@@ -44,3 +44,56 @@ test('節の分からない表の行・下請けの見出しの前の行は読�
   assert.equal(l.subcontractors.length, 0);
   assert.equal(l.warnings.filter((w) => /行目/.test(w)).length, 2);
 });
+
+// 架空の台帳(会社名はすべて仮のもの)
+const TIER_LEDGER = (sub2Heading) => `# 施工体制台帳
+## 1. 作成建設業者(元請)
+| 項目 | 内容 |
+|---|---|
+| 商号 | 架空元請株式会社 |
+| 許可番号 | 架空県知事 許可(般-06)第00001号 |
+## 3. 元請の技術者等
+| 項目 | 内容 |
+|---|---|
+| 主任技術者 氏名 | 架空 一郎 |
+| 資格 | 1級土木施工管理技士 |
+## 4. 下請負人(一次)
+### 4-1. 架空一次工業株式会社
+| 項目 | 内容 |
+|---|---|
+| 工事の内容 | 土工 |
+| 工期 | 2026年4月1日 から 2026年9月30日 まで |
+| 請負代金額 | 45,000,000円 |
+| 主任技術者 氏名 | 架空 二郎 |
+| 資格 | 2級土木施工管理技士 |
+${sub2Heading}
+| 項目 | 内容 |
+|---|---|
+| 工事の内容 | 型枠 |
+| 工期 | 2026年5月1日 から 2026年8月31日 まで |
+| 請負代金額 | 10,000,000円 |
+| 主任技術者 氏名 | 架空 三郎 |
+| 資格 | 2級土木施工管理技士 |
+`;
+
+test('二次の下請け(見出しの「二次」か「(一次: 会社名)」)は、元請けの下請総額に数えない(第26条第2項)', () => {
+  for (const heading of ['## 5. 下請負人(二次)\n### 5-1. 架空二次工業有限会社', '### 4-2. 架空二次工業有限会社(一次: 架空一次工業株式会社)']) {
+    const l = parseLedgerText(TIER_LEDGER(heading));
+    l.project.workType = 'other';
+    const s2 = l.subcontractors[1];
+    assert.equal(s2.name, '架空二次工業有限会社');
+    assert.equal(s2.tier, 2);
+    assert.equal(l.subcontractors[0].tier, 1);
+    const out = checkTaicho(l);
+    // 一次だけなら 4,500万円 < 5,000万円。二次を足すと 5,500万円になるが、候補にしない
+    assert.equal(out.candidates.filter((c) => /総額/.test(c.message)).length, 0, heading);
+  }
+});
+
+test('次数を書いていない下請けは、元請けが直接結んだ契約として総額に数える', () => {
+  const l = parseLedgerText(TIER_LEDGER('### 4-2. 架空二次工業有限会社').replace('## 4. 下請負人(一次)', '## 4. 下請負人'));
+  l.project.workType = 'other';
+  assert.equal(l.subcontractors[1].tier, null);
+  const out = checkTaicho(l);
+  assert.ok(out.candidates.some((c) => c.field === 'prime.engineer.role' && /55,000,000円/.test(c.message)));
+});

@@ -70,6 +70,16 @@ function sectionKind(title) {
   return 'other';
 }
 
+// 下請けの節の見出しから次数を読む。「二次」「三次」など(漢数字・数字)なら 2 以上、「一次」なら 1、書いていなければ null
+function tierOf(title) {
+  const m = clean(title).match(/([一二三四五六七八九]|[1-9１-９])次/);
+  if (!m) return null;
+  const d = '一二三四五六七八九'.indexOf(m[1]);
+  return d >= 0 ? d + 1 : Number(m[1].replace(/[１-９]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+}
+// 「5-1. 子安防水有限会社(一次: 壬生内装株式会社)」の、注文者を書いたかっこ →「一次: 壬生内装株式会社」。無ければ null
+const PARENT_RE = /[(（]\s*((?:[一二三四五六七八九1-9１-９]次|注文者|上位|元方)\s*[:：]\s*[^)）]+)[)）]\s*$/;
+
 const emptyEngineer = () => ({ role: null, name: '', qualification: '' });
 // 「4-1. 架空二土木株式会社」→「架空二土木株式会社」
 const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
@@ -93,6 +103,7 @@ export function parseLedgerText(text) {
   const warnings = [];
   let kind = 'top';
   let sub = null;
+  let sectionTier = null;
 
   const amountInto = (obj, key, raw, where) => {
     const r = parseAmount(raw);
@@ -111,9 +122,15 @@ export function parseLedgerText(text) {
     const h = line.match(/^\s*(#{1,6})\s+(.*)$/);
     if (h) {
       const level = h[1].length;
-      if (level === 2) { kind = sectionKind(h[2]); sub = null; }
+      if (level === 2) { kind = sectionKind(h[2]); sub = null; sectionTier = kind === 'subs' ? tierOf(h[2]) : null; }
       else if (level === 3 && kind === 'subs') {
-        sub = { name: stripNumber(h[2]), licenseNumber: '', work: '', periodFrom: '', periodTo: '', amount: null, engineer: { ...emptyEngineer(), role: 'shunin' } };
+        let name = stripNumber(h[2]);
+        let tier = sectionTier;
+        let orderer = '';
+        const pm = name.match(PARENT_RE);
+        if (pm) { orderer = clean(pm[1]); name = clean(name.slice(0, pm.index)); if (tier === null || tier < 2) tier = 2; }
+        // tier: 1 = 元請けが直接結んだ下請け、2 以上 = 再下請け、null = 見出しに書いていない
+        sub = { name, licenseNumber: '', work: '', periodFrom: '', periodTo: '', amount: null, engineer: { ...emptyEngineer(), role: 'shunin' }, tier, orderer };
         subcontractors.push(sub);
       }
       return;

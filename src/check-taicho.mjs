@@ -52,7 +52,8 @@ function checkEngineer(owner, target, out, who) {
 // 下請けの総額と、元請けの技術者・許可の種類の食い違い
 // 建設業法 第26条第2項(監理技術者)・第3条第1項第2号と施行令 第2条(特定建設業の許可)
 function checkPrimeAgainstTotal(input, out) {
-  const subs = input.subcontractors ?? [];
+  // 第26条第2項の「当該建設工事を施工するために締結した下請契約」は元請けが自分で結んだ契約。二次以降(tier が 2 以上)は総額に数えない
+  const subs = (input.subcontractors ?? []).filter((s) => !(Number.isInteger(s?.tier) && s.tier >= 2));
   const prime = input.prime ?? {};
   const target = primeLabel(prime);
   const role = prime.engineer?.role;
@@ -109,7 +110,8 @@ export function checkTaicho(input = {}) {
   checkPrimeAgainstTotal({ ...input, subcontractors: subs }, out);
   out.notes = [
     '指摘の候補です。抜けが無いことの保証や合否ではありません',
-    '台帳に書いた下請けは、すべて元請けが直接結んだ下請契約として総額を数えています(二次以降の下請けが入っているなら、総額が変わります)',
+    '下請けの総額は、元請けが直接結んだ下請契約だけで数えます。見出しに「二次」などの次数か「(一次: 会社名)」のような注文者の書き方がある下請けは、総額に入れません。次数を書いていない下請けは、元請けが直接結んだ契約として数えます(二次以降が混じっていれば、総額が変わります)',
+    '施工体系図・施工計画書との突き合わせはしていません(台帳だけを点検します)',
     '金額は税込みで比べます(国交省 建設業許可事務ガイドライン【その他】2.)',
     '建築一式工事は建築工事業の許可で請け負うものと読み、施行令 第2条のただし書の金額を使います',
     '台帳の記載事項のうち、国土交通省令(施行規則)で定める事項はこのツールに取り込んでいないので点検していません',
