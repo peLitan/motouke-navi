@@ -93,7 +93,7 @@ export function planRows(out = {}) {
     c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
     'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : ''),
     c.basis.quote, c.basis.fetchedAt ?? '',
-  ])];
+  ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', ''])];
 }
 
 // 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする

@@ -41,11 +41,22 @@ function basisOf(it) {
 
 export const PLAN_ITEMS = planData.items;
 
+// 1-1-1-6 は国の直轄の土木工事の共通仕様書の条。建築一式工事の施工計画書には対応する記載項目が無い(critic の指摘4)
+export const KENCHIKU_UNDECIDABLE = '建築一式工事なので、国の直轄の土木の共通仕様書 ' + planData.section + ' の記載項目は当てはまりません。対応する記載項目が無いので、目次の抜けは判断できません。発注者の仕様書(公共建築工事標準仕様書など)の記載事項で確かめてください';
+
 // text: 施工計画書の目次の文(1行に1つの見出し)
-// 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], notes: [文] }
-export function checkPlanToc(text) {
+// opts.workType: 'kenchiku-ikkatsu'(建築一式)|'other'|未指定。建築一式なら照合せず「判断できない」を返す
+// 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], undecidable: [{message}], notes: [文] }
+export function checkPlanToc(text, opts = {}) {
   const lines = String(text ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
   if (lines.length === 0) throw new Error('目次が空です');
+  if (opts.workType === 'kenchiku-ikkatsu') {
+    return {
+      candidates: [], found: [], extra: [],
+      undecidable: [{ message: KENCHIKU_UNDECIDABLE }],
+      notes: ['工事の種類が「建築一式工事」なので、目次を共通仕様書 ' + planData.section + ' と比べていません'],
+    };
+  }
   const heads = lines.map((l) => ({ line: l, head: tocHeading(l) }));
   const used = new Set();
   const found = [];
@@ -66,7 +77,7 @@ export function checkPlanToc(text) {
       candidates.push({
         item: it.label,
         no: it.no,
-        message: '目次に「' + it.label + '」の見出しが見当たりません。共通仕様書 ' + planData.section + ' の(' + it.no + ')の記載事項です。別の見出しの中に書いてあるか、本文で確かめてください',
+        message: '国の直轄の土木の共通仕様書 ' + planData.section + ' では(' + it.no + ')「' + it.label + '」が記載事項です。目次にその見出しが見当たりません。別の見出しの中に書いてあるか、本文と発注者の仕様書で確かめてください',
         basis: basisOf(it),
       });
     }
@@ -78,5 +89,5 @@ export function checkPlanToc(text) {
     '国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書の記載事項で置き換えてください',
   ];
   if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の項目名と違う言葉で見つけたものです。その見出しが記載事項に当たるかを確かめてください');
-  return { candidates, found, extra, notes };
+  return { candidates, found, extra, undecidable: [], notes };
 }

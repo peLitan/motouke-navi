@@ -172,12 +172,15 @@ export function renderPlanResult(out = {}) {
   const cands = out.candidates ?? [];
   const found = out.found ?? [];
   const extra = out.extra ?? [];
+  const undecidable = out.undecidable ?? [];
   const pageText = (b) => (b.page ? ' PDF ' + b.page + 'ページ' : '') + (b.printedPage ? '(紙面 ' + b.printedPage + ')' : '');
-  const candHtml = cands.length
+  const candHtml = undecidable.length
+    ? '<h3>判断できない(' + undecidable.length + '件)</h3><ul class="undecidable">' + undecidable.map((u) => '<li>' + esc(u.message) + '</li>').join('') + '</ul>'
+    : cands.length
     ? '<h3>記載項目の抜けの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
       + (c.message ? '<p>' + esc(c.message) + '</p>' : '')
       + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + (c.basis.fetchedAt ? '(取得日 ' + esc(c.basis.fetchedAt) + ')' : '') + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
-    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
+    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、国の直轄の土木の共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
   const foundHtml = found.length
     ? '<details class="found"><summary>目次で見つけた記載項目(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
     : '';

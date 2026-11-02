@@ -43,11 +43,12 @@ for (const name of fs.readdirSync(dir).sort()) {
   }
   const tocFile = path.join(p, '施工計画書_目次.md');
   if (fs.existsSync(tocFile)) {
-    const r = checkPlanToc(fs.readFileSync(tocFile, 'utf8'));
+    const r = checkPlanToc(fs.readFileSync(tocFile, 'utf8'), { workType: form.workType });
     c.plan = {
       candidates: r.candidates.map((x) => ({ no: x.no, item: x.item, message: x.message })),
       byAlias: r.found.filter((f) => f.byAlias).map((f) => ({ no: f.no, item: f.item, line: f.line })),
       extra: r.extra,
+      undecidable: r.undecidable.map((x) => x.message),
     };
   }
   out.cases.push(c);

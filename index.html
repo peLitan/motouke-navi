@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-aVfkJE1FF95TQdsgYAGWYxn/pcft2V71pSwLEkFXvFo='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cZVfI/MNIA8QSOR51dpegDNyfg5hoiTmURaExsQ3rNw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -150,7 +150,7 @@
 </section>
 <section id="plan-check">
 <h2>2-2. 施工計画書の目次の点検</h2>
-<p>施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。</p>
+<p>施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
 <p class="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
@@ -488,12 +488,15 @@ function renderPlanResult(out = {}) {
   const cands = out.candidates ?? [];
   const found = out.found ?? [];
   const extra = out.extra ?? [];
+  const undecidable = out.undecidable ?? [];
   const pageText = (b) => (b.page ? ' PDF ' + b.page + 'ページ' : '') + (b.printedPage ? '(紙面 ' + b.printedPage + ')' : '');
-  const candHtml = cands.length
+  const candHtml = undecidable.length
+    ? '<h3>判断できない(' + undecidable.length + '件)</h3><ul class="undecidable">' + undecidable.map((u) => '<li>' + esc(u.message) + '</li>').join('') + '</ul>'
+    : cands.length
     ? '<h3>記載項目の抜けの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
       + (c.message ? '<p>' + esc(c.message) + '</p>' : '')
       + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + (c.basis.fetchedAt ? '(取得日 ' + esc(c.basis.fetchedAt) + ')' : '') + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
-    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
+    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、国の直轄の土木の共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
   const foundHtml = found.length
     ? '<details class="found"><summary>目次で見つけた記載項目(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
     : '';
@@ -1848,7 +1851,7 @@ function planRows(out = {}) {
     c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
     'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : ''),
     c.basis.quote, c.basis.fetchedAt ?? '',
-  ])];
+  ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', ''])];
 }
 
 // 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする
@@ -2036,11 +2039,22 @@ function basisOf(it) {
 
 const PLAN_ITEMS = planData.items;
 
+// 1-1-1-6 は国の直轄の土木工事の共通仕様書の条。建築一式工事の施工計画書には対応する記載項目が無い(critic の指摘4)
+const KENCHIKU_UNDECIDABLE = '建築一式工事なので、国の直轄の土木の共通仕様書 ' + planData.section + ' の記載項目は当てはまりません。対応する記載項目が無いので、目次の抜けは判断できません。発注者の仕様書(公共建築工事標準仕様書など)の記載事項で確かめてください';
+
 // text: 施工計画書の目次の文(1行に1つの見出し)
-// 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], notes: [文] }
-function checkPlanToc(text) {
+// opts.workType: 'kenchiku-ikkatsu'(建築一式)|'other'|未指定。建築一式なら照合せず「判断できない」を返す
+// 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], undecidable: [{message}], notes: [文] }
+function checkPlanToc(text, opts = {}) {
   const lines = String(text ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
   if (lines.length === 0) throw new Error('目次が空です');
+  if (opts.workType === 'kenchiku-ikkatsu') {
+    return {
+      candidates: [], found: [], extra: [],
+      undecidable: [{ message: KENCHIKU_UNDECIDABLE }],
+      notes: ['工事の種類が「建築一式工事」なので、目次を共通仕様書 ' + planData.section + ' と比べていません'],
+    };
+  }
   const heads = lines.map((l) => ({ line: l, head: tocHeading(l) }));
   const used = new Set();
   const found = [];
@@ -2061,7 +2075,7 @@ function checkPlanToc(text) {
       candidates.push({
         item: it.label,
         no: it.no,
-        message: '目次に「' + it.label + '」の見出しが見当たりません。共通仕様書 ' + planData.section + ' の(' + it.no + ')の記載事項です。別の見出しの中に書いてあるか、本文で確かめてください',
+        message: '国の直轄の土木の共通仕様書 ' + planData.section + ' では(' + it.no + ')「' + it.label + '」が記載事項です。目次にその見出しが見当たりません。別の見出しの中に書いてあるか、本文と発注者の仕様書で確かめてください',
         basis: basisOf(it),
       });
     }
@@ -2073,10 +2087,10 @@ function checkPlanToc(text) {
     '国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書の記載事項で置き換えてください',
   ];
   if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の項目名と違う言葉で見つけたものです。その見出しが記載事項に当たるかを確かめてください');
-  return { candidates, found, extra, notes };
+  return { candidates, found, extra, undecidable: [], notes };
 }
 
-return { normalizeLine, tocHeading, PLAN_ITEMS, checkPlanToc };
+return { normalizeLine, tocHeading, PLAN_ITEMS, KENCHIKU_UNDECIDABLE, checkPlanToc };
 })();
 __m["src/sample.mjs"] = (function () {
 // 見本(F05f): 「見本を読み込む」ボタンで画面に入れる、架空の工事の条件と書類。
@@ -2921,7 +2935,9 @@ function runPlanCheck(doc) {
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本を読み込む」を押してください。']); return; }
   try {
-    const out = checkPlanToc(text);
+    const form = readBidForm(collect(doc));
+    const out = checkPlanToc(text, { workType: form.workType ?? undefined });
+    if (!form.workType) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
   } catch (e) {

@@ -203,7 +203,9 @@ export function runPlanCheck(doc) {
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本を読み込む」を押してください。']); return; }
   try {
-    const out = checkPlanToc(text);
+    const form = readBidForm(collect(doc));
+    const out = checkPlanToc(text, { workType: form.workType ?? undefined });
+    if (!form.workType) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
   } catch (e) {

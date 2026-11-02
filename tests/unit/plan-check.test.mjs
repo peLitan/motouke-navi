@@ -40,3 +40,39 @@ test('見本の目次では、(15)と(16)が抜けの候補になり、ページ
 test('目次が空なら止める', () => {
   assert.throws(() => checkPlanToc('  \n '), /目次が空/);
 });
+
+// F07b: 点検の範囲(critic の指摘4・5)。目次の値は架空
+test('工事の種類が建築一式なら照合せず、「判断できない」を1件出して候補は出さない', () => {
+  const out = checkPlanToc('1. 工事概要\n2. 仮設計画', { workType: 'kenchiku-ikkatsu' });
+  assert.deepEqual(out.candidates, []);
+  assert.deepEqual(out.found, []);
+  assert.equal(out.undecidable.length, 1);
+  assert.ok(out.undecidable[0].message.includes('対応する記載項目が無い'));
+  assert.ok(out.undecidable[0].message.includes('1-1-1-6'));
+});
+
+test('それ以外の工事・種類が分からないときは今までどおり照合し、undecidable は空', () => {
+  for (const workType of ['other', undefined]) {
+    const out = checkPlanToc('1. 工事概要', { workType });
+    assert.deepEqual(out.undecidable, []);
+    assert.ok(out.candidates.some((c) => c.item === '計画工程表'));
+  }
+});
+
+test('候補の文は「国の直轄の土木の共通仕様書 1-1-1-6 では」と範囲を断る', () => {
+  const out = checkPlanToc('1. 工事概要');
+  assert.ok(out.candidates.length > 0);
+  for (const c of out.candidates) assert.ok(c.message.startsWith('国の直轄の土木の共通仕様書 1-1-1-6 では'), c.message);
+});
+
+test('建築一式の「判断できない」は画面と CSV に出る', async () => {
+  const { renderPlanResult } = await import('../../src/ui/view.mjs');
+  const { planRows } = await import('../../src/export.mjs');
+  const out = checkPlanToc('1. 工事概要', { workType: 'kenchiku-ikkatsu' });
+  const h = renderPlanResult(out);
+  assert.ok(h.includes('判断できない') && h.includes('対応する記載項目が無い'));
+  assert.ok(!h.includes('すべて見つかりました'));
+  const rows = planRows(out);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[1][1], '判断できない');
+});
