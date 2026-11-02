@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./raw/**)",
+      "Read(./**/raw/**)",
+      "Edit(./raw/**)",
+      "Edit(./**/raw/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true
+  },
+  "enabledMcpjsonServers": ["masked-files"],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Grep|Glob|Bash|PowerShell|Edit|Write|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/hooks/guard-raw.mjs\"" }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/hooks/guard-raw.mjs\"" }
+        ]
+      }
+    ]
+  }
+}

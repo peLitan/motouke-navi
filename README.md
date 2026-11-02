@@ -84,6 +84,26 @@
 - 使うモデルは `claude-opus-5-5`。送り先は `https://api.anthropic.com/v1/messages` だけです
 - 置き換えの漏れは0になりません(上の「文の置き換え」の注意)。送る中身を表示したときに、目で確かめてください
 
+## Claude Code に組み込む
+Claude Code で書類を点検するときに、`raw/` に置いた生のファイル(元の名前が入ったもの)を Claude Code に読ませず、置き換えた後の中身だけを渡すための設定と道具です。置き場は `integration/claude-code/` で、自分の作業フォルダに中身を写して使います。
+
+- `.claude/settings.json`: `permissions.deny` で `raw/` の Read と Edit を止める。PreToolUse と UserPromptSubmit で下のフックを動かす。sandbox を有効にする
+- `hooks/guard-raw.mjs`: Read・Grep・Glob などが `raw/` を指すと止める。プロンプトの `@raw/…` のようなファイルの取り込みも止める。入力が読めないときも止める
+- `.mcp.json` と `mcp/masked-files.mjs`: 手元の MCP の道具 `masked-files`。道具 `read_masked` は `raw/` の中の文のファイルを読み、人名・会社名・メール・電話・住所・許可番号などを記号に置き換えた後の中身だけを返す(対応表と元の語は返さない。`raw/` の外は読まない。外部と通信しない)
+
+使い方:
+1. 作業フォルダに `raw/` を作り、生のファイルを置く(Excel・Word は文のファイル .txt・.csv などにしてから置く)
+2. `integration/claude-code/` の `.claude/`・`.mcp.json`・`hooks/`・`mcp/` を作業フォルダに写す
+3. 環境変数 `MASK_TOOL_DIR` にこのツールのフォルダを入れる(道具が `src/mask/` を使うため)。人名・現場名は辞書に足さないと見つからないので、画面の「対応表を書き出す」で保存した対応表を `MASK_MAP` に指定すると、その語も同じ記号で置き換える
+4. 作業フォルダで Claude Code を開き、「raw/台帳.txt を read_masked で読んで点検して」のように頼む
+
+限界(必ず読んでください):
+- コマンド(`cat`・`type`・`Get-Content` など)での読み取りは、Linux・WSL で Claude Code の sandbox が有効なときは、`permissions.deny` の Read の決まりが sandbox にも使われるので止まります。Windows(ネイティブ)では sandbox が使えないので止まりません。フックはコマンドの中の `raw/` という文字を探して止めますが、変数・`cd` してからの相対パスなどでは見落とします
+- Grep は、探す場所の直下に `raw/` があるときだけフックで止めます。それより深い所の `raw/` は `permissions.deny` に任せます
+- 止めるのは Claude Code の道具だけです。人が端末で開いたファイルや、別のプログラムは止められません
+- 置き換えの漏れは0になりません(上の「文の置き換え」)。返ってきた中身に元の名前が残っていないか、目で確かめてください
+- 試験(`tests/acceptance/claude-code.test.mjs`)は、フックの判断と道具の返事を関数として確かめたものです。Claude Code の版が変わるとフックの入力の形が変わることがあります
+
 ## データと出典
 
 ### 法令の原文(e-Gov 法令 API)
