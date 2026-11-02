@@ -1,7 +1,7 @@
 // 施工計画書の目次の点検(F07)の単体テスト。目次の値はすべて架空
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkPlanToc, tocHeading } from '../../src/plan-check.mjs';
+import { checkPlanToc, tocHeading, OTHER_NOTE } from '../../src/plan-check.mjs';
 import { SAMPLE } from '../../src/sample.mjs';
 
 test('頭の番号・かっこの補足・末尾のページ番号を取り除く', () => {
@@ -75,4 +75,17 @@ test('建築一式の「判断できない」は画面と CSV に出る', async 
   const rows = planRows(out);
   assert.equal(rows.length, 2);
   assert.equal(rows[1][1], '判断できない');
+});
+
+test('(16)その他は照合し、見出しが無ければ候補に出したうえで受け皿の注意を出す', () => {
+  const out = checkPlanToc('1. 工事概要\n2. 計画工程表');
+  assert.ok(out.candidates.some((c) => c.no === 16 && c.item === 'その他'));
+  assert.ok(out.notes.includes(OTHER_NOTE));
+  assert.ok(OTHER_NOTE.includes('(16)は受け皿の項目なので、見出しが無くても抜けとは限らない'));
+});
+
+test('(16)その他の見出しがあれば、受け皿の注意は出さない', () => {
+  const out = checkPlanToc('1. 工事概要\n2. その他');
+  assert.ok(!out.candidates.some((c) => c.no === 16));
+  assert.ok(!out.notes.includes(OTHER_NOTE));
 });

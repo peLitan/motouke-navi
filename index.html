@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cZVfI/MNIA8QSOR51dpegDNyfg5hoiTmURaExsQ3rNw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-BQz5vRm+zipuyTW86IlO/pAU7GdIvCxFsVvOVe3uJO8='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -2045,6 +2045,8 @@ const KENCHIKU_UNDECIDABLE = '建築一式工事なので、国の直轄の土�
 // text: 施工計画書の目次の文(1行に1つの見出し)
 // opts.workType: 'kenchiku-ikkatsu'(建築一式)|'other'|未指定。建築一式なら照合せず「判断できない」を返す
 // 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], undecidable: [{message}], notes: [文] }
+const OTHER_NOTE = '(16)は受け皿の項目なので、見出しが無くても抜けとは限らない。監督職員が求めた項目があれば書く';
+
 function checkPlanToc(text, opts = {}) {
   const lines = String(text ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
   if (lines.length === 0) throw new Error('目次が空です');
@@ -2086,11 +2088,13 @@ function checkPlanToc(text, opts = {}) {
     '共通仕様書 ' + planData.section + ' には「維持工事等簡易な工事においては監督職員の承諾を得て記載内容の一部を省略することができる」とあり、監督職員が補足を求めた項目は追記します。省略の承諾や追記の求めがあるかは、人が確かめてください',
     '国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書の記載事項で置き換えてください',
   ];
+  // (16)その他は受け皿の項目。照合はするが、見出しが無いことは抜けとは限らないと注意に出す(exceptions の回答 B)
+  if (candidates.some((c) => c.no === 16 && c.item === 'その他')) notes.push(OTHER_NOTE);
   if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の項目名と違う言葉で見つけたものです。その見出しが記載事項に当たるかを確かめてください');
   return { candidates, found, extra, undecidable: [], notes };
 }
 
-return { normalizeLine, tocHeading, PLAN_ITEMS, KENCHIKU_UNDECIDABLE, checkPlanToc };
+return { normalizeLine, tocHeading, PLAN_ITEMS, KENCHIKU_UNDECIDABLE, OTHER_NOTE, checkPlanToc };
 })();
 __m["src/sample.mjs"] = (function () {
 // 見本(F05f): 「見本を読み込む」ボタンで画面に入れる、架空の工事の条件と書類。
