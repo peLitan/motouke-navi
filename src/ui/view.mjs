@@ -111,6 +111,22 @@ export function renderCheckResult(out, warnings = []) {
     + '<p class="human">指摘の候補です。台帳が正しいかの最後の判断は、契約書・下請けの書類などを確かめたうえで人がしてください</p>';
 }
 
+// 台帳の Excel の読み込み(F04c): 読めた欄と、読めない欄(欄ごとに理由)
+export const XLSX_CAUSE = { not_found: '欄が無い', empty: '値が無い', invalid: '値を読めない' };
+const XLSX_VALUE = (ledger, key) => key.split('.').reduce((o, k) => (o == null ? o : o[k]), ledger);
+export function renderXlsxResult(r, fieldNames = {}) {
+  const read = Object.entries(r.found ?? {}).filter(([k]) => !(r.unreadable ?? []).some((u) => u.key === k));
+  const readHtml = read.length
+    ? '<h4>読めた欄(' + read.length + ')</h4><table><thead><tr><th>欄</th><th>セル</th><th>値</th></tr></thead><tbody>'
+      + read.map(([k, f]) => '<tr><td>' + esc(fieldNames[k] ?? k) + '</td><td>' + esc(f.value) + '</td><td>' + esc(XLSX_VALUE(r.ledger, k)) + '</td></tr>').join('') + '</tbody></table>'
+    : '<h4>読めた欄</h4><p>ありません。</p>';
+  const un = r.unreadable ?? [];
+  const unHtml = un.length
+    ? '<h4>読めない欄(' + un.length + ')</h4><ul class="unreadable">' + un.map((u) => '<li><strong>' + esc(u.field) + '</strong>(' + esc(XLSX_CAUSE[u.cause] ?? u.cause) + '): ' + esc(u.reason) + (u.raw ? '<br>書いてあった文字: ' + esc(u.raw) : '') + '</li>').join('') + '</ul>'
+    : '<h4>読めない欄</h4><p>ありません。</p>';
+  return readHtml + unHtml + '<p class="human">読めない欄は推測で埋めていません。下の「施工体制台帳の文」の欄で、空の行に書き足してから「台帳を点検する」を押してください</p>';
+}
+
 // Claude の指摘(F12a)。法令の決まりで判定した結果とは別の欄に、1件ずつ「AI の候補」と付けて出す
 export function renderAiCandidates(list = [], warnings = []) {
   const warnHtml = warnings.length ? '<ul class="warnings">' + warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul>' : '';

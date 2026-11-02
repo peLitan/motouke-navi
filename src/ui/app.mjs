@@ -2,8 +2,9 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult } from './view.mjs';
+import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult } from './view.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
+import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
@@ -165,6 +166,28 @@ export function exportCheckCsv(doc) {
   setCheckStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
 }
 
+// 台帳の Excel の読み込み(F04c): 作成例の様式の .xlsx を読み、読めた欄を台帳の文にして「施工体制台帳の文」の欄に入れる。
+// 読めない欄は ledger-unreadable に欄ごとに出す。点検は利用者が中身を確かめて「台帳を点検する」を押してから
+export async function loadLedgerFile(doc, file) {
+  const outEl = doc.getElementById('ledger-unreadable');
+  const status = doc.getElementById('ledger-file-status');
+  if (!file) return false;
+  try {
+    if (!/\.xlsx$/i.test(String(file.name ?? ''))) throw new Error('読めるのは .xlsx だけです(.xls は Excel で .xlsx に保存し直してください)');
+    const r = await readLedgerXlsx(new Uint8Array(await file.arrayBuffer()));
+    const input = doc.getElementById('ledger-input');
+    if (input) input.value = ledgerToText(r.ledger);
+    lastCheck = null;
+    if (outEl) outEl.innerHTML = renderXlsxResult(r, FIELD_NAMES);
+    if (status) status.textContent = '「' + file.name + '」を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。';
+    return true;
+  } catch (e) {
+    if (outEl) outEl.innerHTML = '';
+    if (status) status.textContent = '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e));
+    return false;
+  }
+}
+
 // 施工計画書の目次の点検(F07): 貼った目次を共通仕様書 1-1-1-6 の記載項目と比べ、見当たらない項目を候補に出す
 let lastPlan = null;
 function setPlanStatus(doc, text) {
@@ -246,6 +269,15 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       const changed = () => { if (lastCheck) { lastCheck = null; setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。'); } };
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
+    }
+    const ledgerFile = doc.getElementById('ledger-file');
+    if (ledgerFile) {
+      ledgerFile.addEventListener('change', async () => {
+        const f = ledgerFile.files && ledgerFile.files[0];
+        if (!f) return;
+        await loadLedgerFile(doc, f);
+        ledgerFile.value = '';
+      });
     }
     startMask(doc);
     startAi(doc);

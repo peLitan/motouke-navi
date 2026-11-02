@@ -119,6 +119,19 @@
       "file": "mlit-doboku-spec-r8-1-1-1.txt",
       "excerpt": "HTML版【試行版】の第1節の本文から、上の7つの条の文だけを取り出した(タグを外し、行の中の空白を1つにしただけ。手で打ち直していない。図の説明の埋め込みデータは除いた)。PDF版とは 1-1-1-6 の文だけを突き合わせた(PDF の85・86ページの文字と同じ。data/plan-items.json の page は PDF のページ)。ほかの条は突き合わせていない",
       "license": "ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
+    },
+    {
+      "id": "mlit-taicho-sakuseirei",
+      "kind": "document",
+      "title": "施工体制台帳(作成例)(国土交通省。Excel の様式。施工体制台帳、施工体系図等のページ)",
+      "publisher": "国土交通省",
+      "url": "https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx",
+      "pageUrl": "https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html",
+      "fetchedAt": "2026-11-02",
+      "file": "mlit-taicho-sakuseirei.xlsx",
+      "sha256": "1464309f397ab7657275dbb5b267362881599c2d3ac6b90f646dbe88e25b6009",
+      "excerpt": "取得した .xlsx をそのまま置いた(34,977 バイト。手を加えていない)。台帳の Excel の読み込み(src/ledger-xlsx.mjs)の試験で、本物の様式として読む。この様式には請負代金額の欄が無い",
+      "license": "ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
     }
   ]
 }

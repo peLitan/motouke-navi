@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ZtP61FABYugfbEHk0pSc0VU/NPD0nHVxkwYtiGl8Ajg='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-8ywL90yyf3VeI0P26Ty37HPLxC9B1fSBkNq9DYvmIXQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -134,6 +134,11 @@
 | 資格 | (資格) |</pre>
 <p>「見本を読み込む」を押すと、架空の台帳がこの欄に入ります。</p>
 </details>
+<div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
+<input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+<p class="disclaimer" id="ledger-file-note">ファイルはこの PC の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
+<p id="ledger-file-status" aria-live="polite"></p>
+<div id="ledger-unreadable" class="result" aria-live="polite"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
 <textarea id="ledger-input" name="ledger-input" rows="12" cols="80"></textarea></div>
 <div class="row"><button type="button" id="ledger-run">台帳を点検する</button>
@@ -229,6 +234,7 @@
 <li>公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等） — 取得日 2026-11-02(e-Gov の版 412AC0000000127_20251212_506AC0000000049)<br>https://laws.e-gov.go.jp/law/412AC0000000127</li>
 <li>建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)(国土交通省) — 取得日 2026-11-02<br>https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf</li>
 <li>土木工事共通仕様書(案)令和8年3月(国土交通省。第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42)(国土交通省) — 取得日 2026-11-02<br>https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html</li>
+<li>施工体制台帳(作成例)(国土交通省。Excel の様式。施工体制台帳、施工体系図等のページ)(国土交通省) — 取得日 2026-11-02<br>https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx</li>
 </ul>
 <p>法令は改正されることがあります。取得日から時間がたって古くなったら、判定の前に e-Gov 法令検索や国土交通省の資料の原文を確かめ直してください。この画面は取得日の時点の原文の抜き書きで判定しています。</p>
 </div>
@@ -419,6 +425,22 @@ function renderCheckResult(out, warnings = []) {
     + '<p class="human">指摘の候補です。台帳が正しいかの最後の判断は、契約書・下請けの書類などを確かめたうえで人がしてください</p>';
 }
 
+// 台帳の Excel の読み込み(F04c): 読めた欄と、読めない欄(欄ごとに理由)
+const XLSX_CAUSE = { not_found: '欄が無い', empty: '値が無い', invalid: '値を読めない' };
+const XLSX_VALUE = (ledger, key) => key.split('.').reduce((o, k) => (o == null ? o : o[k]), ledger);
+function renderXlsxResult(r, fieldNames = {}) {
+  const read = Object.entries(r.found ?? {}).filter(([k]) => !(r.unreadable ?? []).some((u) => u.key === k));
+  const readHtml = read.length
+    ? '<h4>読めた欄(' + read.length + ')</h4><table><thead><tr><th>欄</th><th>セル</th><th>値</th></tr></thead><tbody>'
+      + read.map(([k, f]) => '<tr><td>' + esc(fieldNames[k] ?? k) + '</td><td>' + esc(f.value) + '</td><td>' + esc(XLSX_VALUE(r.ledger, k)) + '</td></tr>').join('') + '</tbody></table>'
+    : '<h4>読めた欄</h4><p>ありません。</p>';
+  const un = r.unreadable ?? [];
+  const unHtml = un.length
+    ? '<h4>読めない欄(' + un.length + ')</h4><ul class="unreadable">' + un.map((u) => '<li><strong>' + esc(u.field) + '</strong>(' + esc(XLSX_CAUSE[u.cause] ?? u.cause) + '): ' + esc(u.reason) + (u.raw ? '<br>書いてあった文字: ' + esc(u.raw) : '') + '</li>').join('') + '</ul>'
+    : '<h4>読めない欄</h4><p>ありません。</p>';
+  return readHtml + unHtml + '<p class="human">読めない欄は推測で埋めていません。下の「施工体制台帳の文」の欄で、空の行に書き足してから「台帳を点検する」を押してください</p>';
+}
+
 // Claude の指摘(F12a)。法令の決まりで判定した結果とは別の欄に、1件ずつ「AI の候補」と付けて出す
 function renderAiCandidates(list = [], warnings = []) {
   const warnHtml = warnings.length ? '<ul class="warnings">' + warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul>' : '';
@@ -478,7 +500,7 @@ function renderPlanResult(out = {}) {
     + '<p class="human">抜けの候補です。施工計画書が足りているかの最後の判断は、特記仕様書と監督職員の指示を確かめたうえで人がしてください</p>';
 }
 
-return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult };
+return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult };
 })();
 __m["src/ledger-text.mjs"] = (function () {
 // 台帳の文を読む(F05b): 見出しと「| 項目 | 内容 |」の表で書いた施工体制台帳の文を、点検(src/check-taicho.mjs)の入力の形にする。
@@ -641,8 +663,553 @@ function parseLedgerText(text) {
 
 return { parseAmount, parseDate, parsePeriod, licenseTypeOf, parseLedgerText };
 })();
+__m["src/mask/extract.mjs"] = (function () {
+// 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
+// 外の部品(ライブラリ)は使わない。zip の展開は、ブラウザと Node に標準である DecompressionStream('deflate-raw') を使う。
+// 取り出すのは文字だけ。書式・画像・埋め込みのファイルは読まない。
+// 返すのは1つの文字列(段落・行ごとに改行、表のセルはタブで区切る)。
+
+const MASK_FILE_TYPES = ['.txt', '.docx', '.xlsx'];
+
+const MAX_FILE = 30 * 1024 * 1024;       // 読むファイルの大きさの上限
+const MAX_ENTRY = 50 * 1024 * 1024;      // zip の中の1つのファイルを開いた後の大きさの上限(展開しすぎを防ぐ)
+
+const extOf = (name) => {
+  const m = String(name ?? '').toLowerCase().match(/\.[a-z0-9]+$/);
+  return m ? m[0] : '';
+};
+
+const toBytes = (data) => {
+  if (data instanceof Uint8Array) return data;
+  if (data instanceof ArrayBuffer) return new Uint8Array(data);
+  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  throw new Error('ファイルの中身が読めません(バイトの並びを渡してください)');
+};
+
+// ---- .txt ----
+// UTF-8(BOM の有無どちらも)を先に試し、UTF-8 として読めなければ Shift_JIS として読む
+function decodeText(bytes) {
+  let b = bytes;
+  if (b.length >= 3 && b[0] === 0xef && b[1] === 0xbb && b[2] === 0xbf) b = b.subarray(3);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(b);
+  } catch {
+    try {
+      return new TextDecoder('shift_jis', { fatal: true }).decode(b);
+    } catch {
+      throw new Error('文字のファイルとして読めません(UTF-8 か Shift_JIS で保存してください)');
+    }
+  }
+}
+
+// ---- zip ----
+const u16 = (b, o) => b[o] | (b[o + 1] << 8);
+const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
+
+async function inflateRaw(data, limit) {
+  if (typeof DecompressionStream !== 'function') throw new Error('この環境では .docx・.xlsx を開けません(DecompressionStream がありません)');
+  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  const reader = stream.getReader();
+  const parts = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > limit) { await reader.cancel(); throw new Error('ファイルの中身が大きすぎます'); }
+    parts.push(value);
+  }
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+
+// zip の中央ディレクトリを読み、名前 → 取り出す関数 の表を返す
+function listZip(bytes) {
+  const b = bytes;
+  let eocd = -1;
+  for (let i = b.length - 22; i >= 0 && i >= b.length - 22 - 0xffff; i--) {
+    if (u32(b, i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('.docx・.xlsx の形(zip)になっていません。壊れているか、別の形式のファイルです');
+  const count = u16(b, eocd + 10);
+  let off = u32(b, eocd + 16);
+  const entries = new Map();
+  for (let k = 0; k < count; k++) {
+    if (off + 46 > b.length || u32(b, off) !== 0x02014b50) throw new Error('zip の目次が壊れています');
+    const flags = u16(b, off + 8);
+    const method = u16(b, off + 10);
+    const csize = u32(b, off + 20);
+    const usize = u32(b, off + 24);
+    const nlen = u16(b, off + 28), elen = u16(b, off + 30), clen = u16(b, off + 32);
+    const local = u32(b, off + 42);
+    const name = new TextDecoder('utf-8').decode(b.subarray(off + 46, off + 46 + nlen));
+    entries.set(name, { flags, method, csize, usize, local });
+    off += 46 + nlen + elen + clen;
+  }
+  return entries;
+}
+
+async function readEntry(bytes, entry, name) {
+  if (entry.flags & 1) throw new Error('パスワードのかかったファイルは開けません(' + name + ')');
+  const b = bytes;
+  const lo = entry.local;
+  if (lo + 30 > b.length || u32(b, lo) !== 0x04034b50) throw new Error('zip の中身が壊れています(' + name + ')');
+  const start = lo + 30 + u16(b, lo + 26) + u16(b, lo + 28);
+  const body = b.subarray(start, start + entry.csize);
+  if (entry.method === 0) return body;
+  if (entry.method === 8) return inflateRaw(body, MAX_ENTRY);
+  throw new Error('この圧縮の形式には対応していません(' + name + ')');
+}
+
+async function readXml(bytes, entries, name) {
+  const e = entries.get(name);
+  if (!e) return null;
+  return new TextDecoder('utf-8').decode(await readEntry(bytes, e, name));
+}
+
+// ---- XML ----
+function unescapeXml(s) {
+  return String(s).replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, (all, ent) => {
+    if (ent === 'amp') return '&';
+    if (ent === 'lt') return '<';
+    if (ent === 'gt') return '>';
+    if (ent === 'quot') return '"';
+    if (ent === 'apos') return "'";
+    const n = ent[1] === 'x' ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10);
+    try { return String.fromCodePoint(n); } catch { return all; }
+  });
+}
+
+const attr = (tag, key) => {
+  const m = tag.match(new RegExp('\\s' + key + '\\s*=\\s*"([^"]*)"'));
+  return m ? unescapeXml(m[1]) : null;
+};
+
+// ---- .docx ----
+// 段落(w:p)ごとに1行。分かれた文字の塊(w:t)はつなぐ。w:tab はタブ、w:br・w:cr は改行。表のセルの段落もそれぞれ1行
+function docxXmlToText(xml) {
+  const body = xml.replace(/<w:(?:delText|instrText)\b[^>]*>[\s\S]*?<\/w:(?:delText|instrText)>/g, ''); // 消した文字・フィールドの命令は除く
+  const lines = [];
+  for (const pm of body.matchAll(/<w:p\b[^>]*?(?:\/>|>([\s\S]*?)<\/w:p>)/g)) {
+    const inner = pm[1] || '';
+    let line = '';
+    for (const t of inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>|<w:t\b[^>]*\/>|<w:(tab|br|cr)\b[^>]*\/?>/g)) {
+      if (t[2] === 'tab') line += '\t';
+      else if (t[2]) line += '\n';
+      else if (t[1] !== undefined) line += unescapeXml(t[1]);
+    }
+    lines.push(line);
+  }
+  return lines.join('\n');
+}
+
+async function extractDocx(bytes) {
+  const entries = listZip(bytes);
+  const main = await readXml(bytes, entries, 'word/document.xml');
+  if (main === null) throw new Error('.docx の本文(word/document.xml)が見つかりません');
+  const parts = [docxXmlToText(main)];
+  // 頭書き・脚注・足書きにも名前が入ることがあるので、あれば後ろに足す
+  const extra = [...entries.keys()].filter((n) => /^word\/(header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(n)).sort();
+  for (const n of extra) {
+    const t = docxXmlToText(await readXml(bytes, entries, n)).trim();
+    if (t) parts.push(t);
+  }
+  return parts.join('\n');
+}
+
+// ---- .xlsx ----
+// 共有文字列: si ごとに、その中の t をつなぐ(ふりがな rPh は除く)
+function sharedStrings(xml) {
+  if (!xml) return [];
+  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>|<si\b[^>]*\/>/g)].map((m) => {
+    const inner = (m[1] || '').replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '');
+    return [...inner.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join('');
+  });
+}
+
+const colIndex = (ref) => {
+  const m = String(ref ?? '').match(/^([A-Z]+)/);
+  if (!m) return null;
+  let n = 0;
+  for (const c of m[1]) n = n * 26 + (c.charCodeAt(0) - 64);
+  return n - 1;
+};
+
+function sheetXmlToText(xml, shared) {
+  const lines = [];
+  for (const rm of xml.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+    const cells = [];
+    let next = 0;
+    for (const cm of (rm[1] || '').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const tag = '<c ' + cm[1];
+      const inner = cm[2] || '';
+      const ci = colIndex(attr(tag, 'r'));
+      const at = ci === null ? next : ci;
+      cells[at] = cellValue(tag, inner, shared).text;
+      next = at + 1;
+    }
+    const line = Array.from(cells, (x) => x ?? '').join('\t').replace(/\t+$/, '');
+    if (line) lines.push(line);
+  }
+  return lines.join('\n');
+}
+
+const resolvePath = (base, target) => {
+  if (target.startsWith('/')) return target.slice(1);
+  const parts = base.split('/').slice(0, -1);
+  for (const seg of target.split('/')) {
+    if (seg === '..') parts.pop();
+    else if (seg && seg !== '.') parts.push(seg);
+  }
+  return parts.join('/');
+};
+
+// .xlsx を開き、共有文字列と、ブックに書かれた順のシートの XML を返す(台帳の Excel の読み込み F04c でも使う)
+async function openXlsx(bytes) {
+  const entries = listZip(bytes);
+  const shared = sharedStrings(await readXml(bytes, entries, 'xl/sharedStrings.xml'));
+  const wb = await readXml(bytes, entries, 'xl/workbook.xml');
+  const rels = (await readXml(bytes, entries, 'xl/_rels/workbook.xml.rels')) || '';
+  const relMap = new Map([...rels.matchAll(/<Relationship\b[^>]*>/g)].map((m) => [attr(m[0], 'Id'), attr(m[0], 'Target')]));
+  // ブックに書かれたシートの順に読む。読めなければ、名前の順に xl/worksheets/ を読む
+  let sheets = [];
+  if (wb) {
+    for (const m of wb.matchAll(/<sheet\b[^>]*>/g)) {
+      const target = relMap.get(attr(m[0], 'r:id'));
+      if (target) sheets.push({ name: attr(m[0], 'name') || '', path: resolvePath('xl/workbook.xml', target) });
+    }
+  }
+  if (!sheets.length) {
+    sheets = [...entries.keys()].filter((n) => /^xl\/worksheets\/[^/]+\.xml$/.test(n)).sort().map((n) => ({ name: '', path: n }));
+  }
+  if (!sheets.length) throw new Error('.xlsx の中にシートが見つかりません');
+  const out = [];
+  for (const s of sheets) {
+    const xml = await readXml(bytes, entries, s.path);
+    if (xml !== null) out.push({ name: s.name, xml });
+  }
+  return { shared, sheets: out };
+}
+
+// シートの XML のセルの値(共有文字列・インラインの文字・数・式の結果。ふりがなは除く)。数のセルは number も返す
+function cellValue(tag, inner, shared) {
+  const type = attr(tag, 't');
+  if (type === 'inlineStr') {
+    return { text: [...inner.replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '').matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join(''), number: null };
+  }
+  const vm = inner.match(/<v\b[^>]*>([\s\S]*?)<\/v>/);
+  const raw = vm ? unescapeXml(vm[1]) : '';
+  if (type === 's') return { text: shared[Number(raw)] ?? '', number: null };
+  if (type === 'b') return { text: raw === '1' ? 'TRUE' : raw === '0' ? 'FALSE' : raw, number: null };
+  if ((type === null || type === 'n') && raw !== '' && Number.isFinite(Number(raw))) return { text: raw, number: Number(raw) };
+  return { text: raw, number: null }; // 式の結果の文字(str)・エラー(e)はそのまま
+}
+
+async function extractXlsx(bytes) {
+  const { shared, sheets } = await openXlsx(bytes);
+  const out = [];
+  for (const s of sheets) {
+    const text = sheetXmlToText(s.xml, shared);
+    if (sheets.length > 1) out.push('[シート: ' + s.name + ']');
+    if (text) out.push(text);
+  }
+  return out.join('\n');
+}
+
+// ファイルの名前(拡張子で形式を決める)と中身(Uint8Array か ArrayBuffer)から、文字を取り出す
+async function extractText(name, data) {
+  const ext = extOf(name);
+  if (!MASK_FILE_TYPES.includes(ext)) {
+    throw new Error('対応していない形式です(' + (ext || '拡張子なし') + ')。読めるのは ' + MASK_FILE_TYPES.join('・') + ' です。PDF・.doc・.xls は、文字をコピーして貼り付けてください');
+  }
+  const bytes = toBytes(data);
+  if (bytes.length > MAX_FILE) throw new Error('ファイルが大きすぎます(上限 ' + (MAX_FILE / 1024 / 1024) + 'MB)');
+  if (ext === '.txt') return decodeText(bytes);
+  if (ext === '.docx') return extractDocx(bytes);
+  return extractXlsx(bytes);
+}
+
+return { MASK_FILE_TYPES, decodeText, listZip, unescapeXml, colIndex, openXlsx, cellValue, extractText };
+})();
+__m["src/ledger-xlsx.mjs"] = (function () {
+// 台帳の Excel の読み込み(F04c): 国交省の「施工体制台帳(作成例)」の様式の .xlsx を、そのまま読んで台帳の入力の形にする。
+// 欄の位置は決め打ちしない。シートのセルから欄名(「工事名称及び工事内容」「工期」など)の文字を探し、その右の値のセルを読む。
+// 値のセルは、欄名のセル(結合セルならその範囲)の右にある、最初の「文字の入ったセル」か「結合セルの左上」。
+// 見つからなければ、欄名のすぐ右のセル。別の欄名に当たったら、そこまでで探すのをやめる。
+// 作成例の様式は、右に「《下請負人に関する事項》」の区画があり、同じ欄名(工事名称・工期・会社名など)が並ぶ。
+// その見出しのセルから右下は下請負人の区画として、欄名も値も探さない。
+// 読めない欄は推測で埋めず、欄ごとに unreadable に挙げる(cause: not_found = 欄が無い、empty = 値が無い、invalid = 値を読めない)。
+// 読むのは元請けの7つの欄だけ(工事名・発注者・工期の始めと終わり・請負代金額・会社名・監理技術者/主任技術者の名前)。
+// 許可番号・下請負人の欄・保険の欄などは読まない。zip の展開は src/mask/extract.mjs の部品(外の部品は使わない)。
+//
+// 返り値: { ledger, unreadable: [{ key, field, reason, cause, raw? }], found: { key: { label, value } }, form, sheet }
+//   ledger は src/ledger-text.mjs の parseLedgerText と同じ形({ project, prime, subcontractors, warnings })
+const { openXlsx, cellValue, colIndex } = __m["src/mask/extract.mjs"];
+const { parseAmount, parseDate, parsePeriod } = __m["src/ledger-text.mjs"];
+
+const MAX_FILE = 30 * 1024 * 1024;
+
+// 欄名の文字(空白・改行・かっこ「［］[]」を除いたもの)に当てる形
+const FIELDS = [
+  { id: 'name', keys: ['project.name'], field: '工事名', re: /^工事(名|名称|件名)(及び工事内容)?$/ },
+  { id: 'orderer', keys: ['project.orderer'], field: '発注者', re: /^発注者(名)?(及び住所)?$/ },
+  { id: 'period', keys: ['project.periodFrom', 'project.periodTo'], field: '工期', re: /^工期$/ },
+  { id: 'amount', keys: ['project.contractAmount'], field: '請負代金額', re: /^請負代金(の)?額$/ },
+  { id: 'prime', keys: ['prime.name'], field: '会社名', re: /^(会社名|商号|商号又は名称|建設業者名)(・事業者ID)?$/ },
+  { id: 'engineer', keys: ['prime.engineer.name'], field: '監理技術者名・主任技術者名', re: /^((監理|主任)技術者(名|氏名)?[・/／]?){1,2}$/ },
+];
+const FIELD_NAME = {
+  'project.name': '工事名',
+  'project.orderer': '発注者',
+  'project.periodFrom': '工期(始め)',
+  'project.periodTo': '工期(終わり)',
+  'project.contractAmount': '請負代金額',
+  'prime.name': '会社名',
+  'prime.engineer.name': '監理技術者名・主任技術者名',
+};
+const LEDGER_XLSX_KEYS = Object.keys(FIELD_NAME);
+const FIELD_NAMES = FIELD_NAME;
+
+// 作成例の様式に請負代金額の欄が無いときの理由(exceptions.md 23:00 の回答 A)
+const NO_AMOUNT_IN_SAKUSEIREI = '作成例の様式に請負代金額の欄が無い。契約書面の写しで確かめる';
+
+const normLabel = (s) => String(s ?? '').replace(/[\s［］[\]]/g, '');
+const oneLine = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+const colName = (i) => { let s = ''; for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
+const refOf = (r, c) => colName(c) + (r + 1);
+const parseRef = (ref) => { const m = String(ref).match(/^([A-Z]+)(\d+)$/); return m ? { r: Number(m[2]) - 1, c: colIndex(m[1]) } : null; };
+
+// シートの XML を、セルの表(行 → 列 → 値)と結合セルの範囲にする
+function readSheet(xml, shared) {
+  const cells = new Map();
+  for (const rm of xml.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+    for (const cm of (rm[1] || '').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const tag = '<c ' + cm[1];
+      const rf = (tag.match(/\sr\s*=\s*"([A-Z]+\d+)"/) || [])[1];
+      const pos = rf && parseRef(rf);
+      if (!pos) continue;
+      const v = cellValue(tag, cm[2] || '', shared);
+      if (v.text === '' && v.number === null) continue;
+      if (!cells.has(pos.r)) cells.set(pos.r, new Map());
+      cells.get(pos.r).set(pos.c, v);
+    }
+  }
+  const merges = [];
+  for (const m of xml.matchAll(/<mergeCell\b[^>]*\bref\s*=\s*"([A-Z]+\d+):([A-Z]+\d+)"/g)) {
+    const a = parseRef(m[1]), b = parseRef(m[2]);
+    if (a && b) merges.push({ r1: a.r, c1: a.c, r2: b.r, c2: b.c });
+  }
+  // 下請負人の区画(見出しのセルから右下)。無ければ null
+  let subZone = null;
+  for (const [r, row] of cells) for (const [c, v] of row) {
+    if (/下請負人に関する事項/.test(v.text) && (!subZone || r < subZone.r || (r === subZone.r && c < subZone.c))) subZone = { r, c };
+  }
+  return { cells, merges, subZone };
+}
+const inSubZone = (sheet, r, c) => !!sheet.subZone && r >= sheet.subZone.r && c >= sheet.subZone.c;
+
+const cellAt = (sheet, r, c) => sheet.cells.get(r)?.get(c) ?? null;
+const mergeAt = (sheet, r, c) => sheet.merges.find((m) => r >= m.r1 && r <= m.r2 && c >= m.c1 && c <= m.c2) ?? null;
+const isLabel = (text) => FIELDS.some((f) => f.re.test(normLabel(text)));
+
+// 欄名のセルの右の値のセルの位置
+function valueCellOf(sheet, r, c) {
+  const own = mergeAt(sheet, r, c);
+  const start = (own ? own.c2 : c) + 1;
+  const rowCells = sheet.cells.get(r) ?? new Map();
+  const lastCol = Math.max(start, ...rowCells.keys(), ...sheet.merges.filter((m) => m.r1 === r).map((m) => m.c2));
+  for (let cc = start; cc <= lastCol; cc++) {
+    if (inSubZone(sheet, r, cc)) break;
+    const v = rowCells.get(cc);
+    const m = mergeAt(sheet, r, cc);
+    const topLeft = m && m.r1 === r && m.c1 === cc;
+    if (m && !topLeft) { cc = m.c2; continue; } // 結合セルの途中(上の行から続くものを含む)は飛ばす
+    if (v || topLeft) {
+      if (v && isLabel(v.text)) break; // 別の欄名に当たった
+      return { r, c: cc };
+    }
+  }
+  return { r, c: start };
+}
+
+// 値の読み方
+const readText = (v) => oneLine(v ? v.text : '');
+
+function readPeriod(raw) {
+  const s = oneLine(raw);
+  if (s === '') return { cause: 'empty' };
+  if (s.replace(/[自至年月日から〜～~まで\s]/g, '') === '') return { cause: 'empty', template: true };
+  // 「自 2026年10月1日 至 2027年3月15日」(作成例の様式の書き方)と「A から B まで」の両方を読む
+  const m = s.match(/^自\s*(.*?)\s*至\s*(.*)$/);
+  if (m) {
+    const from = m[1] === '' ? '' : parseDate(m[1]);
+    const to = m[2] === '' ? '' : parseDate(m[2]);
+    return { from, to, rawFrom: m[1], rawTo: m[2] };
+  }
+  const p = parsePeriod(s);
+  if (p.error && p.from === p.to) return { from: null, to: null, rawFrom: s, rawTo: s };
+  return { from: parseDate(p.from) ?? (p.from === '' ? '' : null), to: parseDate(p.to) ?? (p.to === '' ? '' : null), rawFrom: p.from, rawTo: p.to };
+}
+
+// 監理技術者名・主任技術者名の欄: 作成例の様式は同じ欄に「専任・非専任」の文字がある。その語を除いた残りを名前とする
+function readEngineer(raw) {
+  const rest = oneLine(String(raw ?? '').replace(/非?専\s*任/g, ' '));
+  return { name: rest, template: rest === '' && oneLine(raw) !== '' };
+}
+
+const set = (obj, key, value) => {
+  const ks = key.split('.');
+  let o = obj;
+  for (const k of ks.slice(0, -1)) o = o[k];
+  o[ks.at(-1)] = value;
+};
+
+const toBytes = (data) => {
+  if (data instanceof Uint8Array) return data;
+  if (data instanceof ArrayBuffer) return new Uint8Array(data);
+  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  throw new Error('ファイルの中身が読めません(バイトの並びを渡してください)');
+};
+
+async function readLedgerXlsx(data) {
+  const bytes = toBytes(data);
+  if (bytes.length > MAX_FILE) throw new Error('ファイルが大きすぎます(上限 ' + (MAX_FILE / 1024 / 1024) + 'MB)');
+  let book;
+  try {
+    book = await openXlsx(bytes);
+  } catch (e) {
+    throw new Error('Excel(.xlsx)として読めません: ' + (e && e.message ? e.message : String(e)) + '。.xls(古い形式)は Excel で .xlsx に保存し直してください');
+  }
+  const sheets = book.sheets.map((s) => ({ name: s.name, ...readSheet(s.xml, book.shared) }));
+
+  // 欄名のセルを、シートの順・上の行から・左の列から探す。最初に当たったものを使う
+  const hits = {};
+  let sakuseirei = false;
+  let firstSheet = null;
+  for (const sh of sheets) {
+    for (const r of [...sh.cells.keys()].sort((a, b) => a - b)) {
+      const row = sh.cells.get(r);
+      for (const c of [...row.keys()].sort((a, b) => a - b)) {
+        if (inSubZone(sh, r, c)) continue;
+        const text = row.get(c).text;
+        if (/施工体制台帳\s*[（(]\s*作成例\s*[）)]/.test(text)) sakuseirei = true;
+        const label = normLabel(text);
+        for (const f of FIELDS) {
+          if (hits[f.id] || !f.re.test(label)) continue;
+          hits[f.id] = { sheet: sh, r, c };
+          firstSheet ||= sh.name;
+        }
+      }
+    }
+  }
+
+  const project = { name: '', place: '', orderer: '', contractAmount: null, periodFrom: '', periodTo: '' };
+  const prime = { name: '', licenseNumber: '', licenseType: null, engineer: { role: null, name: '', qualification: '' } };
+  const ledger = { project, prime, subcontractors: [], warnings: [] };
+  const unreadable = [];
+  const found = {};
+  const bad = (key, cause, reason, raw) => unreadable.push({ key, field: FIELD_NAME[key], reason, cause, ...(raw ? { raw } : {}) });
+
+  for (const f of FIELDS) {
+    const h = hits[f.id];
+    if (!h) {
+      for (const key of f.keys) {
+        const reason = key === 'project.contractAmount' && sakuseirei
+          ? NO_AMOUNT_IN_SAKUSEIREI
+          : '「' + f.field + '」の欄が見つかりません(欄名の文字が様式の中に無い)';
+        bad(key, 'not_found', reason);
+      }
+      continue;
+    }
+    const vpos = valueCellOf(h.sheet, h.r, h.c);
+    const label = refOf(h.r, h.c), value = refOf(vpos.r, vpos.c);
+    for (const key of f.keys) found[key] = { label, value, sheet: h.sheet.name };
+    const v = cellAt(h.sheet, vpos.r, vpos.c);
+    const where = '(欄名 ' + label + '、値 ' + value + ')';
+
+    if (f.id === 'period') {
+      if (v && v.number !== null) { for (const key of f.keys) bad(key, 'invalid', '工期が1つの数で、始めと終わりを読めません' + where, v.text); continue; }
+      const p = readPeriod(v ? v.text : '');
+      if (p.cause === 'empty') {
+        for (const key of f.keys) bad(key, 'empty', (p.template ? '工期の欄に日付が入っていません(様式の雛形の文字だけ)' : '工期の欄が空です') + where);
+        continue;
+      }
+      for (const [key, val, raw, side] of [['project.periodFrom', p.from, p.rawFrom, '始め'], ['project.periodTo', p.to, p.rawTo, '終わり']]) {
+        if (val) set(ledger, key, val);
+        else if (val === '') bad(key, 'empty', '工期の' + side + 'の日付が空です' + where);
+        else bad(key, 'invalid', '工期の' + side + 'の日付を読めません(「自 2026年10月1日 至 2027年3月15日」の形で書いてください)' + where, raw);
+      }
+      continue;
+    }
+    const key = f.keys[0];
+    if (f.id === 'amount') {
+      if (v && v.number !== null) {
+        if (Number.isSafeInteger(v.number) && v.number >= 0) set(ledger, key, v.number);
+        else bad(key, 'invalid', '請負代金額が円の整数ではありません' + where, v.text);
+        continue;
+      }
+      const raw = readText(v);
+      if (raw === '') { bad(key, 'empty', '請負代金額の欄が空です' + where); continue; }
+      const a = parseAmount(raw);
+      if (a.value === null) bad(key, 'invalid', (a.error || '金額を読めません') + where, raw);
+      else set(ledger, key, a.value);
+      continue;
+    }
+    if (f.id === 'engineer') {
+      const e = readEngineer(v ? v.text : '');
+      if (e.name === '') { bad(key, 'empty', (e.template ? '名前が入っていません(様式の「専任・非専任」の文字だけ)' : '監理技術者名・主任技術者名の欄が空です') + where); continue; }
+      prime.engineer.name = e.name;
+      const lab = normLabel(cellAt(h.sheet, h.r, h.c).text);
+      if (/監理/.test(lab) && !/主任/.test(lab)) prime.engineer.role = 'kanri';
+      else if (/主任/.test(lab) && !/監理/.test(lab)) prime.engineer.role = 'shunin';
+      else ledger.warnings.push('様式の欄が「監理技術者名・主任技術者名」なので、監理技術者か主任技術者かは決めていません。台帳の文の「監理技術者 氏名」の行で確かめてください');
+      continue;
+    }
+    const raw = readText(v);
+    if (raw === '') { bad(key, 'empty', '「' + f.field + '」の欄が空です' + where); continue; }
+    set(ledger, key, raw);
+  }
+  ledger.warnings.push('Excel から読むのは元請けの7つの欄だけです。許可番号・下請負人の欄は読まないので、台帳の文に書き足してください');
+  return { ledger, unreadable, found, form: sakuseirei ? 'mlit-sakuseirei' : null, sheet: firstSheet };
+}
+
+// 読んだ台帳を、台帳の文(「2. 施工体制台帳の点検」に貼る形。src/ledger-text.mjs で読める)にする。読めない欄は値を空にして行を残す
+const cellText = (s) => String(s ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
+const jpDate = (iso) => { const m = String(iso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${Number(m[1])}年${Number(m[2])}月${Number(m[3])}日` : ''; };
+function ledgerToText(ledger) {
+  const p = ledger.project, pr = ledger.prime;
+  const period = p.periodFrom || p.periodTo ? `${jpDate(p.periodFrom)} から ${jpDate(p.periodTo)} まで` : '';
+  const amount = Number.isSafeInteger(p.contractAmount) ? '金 ' + p.contractAmount.toLocaleString('en-US') + '円' : '';
+  const role = pr.engineer.role === 'shunin' ? '主任技術者' : '監理技術者';
+  return [
+    '工事名: ' + cellText(p.name),
+    '## 1. 作成建設業者(元請)',
+    '| 項目 | 内容 |',
+    '|---|---|',
+    '| 商号 | ' + cellText(pr.name) + ' |',
+    '| 許可番号 |  |',
+    '## 2. 発注者との契約',
+    '| 項目 | 内容 |',
+    '|---|---|',
+    '| 発注者 | ' + cellText(p.orderer) + ' |',
+    '| 工期 | ' + period + ' |',
+    '| 請負代金額 | ' + amount + ' |',
+    '## 3. 元請の技術者等',
+    '| 項目 | 内容 |',
+    '|---|---|',
+    '| ' + role + ' 氏名 | ' + cellText(pr.engineer.name) + ' |',
+    '| 資格 |  |',
+    '## 4. 下請負人(一次)',
+    '',
+  ].join('\n');
+}
+
+return { LEDGER_XLSX_KEYS, FIELD_NAMES, NO_AMOUNT_IN_SAKUSEIREI, readLedgerXlsx, ledgerToText };
+})();
 __m["data/quotes.json"] = {"note":"法令の抜き書き。text は data/sources の原文に一字一句そのまま入っている文(空白の違いだけ許す)。文の一部を抜くときも、ただし書・「を除き」・読み替え・適用しないの部分は切り落とさない。paragraph は項の番号、item は号の番号(無ければ null)。照合は src/quote-check.mjs と scripts/check-quotes.mjs","quotes":[{"id":"q-kensetsu-24_8-1","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"特定建設業者は、発注者から直接建設工事を請け負つた場合において、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になるときは"},{"id":"q-kensetsu-24_8-1-items","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"下請負人の商号又は名称、当該下請負人に係る建設工事の内容及び工期その他の国土交通省令で定める事項を記載した施工体制台帳を作成し、工事現場ごとに備え置かなければならない。"},{"id":"q-kensetsu-24_8-1-taicho","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"施工体制台帳を作成し、工事現場ごとに備え置かなければならない。"},{"id":"q-kensetsu-24_8-2","sourceId":"kensetsu-24_8","article":"24の8","paragraph":2,"item":null,"text":"前項の建設工事の下請負人は、その請け負つた建設工事を他の建設業を営む者に請け負わせたときは、国土交通省令で定めるところにより、同項の特定建設業者に対して、当該他の建設業を営む者の商号又は名称、当該者の請け負つた建設工事の内容及び工期その他の国土交通省令で定める事項を通知しなければならない。"},{"id":"q-kensetsu-24_8-4","sourceId":"kensetsu-24_8","article":"24の8","paragraph":4,"item":null,"text":"第一項の特定建設業者は、国土交通省令で定めるところにより、当該建設工事における各下請負人の施工の分担関係を表示した施工体系図を作成し、これを当該工事現場の見やすい場所に掲げなければならない。"},{"id":"q-rei-7_4-1","sourceId":"rei-7_4","article":"7の4","paragraph":1,"item":null,"text":"法第二十四条の八第一項の政令で定める金額は、五千万円とする。ただし、特定建設業者が発注者から直接請け負つた建設工事が建築一式工事である場合においては、八千万円とする。"},{"id":"q-nyukei-15-1","sourceId":"nyukei-15","article":"15","paragraph":1,"item":null,"text":"公共工事についての建設業法第二十四条の八第一項、第二項及び第四項の規定の適用については、これらの規定中「特定建設業者」とあるのは「建設業者」と、同条第一項中「締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になる」とあるのは「下請契約を締結した」と、同条第四項中「見やすい場所」とあるのは「工事関係者が見やすい場所及び公衆が見やすい場所」とする。"},{"id":"q-nyukei-15-2","sourceId":"nyukei-15","article":"15","paragraph":2,"item":null,"text":"公共工事の受注者（前項の規定により読み替えて適用される建設業法第二十四条の八第一項の規定により同項に規定する施工体制台帳（以下「施工体制台帳」という。）を作成しなければならないこととされているものに限る。）は、当該公共工事に関する工事現場の施工体制を発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、作成した施工体制台帳（同項の規定により記載すべきものとされた事項に変更が生じたことに伴い新たに作成されたものを含む。）の写しを発注者に提出しなければならない。この場合においては、同条第三項の規定は、適用しない。"},{"id":"q-kensetsu-3-1","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":null,"text":"建設業を営もうとする者は、次に掲げる区分により、この章で定めるところにより、二以上の都道府県の区域内に営業所（本店又は支店若しくは政令で定めるこれに準ずるものをいう。以下同じ。）を設けて営業をしようとする場合にあつては国土交通大臣の、一の都道府県の区域内にのみ営業所を設けて営業をしようとする場合にあつては当該営業所の所在地を管轄する都道府県知事の許可を受けなければならない。ただし、政令で定める軽微な建設工事のみを請け負うことを営業とする者は、この限りでない。"},{"id":"q-kensetsu-3-1-2","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":2,"text":"その者が発注者から直接請け負う一件の建設工事につき、その工事の全部又は一部を、下請代金の額（その工事に係る下請契約が二以上あるときは、下請代金の額の総額）が政令で定める金額以上となる下請契約を締結して施工しようとするもの"},{"id":"q-rei-2-1","sourceId":"rei-2","article":"2","paragraph":1,"item":null,"text":"法第三条第一項第二号の政令で定める金額は、五千万円とする。ただし、同項の許可を受けようとする建設業が建築工事業である場合においては、八千万円とする。"},{"id":"q-kensetsu-26-1","sourceId":"kensetsu-26","article":"26","paragraph":1,"item":null,"text":"建設業者は、その請け負つた建設工事を施工するときは、当該建設工事に関し第七条第二号イ、ロ又はハに該当する者で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「主任技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-2","sourceId":"kensetsu-26","article":"26","paragraph":2,"item":null,"text":"発注者から直接建設工事を請け負つた特定建設業者は、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が第三条第一項第二号の政令で定める金額以上になる場合においては、前項の規定にかかわらず、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者（当該建設工事に係る建設業が指定建設業である場合にあつては、同号イに該当する者又は同号ハの規定により国土交通大臣が同号イに掲げる者と同等以上の能力を有するものと認定した者）で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「監理技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-3","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":null,"text":"公共性のある施設若しくは工作物又は多数の者が利用する施設若しくは工作物に関する重要な建設工事で政令で定めるものについては、前二項の規定により置かなければならない主任技術者又は監理技術者は、工事現場ごとに、専任の者でなければならない。ただし、次に掲げる主任技術者又は監理技術者については、この限りでない。"},{"id":"q-kensetsu-26-3-1","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":1,"text":"一　当該建設工事が次のイからハまでに掲げる要件のいずれにも該当する場合における主任技術者又は監理技術者\n　イ　当該建設工事の請負代金の額が政令で定める金額未満となるものであること。\n　ロ　当該建設工事の工事現場間の移動時間又は連絡方法その他の当該工事現場の施工体制の確保のために必要な事項に関し国土交通省令で定める要件に適合するものであること。\n　ハ　主任技術者又は監理技術者が当該建設工事の工事現場の状況の確認その他の当該工事現場に係る第二十六条の四第一項に規定する職務を情報通信技術を利用する方法により行うため必要な措置として国土交通省令で定めるものが講じられるものであること。"},{"id":"q-kensetsu-26-3-2","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":2,"text":"二　当該建設工事の工事現場に、当該監理技術者の行うべき第二十六条の四第一項に規定する職務を補佐する者として、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者に準ずる者として政令で定める者を専任で置く場合における監理技術者"},{"id":"q-kensetsu-26-4","sourceId":"kensetsu-26","article":"26","paragraph":4,"item":null,"text":"前項ただし書の規定は、同項各号の建設工事の工事現場の数が、同一の主任技術者又は監理技術者が各工事現場に係る第二十六条の四第一項に規定する職務を行つたとしてもその適切な遂行に支障を生ずるおそれがないものとして政令で定める数を超えるときは、適用しない。"},{"id":"q-rei-27-1","sourceId":"rei-27","article":"27","paragraph":1,"item":null,"text":"法第二十六条第三項の政令で定める重要な建設工事は、次の各号のいずれかに該当する建設工事で工事一件の請負代金の額が四千五百万円（当該建設工事が建築一式工事である場合にあつては、九千万円）以上のものとする。"},{"id":"q-rei-27-1-1","sourceId":"rei-27","article":"27","paragraph":1,"item":1,"text":"国又は地方公共団体が注文者である施設又は工作物に関する建設工事"},{"id":"q-rei-27-2","sourceId":"rei-27","article":"27","paragraph":2,"item":null,"text":"前項に規定する建設工事のうち密接な関係のある二以上の建設工事を同一の建設業者が同一の場所又は近接した場所において施工するものについては、同一の専任の主任技術者がこれらの建設工事を管理することができる。"},{"id":"q-kensetsu-24_8-3","sourceId":"kensetsu-24_8","article":"24の8","paragraph":3,"item":null,"text":"第一項の特定建設業者は、同項の発注者から請求があつたときは、同項の規定により備え置かれた施工体制台帳を、その発注者の閲覧に供しなければならない。"},{"id":"q-mlit-guideline-tax","sourceId":"mlit-kyoka-guideline","article":null,"paragraph":null,"item":null,"section":"【その他】2.","page":44,"text":"法、令及び規則の規定中、「請負代金の額」その他の個々の取引に係る請負代金に係る用語は、当該取引に係る消費税及び地方消費税の額を含むものとする。"}]};
-__m["data/sources/index.json"] = {"note":"法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は、根拠に使う節だけを PDF から文字のまま写して保存する(全文は再配布しない)","sources":[{"id":"kensetsu-3","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"3","title":"建設業法 第3条（建設業の許可）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-3.txt"},{"id":"kensetsu-24_8","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"24の8","title":"建設業法 第24条の8（施工体制台帳及び施工体系図の作成等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-24_8.txt"},{"id":"kensetsu-26","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"26","title":"建設業法 第26条（主任技術者及び監理技術者の設置等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-26.txt"},{"id":"rei-2","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"2","title":"建設業法施行令 第2条（法第三条第一項第二号の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-2.txt"},{"id":"rei-7_4","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"7の4","title":"建設業法施行令 第7条の4（法第二十四条の八第一項の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-7_4.txt"},{"id":"rei-27","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"27","title":"建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-27.txt"},{"id":"nyukei-15","kind":"law","law":"公共工事の入札及び契約の適正化の促進に関する法律","lawId":"412AC0000000127","article":"15","title":"公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等）","url":"https://laws.e-gov.go.jp/law/412AC0000000127","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/412AC0000000127?response_format=xml","revisionId":"412AC0000000127_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-nyukei-15.txt"},{"id":"mlit-kyoka-guideline","kind":"document","title":"建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)","publisher":"国土交通省","url":"https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf","pageUrl":"https://www.mlit.go.jp/totikensangyo/const/sosei_const_tk1_000002.html","section":"【その他】2.","page":44,"fetchedAt":"2026-11-02","file":"mlit-kyoka-guideline-sonota-2.txt","excerpt":"44ページの「２．法等における「請負代金の額」等の内容について」の見出しと本文だけ。PDF の文字(ToUnicode)をそのまま取り出した","license":"PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"},{"id":"mlit-doboku-spec-r8","kind":"document","title":"土木工事共通仕様書(案)令和8年3月(国土交通省。第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42)","publisher":"国土交通省","url":"https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html","pageUrl":"https://www.mlit.go.jp/tec/tec_tk_000052.html","pdfUrl":"https://www.mlit.go.jp/tec/content/001990182.pdf","section":"1-1-1","fetchedAt":"2026-11-02","file":"mlit-doboku-spec-r8-1-1-1.txt","excerpt":"HTML版【試行版】の第1節の本文から、上の7つの条の文だけを取り出した(タグを外し、行の中の空白を1つにしただけ。手で打ち直していない。図の説明の埋め込みデータは除いた)。PDF版とは 1-1-1-6 の文だけを突き合わせた(PDF の85・86ページの文字と同じ。data/plan-items.json の page は PDF のページ)。ほかの条は突き合わせていない","license":"ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"}]};
+__m["data/sources/index.json"] = {"note":"法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は、根拠に使う節だけを PDF から文字のまま写して保存する(全文は再配布しない)","sources":[{"id":"kensetsu-3","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"3","title":"建設業法 第3条（建設業の許可）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-3.txt"},{"id":"kensetsu-24_8","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"24の8","title":"建設業法 第24条の8（施工体制台帳及び施工体系図の作成等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-24_8.txt"},{"id":"kensetsu-26","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"26","title":"建設業法 第26条（主任技術者及び監理技術者の設置等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-26.txt"},{"id":"rei-2","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"2","title":"建設業法施行令 第2条（法第三条第一項第二号の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-2.txt"},{"id":"rei-7_4","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"7の4","title":"建設業法施行令 第7条の4（法第二十四条の八第一項の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-7_4.txt"},{"id":"rei-27","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"27","title":"建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-27.txt"},{"id":"nyukei-15","kind":"law","law":"公共工事の入札及び契約の適正化の促進に関する法律","lawId":"412AC0000000127","article":"15","title":"公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等）","url":"https://laws.e-gov.go.jp/law/412AC0000000127","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/412AC0000000127?response_format=xml","revisionId":"412AC0000000127_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-nyukei-15.txt"},{"id":"mlit-kyoka-guideline","kind":"document","title":"建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)","publisher":"国土交通省","url":"https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf","pageUrl":"https://www.mlit.go.jp/totikensangyo/const/sosei_const_tk1_000002.html","section":"【その他】2.","page":44,"fetchedAt":"2026-11-02","file":"mlit-kyoka-guideline-sonota-2.txt","excerpt":"44ページの「２．法等における「請負代金の額」等の内容について」の見出しと本文だけ。PDF の文字(ToUnicode)をそのまま取り出した","license":"PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"},{"id":"mlit-doboku-spec-r8","kind":"document","title":"土木工事共通仕様書(案)令和8年3月(国土交通省。第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42)","publisher":"国土交通省","url":"https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html","pageUrl":"https://www.mlit.go.jp/tec/tec_tk_000052.html","pdfUrl":"https://www.mlit.go.jp/tec/content/001990182.pdf","section":"1-1-1","fetchedAt":"2026-11-02","file":"mlit-doboku-spec-r8-1-1-1.txt","excerpt":"HTML版【試行版】の第1節の本文から、上の7つの条の文だけを取り出した(タグを外し、行の中の空白を1つにしただけ。手で打ち直していない。図の説明の埋め込みデータは除いた)。PDF版とは 1-1-1-6 の文だけを突き合わせた(PDF の85・86ページの文字と同じ。data/plan-items.json の page は PDF のページ)。ほかの条は突き合わせていない","license":"ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"},{"id":"mlit-taicho-sakuseirei","kind":"document","title":"施工体制台帳(作成例)(国土交通省。Excel の様式。施工体制台帳、施工体系図等のページ)","publisher":"国土交通省","url":"https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx","pageUrl":"https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html","fetchedAt":"2026-11-02","file":"mlit-taicho-sakuseirei.xlsx","sha256":"1464309f397ab7657275dbb5b267362881599c2d3ac6b90f646dbe88e25b6009","excerpt":"取得した .xlsx をそのまま置いた(34,977 バイト。手を加えていない)。台帳の Excel の読み込み(src/ledger-xlsx.mjs)の試験で、本物の様式として読む。この様式には請負代金額の欄が無い","license":"ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"}]};
 __m["data/rules.json"] = {"note":"規則表。1行 = 1つの決まり。condition の欄がすべて入力と同じ行が当てはまる。result は判定の結果(status = 台帳を作るか、copyToOrderer = 写しを発注者に出すか)。basis は data/quotes.json の抜き書きの id。exceptions は、根拠の原文にある例外・参照(ただし・を除き・この限りでない・準用・読み替え)をこの行でどう扱ったか。値の意味: orderer は public(公共工事)か private(民間工事)、direct は発注者から直接請け負ったか、hasSubcontract は下請契約を結んだか、ictMeasure は発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を受注者が講じているか。民間の行の値: subcontractTotal は発注者から直接請け負った工事の下請契約の請負代金の総額(円・消費税込み。amountBasis を見る)、workType は kenchiku-ikkatsu(建築一式工事)か other(それ以外)、license は元請けの許可の種類で tokutei(特定建設業)か ippan(一般建設業)。condition の値がオブジェクトのときは比べ方(gte = 以上、lt = 未満、in = どれか、notIn = どれでもない)","rules":[{"id":"pub-taicho-create","scope":"public","condition":{"orderer":"public","direct":true,"hasSubcontract":true},"action":"施工体制台帳を作り、工事現場ごとに備え置く","result":{"status":"required"},"basis":[{"quoteId":"q-nyukei-15-1"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-24_8-1-taicho"}],"exceptions":["入契法 第15条第1項の読み替え: 公共工事では、建設業法 第24条の8第1項の「特定建設業者」を「建設業者」と、金額の要件(下請契約の総額が政令で定める金額以上)を「下請契約を締結した」と読む。このため、公共工事では許可の種類(特定・一般)と下請けの総額にかかわらず、下請契約を結べば作る","施行令 第7条の4 の金額(ただし書の建築一式工事の金額を含む)は、この読み替えにより公共工事には使わない"]},{"id":"pub-copy-submit","scope":"public","condition":{"orderer":"public","direct":true,"hasSubcontract":true,"ictMeasure":false},"action":"作った施工体制台帳(記載事項の変更に伴い新たに作ったものを含む)の写しを発注者に出す","result":{"copyToOrderer":"required"},"basis":[{"quoteId":"q-nyukei-15-2"}],"exceptions":["入契法 第15条第2項の「を除き」: 発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を講じている場合は出さなくてよい。この場合は行 pub-copy-exempt が当てはまる","入契法 第15条第2項の「読み替えて適用される」: 対象は第1項で読み替えた建設業法 第24条の8第1項により台帳を作る受注者に限る(行 pub-taicho-create と同じ条件)","入契法 第15条第2項の後段「同条第三項の規定は、適用しない」: 「同条」は、この項の中で直前に出てくる建設業法 第24条の8 を指すと読み、同条第3項(発注者の請求による閲覧)は適用しないとした(この読み方はツールの解釈。原文に条の名は書いていない)","措置に当たるかは国土交通省令で定めるもの(このツールは省令の原文を取得していないので、措置を講じていないことは利用者が確かめる)"]},{"id":"pub-copy-exempt","scope":"public","condition":{"orderer":"public","direct":true,"hasSubcontract":true,"ictMeasure":true},"action":"措置を講じているので、写しを発注者に出さなくてよい(台帳は作る)","result":{"copyToOrderer":"not_required"},"basis":[{"quoteId":"q-nyukei-15-2"}],"exceptions":["入契法 第15条第2項の「を除き」をこの行で扱う。措置に当たるかは国土交通省令で定めるもの(このツールは省令の原文を取得していないので、措置に当たるかは利用者が確かめる)","台帳の作成そのものは免除されない(行 pub-taicho-create)"]},{"id":"pub-no-subcontract","scope":"public","condition":{"orderer":"public","hasSubcontract":false},"action":"下請契約を結んでいないので、施工体制台帳は作らなくてよい(下請契約を結んだら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-nyukei-15-1"},{"quoteId":"q-nyukei-15-2"}],"exceptions":["入契法 第15条第1項の読み替え: 公共工事で台帳を作る条件は「下請契約を締結した」こと。結んでいなければ作る条件に当たらない","入契法 第15条第2項の「作成しなければならないこととされているものに限る」: 写しを出すのは台帳を作る受注者だけなので、台帳を作らなければ写しも出すものが無い(not_applicable)"]},{"id":"pub-not-direct","scope":"public","condition":{"orderer":"public","direct":false},"action":"発注者から直接請け負っていないので、元請けとして施工体制台帳を作る対象にしない","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-nyukei-15-1"}],"exceptions":["入契法 第15条第1項の読み替えは「特定建設業者」と金額の要件を変えるが、「発注者から直接建設工事を請け負つた場合」の要件は変えない"]},{"id":"pub-sub-notify","scope":"public","condition":{"orderer":"public","direct":false,"hasSubcontract":true},"action":"下請負人として請け負った工事を他の建設業を営む者に請け負わせたので、元請けに再下請の商号・工事の内容・工期などを通知する","result":{"notifyPrime":"required"},"basis":[{"quoteId":"q-kensetsu-24_8-2"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-nyukei-15-1"}],"exceptions":["入契法 第15条第1項の読み替え: 建設業法 第24条の8第2項の「特定建設業者」は、公共工事では「建設業者」と読む(通知の相手は台帳を作る元請け)","通知する事項の細目は国土交通省令で定める(このツールは省令の原文を取得していない)"]},{"id":"prv-taicho-create","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"gte":50000000}},"action":"特定建設業者が発注者から直接請け負い、下請けの総額(税込み)が五千万円以上なので、施工体制台帳を作り、工事現場ごとに備え置く。民間工事なので写しを発注者に出す決まりは無いが、発注者から請求があれば台帳を閲覧させる","result":{"status":"required","copyToOrderer":"not_required"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-24_8-1-taicho"},{"quoteId":"q-rei-7_4-1"},{"quoteId":"q-kensetsu-24_8-3"},{"quoteId":"q-nyukei-15-2"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","建設業法 第24条の8第1項の「国土交通省令で定めるところにより」「国土交通省令で定める事項」: 台帳の書き方・記載事項は省令による(このツールは省令の原文を取得していない)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","写しを発注者に出す決まりは入契法 第15条第2項で、対象は「公共工事の受注者」に限る。民間工事には当たらないので copyToOrderer は not_required。同項の「を除き」(措置)と「読み替えて適用される」は公共工事の話なので、この行では使わない","閲覧: 発注者から請求があったときは台帳を閲覧させる(建設業法 第24条の8第3項)"]},{"id":"prv-taicho-create-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":"kenchiku-ikkatsu","subcontractTotal":{"gte":80000000}},"action":"特定建設業者が発注者から直接請け負った建築一式工事で、下請けの総額(税込み)が八千万円以上なので、施工体制台帳を作り、工事現場ごとに備え置く。民間工事なので写しを発注者に出す決まりは無いが、発注者から請求があれば台帳を閲覧させる","result":{"status":"required","copyToOrderer":"not_required"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-24_8-1-taicho"},{"quoteId":"q-rei-7_4-1"},{"quoteId":"q-kensetsu-24_8-3"},{"quoteId":"q-nyukei-15-2"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","建設業法 第24条の8第1項の「国土交通省令で定めるところにより」「国土交通省令で定める事項」: 台帳の書き方・記載事項は省令による(このツールは省令の原文を取得していない)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","写しを発注者に出す決まりは入契法 第15条第2項で、対象は「公共工事の受注者」に限る。民間工事には当たらないので copyToOrderer は not_required。同項の「を除き」(措置)と「読み替えて適用される」は公共工事の話なので、この行では使わない","閲覧: 発注者から請求があったときは台帳を閲覧させる(建設業法 第24条の8第3項)"]},{"id":"prv-below","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"lt":50000000}},"action":"下請けの総額(税込み)が五千万円未満なので、施工体制台帳を作る決まりに当たらない(総額が増えて五千万円以上になったら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-below-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":"kenchiku-ikkatsu","subcontractTotal":{"lt":80000000}},"action":"建築一式工事で下請けの総額(税込み)が八千万円未満なので、施工体制台帳を作る決まりに当たらない(総額が増えて八千万円以上になったら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-ippan-over","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"gte":50000000}},"action":"一般建設業の許可で、下請けの総額(税込み)が五千万円以上の下請契約を結んで元請けとして施工しようとしている。発注者から直接請け負い、この額の下請契約を結んで施工するのは特定建設業の許可の区分(建設業法 第3条第1項第2号)なので、元請けの許可の種類(業種ごとの特定・一般)を許可通知書などで確かめる。特定建設業の許可なら施工体制台帳を作る。あわせて、許可の業種が建築工事業かも確かめる(施行令 第2条のただし書により、建築工事業なら特定建設業の許可が要る境目は八千万円になる。このツールは許可の業種を入力に持たず、工事の種類で境目を選んでいる)","result":{"status":"needs_check"},"basis":[{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事のみを請け負う者は許可が要らない): 下請けの総額が境目以上の工事を元請けとして施工する場面なので、この行では扱わない","建設業法 第3条第1項の「準ずる」(営業所の定義): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 許可を受けようとする建設業が建築工事業なら八千万円。このツールは工事の種類(建築一式工事か)で行を分けていて、許可の業種(建築工事業か)とは別のもの。建築一式工事なら建築工事業の許可で請け負うのが通常だが、それはツールの読み方で原文には無い","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた"]},{"id":"prv-ippan-over-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":"kenchiku-ikkatsu","subcontractTotal":{"gte":80000000}},"action":"一般建設業の許可で、建築一式工事の下請けの総額(税込み)が八千万円以上の下請契約を結んで元請けとして施工しようとしている。この額の下請契約を結んで施工するのは特定建設業の許可の区分(建設業法 第3条第1項第2号)なので、元請けの許可の種類(業種ごとの特定・一般)を許可通知書などで確かめる。特定建設業の許可なら施工体制台帳を作る。あわせて、許可の業種が建築工事業かも確かめる(施行令 第2条のただし書により、建築工事業なら特定建設業の許可が要る境目は八千万円になる。このツールは許可の業種を入力に持たず、工事の種類で境目を選んでいる)","result":{"status":"needs_check"},"basis":[{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事のみを請け負う者は許可が要らない): 下請けの総額が境目以上の工事を元請けとして施工する場面なので、この行では扱わない","建設業法 第3条第1項の「準ずる」(営業所の定義): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 許可を受けようとする建設業が建築工事業なら八千万円。このツールは工事の種類(建築一式工事か)で行を分けていて、許可の業種(建築工事業か)とは別のもの。建築一式工事なら建築工事業の許可で請け負うのが通常だが、それはツールの読み方で原文には無い","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた"]},{"id":"prv-ippan-below","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"lt":50000000}},"action":"一般建設業者なので、施工体制台帳を作る決まり(建設業法 第24条の8第1項。対象は特定建設業者)に当たらない。下請けの総額(税込み)は特定建設業の許可が要る境目(五千万円)より下なので、許可の種類の確認も要らない","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事)と「準ずる」(営業所): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 建築工事業の許可なら境目は八千万円。境目未満の判定は五千万円・八千万円のどちらで見ても変わらない側だけにしてある(一式でない工事は五千万円未満、建築一式工事は八千万円未満)。建築一式工事で五千万円以上八千万円未満のとき、許可の業種が建築工事業でなければ特定の許可が要る場合があるが、このツールは建築一式工事を建築工事業の許可で請け負うものと読んでいる(ツールの読み方で原文には無い)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-ippan-below-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":"kenchiku-ikkatsu","subcontractTotal":{"lt":80000000}},"action":"一般建設業者なので、施工体制台帳を作る決まり(建設業法 第24条の8第1項。対象は特定建設業者)に当たらない。建築一式工事で下請けの総額(税込み)は八千万円より下なので、許可の種類の確認も要らない","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事)と「準ずる」(営業所): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 建築工事業の許可なら境目は八千万円。境目未満の判定は五千万円・八千万円のどちらで見ても変わらない側だけにしてある(一式でない工事は五千万円未満、建築一式工事は八千万円未満)。建築一式工事で五千万円以上八千万円未満のとき、許可の業種が建築工事業でなければ特定の許可が要る場合があるが、このツールは建築一式工事を建築工事業の許可で請け負うものと読んでいる(ツールの読み方で原文には無い)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-not-direct","scope":"private","condition":{"orderer":"private","direct":false},"action":"発注者から直接請け負っていないので、元請けとして施工体制台帳を作る対象にしない(下請けとして再下請に出したときの通知は別)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"}],"exceptions":["建設業法 第24条の8第1項は「発注者から直接建設工事を請け負つた場合」に限る。下請けの総額や許可の種類にかかわらず、この要件に当たらなければ作る対象にならない"]},{"id":"prv-no-subcontract","scope":"private","condition":{"orderer":"private","hasSubcontract":false},"action":"下請契約を結んでいないので、施工体制台帳は作らなくてよい(下請契約を結び、総額が境目以上になったら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"}],"exceptions":["建設業法 第24条の8第1項は「締結した下請契約の請負代金の額」が境目以上のときに限る。下請契約が無ければ当たらない"]}],"amountBasis":{"tax":"included","note":"下請けの総額などの「請負代金の額」は、消費税及び地方消費税の額を含めて境目と比べる。画面の金額の入力欄は税込みで入れる","basis":[{"quoteId":"q-mlit-guideline-tax"}]}};
 __m["src/taicho.mjs"] = (function () {
 // 施工体制台帳が要るか・写しを発注者に出すかの判定(F03a: 公共工事の行、F03b: 民間工事の行)
@@ -1831,264 +2398,6 @@ const CONSTRUCTION_DICT = {
 
 return { CONSTRUCTION_DICT };
 })();
-__m["src/mask/extract.mjs"] = (function () {
-// 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
-// 外の部品(ライブラリ)は使わない。zip の展開は、ブラウザと Node に標準である DecompressionStream('deflate-raw') を使う。
-// 取り出すのは文字だけ。書式・画像・埋め込みのファイルは読まない。
-// 返すのは1つの文字列(段落・行ごとに改行、表のセルはタブで区切る)。
-
-const MASK_FILE_TYPES = ['.txt', '.docx', '.xlsx'];
-
-const MAX_FILE = 30 * 1024 * 1024;       // 読むファイルの大きさの上限
-const MAX_ENTRY = 50 * 1024 * 1024;      // zip の中の1つのファイルを開いた後の大きさの上限(展開しすぎを防ぐ)
-
-const extOf = (name) => {
-  const m = String(name ?? '').toLowerCase().match(/\.[a-z0-9]+$/);
-  return m ? m[0] : '';
-};
-
-const toBytes = (data) => {
-  if (data instanceof Uint8Array) return data;
-  if (data instanceof ArrayBuffer) return new Uint8Array(data);
-  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-  throw new Error('ファイルの中身が読めません(バイトの並びを渡してください)');
-};
-
-// ---- .txt ----
-// UTF-8(BOM の有無どちらも)を先に試し、UTF-8 として読めなければ Shift_JIS として読む
-function decodeText(bytes) {
-  let b = bytes;
-  if (b.length >= 3 && b[0] === 0xef && b[1] === 0xbb && b[2] === 0xbf) b = b.subarray(3);
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(b);
-  } catch {
-    try {
-      return new TextDecoder('shift_jis', { fatal: true }).decode(b);
-    } catch {
-      throw new Error('文字のファイルとして読めません(UTF-8 か Shift_JIS で保存してください)');
-    }
-  }
-}
-
-// ---- zip ----
-const u16 = (b, o) => b[o] | (b[o + 1] << 8);
-const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
-
-async function inflateRaw(data, limit) {
-  if (typeof DecompressionStream !== 'function') throw new Error('この環境では .docx・.xlsx を開けません(DecompressionStream がありません)');
-  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  const reader = stream.getReader();
-  const parts = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.length;
-    if (total > limit) { await reader.cancel(); throw new Error('ファイルの中身が大きすぎます'); }
-    parts.push(value);
-  }
-  const out = new Uint8Array(total);
-  let o = 0;
-  for (const p of parts) { out.set(p, o); o += p.length; }
-  return out;
-}
-
-// zip の中央ディレクトリを読み、名前 → 取り出す関数 の表を返す
-function listZip(bytes) {
-  const b = bytes;
-  let eocd = -1;
-  for (let i = b.length - 22; i >= 0 && i >= b.length - 22 - 0xffff; i--) {
-    if (u32(b, i) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd < 0) throw new Error('.docx・.xlsx の形(zip)になっていません。壊れているか、別の形式のファイルです');
-  const count = u16(b, eocd + 10);
-  let off = u32(b, eocd + 16);
-  const entries = new Map();
-  for (let k = 0; k < count; k++) {
-    if (off + 46 > b.length || u32(b, off) !== 0x02014b50) throw new Error('zip の目次が壊れています');
-    const flags = u16(b, off + 8);
-    const method = u16(b, off + 10);
-    const csize = u32(b, off + 20);
-    const usize = u32(b, off + 24);
-    const nlen = u16(b, off + 28), elen = u16(b, off + 30), clen = u16(b, off + 32);
-    const local = u32(b, off + 42);
-    const name = new TextDecoder('utf-8').decode(b.subarray(off + 46, off + 46 + nlen));
-    entries.set(name, { flags, method, csize, usize, local });
-    off += 46 + nlen + elen + clen;
-  }
-  return entries;
-}
-
-async function readEntry(bytes, entry, name) {
-  if (entry.flags & 1) throw new Error('パスワードのかかったファイルは開けません(' + name + ')');
-  const b = bytes;
-  const lo = entry.local;
-  if (lo + 30 > b.length || u32(b, lo) !== 0x04034b50) throw new Error('zip の中身が壊れています(' + name + ')');
-  const start = lo + 30 + u16(b, lo + 26) + u16(b, lo + 28);
-  const body = b.subarray(start, start + entry.csize);
-  if (entry.method === 0) return body;
-  if (entry.method === 8) return inflateRaw(body, MAX_ENTRY);
-  throw new Error('この圧縮の形式には対応していません(' + name + ')');
-}
-
-async function readXml(bytes, entries, name) {
-  const e = entries.get(name);
-  if (!e) return null;
-  return new TextDecoder('utf-8').decode(await readEntry(bytes, e, name));
-}
-
-// ---- XML ----
-function unescapeXml(s) {
-  return String(s).replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, (all, ent) => {
-    if (ent === 'amp') return '&';
-    if (ent === 'lt') return '<';
-    if (ent === 'gt') return '>';
-    if (ent === 'quot') return '"';
-    if (ent === 'apos') return "'";
-    const n = ent[1] === 'x' ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10);
-    try { return String.fromCodePoint(n); } catch { return all; }
-  });
-}
-
-const attr = (tag, key) => {
-  const m = tag.match(new RegExp('\\s' + key + '\\s*=\\s*"([^"]*)"'));
-  return m ? unescapeXml(m[1]) : null;
-};
-
-// ---- .docx ----
-// 段落(w:p)ごとに1行。分かれた文字の塊(w:t)はつなぐ。w:tab はタブ、w:br・w:cr は改行。表のセルの段落もそれぞれ1行
-function docxXmlToText(xml) {
-  const body = xml.replace(/<w:(?:delText|instrText)\b[^>]*>[\s\S]*?<\/w:(?:delText|instrText)>/g, ''); // 消した文字・フィールドの命令は除く
-  const lines = [];
-  for (const pm of body.matchAll(/<w:p\b[^>]*?(?:\/>|>([\s\S]*?)<\/w:p>)/g)) {
-    const inner = pm[1] || '';
-    let line = '';
-    for (const t of inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>|<w:t\b[^>]*\/>|<w:(tab|br|cr)\b[^>]*\/?>/g)) {
-      if (t[2] === 'tab') line += '\t';
-      else if (t[2]) line += '\n';
-      else if (t[1] !== undefined) line += unescapeXml(t[1]);
-    }
-    lines.push(line);
-  }
-  return lines.join('\n');
-}
-
-async function extractDocx(bytes) {
-  const entries = listZip(bytes);
-  const main = await readXml(bytes, entries, 'word/document.xml');
-  if (main === null) throw new Error('.docx の本文(word/document.xml)が見つかりません');
-  const parts = [docxXmlToText(main)];
-  // 頭書き・脚注・足書きにも名前が入ることがあるので、あれば後ろに足す
-  const extra = [...entries.keys()].filter((n) => /^word\/(header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(n)).sort();
-  for (const n of extra) {
-    const t = docxXmlToText(await readXml(bytes, entries, n)).trim();
-    if (t) parts.push(t);
-  }
-  return parts.join('\n');
-}
-
-// ---- .xlsx ----
-// 共有文字列: si ごとに、その中の t をつなぐ(ふりがな rPh は除く)
-function sharedStrings(xml) {
-  if (!xml) return [];
-  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>|<si\b[^>]*\/>/g)].map((m) => {
-    const inner = (m[1] || '').replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '');
-    return [...inner.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join('');
-  });
-}
-
-const colIndex = (ref) => {
-  const m = String(ref ?? '').match(/^([A-Z]+)/);
-  if (!m) return null;
-  let n = 0;
-  for (const c of m[1]) n = n * 26 + (c.charCodeAt(0) - 64);
-  return n - 1;
-};
-
-function sheetXmlToText(xml, shared) {
-  const lines = [];
-  for (const rm of xml.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
-    const cells = [];
-    let next = 0;
-    for (const cm of (rm[1] || '').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
-      const tag = '<c ' + cm[1];
-      const inner = cm[2] || '';
-      const type = attr(tag, 't');
-      const ci = colIndex(attr(tag, 'r'));
-      const at = ci === null ? next : ci;
-      let v = '';
-      if (type === 'inlineStr') {
-        v = [...inner.replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '').matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join('');
-      } else {
-        const vm = inner.match(/<v\b[^>]*>([\s\S]*?)<\/v>/);
-        const raw = vm ? unescapeXml(vm[1]) : '';
-        if (type === 's') v = shared[Number(raw)] ?? '';
-        else if (type === 'b') v = raw === '1' ? 'TRUE' : raw === '0' ? 'FALSE' : raw;
-        else v = raw; // 数・式の結果の文字(str)・エラー(e)はそのまま
-      }
-      cells[at] = v;
-      next = at + 1;
-    }
-    const line = Array.from(cells, (x) => x ?? '').join('\t').replace(/\t+$/, '');
-    if (line) lines.push(line);
-  }
-  return lines.join('\n');
-}
-
-const resolvePath = (base, target) => {
-  if (target.startsWith('/')) return target.slice(1);
-  const parts = base.split('/').slice(0, -1);
-  for (const seg of target.split('/')) {
-    if (seg === '..') parts.pop();
-    else if (seg && seg !== '.') parts.push(seg);
-  }
-  return parts.join('/');
-};
-
-async function extractXlsx(bytes) {
-  const entries = listZip(bytes);
-  const shared = sharedStrings(await readXml(bytes, entries, 'xl/sharedStrings.xml'));
-  const wb = await readXml(bytes, entries, 'xl/workbook.xml');
-  const rels = (await readXml(bytes, entries, 'xl/_rels/workbook.xml.rels')) || '';
-  const relMap = new Map([...rels.matchAll(/<Relationship\b[^>]*>/g)].map((m) => [attr(m[0], 'Id'), attr(m[0], 'Target')]));
-  // ブックに書かれたシートの順に読む。読めなければ、名前の順に xl/worksheets/ を読む
-  let sheets = [];
-  if (wb) {
-    for (const m of wb.matchAll(/<sheet\b[^>]*>/g)) {
-      const target = relMap.get(attr(m[0], 'r:id'));
-      if (target) sheets.push({ name: attr(m[0], 'name') || '', path: resolvePath('xl/workbook.xml', target) });
-    }
-  }
-  if (!sheets.length) {
-    sheets = [...entries.keys()].filter((n) => /^xl\/worksheets\/[^/]+\.xml$/.test(n)).sort().map((n) => ({ name: '', path: n }));
-  }
-  if (!sheets.length) throw new Error('.xlsx の中にシートが見つかりません');
-  const out = [];
-  for (const s of sheets) {
-    const xml = await readXml(bytes, entries, s.path);
-    if (xml === null) continue;
-    const text = sheetXmlToText(xml, shared);
-    if (sheets.length > 1) out.push('[シート: ' + s.name + ']');
-    if (text) out.push(text);
-  }
-  return out.join('\n');
-}
-
-// ファイルの名前(拡張子で形式を決める)と中身(Uint8Array か ArrayBuffer)から、文字を取り出す
-async function extractText(name, data) {
-  const ext = extOf(name);
-  if (!MASK_FILE_TYPES.includes(ext)) {
-    throw new Error('対応していない形式です(' + (ext || '拡張子なし') + ')。読めるのは ' + MASK_FILE_TYPES.join('・') + ' です。PDF・.doc・.xls は、文字をコピーして貼り付けてください');
-  }
-  const bytes = toBytes(data);
-  if (bytes.length > MAX_FILE) throw new Error('ファイルが大きすぎます(上限 ' + (MAX_FILE / 1024 / 1024) + 'MB)');
-  if (ext === '.txt') return decodeText(bytes);
-  if (ext === '.docx') return extractDocx(bytes);
-  return extractXlsx(bytes);
-}
-
-return { MASK_FILE_TYPES, decodeText, listZip, unescapeXml, extractText };
-})();
 __m["src/ui/mask-app.mjs"] = (function () {
 // 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
 // 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
@@ -2312,8 +2621,9 @@ __m["src/ui/app.mjs"] = (function () {
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult } = __m["src/ui/view.mjs"];
+const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult } = __m["src/ui/view.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
+const { readLedgerXlsx, ledgerToText, FIELD_NAMES } = __m["src/ledger-xlsx.mjs"];
 const { checkTaicho } = __m["src/check-taicho.mjs"];
 const { bidCheck } = __m["src/bid-check.mjs"];
 const { judgeTaicho } = __m["src/taicho.mjs"];
@@ -2475,6 +2785,28 @@ function exportCheckCsv(doc) {
   setCheckStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
 }
 
+// 台帳の Excel の読み込み(F04c): 作成例の様式の .xlsx を読み、読めた欄を台帳の文にして「施工体制台帳の文」の欄に入れる。
+// 読めない欄は ledger-unreadable に欄ごとに出す。点検は利用者が中身を確かめて「台帳を点検する」を押してから
+async function loadLedgerFile(doc, file) {
+  const outEl = doc.getElementById('ledger-unreadable');
+  const status = doc.getElementById('ledger-file-status');
+  if (!file) return false;
+  try {
+    if (!/\.xlsx$/i.test(String(file.name ?? ''))) throw new Error('読めるのは .xlsx だけです(.xls は Excel で .xlsx に保存し直してください)');
+    const r = await readLedgerXlsx(new Uint8Array(await file.arrayBuffer()));
+    const input = doc.getElementById('ledger-input');
+    if (input) input.value = ledgerToText(r.ledger);
+    lastCheck = null;
+    if (outEl) outEl.innerHTML = renderXlsxResult(r, FIELD_NAMES);
+    if (status) status.textContent = '「' + file.name + '」を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。';
+    return true;
+  } catch (e) {
+    if (outEl) outEl.innerHTML = '';
+    if (status) status.textContent = '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e));
+    return false;
+  }
+}
+
 // 施工計画書の目次の点検(F07): 貼った目次を共通仕様書 1-1-1-6 の記載項目と比べ、見当たらない項目を候補に出す
 let lastPlan = null;
 function setPlanStatus(doc, text) {
@@ -2557,6 +2889,15 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
     }
+    const ledgerFile = doc.getElementById('ledger-file');
+    if (ledgerFile) {
+      ledgerFile.addEventListener('change', async () => {
+        const f = ledgerFile.files && ledgerFile.files[0];
+        if (!f) return;
+        await loadLedgerFile(doc, f);
+        ledgerFile.value = '';
+      });
+    }
     startMask(doc);
     startAi(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
@@ -2577,7 +2918,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { runBid, exportScheduleCsv, exportCsv, printResult, runLedgerCheck, exportCheckCsv, runPlanCheck, exportPlanCsv, loadSample, startApp };
+return { runBid, exportScheduleCsv, exportCsv, printResult, runLedgerCheck, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

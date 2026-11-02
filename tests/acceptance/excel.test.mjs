@@ -32,7 +32,11 @@ test('国交省の作成例の様式の Excel を取得して置き、そのま�
   // 本物の様式の中で、7つの欄すべての欄名のセルを見つけている(見つからない欄は0)。そのセルの文字が欄名に当たる
   const { unzipForTest } = await import('./_helpers.mjs');
   const entries = await unzipForTest(bytes);
-  for (const k of KEYS) {
+  // 2026-11-02 統括(exceptions の F04c の [decision] に A と回答): 国交省の作成例の様式には請負代金額の欄が無い。本物の様式では請負代金額を「欄が無い」として読めない欄に挙げればよい
+  const REAL_KEYS = KEYS.filter((k) => k !== 'project.contractAmount');
+  const ca = unreadable.find((u) => u.key === 'project.contractAmount');
+  assert.ok(ca && ca.cause === 'not_found' && /欄/.test(String(ca.reason || '')), '請負代金額が「様式に欄が無い」として読めない欄に挙がっていない');
+  for (const k of REAL_KEYS) {
     assert.match(String(found?.[k]?.label ?? ''), /^[A-Z]+\d+$/, k + ' の欄名のセルを本物の様式の中に見つけていない');
     assert.match(String(found[k].value ?? ''), /^[A-Z]+\d+$/, k + ' の値のセルの番地が無い');
     const t = cellTextForTest(entries, found[k].label);
@@ -44,11 +48,11 @@ test('国交省の作成例の様式の Excel を取得して置き、そのま�
   }
   // 値が入っていれば読めることを、本物の様式の値の欄に架空の値を書いて確かめる
   const cells = {};
-  for (const k of KEYS) (cells[found[k].value] ||= []).push(k);
+  for (const k of REAL_KEYS) (cells[found[k].value] ||= []).push(k);
   const filled = await fillXlsxForTest(bytes, cells);
   assert.ok(filled, '値のセルに書き込めない(工期の2つ以外で1つのセルを分け合っている、または行が無い)');
   const r2 = await readLedgerXlsx(filled.bytes);
-  for (const k of KEYS) assert.equal(String(pick(r2.ledger, k)), String(filled.expect[k]), k + ' に書いた値が読めない');
+  for (const k of REAL_KEYS) assert.equal(String(pick(r2.ledger, k)), String(filled.expect[k]), k + ' に書いた値が読めない');
 });
 
 const LABEL_RE = { 'project.name': /工事名/, 'project.orderer': /発注者/, 'project.periodFrom': /工期/, 'project.periodTo': /工期/, 'project.contractAmount': /請負代金/, 'prime.name': /会社名|商号|名称/, 'prime.engineer.name': /監理技術者|主任技術者/ };

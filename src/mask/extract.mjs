@@ -163,7 +163,7 @@ function sharedStrings(xml) {
   });
 }
 
-const colIndex = (ref) => {
+export const colIndex = (ref) => {
   const m = String(ref ?? '').match(/^([A-Z]+)/);
   if (!m) return null;
   let n = 0;
@@ -179,20 +179,9 @@ function sheetXmlToText(xml, shared) {
     for (const cm of (rm[1] || '').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
       const tag = '<c ' + cm[1];
       const inner = cm[2] || '';
-      const type = attr(tag, 't');
       const ci = colIndex(attr(tag, 'r'));
       const at = ci === null ? next : ci;
-      let v = '';
-      if (type === 'inlineStr') {
-        v = [...inner.replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '').matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join('');
-      } else {
-        const vm = inner.match(/<v\b[^>]*>([\s\S]*?)<\/v>/);
-        const raw = vm ? unescapeXml(vm[1]) : '';
-        if (type === 's') v = shared[Number(raw)] ?? '';
-        else if (type === 'b') v = raw === '1' ? 'TRUE' : raw === '0' ? 'FALSE' : raw;
-        else v = raw; // 数・式の結果の文字(str)・エラー(e)はそのまま
-      }
-      cells[at] = v;
+      cells[at] = cellValue(tag, inner, shared).text;
       next = at + 1;
     }
     const line = Array.from(cells, (x) => x ?? '').join('\t').replace(/\t+$/, '');
@@ -211,7 +200,8 @@ const resolvePath = (base, target) => {
   return parts.join('/');
 };
 
-async function extractXlsx(bytes) {
+// .xlsx を開き、共有文字列と、ブックに書かれた順のシートの XML を返す(台帳の Excel の読み込み F04c でも使う)
+export async function openXlsx(bytes) {
   const entries = listZip(bytes);
   const shared = sharedStrings(await readXml(bytes, entries, 'xl/sharedStrings.xml'));
   const wb = await readXml(bytes, entries, 'xl/workbook.xml');
@@ -232,8 +222,30 @@ async function extractXlsx(bytes) {
   const out = [];
   for (const s of sheets) {
     const xml = await readXml(bytes, entries, s.path);
-    if (xml === null) continue;
-    const text = sheetXmlToText(xml, shared);
+    if (xml !== null) out.push({ name: s.name, xml });
+  }
+  return { shared, sheets: out };
+}
+
+// シートの XML のセルの値(共有文字列・インラインの文字・数・式の結果。ふりがなは除く)。数のセルは number も返す
+export function cellValue(tag, inner, shared) {
+  const type = attr(tag, 't');
+  if (type === 'inlineStr') {
+    return { text: [...inner.replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '').matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join(''), number: null };
+  }
+  const vm = inner.match(/<v\b[^>]*>([\s\S]*?)<\/v>/);
+  const raw = vm ? unescapeXml(vm[1]) : '';
+  if (type === 's') return { text: shared[Number(raw)] ?? '', number: null };
+  if (type === 'b') return { text: raw === '1' ? 'TRUE' : raw === '0' ? 'FALSE' : raw, number: null };
+  if ((type === null || type === 'n') && raw !== '' && Number.isFinite(Number(raw))) return { text: raw, number: Number(raw) };
+  return { text: raw, number: null }; // 式の結果の文字(str)・エラー(e)はそのまま
+}
+
+async function extractXlsx(bytes) {
+  const { shared, sheets } = await openXlsx(bytes);
+  const out = [];
+  for (const s of sheets) {
+    const text = sheetXmlToText(s.xml, shared);
     if (sheets.length > 1) out.push('[シート: ' + s.name + ']');
     if (text) out.push(text);
   }

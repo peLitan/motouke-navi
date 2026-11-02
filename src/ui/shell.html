@@ -134,6 +134,11 @@
 | 資格 | (資格) |</pre>
 <p>「見本を読み込む」を押すと、架空の台帳がこの欄に入ります。</p>
 </details>
+<div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
+<input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+<p class="disclaimer" id="ledger-file-note">ファイルはこの PC の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
+<p id="ledger-file-status" aria-live="polite"></p>
+<div id="ledger-unreadable" class="result" aria-live="polite"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
 <textarea id="ledger-input" name="ledger-input" rows="12" cols="80"></textarea></div>
 <div class="row"><button type="button" id="ledger-run">台帳を点検する</button>
