@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult } from './view.mjs';
+import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary } from './view.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
@@ -24,6 +24,17 @@ let last = null;
 const STALE = '条件が変わりました。もう一度「確認する」を押してから、印刷・書き出しをしてください。';
 let stale = false; // 結果を出したあとに条件を変えたか
 
+// まとめの枠(F14b): 最後に出した各結果を持ち、結果が出るたびに枠を書き直す(ページを閉じれば消える)
+const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, check: null, plan: null, stale: false };
+let summaryShown = false;
+function updateSummary(doc) {
+  const el = doc.getElementById('summary');
+  if (!el) return;
+  el.innerHTML = renderSummary({ ...summary, values: summary.values ?? collect(doc) });
+  el.hidden = false;
+  summaryShown = true;
+}
+
 function collect(doc) {
   const values = {};
   for (const id of BID_FORM_IDS) {
@@ -39,11 +50,13 @@ export function runBid(doc) {
   const taichoOut = doc.getElementById('taicho-result');
   const values = collect(doc);
   const errors = formErrors(values);
+  Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
   if (errors.length) {
     last = null;
     bidOut.innerHTML = renderErrors(errors);
     taichoOut.innerHTML = renderErrors(errors);
     runSchedule(doc, null, errors);
+    updateSummary(doc);
     return;
   }
   last = null;
@@ -55,6 +68,8 @@ export function runBid(doc) {
     bidOut.innerHTML = renderBidResult(bid);
     taichoOut.innerHTML = renderTaichoResult(taicho);
     last = { bid, taicho };
+    summary.bid = bid;
+    summary.taicho = taicho;
     stale = false;
     setExportStatus(doc, '');
   } catch (e) {
@@ -62,6 +77,7 @@ export function runBid(doc) {
     bidOut.innerHTML = msg;
     taichoOut.innerHTML = msg;
   }
+  updateSummary(doc);
 }
 
 // 段取りの一覧(F06a): 同じ条件から、着手までの段取りを出す(入札前の確認とは別に動かし、片方が止まっても片方は出す)
@@ -80,6 +96,7 @@ function runSchedule(doc, input, errors = []) {
     const detail = buildScheduleDetail(input);
     out.innerHTML = renderSchedule(detail.rows, detail);
     lastSchedule = detail.rows;
+    summary.scheduleCount = detail.rows.length;
   } catch (e) {
     out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
@@ -133,6 +150,7 @@ export function runLedgerCheck(doc) {
   const outEl = doc.getElementById('check-result');
   const input = doc.getElementById('ledger-input');
   lastCheck = null;
+  summary.check = null;
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本で試す」を押してください。']); return; }
@@ -155,9 +173,11 @@ export function runLedgerCheck(doc) {
     const out = checkTaicho(ledger);
     outEl.innerHTML = renderCheckResult(out, warnings);
     lastCheck = out;
+    summary.check = out;
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました(抜き書きの誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
+  updateSummary(doc);
 }
 
 export function exportCheckCsv(doc) {
@@ -199,6 +219,7 @@ export function runPlanCheck(doc) {
   const outEl = doc.getElementById('plan-result');
   const input = doc.getElementById('plan-input');
   lastPlan = null;
+  summary.plan = null;
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本で試す」を押してください。']); return; }
@@ -208,9 +229,11 @@ export function runPlanCheck(doc) {
     if (!form.workType) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
+    summary.plan = out;
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました: ' + String(e && e.message ? e.message : e)]);
   }
+  updateSummary(doc);
 }
 
 export function exportPlanCsv(doc) {
@@ -240,6 +263,9 @@ export function loadSample(doc) {
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
+  // 見本のあとは、結論の枠(まとめ)を画面に出す
+  const sum = doc.getElementById('summary');
+  if (sum && typeof sum.scrollIntoView === 'function') sum.scrollIntoView({ block: 'start' });
 }
 
 export function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
@@ -289,6 +315,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (!el) continue;
       const changed = () => {
         if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
+        if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); }
         if (lastSchedule) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
       };
       el.addEventListener('input', changed);

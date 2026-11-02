@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-frYzhc/PrxYwYd6XvFikJzfErib1WFF9c6oAA0AMoKY='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-raravnYSOH3BQSKD8HgZSi5U27yn+oNIKtjjqvJrAfQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -12,8 +12,6 @@
   .row { margin: 0.4rem 0; }
   .row label { margin-right: 0.5rem; }
   .result { border: 1px solid #ccc; padding: 0.5rem 1rem; margin-bottom: 1rem; }
-  .status-required .status { color: #1d4ed8; }
-  .status-needs_check .status { color: #b91c1c; }
   .human { font-weight: bold; }
   .errors { color: #b91c1c; }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
@@ -35,6 +33,27 @@
   .steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0.75rem 0 0; }
   .steps li { border: 1px solid #1d4ed8; background: #fff; border-radius: 1rem; padding: 0.2rem 0.75rem; }
   .steps li + li::before { content: "→ "; color: #1d4ed8; }
+  /* 結論の印とまとめの枠(F14b)。色だけで区別しない: 記号(✕ ! ✓)と言葉を必ず添える。文字と地の色のコントラストは 4.5:1 以上 */
+  .badge { display: inline-block; border: 2px solid; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
+  .badge .mark { display: inline-block; min-width: 1em; text-align: center; }
+  .badge-required { color: #991b1b; background: #fee2e2; border-color: #b91c1c; }
+  .badge-needs_check { color: #713f12; background: #fef3c7; border-color: #a16207; }
+  .badge-not_required { color: #14532d; background: #dcfce7; border-color: #15803d; }
+  .summary { border-left: 6px solid #1e293b; background: #f8fafc; padding: 0.5rem 1rem 0.75rem; margin: 1rem 0 1.5rem; }
+  .summary h3 { margin: 0.25rem 0 0.5rem; font-size: 1.35rem; }
+  .summary h4 { margin: 0.75rem 0 0.25rem; }
+  .summary-counts, .summary-items { list-style: none; padding: 0; margin: 0.25rem 0; }
+  .summary-counts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+  .summary-items li { margin: 0.2rem 0; }
+  .summary-table { border-collapse: collapse; }
+  .summary-table th, .summary-table td { text-align: left; vertical-align: top; padding: 0.2rem 1rem 0.2rem 0; border-bottom: 1px solid #cbd5e1; }
+  .summary-list { margin: 0.25rem 0; }
+  .summary-row { display: grid; grid-template-columns: minmax(8rem, 18rem) 1fr; gap: 0 1rem; border-bottom: 1px solid #cbd5e1; padding: 0.15rem 0; }
+  .summary-row dt { font-weight: bold; }
+  .summary-row dd { margin: 0; overflow-wrap: anywhere; }
+  .summary-stale, .summary-error { border: 2px solid #b91c1c; background: #fff; color: #991b1b; padding: 0.25rem 0.5rem; font-weight: bold; }
+  .not-yet { color: #475569; }
+  @media (max-width: 30rem) { .summary-row { grid-template-columns: 1fr; } }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
@@ -109,6 +128,7 @@
 <div class="row"><input type="checkbox" id="ict-measure" name="ict-measure"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる</label></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
+<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
@@ -379,6 +399,15 @@ function amountBasisBlock(ab) {
 }
 
 const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る' };
+// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=✕と赤系、確認が要る=!と黄系、要らない=✓と緑系)
+const STATUS_MARK = { required: '✕', needs_check: '!', not_required: '✓' };
+function statusBadge(status, extra = '') {
+  const word = BID_STATUS[status] ?? String(status ?? '');
+  const mark = STATUS_MARK[status];
+  return '<span class="badge badge-' + esc(status) + '">' + (mark ? '<span class="mark" aria-hidden="true">' + esc(mark) + '</span> ' : '') + esc(word + extra) + '</span>';
+}
+// 結果の項目へのページの中のリンクの行き先(まとめの枠から移る)
+const bidItemId = (key) => 'bid-item-' + String(key ?? '').replace(/[^\w-]/g, '_');
 const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
 
 // 入札前の確認(bidCheck の返り値)
@@ -386,7 +415,7 @@ function renderBidResult(bid) {
   const rows = bid.items.map((it) => {
     const status = BID_STATUS[it.status] ?? it.status;
     const value = it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '';
-    return '<li class="item status-' + esc(it.status) + '"><h4>' + esc(it.label) + ': <span class="status">' + esc(status + value) + '</span></h4>'
+    return '<li class="item status-' + esc(it.status) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[it.status] ? statusBadge(it.status, value) : esc(status + value)) + '</span></h4>'
       + '<p>' + esc(it.note) + '</p>' + basisList(it.basis) + exceptionList(it.exceptions) + '</li>';
   }).join('');
   const checks = bid.checks.length
@@ -538,7 +567,70 @@ function renderPlanResult(out = {}) {
     + '<p class="human">抜けの候補です。施工計画書が足りているかの最後の判断は、特記仕様書と監督職員の指示を確かめたうえで人がしてください</p>';
 }
 
-return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult };
+// まとめの枠(F14b): 結果の一番上に、結論(要る・確認が要る・要らない の件数と一覧)、台帳の候補の数、目次の抜けの数、入れた条件を出す。
+// 各行から、ページの中のリンクで詳しい結果へ移る。state は app.mjs が持つ最後の結果(無い所は「まだ出していません」)
+//   state = { values: 欄の値, errors: [文], bid, taicho, scheduleCount, check, plan, stale }
+const SUMMARY_FIELDS = [
+  ['orderer', '発注者', { public: '公共', private: '民間' }],
+  ['direct', '発注者から直接請け負う(元請け)', { true: 'はい', false: 'いいえ' }],
+  ['work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }],
+  ['contract-amount', '請負代金の見込み(税込み)', null],
+  ['subcontract-total', '下請けの総額(税込み)', null],
+  ['license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }],
+  ['engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }],
+  ['ict-measure', '台帳を発注者が閲覧できる措置(公共)', { true: '講じる', false: '講じない' }],
+];
+function summaryValue(raw, map) {
+  if (map) {
+    const v = map[String(raw)];
+    return v ?? '選んでいません';
+  }
+  const s = String(raw ?? '').trim();
+  return s === '' ? '入れていません' : s + (/円$/.test(s) ? '' : ' 円');
+}
+const NOT_YET = (btn) => '<span class="not-yet">まだ出していません(「' + esc(btn) + '」を押すと出ます)</span>';
+function renderSummary(state = {}) {
+  const parts = [];
+  if (state.stale) parts.push('<p class="summary-stale">条件が変わりました。下の数は前の条件の結果です。もう一度「確認する」を押してください。</p>');
+  // 結論: 入札前の確認の項目
+  if (state.errors && state.errors.length) {
+    parts.push('<p class="summary-error">入力を読めませんでした。<a href="#bid-result">入札前の確認の欄</a>を見て直してください。</p>');
+  } else if (state.bid) {
+    const items = state.bid.items ?? [];
+    const order = ['required', 'needs_check', 'not_required'];
+    const count = (st) => items.filter((it) => it.status === st).length;
+    parts.push('<h4>受注したら要るもの(' + items.length + '項目)</h4>'
+      + '<ul class="summary-counts">' + order.map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>件</li>').join('') + '</ul>'
+      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
+        .map((it) => '<li>' + statusBadge(it.status, it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
+      + ((state.bid.checks ?? []).length ? '<p><a href="#bid-result">確認が要る点 ' + state.bid.checks.length + '件</a>を入札前の確認の欄に出しています。</p>' : ''));
+  } else {
+    parts.push('<h4>受注したら要るもの</h4><p>' + NOT_YET('確認する') + '</p>');
+  }
+  // 数で見せるもの: 台帳が要るか・段取り・台帳の点検・目次の点検
+  const rows = [];
+  if (state.taicho) rows.push(['施工体制台帳が要るか', esc(TAICHO_STATUS[state.taicho.status] ?? state.taicho.status), 'taicho-result']);
+  if (typeof state.scheduleCount === 'number') rows.push(['受注後の段取り', state.scheduleCount + '件', 'schedule-result']);
+  if (state.check) {
+    const c = (state.check.candidates ?? []).length;
+    const u = (state.check.undecidable ?? []).length;
+    rows.push(['施工体制台帳の点検', '抜け・食い違いの候補 <strong>' + c + '</strong>件' + (u ? '、判断できない ' + u + '件' : ''), 'check-result']);
+  } else rows.push(['施工体制台帳の点検', NOT_YET('台帳を点検する'), 'check-result']);
+  if (state.plan) {
+    const und = (state.plan.undecidable ?? []).length;
+    rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : '記載項目の抜けの候補 <strong>' + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
+  } else rows.push(['施工計画書の目次の点検', NOT_YET('目次を点検する'), 'plan-result']);
+  parts.push('<h4>書類と段取り</h4><table class="summary-table"><tbody>'
+    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>');
+  // 入れた条件(項目名と値の一覧)
+  const values = state.values ?? {};
+  parts.push('<h4>入れた条件</h4><dl class="summary-list">'
+    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map)) + '</dd></div>').join('') + '</dl>');
+  return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
+    + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
+}
+
+return { esc, basisLabel, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult, SUMMARY_FIELDS, renderSummary };
 })();
 __m["src/ledger-text.mjs"] = (function () {
 // 台帳の文を読む(F05b): 見出しと「| 項目 | 内容 |」の表で書いた施工体制台帳の文を、点検(src/check-taicho.mjs)の入力の形にする。
@@ -2768,7 +2860,7 @@ __m["src/ui/app.mjs"] = (function () {
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult } = __m["src/ui/view.mjs"];
+const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary } = __m["src/ui/view.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
 const { readLedgerXlsx, ledgerToText, FIELD_NAMES } = __m["src/ledger-xlsx.mjs"];
 const { checkTaicho } = __m["src/check-taicho.mjs"];
@@ -2790,6 +2882,17 @@ let last = null;
 const STALE = '条件が変わりました。もう一度「確認する」を押してから、印刷・書き出しをしてください。';
 let stale = false; // 結果を出したあとに条件を変えたか
 
+// まとめの枠(F14b): 最後に出した各結果を持ち、結果が出るたびに枠を書き直す(ページを閉じれば消える)
+const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, check: null, plan: null, stale: false };
+let summaryShown = false;
+function updateSummary(doc) {
+  const el = doc.getElementById('summary');
+  if (!el) return;
+  el.innerHTML = renderSummary({ ...summary, values: summary.values ?? collect(doc) });
+  el.hidden = false;
+  summaryShown = true;
+}
+
 function collect(doc) {
   const values = {};
   for (const id of BID_FORM_IDS) {
@@ -2805,11 +2908,13 @@ function runBid(doc) {
   const taichoOut = doc.getElementById('taicho-result');
   const values = collect(doc);
   const errors = formErrors(values);
+  Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
   if (errors.length) {
     last = null;
     bidOut.innerHTML = renderErrors(errors);
     taichoOut.innerHTML = renderErrors(errors);
     runSchedule(doc, null, errors);
+    updateSummary(doc);
     return;
   }
   last = null;
@@ -2821,6 +2926,8 @@ function runBid(doc) {
     bidOut.innerHTML = renderBidResult(bid);
     taichoOut.innerHTML = renderTaichoResult(taicho);
     last = { bid, taicho };
+    summary.bid = bid;
+    summary.taicho = taicho;
     stale = false;
     setExportStatus(doc, '');
   } catch (e) {
@@ -2828,6 +2935,7 @@ function runBid(doc) {
     bidOut.innerHTML = msg;
     taichoOut.innerHTML = msg;
   }
+  updateSummary(doc);
 }
 
 // 段取りの一覧(F06a): 同じ条件から、着手までの段取りを出す(入札前の確認とは別に動かし、片方が止まっても片方は出す)
@@ -2846,6 +2954,7 @@ function runSchedule(doc, input, errors = []) {
     const detail = buildScheduleDetail(input);
     out.innerHTML = renderSchedule(detail.rows, detail);
     lastSchedule = detail.rows;
+    summary.scheduleCount = detail.rows.length;
   } catch (e) {
     out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
@@ -2899,6 +3008,7 @@ function runLedgerCheck(doc) {
   const outEl = doc.getElementById('check-result');
   const input = doc.getElementById('ledger-input');
   lastCheck = null;
+  summary.check = null;
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本で試す」を押してください。']); return; }
@@ -2921,9 +3031,11 @@ function runLedgerCheck(doc) {
     const out = checkTaicho(ledger);
     outEl.innerHTML = renderCheckResult(out, warnings);
     lastCheck = out;
+    summary.check = out;
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました(抜き書きの誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
+  updateSummary(doc);
 }
 
 function exportCheckCsv(doc) {
@@ -2965,6 +3077,7 @@ function runPlanCheck(doc) {
   const outEl = doc.getElementById('plan-result');
   const input = doc.getElementById('plan-input');
   lastPlan = null;
+  summary.plan = null;
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本で試す」を押してください。']); return; }
@@ -2974,9 +3087,11 @@ function runPlanCheck(doc) {
     if (!form.workType) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
+    summary.plan = out;
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました: ' + String(e && e.message ? e.message : e)]);
   }
+  updateSummary(doc);
 }
 
 function exportPlanCsv(doc) {
@@ -3006,6 +3121,9 @@ function loadSample(doc) {
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
+  // 見本のあとは、結論の枠(まとめ)を画面に出す
+  const sum = doc.getElementById('summary');
+  if (sum && typeof sum.scrollIntoView === 'function') sum.scrollIntoView({ block: 'start' });
 }
 
 function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
@@ -3055,6 +3173,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (!el) continue;
       const changed = () => {
         if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
+        if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); }
         if (lastSchedule) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
       };
       el.addEventListener('input', changed);

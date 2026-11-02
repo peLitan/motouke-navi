@@ -33,6 +33,15 @@ function amountBasisBlock(ab) {
 }
 
 export const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る' };
+// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=✕と赤系、確認が要る=!と黄系、要らない=✓と緑系)
+export const STATUS_MARK = { required: '✕', needs_check: '!', not_required: '✓' };
+export function statusBadge(status, extra = '') {
+  const word = BID_STATUS[status] ?? String(status ?? '');
+  const mark = STATUS_MARK[status];
+  return '<span class="badge badge-' + esc(status) + '">' + (mark ? '<span class="mark" aria-hidden="true">' + esc(mark) + '</span> ' : '') + esc(word + extra) + '</span>';
+}
+// 結果の項目へのページの中のリンクの行き先(まとめの枠から移る)
+export const bidItemId = (key) => 'bid-item-' + String(key ?? '').replace(/[^\w-]/g, '_');
 export const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
 
 // 入札前の確認(bidCheck の返り値)
@@ -40,7 +49,7 @@ export function renderBidResult(bid) {
   const rows = bid.items.map((it) => {
     const status = BID_STATUS[it.status] ?? it.status;
     const value = it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '';
-    return '<li class="item status-' + esc(it.status) + '"><h4>' + esc(it.label) + ': <span class="status">' + esc(status + value) + '</span></h4>'
+    return '<li class="item status-' + esc(it.status) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[it.status] ? statusBadge(it.status, value) : esc(status + value)) + '</span></h4>'
       + '<p>' + esc(it.note) + '</p>' + basisList(it.basis) + exceptionList(it.exceptions) + '</li>';
   }).join('');
   const checks = bid.checks.length
@@ -190,4 +199,67 @@ export function renderPlanResult(out = {}) {
   const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   return candHtml + foundHtml + extraHtml + notes
     + '<p class="human">抜けの候補です。施工計画書が足りているかの最後の判断は、特記仕様書と監督職員の指示を確かめたうえで人がしてください</p>';
+}
+
+// まとめの枠(F14b): 結果の一番上に、結論(要る・確認が要る・要らない の件数と一覧)、台帳の候補の数、目次の抜けの数、入れた条件を出す。
+// 各行から、ページの中のリンクで詳しい結果へ移る。state は app.mjs が持つ最後の結果(無い所は「まだ出していません」)
+//   state = { values: 欄の値, errors: [文], bid, taicho, scheduleCount, check, plan, stale }
+export const SUMMARY_FIELDS = [
+  ['orderer', '発注者', { public: '公共', private: '民間' }],
+  ['direct', '発注者から直接請け負う(元請け)', { true: 'はい', false: 'いいえ' }],
+  ['work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }],
+  ['contract-amount', '請負代金の見込み(税込み)', null],
+  ['subcontract-total', '下請けの総額(税込み)', null],
+  ['license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }],
+  ['engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }],
+  ['ict-measure', '台帳を発注者が閲覧できる措置(公共)', { true: '講じる', false: '講じない' }],
+];
+function summaryValue(raw, map) {
+  if (map) {
+    const v = map[String(raw)];
+    return v ?? '選んでいません';
+  }
+  const s = String(raw ?? '').trim();
+  return s === '' ? '入れていません' : s + (/円$/.test(s) ? '' : ' 円');
+}
+const NOT_YET = (btn) => '<span class="not-yet">まだ出していません(「' + esc(btn) + '」を押すと出ます)</span>';
+export function renderSummary(state = {}) {
+  const parts = [];
+  if (state.stale) parts.push('<p class="summary-stale">条件が変わりました。下の数は前の条件の結果です。もう一度「確認する」を押してください。</p>');
+  // 結論: 入札前の確認の項目
+  if (state.errors && state.errors.length) {
+    parts.push('<p class="summary-error">入力を読めませんでした。<a href="#bid-result">入札前の確認の欄</a>を見て直してください。</p>');
+  } else if (state.bid) {
+    const items = state.bid.items ?? [];
+    const order = ['required', 'needs_check', 'not_required'];
+    const count = (st) => items.filter((it) => it.status === st).length;
+    parts.push('<h4>受注したら要るもの(' + items.length + '項目)</h4>'
+      + '<ul class="summary-counts">' + order.map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>件</li>').join('') + '</ul>'
+      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
+        .map((it) => '<li>' + statusBadge(it.status, it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
+      + ((state.bid.checks ?? []).length ? '<p><a href="#bid-result">確認が要る点 ' + state.bid.checks.length + '件</a>を入札前の確認の欄に出しています。</p>' : ''));
+  } else {
+    parts.push('<h4>受注したら要るもの</h4><p>' + NOT_YET('確認する') + '</p>');
+  }
+  // 数で見せるもの: 台帳が要るか・段取り・台帳の点検・目次の点検
+  const rows = [];
+  if (state.taicho) rows.push(['施工体制台帳が要るか', esc(TAICHO_STATUS[state.taicho.status] ?? state.taicho.status), 'taicho-result']);
+  if (typeof state.scheduleCount === 'number') rows.push(['受注後の段取り', state.scheduleCount + '件', 'schedule-result']);
+  if (state.check) {
+    const c = (state.check.candidates ?? []).length;
+    const u = (state.check.undecidable ?? []).length;
+    rows.push(['施工体制台帳の点検', '抜け・食い違いの候補 <strong>' + c + '</strong>件' + (u ? '、判断できない ' + u + '件' : ''), 'check-result']);
+  } else rows.push(['施工体制台帳の点検', NOT_YET('台帳を点検する'), 'check-result']);
+  if (state.plan) {
+    const und = (state.plan.undecidable ?? []).length;
+    rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : '記載項目の抜けの候補 <strong>' + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
+  } else rows.push(['施工計画書の目次の点検', NOT_YET('目次を点検する'), 'plan-result']);
+  parts.push('<h4>書類と段取り</h4><table class="summary-table"><tbody>'
+    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>');
+  // 入れた条件(項目名と値の一覧)
+  const values = state.values ?? {};
+  parts.push('<h4>入れた条件</h4><dl class="summary-list">'
+    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map)) + '</dd></div>').join('') + '</dl>');
+  return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
+    + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }

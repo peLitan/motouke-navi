@@ -12,8 +12,6 @@
   .row { margin: 0.4rem 0; }
   .row label { margin-right: 0.5rem; }
   .result { border: 1px solid #ccc; padding: 0.5rem 1rem; margin-bottom: 1rem; }
-  .status-required .status { color: #1d4ed8; }
-  .status-needs_check .status { color: #b91c1c; }
   .human { font-weight: bold; }
   .errors { color: #b91c1c; }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
@@ -35,6 +33,27 @@
   .steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0.75rem 0 0; }
   .steps li { border: 1px solid #1d4ed8; background: #fff; border-radius: 1rem; padding: 0.2rem 0.75rem; }
   .steps li + li::before { content: "→ "; color: #1d4ed8; }
+  /* 結論の印とまとめの枠(F14b)。色だけで区別しない: 記号(✕ ! ✓)と言葉を必ず添える。文字と地の色のコントラストは 4.5:1 以上 */
+  .badge { display: inline-block; border: 2px solid; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
+  .badge .mark { display: inline-block; min-width: 1em; text-align: center; }
+  .badge-required { color: #991b1b; background: #fee2e2; border-color: #b91c1c; }
+  .badge-needs_check { color: #713f12; background: #fef3c7; border-color: #a16207; }
+  .badge-not_required { color: #14532d; background: #dcfce7; border-color: #15803d; }
+  .summary { border-left: 6px solid #1e293b; background: #f8fafc; padding: 0.5rem 1rem 0.75rem; margin: 1rem 0 1.5rem; }
+  .summary h3 { margin: 0.25rem 0 0.5rem; font-size: 1.35rem; }
+  .summary h4 { margin: 0.75rem 0 0.25rem; }
+  .summary-counts, .summary-items { list-style: none; padding: 0; margin: 0.25rem 0; }
+  .summary-counts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+  .summary-items li { margin: 0.2rem 0; }
+  .summary-table { border-collapse: collapse; }
+  .summary-table th, .summary-table td { text-align: left; vertical-align: top; padding: 0.2rem 1rem 0.2rem 0; border-bottom: 1px solid #cbd5e1; }
+  .summary-list { margin: 0.25rem 0; }
+  .summary-row { display: grid; grid-template-columns: minmax(8rem, 18rem) 1fr; gap: 0 1rem; border-bottom: 1px solid #cbd5e1; padding: 0.15rem 0; }
+  .summary-row dt { font-weight: bold; }
+  .summary-row dd { margin: 0; overflow-wrap: anywhere; }
+  .summary-stale, .summary-error { border: 2px solid #b91c1c; background: #fff; color: #991b1b; padding: 0.25rem 0.5rem; font-weight: bold; }
+  .not-yet { color: #475569; }
+  @media (max-width: 30rem) { .summary-row { grid-template-columns: 1fr; } }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
@@ -109,6 +128,7 @@
 <div class="row"><input type="checkbox" id="ict-measure" name="ict-measure"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる</label></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
+<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
