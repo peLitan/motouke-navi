@@ -85,6 +85,17 @@ export function scheduleRows(rows = []) {
   ])];
 }
 
+// 施工計画書の目次の点検(F07)の行。見出しの行 + 抜けの候補1件ごとに1行
+export const PLAN_COLUMNS = ['項目', '状態', '説明', '根拠の箇所', 'ページ', '根拠の原文(抜き書き)', '取得日'];
+export function planRows(out = {}) {
+  return [PLAN_COLUMNS.slice(), ...(out.candidates ?? []).map((c) => [
+    c.item, '抜けの候補', c.message ?? '',
+    c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
+    'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : ''),
+    c.basis.quote, c.basis.fetchedAt ?? '',
+  ])];
+}
+
 // 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする
 function cell(v) {
   const s = v === null || v === undefined ? '' : String(v);

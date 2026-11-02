@@ -141,6 +141,17 @@
 <p id="check-status" aria-live="polite"></p>
 <div id="check-result" class="result" aria-live="polite"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
 </section>
+<section id="plan-check">
+<h2>2-2. 施工計画書の目次の点検</h2>
+<p>施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。</p>
+<p class="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
+<div class="row"><label for="plan-input">施工計画書の目次</label><br>
+<textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
+<div class="row"><button type="button" id="plan-run">目次を点検する</button>
+<button type="button" id="plan-csv-btn">目次の点検の結果を CSV に書き出す</button></div>
+<p id="plan-status" aria-live="polite"></p>
+<div id="plan-result" class="result" aria-live="polite"><p>目次を貼って「目次を点検する」を押してください。</p></div>
+</section>
 <section id="mask" class="no-print">
 <h2>3. 文の置き換え(外のサービスに貼る前に)</h2>
 <p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>

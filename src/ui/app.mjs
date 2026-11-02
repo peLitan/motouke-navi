@@ -1,14 +1,15 @@
-// 画面のつながり(F05a・F05e・F05b・F06a): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
+// 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule } from './view.mjs';
+import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult } from './view.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
-import { stage1Rows, checkRows, scheduleRows, toCsv } from '../export.mjs';
+import { stage1Rows, checkRows, scheduleRows, planRows, toCsv } from '../export.mjs';
 import { buildScheduleDetail } from '../schedule.mjs';
+import { checkPlanToc } from '../plan-check.mjs';
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
 import { startAi } from './ai-app.mjs';
@@ -164,6 +165,35 @@ export function exportCheckCsv(doc) {
   setCheckStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
 }
 
+// 施工計画書の目次の点検(F07): 貼った目次を共通仕様書 1-1-1-6 の記載項目と比べ、見当たらない項目を候補に出す
+let lastPlan = null;
+function setPlanStatus(doc, text) {
+  const el = doc.getElementById('plan-status');
+  if (el) el.textContent = text;
+}
+
+export function runPlanCheck(doc) {
+  const outEl = doc.getElementById('plan-result');
+  const input = doc.getElementById('plan-input');
+  lastPlan = null;
+  setPlanStatus(doc, '');
+  const text = input ? String(input.value ?? '') : '';
+  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本を読み込む」を押してください。']); return; }
+  try {
+    const out = checkPlanToc(text);
+    outEl.innerHTML = renderPlanResult(out);
+    lastPlan = out;
+  } catch (e) {
+    outEl.innerHTML = renderErrors(['点検の途中で止まりました: ' + String(e && e.message ? e.message : e)]);
+  }
+}
+
+export function exportPlanCsv(doc) {
+  if (!lastPlan) { setPlanStatus(doc, '先に「目次を点検する」を押して結果を出してください。'); return; }
+  downloadText(doc, toCsv(planRows(lastPlan)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
+  setPlanStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+}
+
 // 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。
 // 書類の入力欄(台帳・目次)がある画面ならそこに入れ、見本の書類の欄にも中身を出す。
 export function loadSample(doc) {
@@ -184,6 +214,7 @@ export function loadSample(doc) {
   if (st) st.textContent = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
+  if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
 }
 
 export function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
@@ -199,6 +230,15 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('ledger-run', () => runLedgerCheck(doc));
     on('check-csv-btn', () => exportCheckCsv(doc));
     on('schedule-csv-btn', () => exportScheduleCsv(doc));
+    on('plan-run', () => runPlanCheck(doc));
+    on('plan-csv-btn', () => exportPlanCsv(doc));
+    // 目次を変えたら、前の点検の結果は書き出さない
+    const planEl = doc.getElementById('plan-input');
+    if (planEl) {
+      const changed = () => { if (lastPlan) { lastPlan = null; setPlanStatus(doc, '目次が変わりました。もう一度「目次を点検する」を押してから書き出してください。'); } };
+      planEl.addEventListener('input', changed);
+      planEl.addEventListener('change', changed);
+    }
     // 台帳の文や条件を変えたら、前の点検の結果は書き出さない
     for (const id of ['ledger-input', ...BID_FORM_IDS]) {
       const el = doc.getElementById(id);

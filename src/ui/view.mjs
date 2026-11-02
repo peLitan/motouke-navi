@@ -147,3 +147,25 @@ export function renderSchedule(rows = [], detail = {}) {
   return notes + body + skipped
     + '<p class="human">国の直轄の例です。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
+
+// 施工計画書の目次の点検(F07)。抜けの候補を、根拠(共通仕様書の箇所・ページ・原文)つきで出す
+export function renderPlanResult(out = {}) {
+  const cands = out.candidates ?? [];
+  const found = out.found ?? [];
+  const extra = out.extra ?? [];
+  const pageText = (b) => (b.page ? ' PDF ' + b.page + 'ページ' : '') + (b.printedPage ? '(紙面 ' + b.printedPage + ')' : '');
+  const candHtml = cands.length
+    ? '<h3>記載項目の抜けの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
+      + (c.message ? '<p>' + esc(c.message) + '</p>' : '')
+      + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + (c.basis.fetchedAt ? '(取得日 ' + esc(c.basis.fetchedAt) + ')' : '') + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
+    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
+  const foundHtml = found.length
+    ? '<details class="found"><summary>目次で見つけた記載項目(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
+    : '';
+  const extraHtml = extra.length
+    ? '<details class="extra"><summary>記載項目に当たらなかった目次の行(' + extra.length + '件)</summary><ul>' + extra.map((l) => '<li>' + esc(l) + '</li>').join('') + '</ul></details>'
+    : '';
+  const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
+  return candHtml + foundHtml + extraHtml + notes
+    + '<p class="human">抜けの候補です。施工計画書が足りているかの最後の判断は、特記仕様書と監督職員の指示を確かめたうえで人がしてください</p>';
+}
