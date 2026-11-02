@@ -105,6 +105,20 @@
       "file": "mlit-kyoka-guideline-sonota-2.txt",
       "excerpt": "44ページの「２．法等における「請負代金の額」等の内容について」の見出しと本文だけ。PDF の文字(ToUnicode)をそのまま取り出した",
       "license": "PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
+    },
+    {
+      "id": "mlit-doboku-spec-r8",
+      "kind": "document",
+      "title": "土木工事共通仕様書(案)令和8年3月(国土交通省。第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42)",
+      "publisher": "国土交通省",
+      "url": "https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html",
+      "pageUrl": "https://www.mlit.go.jp/tec/tec_tk_000052.html",
+      "pdfUrl": "https://www.mlit.go.jp/tec/content/001990182.pdf",
+      "section": "1-1-1",
+      "fetchedAt": "2026-11-02",
+      "file": "mlit-doboku-spec-r8-1-1-1.txt",
+      "excerpt": "HTML版【試行版】の第1節の本文から、上の7つの条の文だけを取り出した(タグを外し、行の中の空白を1つにしただけ。手で打ち直していない。図の説明の埋め込みデータは除いた)。PDF版との突き合わせはしていない",
+      "license": "ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
     }
   ]
 }

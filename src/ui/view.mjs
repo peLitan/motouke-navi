@@ -121,3 +121,29 @@ export function renderAiCandidates(list = [], warnings = []) {
   return '<h3>AI の候補(' + list.length + '件)</h3>' + warnHtml + body
     + '<p class="human">AI の候補です。法令の決まりで判定した結果ではありません。根拠の条も AI が挙げたもので、このツールは原文と照らしていません。最後の判断は人がしてください</p>';
 }
+
+// 段取りの一覧(F06a)。rows は buildSchedule の行、detail は buildScheduleDetail の skipped・notes(無くてよい)
+export const SCHEDULE_STATUS = { applies: '行う', needs_check: '確かめる' };
+export const SCHEDULE_PHASE = { start: '着手まで' };
+export function renderSchedule(rows = [], detail = {}) {
+  const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
+  const phases = [...new Set(rows.map((r) => r.phase))];
+  const tables = phases.map((ph) => {
+    const list = rows.filter((r) => r.phase === ph);
+    return '<h3>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h3>'
+      + '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
+      + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
+        + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
+        + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
+        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>'
+        + '<details class="basis"><summary>' + esc(r.basis.section) + ' ' + esc(r.basis.sectionTitle ?? '') + '</summary><p>' + esc(r.basis.doc) + '(取得日 ' + esc(r.basis.fetchedAt) + ')</p><blockquote>' + esc(r.basis.quote) + '</blockquote></details>'
+        + '</td></tr>').join('')
+      + '</tbody></table>';
+  }).join('');
+  const body = rows.length ? tables : '<p>入れた条件では、出す段取りの行がありません。</p>';
+  const skipped = (detail.skipped ?? []).length
+    ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
+    : '';
+  return notes + body + skipped
+    + '<p class="human">国の直轄の例です。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
+}

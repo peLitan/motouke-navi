@@ -87,6 +87,14 @@
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<h3>受注後の段取り(着手まで)</h3>
+<p class="schedule-notice" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
+<p>国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手までに受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。</p>
+<div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div class="export no-print">
+<button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
+<p id="schedule-status" aria-live="polite"></p>
+</div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -204,6 +212,7 @@
 <h2>使った資料の表示</h2>
 <p>この画面の判定には、国土交通省「建設業許可事務ガイドライン」(https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf)の一部(【その他】２.「請負代金の額」等の内容について)を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。</p>
 <p>加工: 上の節の一部を抜き出し、判定の根拠(金額を税込みで比べること)に使いました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
+<p>段取りの一覧には、国土交通省「土木工事共通仕様書(案)令和8年3月」(https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html。HTML版【試行版】)の第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42 を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。加工: 上の条の文の一部を抜き出し、いつ・何を・誰にの形に言い換えて並べました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
 {{SCRIPT}}

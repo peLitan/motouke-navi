@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-7LB8jY5q5WsW0zSDYECuw6rVg3O0prhv+LQlX5W9bkc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-VHk1a1QsNGvclxgymY043kx266a2EV0o+6+9ilD4kZc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -87,6 +87,14 @@
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<h3>受注後の段取り(着手まで)</h3>
+<p class="schedule-notice" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
+<p>国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手までに受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。</p>
+<div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div class="export no-print">
+<button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
+<p id="schedule-status" aria-live="polite"></p>
+</div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -205,6 +213,7 @@
 <li>建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事） — 取得日 2026-11-02(e-Gov の版 331CO0000000273_20260401_507CO0000000412)<br>https://laws.e-gov.go.jp/law/331CO0000000273</li>
 <li>公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等） — 取得日 2026-11-02(e-Gov の版 412AC0000000127_20251212_506AC0000000049)<br>https://laws.e-gov.go.jp/law/412AC0000000127</li>
 <li>建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)(国土交通省) — 取得日 2026-11-02<br>https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf</li>
+<li>土木工事共通仕様書(案)令和8年3月(国土交通省。第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42)(国土交通省) — 取得日 2026-11-02<br>https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html</li>
 </ul>
 <p>法令は改正されることがあります。取得日から時間がたって古くなったら、判定の前に e-Gov 法令検索や国土交通省の資料の原文を確かめ直してください。この画面は取得日の時点の原文の抜き書きで判定しています。</p>
 </div>
@@ -214,6 +223,7 @@
 <h2>使った資料の表示</h2>
 <p>この画面の判定には、国土交通省「建設業許可事務ガイドライン」(https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf)の一部(【その他】２.「請負代金の額」等の内容について)を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。</p>
 <p>加工: 上の節の一部を抜き出し、判定の根拠(金額を税込みで比べること)に使いました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
+<p>段取りの一覧には、国土交通省「土木工事共通仕様書(案)令和8年3月」(https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html。HTML版【試行版】)の第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42 を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。加工: 上の条の文の一部を抜き出し、いつ・何を・誰にの形に言い換えて並べました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
 <script>
@@ -405,7 +415,33 @@ function renderAiCandidates(list = [], warnings = []) {
     + '<p class="human">AI の候補です。法令の決まりで判定した結果ではありません。根拠の条も AI が挙げたもので、このツールは原文と照らしていません。最後の判断は人がしてください</p>';
 }
 
-return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, renderAiCandidates };
+// 段取りの一覧(F06a)。rows は buildSchedule の行、detail は buildScheduleDetail の skipped・notes(無くてよい)
+const SCHEDULE_STATUS = { applies: '行う', needs_check: '確かめる' };
+const SCHEDULE_PHASE = { start: '着手まで' };
+function renderSchedule(rows = [], detail = {}) {
+  const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
+  const phases = [...new Set(rows.map((r) => r.phase))];
+  const tables = phases.map((ph) => {
+    const list = rows.filter((r) => r.phase === ph);
+    return '<h3>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h3>'
+      + '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
+      + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
+        + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
+        + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
+        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>'
+        + '<details class="basis"><summary>' + esc(r.basis.section) + ' ' + esc(r.basis.sectionTitle ?? '') + '</summary><p>' + esc(r.basis.doc) + '(取得日 ' + esc(r.basis.fetchedAt) + ')</p><blockquote>' + esc(r.basis.quote) + '</blockquote></details>'
+        + '</td></tr>').join('')
+      + '</tbody></table>';
+  }).join('');
+  const body = rows.length ? tables : '<p>入れた条件では、出す段取りの行がありません。</p>';
+  const skipped = (detail.skipped ?? []).length
+    ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
+    : '';
+  return notes + body + skipped
+    + '<p class="human">国の直轄の例です。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
+}
+
+return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule };
 })();
 __m["src/ledger-text.mjs"] = (function () {
 // 台帳の文を読む(F05b): 見出しと「| 項目 | 内容 |」の表で書いた施工体制台帳の文を、点検(src/check-taicho.mjs)の入力の形にする。
@@ -569,7 +605,7 @@ function parseLedgerText(text) {
 return { parseAmount, parseDate, parsePeriod, licenseTypeOf, parseLedgerText };
 })();
 __m["data/quotes.json"] = {"note":"法令の抜き書き。text は data/sources の原文に一字一句そのまま入っている文(空白の違いだけ許す)。文の一部を抜くときも、ただし書・「を除き」・読み替え・適用しないの部分は切り落とさない。paragraph は項の番号、item は号の番号(無ければ null)。照合は src/quote-check.mjs と scripts/check-quotes.mjs","quotes":[{"id":"q-kensetsu-24_8-1","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"特定建設業者は、発注者から直接建設工事を請け負つた場合において、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になるときは"},{"id":"q-kensetsu-24_8-1-items","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"下請負人の商号又は名称、当該下請負人に係る建設工事の内容及び工期その他の国土交通省令で定める事項を記載した施工体制台帳を作成し、工事現場ごとに備え置かなければならない。"},{"id":"q-kensetsu-24_8-1-taicho","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"施工体制台帳を作成し、工事現場ごとに備え置かなければならない。"},{"id":"q-kensetsu-24_8-2","sourceId":"kensetsu-24_8","article":"24の8","paragraph":2,"item":null,"text":"前項の建設工事の下請負人は、その請け負つた建設工事を他の建設業を営む者に請け負わせたときは、国土交通省令で定めるところにより、同項の特定建設業者に対して、当該他の建設業を営む者の商号又は名称、当該者の請け負つた建設工事の内容及び工期その他の国土交通省令で定める事項を通知しなければならない。"},{"id":"q-kensetsu-24_8-4","sourceId":"kensetsu-24_8","article":"24の8","paragraph":4,"item":null,"text":"第一項の特定建設業者は、国土交通省令で定めるところにより、当該建設工事における各下請負人の施工の分担関係を表示した施工体系図を作成し、これを当該工事現場の見やすい場所に掲げなければならない。"},{"id":"q-rei-7_4-1","sourceId":"rei-7_4","article":"7の4","paragraph":1,"item":null,"text":"法第二十四条の八第一項の政令で定める金額は、五千万円とする。ただし、特定建設業者が発注者から直接請け負つた建設工事が建築一式工事である場合においては、八千万円とする。"},{"id":"q-nyukei-15-1","sourceId":"nyukei-15","article":"15","paragraph":1,"item":null,"text":"公共工事についての建設業法第二十四条の八第一項、第二項及び第四項の規定の適用については、これらの規定中「特定建設業者」とあるのは「建設業者」と、同条第一項中「締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になる」とあるのは「下請契約を締結した」と、同条第四項中「見やすい場所」とあるのは「工事関係者が見やすい場所及び公衆が見やすい場所」とする。"},{"id":"q-nyukei-15-2","sourceId":"nyukei-15","article":"15","paragraph":2,"item":null,"text":"公共工事の受注者（前項の規定により読み替えて適用される建設業法第二十四条の八第一項の規定により同項に規定する施工体制台帳（以下「施工体制台帳」という。）を作成しなければならないこととされているものに限る。）は、当該公共工事に関する工事現場の施工体制を発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、作成した施工体制台帳（同項の規定により記載すべきものとされた事項に変更が生じたことに伴い新たに作成されたものを含む。）の写しを発注者に提出しなければならない。この場合においては、同条第三項の規定は、適用しない。"},{"id":"q-kensetsu-3-1","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":null,"text":"建設業を営もうとする者は、次に掲げる区分により、この章で定めるところにより、二以上の都道府県の区域内に営業所（本店又は支店若しくは政令で定めるこれに準ずるものをいう。以下同じ。）を設けて営業をしようとする場合にあつては国土交通大臣の、一の都道府県の区域内にのみ営業所を設けて営業をしようとする場合にあつては当該営業所の所在地を管轄する都道府県知事の許可を受けなければならない。ただし、政令で定める軽微な建設工事のみを請け負うことを営業とする者は、この限りでない。"},{"id":"q-kensetsu-3-1-2","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":2,"text":"その者が発注者から直接請け負う一件の建設工事につき、その工事の全部又は一部を、下請代金の額（その工事に係る下請契約が二以上あるときは、下請代金の額の総額）が政令で定める金額以上となる下請契約を締結して施工しようとするもの"},{"id":"q-rei-2-1","sourceId":"rei-2","article":"2","paragraph":1,"item":null,"text":"法第三条第一項第二号の政令で定める金額は、五千万円とする。ただし、同項の許可を受けようとする建設業が建築工事業である場合においては、八千万円とする。"},{"id":"q-kensetsu-26-1","sourceId":"kensetsu-26","article":"26","paragraph":1,"item":null,"text":"建設業者は、その請け負つた建設工事を施工するときは、当該建設工事に関し第七条第二号イ、ロ又はハに該当する者で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「主任技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-2","sourceId":"kensetsu-26","article":"26","paragraph":2,"item":null,"text":"発注者から直接建設工事を請け負つた特定建設業者は、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が第三条第一項第二号の政令で定める金額以上になる場合においては、前項の規定にかかわらず、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者（当該建設工事に係る建設業が指定建設業である場合にあつては、同号イに該当する者又は同号ハの規定により国土交通大臣が同号イに掲げる者と同等以上の能力を有するものと認定した者）で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「監理技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-3","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":null,"text":"公共性のある施設若しくは工作物又は多数の者が利用する施設若しくは工作物に関する重要な建設工事で政令で定めるものについては、前二項の規定により置かなければならない主任技術者又は監理技術者は、工事現場ごとに、専任の者でなければならない。ただし、次に掲げる主任技術者又は監理技術者については、この限りでない。"},{"id":"q-kensetsu-26-3-1","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":1,"text":"一　当該建設工事が次のイからハまでに掲げる要件のいずれにも該当する場合における主任技術者又は監理技術者\n　イ　当該建設工事の請負代金の額が政令で定める金額未満となるものであること。\n　ロ　当該建設工事の工事現場間の移動時間又は連絡方法その他の当該工事現場の施工体制の確保のために必要な事項に関し国土交通省令で定める要件に適合するものであること。\n　ハ　主任技術者又は監理技術者が当該建設工事の工事現場の状況の確認その他の当該工事現場に係る第二十六条の四第一項に規定する職務を情報通信技術を利用する方法により行うため必要な措置として国土交通省令で定めるものが講じられるものであること。"},{"id":"q-kensetsu-26-3-2","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":2,"text":"二　当該建設工事の工事現場に、当該監理技術者の行うべき第二十六条の四第一項に規定する職務を補佐する者として、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者に準ずる者として政令で定める者を専任で置く場合における監理技術者"},{"id":"q-kensetsu-26-4","sourceId":"kensetsu-26","article":"26","paragraph":4,"item":null,"text":"前項ただし書の規定は、同項各号の建設工事の工事現場の数が、同一の主任技術者又は監理技術者が各工事現場に係る第二十六条の四第一項に規定する職務を行つたとしてもその適切な遂行に支障を生ずるおそれがないものとして政令で定める数を超えるときは、適用しない。"},{"id":"q-rei-27-1","sourceId":"rei-27","article":"27","paragraph":1,"item":null,"text":"法第二十六条第三項の政令で定める重要な建設工事は、次の各号のいずれかに該当する建設工事で工事一件の請負代金の額が四千五百万円（当該建設工事が建築一式工事である場合にあつては、九千万円）以上のものとする。"},{"id":"q-rei-27-1-1","sourceId":"rei-27","article":"27","paragraph":1,"item":1,"text":"国又は地方公共団体が注文者である施設又は工作物に関する建設工事"},{"id":"q-rei-27-2","sourceId":"rei-27","article":"27","paragraph":2,"item":null,"text":"前項に規定する建設工事のうち密接な関係のある二以上の建設工事を同一の建設業者が同一の場所又は近接した場所において施工するものについては、同一の専任の主任技術者がこれらの建設工事を管理することができる。"},{"id":"q-kensetsu-24_8-3","sourceId":"kensetsu-24_8","article":"24の8","paragraph":3,"item":null,"text":"第一項の特定建設業者は、同項の発注者から請求があつたときは、同項の規定により備え置かれた施工体制台帳を、その発注者の閲覧に供しなければならない。"},{"id":"q-mlit-guideline-tax","sourceId":"mlit-kyoka-guideline","article":null,"paragraph":null,"item":null,"section":"【その他】2.","page":44,"text":"法、令及び規則の規定中、「請負代金の額」その他の個々の取引に係る請負代金に係る用語は、当該取引に係る消費税及び地方消費税の額を含むものとする。"}]};
-__m["data/sources/index.json"] = {"note":"法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は、根拠に使う節だけを PDF から文字のまま写して保存する(全文は再配布しない)","sources":[{"id":"kensetsu-3","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"3","title":"建設業法 第3条（建設業の許可）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-3.txt"},{"id":"kensetsu-24_8","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"24の8","title":"建設業法 第24条の8（施工体制台帳及び施工体系図の作成等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-24_8.txt"},{"id":"kensetsu-26","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"26","title":"建設業法 第26条（主任技術者及び監理技術者の設置等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-26.txt"},{"id":"rei-2","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"2","title":"建設業法施行令 第2条（法第三条第一項第二号の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-2.txt"},{"id":"rei-7_4","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"7の4","title":"建設業法施行令 第7条の4（法第二十四条の八第一項の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-7_4.txt"},{"id":"rei-27","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"27","title":"建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-27.txt"},{"id":"nyukei-15","kind":"law","law":"公共工事の入札及び契約の適正化の促進に関する法律","lawId":"412AC0000000127","article":"15","title":"公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等）","url":"https://laws.e-gov.go.jp/law/412AC0000000127","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/412AC0000000127?response_format=xml","revisionId":"412AC0000000127_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-nyukei-15.txt"},{"id":"mlit-kyoka-guideline","kind":"document","title":"建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)","publisher":"国土交通省","url":"https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf","pageUrl":"https://www.mlit.go.jp/totikensangyo/const/sosei_const_tk1_000002.html","section":"【その他】2.","page":44,"fetchedAt":"2026-11-02","file":"mlit-kyoka-guideline-sonota-2.txt","excerpt":"44ページの「２．法等における「請負代金の額」等の内容について」の見出しと本文だけ。PDF の文字(ToUnicode)をそのまま取り出した","license":"PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"}]};
+__m["data/sources/index.json"] = {"note":"法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は、根拠に使う節だけを PDF から文字のまま写して保存する(全文は再配布しない)","sources":[{"id":"kensetsu-3","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"3","title":"建設業法 第3条（建設業の許可）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-3.txt"},{"id":"kensetsu-24_8","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"24の8","title":"建設業法 第24条の8（施工体制台帳及び施工体系図の作成等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-24_8.txt"},{"id":"kensetsu-26","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"26","title":"建設業法 第26条（主任技術者及び監理技術者の設置等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-26.txt"},{"id":"rei-2","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"2","title":"建設業法施行令 第2条（法第三条第一項第二号の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-2.txt"},{"id":"rei-7_4","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"7の4","title":"建設業法施行令 第7条の4（法第二十四条の八第一項の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-7_4.txt"},{"id":"rei-27","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"27","title":"建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-27.txt"},{"id":"nyukei-15","kind":"law","law":"公共工事の入札及び契約の適正化の促進に関する法律","lawId":"412AC0000000127","article":"15","title":"公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等）","url":"https://laws.e-gov.go.jp/law/412AC0000000127","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/412AC0000000127?response_format=xml","revisionId":"412AC0000000127_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-nyukei-15.txt"},{"id":"mlit-kyoka-guideline","kind":"document","title":"建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)","publisher":"国土交通省","url":"https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf","pageUrl":"https://www.mlit.go.jp/totikensangyo/const/sosei_const_tk1_000002.html","section":"【その他】2.","page":44,"fetchedAt":"2026-11-02","file":"mlit-kyoka-guideline-sonota-2.txt","excerpt":"44ページの「２．法等における「請負代金の額」等の内容について」の見出しと本文だけ。PDF の文字(ToUnicode)をそのまま取り出した","license":"PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"},{"id":"mlit-doboku-spec-r8","kind":"document","title":"土木工事共通仕様書(案)令和8年3月(国土交通省。第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42)","publisher":"国土交通省","url":"https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html","pageUrl":"https://www.mlit.go.jp/tec/tec_tk_000052.html","pdfUrl":"https://www.mlit.go.jp/tec/content/001990182.pdf","section":"1-1-1","fetchedAt":"2026-11-02","file":"mlit-doboku-spec-r8-1-1-1.txt","excerpt":"HTML版【試行版】の第1節の本文から、上の7つの条の文だけを取り出した(タグを外し、行の中の空白を1つにしただけ。手で打ち直していない。図の説明の埋め込みデータは除いた)。PDF版との突き合わせはしていない","license":"ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"}]};
 __m["data/rules.json"] = {"note":"規則表。1行 = 1つの決まり。condition の欄がすべて入力と同じ行が当てはまる。result は判定の結果(status = 台帳を作るか、copyToOrderer = 写しを発注者に出すか)。basis は data/quotes.json の抜き書きの id。exceptions は、根拠の原文にある例外・参照(ただし・を除き・この限りでない・準用・読み替え)をこの行でどう扱ったか。値の意味: orderer は public(公共工事)か private(民間工事)、direct は発注者から直接請け負ったか、hasSubcontract は下請契約を結んだか、ictMeasure は発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を受注者が講じているか。民間の行の値: subcontractTotal は発注者から直接請け負った工事の下請契約の請負代金の総額(円・消費税込み。amountBasis を見る)、workType は kenchiku-ikkatsu(建築一式工事)か other(それ以外)、license は元請けの許可の種類で tokutei(特定建設業)か ippan(一般建設業)。condition の値がオブジェクトのときは比べ方(gte = 以上、lt = 未満、in = どれか、notIn = どれでもない)","rules":[{"id":"pub-taicho-create","scope":"public","condition":{"orderer":"public","direct":true,"hasSubcontract":true},"action":"施工体制台帳を作り、工事現場ごとに備え置く","result":{"status":"required"},"basis":[{"quoteId":"q-nyukei-15-1"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-24_8-1-taicho"}],"exceptions":["入契法 第15条第1項の読み替え: 公共工事では、建設業法 第24条の8第1項の「特定建設業者」を「建設業者」と、金額の要件(下請契約の総額が政令で定める金額以上)を「下請契約を締結した」と読む。このため、公共工事では許可の種類(特定・一般)と下請けの総額にかかわらず、下請契約を結べば作る","施行令 第7条の4 の金額(ただし書の建築一式工事の金額を含む)は、この読み替えにより公共工事には使わない"]},{"id":"pub-copy-submit","scope":"public","condition":{"orderer":"public","direct":true,"hasSubcontract":true,"ictMeasure":false},"action":"作った施工体制台帳(記載事項の変更に伴い新たに作ったものを含む)の写しを発注者に出す","result":{"copyToOrderer":"required"},"basis":[{"quoteId":"q-nyukei-15-2"}],"exceptions":["入契法 第15条第2項の「を除き」: 発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を講じている場合は出さなくてよい。この場合は行 pub-copy-exempt が当てはまる","入契法 第15条第2項の「読み替えて適用される」: 対象は第1項で読み替えた建設業法 第24条の8第1項により台帳を作る受注者に限る(行 pub-taicho-create と同じ条件)","入契法 第15条第2項の後段「同条第三項の規定は、適用しない」: 「同条」は、この項の中で直前に出てくる建設業法 第24条の8 を指すと読み、同条第3項(発注者の請求による閲覧)は適用しないとした(この読み方はツールの解釈。原文に条の名は書いていない)","措置に当たるかは国土交通省令で定めるもの(このツールは省令の原文を取得していないので、措置を講じていないことは利用者が確かめる)"]},{"id":"pub-copy-exempt","scope":"public","condition":{"orderer":"public","direct":true,"hasSubcontract":true,"ictMeasure":true},"action":"措置を講じているので、写しを発注者に出さなくてよい(台帳は作る)","result":{"copyToOrderer":"not_required"},"basis":[{"quoteId":"q-nyukei-15-2"}],"exceptions":["入契法 第15条第2項の「を除き」をこの行で扱う。措置に当たるかは国土交通省令で定めるもの(このツールは省令の原文を取得していないので、措置に当たるかは利用者が確かめる)","台帳の作成そのものは免除されない(行 pub-taicho-create)"]},{"id":"pub-no-subcontract","scope":"public","condition":{"orderer":"public","hasSubcontract":false},"action":"下請契約を結んでいないので、施工体制台帳は作らなくてよい(下請契約を結んだら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-nyukei-15-1"},{"quoteId":"q-nyukei-15-2"}],"exceptions":["入契法 第15条第1項の読み替え: 公共工事で台帳を作る条件は「下請契約を締結した」こと。結んでいなければ作る条件に当たらない","入契法 第15条第2項の「作成しなければならないこととされているものに限る」: 写しを出すのは台帳を作る受注者だけなので、台帳を作らなければ写しも出すものが無い(not_applicable)"]},{"id":"pub-not-direct","scope":"public","condition":{"orderer":"public","direct":false},"action":"発注者から直接請け負っていないので、元請けとして施工体制台帳を作る対象にしない","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-nyukei-15-1"}],"exceptions":["入契法 第15条第1項の読み替えは「特定建設業者」と金額の要件を変えるが、「発注者から直接建設工事を請け負つた場合」の要件は変えない"]},{"id":"pub-sub-notify","scope":"public","condition":{"orderer":"public","direct":false,"hasSubcontract":true},"action":"下請負人として請け負った工事を他の建設業を営む者に請け負わせたので、元請けに再下請の商号・工事の内容・工期などを通知する","result":{"notifyPrime":"required"},"basis":[{"quoteId":"q-kensetsu-24_8-2"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-nyukei-15-1"}],"exceptions":["入契法 第15条第1項の読み替え: 建設業法 第24条の8第2項の「特定建設業者」は、公共工事では「建設業者」と読む(通知の相手は台帳を作る元請け)","通知する事項の細目は国土交通省令で定める(このツールは省令の原文を取得していない)"]},{"id":"prv-taicho-create","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"gte":50000000}},"action":"特定建設業者が発注者から直接請け負い、下請けの総額(税込み)が五千万円以上なので、施工体制台帳を作り、工事現場ごとに備え置く。民間工事なので写しを発注者に出す決まりは無いが、発注者から請求があれば台帳を閲覧させる","result":{"status":"required","copyToOrderer":"not_required"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-24_8-1-taicho"},{"quoteId":"q-rei-7_4-1"},{"quoteId":"q-kensetsu-24_8-3"},{"quoteId":"q-nyukei-15-2"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","建設業法 第24条の8第1項の「国土交通省令で定めるところにより」「国土交通省令で定める事項」: 台帳の書き方・記載事項は省令による(このツールは省令の原文を取得していない)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","写しを発注者に出す決まりは入契法 第15条第2項で、対象は「公共工事の受注者」に限る。民間工事には当たらないので copyToOrderer は not_required。同項の「を除き」(措置)と「読み替えて適用される」は公共工事の話なので、この行では使わない","閲覧: 発注者から請求があったときは台帳を閲覧させる(建設業法 第24条の8第3項)"]},{"id":"prv-taicho-create-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":"kenchiku-ikkatsu","subcontractTotal":{"gte":80000000}},"action":"特定建設業者が発注者から直接請け負った建築一式工事で、下請けの総額(税込み)が八千万円以上なので、施工体制台帳を作り、工事現場ごとに備え置く。民間工事なので写しを発注者に出す決まりは無いが、発注者から請求があれば台帳を閲覧させる","result":{"status":"required","copyToOrderer":"not_required"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-24_8-1-taicho"},{"quoteId":"q-rei-7_4-1"},{"quoteId":"q-kensetsu-24_8-3"},{"quoteId":"q-nyukei-15-2"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","建設業法 第24条の8第1項の「国土交通省令で定めるところにより」「国土交通省令で定める事項」: 台帳の書き方・記載事項は省令による(このツールは省令の原文を取得していない)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","写しを発注者に出す決まりは入契法 第15条第2項で、対象は「公共工事の受注者」に限る。民間工事には当たらないので copyToOrderer は not_required。同項の「を除き」(措置)と「読み替えて適用される」は公共工事の話なので、この行では使わない","閲覧: 発注者から請求があったときは台帳を閲覧させる(建設業法 第24条の8第3項)"]},{"id":"prv-below","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"lt":50000000}},"action":"下請けの総額(税込み)が五千万円未満なので、施工体制台帳を作る決まりに当たらない(総額が増えて五千万円以上になったら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-below-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"tokutei","workType":"kenchiku-ikkatsu","subcontractTotal":{"lt":80000000}},"action":"建築一式工事で下請けの総額(税込み)が八千万円未満なので、施工体制台帳を作る決まりに当たらない(総額が増えて八千万円以上になったら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-ippan-over","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"gte":50000000}},"action":"一般建設業の許可で、下請けの総額(税込み)が五千万円以上の下請契約を結んで元請けとして施工しようとしている。発注者から直接請け負い、この額の下請契約を結んで施工するのは特定建設業の許可の区分(建設業法 第3条第1項第2号)なので、元請けの許可の種類(業種ごとの特定・一般)を許可通知書などで確かめる。特定建設業の許可なら施工体制台帳を作る。あわせて、許可の業種が建築工事業かも確かめる(施行令 第2条のただし書により、建築工事業なら特定建設業の許可が要る境目は八千万円になる。このツールは許可の業種を入力に持たず、工事の種類で境目を選んでいる)","result":{"status":"needs_check"},"basis":[{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事のみを請け負う者は許可が要らない): 下請けの総額が境目以上の工事を元請けとして施工する場面なので、この行では扱わない","建設業法 第3条第1項の「準ずる」(営業所の定義): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 許可を受けようとする建設業が建築工事業なら八千万円。このツールは工事の種類(建築一式工事か)で行を分けていて、許可の業種(建築工事業か)とは別のもの。建築一式工事なら建築工事業の許可で請け負うのが通常だが、それはツールの読み方で原文には無い","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた"]},{"id":"prv-ippan-over-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":"kenchiku-ikkatsu","subcontractTotal":{"gte":80000000}},"action":"一般建設業の許可で、建築一式工事の下請けの総額(税込み)が八千万円以上の下請契約を結んで元請けとして施工しようとしている。この額の下請契約を結んで施工するのは特定建設業の許可の区分(建設業法 第3条第1項第2号)なので、元請けの許可の種類(業種ごとの特定・一般)を許可通知書などで確かめる。特定建設業の許可なら施工体制台帳を作る。あわせて、許可の業種が建築工事業かも確かめる(施行令 第2条のただし書により、建築工事業なら特定建設業の許可が要る境目は八千万円になる。このツールは許可の業種を入力に持たず、工事の種類で境目を選んでいる)","result":{"status":"needs_check"},"basis":[{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"},{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-rei-7_4-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事のみを請け負う者は許可が要らない): 下請けの総額が境目以上の工事を元請けとして施工する場面なので、この行では扱わない","建設業法 第3条第1項の「準ずる」(営業所の定義): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 許可を受けようとする建設業が建築工事業なら八千万円。このツールは工事の種類(建築一式工事か)で行を分けていて、許可の業種(建築工事業か)とは別のもの。建築一式工事なら建築工事業の許可で請け負うのが通常だが、それはツールの読み方で原文には無い","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)","施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた"]},{"id":"prv-ippan-below","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":{"notIn":["kenchiku-ikkatsu"]},"subcontractTotal":{"lt":50000000}},"action":"一般建設業者なので、施工体制台帳を作る決まり(建設業法 第24条の8第1項。対象は特定建設業者)に当たらない。下請けの総額(税込み)は特定建設業の許可が要る境目(五千万円)より下なので、許可の種類の確認も要らない","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事)と「準ずる」(営業所): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 建築工事業の許可なら境目は八千万円。境目未満の判定は五千万円・八千万円のどちらで見ても変わらない側だけにしてある(一式でない工事は五千万円未満、建築一式工事は八千万円未満)。建築一式工事で五千万円以上八千万円未満のとき、許可の業種が建築工事業でなければ特定の許可が要る場合があるが、このツールは建築一式工事を建築工事業の許可で請け負うものと読んでいる(ツールの読み方で原文には無い)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-ippan-below-kenchiku","scope":"private","condition":{"orderer":"private","direct":true,"hasSubcontract":true,"license":"ippan","workType":"kenchiku-ikkatsu","subcontractTotal":{"lt":80000000}},"action":"一般建設業者なので、施工体制台帳を作る決まり(建設業法 第24条の8第1項。対象は特定建設業者)に当たらない。建築一式工事で下請けの総額(税込み)は八千万円より下なので、許可の種類の確認も要らない","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"},{"quoteId":"q-kensetsu-3-1-2"},{"quoteId":"q-rei-2-1"}],"exceptions":["建設業法 第3条第1項の「ただし」(軽微な建設工事)と「準ずる」(営業所): 許可の種類の確認には関わらないので、この行では扱わない","施行令 第2条の「ただし」: 建築工事業の許可なら境目は八千万円。境目未満の判定は五千万円・八千万円のどちらで見ても変わらない側だけにしてある(一式でない工事は五千万円未満、建築一式工事は八千万円未満)。建築一式工事で五千万円以上八千万円未満のとき、許可の業種が建築工事業でなければ特定の許可が要る場合があるが、このツールは建築一式工事を建築工事業の許可で請け負うものと読んでいる(ツールの読み方で原文には無い)","金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"]},{"id":"prv-not-direct","scope":"private","condition":{"orderer":"private","direct":false},"action":"発注者から直接請け負っていないので、元請けとして施工体制台帳を作る対象にしない(下請けとして再下請に出したときの通知は別)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"}],"exceptions":["建設業法 第24条の8第1項は「発注者から直接建設工事を請け負つた場合」に限る。下請けの総額や許可の種類にかかわらず、この要件に当たらなければ作る対象にならない"]},{"id":"prv-no-subcontract","scope":"private","condition":{"orderer":"private","hasSubcontract":false},"action":"下請契約を結んでいないので、施工体制台帳は作らなくてよい(下請契約を結び、総額が境目以上になったら作る)","result":{"status":"not_required","copyToOrderer":"not_applicable"},"basis":[{"quoteId":"q-kensetsu-24_8-1"}],"exceptions":["建設業法 第24条の8第1項は「締結した下請契約の請負代金の額」が境目以上のときに限る。下請契約が無ければ当たらない"]}],"amountBasis":{"tax":"included","note":"下請けの総額などの「請負代金の額」は、消費税及び地方消費税の額を含めて境目と比べる。画面の金額の入力欄は税込みで入れる","basis":[{"quoteId":"q-mlit-guideline-tax"}]}};
 __m["src/taicho.mjs"] = (function () {
 // 施工体制台帳が要るか・写しを発注者に出すかの判定(F03a: 公共工事の行、F03b: 民間工事の行)
@@ -1025,7 +1061,7 @@ __m["src/export.mjs"] = (function () {
 // 結果の書き出し(F05e)。判定の結果を「行の配列」にし、CSV の文字列にする。
 // DOM には触らない。画面(src/ui/app.mjs)が、この文字列を Blob にしてダウンロードさせる(通信はしない)。
 // のちの段の結果も、同じ列(COLUMNS)の行を作る関数を足せば、同じ toCsv で書き出せる。
-const { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel } = __m["src/ui/view.mjs"];
+const { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE } = __m["src/ui/view.mjs"];
 
 // すべての結果で共通の列
 const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '例外・読み方の注意'];
@@ -1099,6 +1135,16 @@ function checkRows(out, notice) {
   ];
 }
 
+// 段取りの一覧(F06a)の行。段取りは「いつ・何を・誰に」が要なので、共通の列とは別の列にする(見出しの行 + 1行ずつ)
+const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', '根拠の箇所', '根拠の原文(抜き書き)', '取得日', '注意'];
+function scheduleRows(rows = []) {
+  return [SCHEDULE_COLUMNS.slice(), ...rows.map((r) => [
+    SCHEDULE_PHASE[r.phase] ?? r.phase, r.when, r.what, r.to, SCHEDULE_STATUS[r.status] ?? r.status ?? '',
+    r.basis.doc + ' ' + r.basis.section + (r.basis.sectionTitle ? ' ' + r.basis.sectionTitle : ''), r.basis.quote, r.basis.fetchedAt,
+    [r.note, ...(r.checks ?? [])].filter(Boolean).join('\n'),
+  ])];
+}
+
 // 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする
 function cell(v) {
   const s = v === null || v === undefined ? '' : String(v);
@@ -1110,7 +1156,126 @@ function toCsv(rows) {
   return '﻿' + rows.map((r) => r.map(cell).join(',') + '\r\n').join('');
 }
 
-return { COLUMNS, bidRows, bidCheckRows, taichoRows, amountBasisRows, stage1Rows, checkRows, toCsv };
+return { COLUMNS, bidRows, bidCheckRows, taichoRows, amountBasisRows, stage1Rows, checkRows, SCHEDULE_COLUMNS, scheduleRows, toCsv };
+})();
+__m["data/schedule.json"] = {"note":"段取りの規則表(国の直轄の土木工事の例)。1行 = 共通仕様書の1つの決まり。quote は data/sources の原文(土木工事共通仕様書(案)令和8年3月)に一字一句そのまま入っている文(空白の違いだけ許す)。when・what・to は quote を言い換えたもので、quote に無い期日や相手を足さない。condition は入力の値と同じときだけ行を出す(入力が分からないときは「確かめる」の注意を付けて出す)。threshold は金額の境目を quote の「○万円以上」から pattern で読む(コードに金額を書き込まない)。照合は src/schedule.mjs の checkScheduleRules","doc":"土木工事共通仕様書(案)令和8年3月","sourceId":"mlit-doboku-spec-r8","rules":[{"id":"start-corins","phase":"start","when":"契約後、土曜日・日曜日・祝日等を除き10日以内","what":"コリンズ(工事実績情報システム)に受注時の工事実績情報を登録する(先に「登録のための確認のお願い」をコリンズから監督職員にメール送信し、確認を受ける)","to":"監督職員(確認)・登録機関(登録)","section":"1-1-1-7","title":"コリンズ(CORINS)への登録","threshold":{"field":"contractAmount","pattern":"工事請負代金額が(\\d+)万円以上","label":"工事請負代金額"},"quote":"受注者は、受注時または変更時において工事請負代金額が500万円以上の工事について、工事実績情報システム（コリンズ）に基づき、受注・変更・完成・訂正時に工事実績情報として作成した「登録のための確認のお願い」をコリンズから監督職員にメール送信し、監督職員の確認を受けたうえ、受注時は契約後、土曜日、日曜日、祝日等を除き10日以内に","note":"登録の対象は工事請負代金額500万円以上(単価契約の場合は契約総額)の全ての工事です。期限は契約から数えるので、着手より後になることもあります"},{"id":"start-design-check","phase":"start","when":"施工前","what":"設計図書を照査し(契約書第18条第1項第1号〜第5号)、当たる事実があれば、確認できる資料(現地地形図・設計図との対比図など)を出して確認を求める","to":"監督職員","section":"1-1-1-3","title":"設計図書の照査等","quote":"受注者は、施工前及び施工途中において、自らの負担により契約書第18条第1項第1号から第5号に係る設計図書の照査を行い、該当する事実がある場合は、監督職員にその事実が確認できる資料を提出し、確認を求めなければならない。","note":"照査は施工途中も続けます(施工中の段取り)。監督職員から更に詳しい説明や資料の追加を求められたら従います。照査の範囲を超える資料の作成は、契約書第19条により監督職員の指示によります"},{"id":"start-subcontract-terms","phase":"start","when":"下請負に付する場合","what":"下請負の要件をすべて満たすか確かめる((1)受注者が総合的に企画・指導・調整する、(2)下請負者が地方整備局の工事指名競争参加資格者なら指名停止期間中でない、(3)下請負者に施工能力がある)。下請契約は、労務費・保険料などを反映した適正な代金と工期で結ぶ","to":"下請負者(契約の相手)","section":"1-1-1-12","title":"工事の下請負","condition":{"hasSubcontract":true},"quote":"受注者は、下請負に付する場合には、以下の各号に掲げる要件をすべて満たさなければならない。","note":"原文の(2)は「国土交通省○○地方整備局」と所の名が空けてあります。どの地方整備局かは契約の書類で確かめてください"},{"id":"start-taicho","phase":"start","when":"下請契約を締結したとき","what":"施工体制台帳を作成し、工事現場に備える(原則として電子データで作成する)","to":"工事現場に備える(相手は無し)","section":"1-1-1-13","title":"施工体制台帳","condition":{"hasSubcontract":true},"quote":"受注者は、工事を施工するために下請契約を締結した場合、国土交通省令及び「施工体制台帳の作成等について（通知）」（令和4年12月28日　国不建第466～467号）に従って記載した施工体制台帳を作成し、工事現場に備える","note":"時期は「下請契約を締結したとき」で、原文に期限はありません。記載の中身は国土交通省令と「施工体制台帳の作成等について(通知)」によります(このツールは中身を取得していません)"},{"id":"start-taicho-copy","phase":"start","when":"下請契約を締結したとき(原文に提出の期限は無い)","what":"施工体制台帳の写しを提出する","to":"監督職員","section":"1-1-1-13","title":"施工体制台帳","condition":{"hasSubcontract":true,"ictMeasure":false},"quote":"発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、その写しを監督職員に提出しなければならない。","note":"発注者が情報通信技術で確認できる措置(国土交通省令で定めるもの)を講じている場合は、写しの提出は要りません"},{"id":"start-taikeizu","phase":"start","when":"下請契約を締結したとき","what":"施工体系図(各下請負者の施工の分担関係)を作成し、工事関係者が見やすい場所と公衆が見やすい場所に掲げる","to":"工事関係者・公衆(掲示)","section":"1-1-1-13","title":"施工体制台帳(2.施工体系図)","condition":{"hasSubcontract":true},"quote":"各下請負者の施工の分担関係を表示した施工体系図を作成し、公共工事の入札及び契約の適正化の促進に関する法律に従って、工事関係者が見やすい場所及び公衆が見やすい場所に掲げる","note":"時期は「下請契約を締結したとき」で、原文に期限はありません。記載の中身は国土交通省令と「施工体制台帳の作成等について(通知)」によります(このツールは中身を取得していません)"},{"id":"start-taikeizu-copy","phase":"start","when":"下請契約を締結したとき(原文に提出の期限は無い)","what":"施工体系図の写しを提出する","to":"監督職員","section":"1-1-1-13","title":"施工体制台帳(2.施工体系図)","condition":{"hasSubcontract":true,"ictMeasure":false},"quote":"工事関係者が見やすい場所及び公衆が見やすい場所に掲げるとともに、発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、その写しを監督職員に提出しなければならない。","note":"発注者が情報通信技術で確認できる措置(国土交通省令で定めるもの)を講じている場合は、写しの提出は要りません"},{"id":"start-plan","phase":"start","when":"工事着手前(または施工方法が確定した時期)","what":"施工計画書(工事目的物を完成するために必要な手順や工法等)を提出する","to":"監督職員","section":"1-1-1-6","title":"施工計画書","quote":"受注者は、工事着手前または施工方法が確定した時期に工事目的物を完成するために必要な手順や工法等についての施工計画書を監督職員に提出しなければならない。","note":"記載する事項(工事概要・計画工程表・現場組織表など)は 1-1-1-6 の(1)〜(16)にあります。維持工事等の簡易な工事では、監督職員の承諾を得て記載の一部を省略できます"},{"id":"start-commence","phase":"start","when":"特記仕様書に定めた工事着手の期日まで(定めがある場合)","what":"特記仕様書で工事着手の期日を確かめ、その期日までに着手する","to":"相手は無し(特記仕様書で期日を確かめる)","section":"1-1-1-11","title":"工事着手","quote":"受注者は、特記仕様書に工事に着手すべき期日について定めがある場合には、その期日までに工事着手しなければならない。","note":"着手の期日は特記仕様書の中身で、共通仕様書からは決まりません。この行が着手までの段取りの区切りです"}]};
+__m["src/schedule.mjs"] = (function () {
+// 段取りの一覧(F06a: 着手まで。国の直轄の土木工事の例)。
+// data/schedule.json の規則表の行を、入力の条件に当てはめて「いつ・何を・誰に・根拠(共通仕様書の箇所と原文)」の行にする。
+// 条件や金額の境目はコードに書き込まない(規則表の condition と、抜き書きから読む threshold)。
+// 入力が分からない条件は、推測で決めずに「確かめる」の注意を付けて行を出す。
+const scheduleData = __m["data/schedule.json"];
+const sourcesData = __m["data/sources/index.json"];
+
+const FIELD_LABEL = {
+  hasSubcontract: '下請契約があるか',
+  ictMeasure: '発注者が情報通信技術で確認できる措置を講じているか',
+};
+const PHASES = { start: '着手まで' };
+const PHASE_LABEL = PHASES;
+
+const isUnknown = (v) => v === undefined || v === null || (typeof v === 'number' && !Number.isFinite(v));
+
+// 抜き書きの「○万円以上」から境目の円を読む。読めなければ規則表の誤りとして止める
+function thresholdYen(rule) {
+  const m = String(rule.quote).match(new RegExp(rule.threshold.pattern));
+  if (!m) throw new Error('段取りの規則表: 抜き書きから金額の境目を読めない: ' + rule.id);
+  return Number(m[1]) * 10000;
+}
+
+function sourceOf(id) {
+  const s = sourcesData.sources.find((x) => x.id === id);
+  if (!s) throw new Error('段取りの規則表: 出典が無い: ' + id);
+  return s;
+}
+
+function basisOf(rule) {
+  const s = sourceOf(scheduleData.sourceId);
+  return {
+    doc: scheduleData.doc,
+    title: scheduleData.doc,
+    section: rule.section,
+    sectionTitle: rule.title,
+    sourceId: scheduleData.sourceId,
+    quote: rule.quote,
+    url: s.url,
+    fetchedAt: s.fetchedAt,
+  };
+}
+
+const yen = (n) => Number(n).toLocaleString('ja-JP') + '円';
+
+// 規則表の1行を入力に当てはめる。返り値: { show, checks, skip }
+function apply(rule, input) {
+  const checks = [];
+  for (const [k, want] of Object.entries(rule.condition ?? {})) {
+    const v = input[k];
+    if (isUnknown(v)) checks.push('「' + (FIELD_LABEL[k] ?? k) + '」が分からないので、当てはまるか確かめてください');
+    else if (v !== want) return { show: false, skip: (FIELD_LABEL[k] ?? k) + 'が条件に合わないので出していません' };
+  }
+  if (rule.threshold) {
+    const t = thresholdYen(rule);
+    const v = input[rule.threshold.field];
+    if (isUnknown(v)) checks.push(rule.threshold.label + 'が分からないので、' + yen(t) + '以上なら行います');
+    else if (v < t) return { show: false, skip: rule.threshold.label + 'が' + yen(t) + '未満なので出していません' };
+  }
+  return { show: true, checks };
+}
+
+// 段取りの行と、出さなかった行の理由を返す
+function buildScheduleDetail(input = {}) {
+  const rows = [];
+  const skipped = [];
+  const notes = [];
+  if (input.direct === false) {
+    notes.push('この段取りは発注者から直接請け負った受注者(元請け)の例です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください');
+    return { rows, skipped: scheduleData.rules.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes };
+  }
+  if (input.orderer === 'private') notes.push('民間工事です。この一覧は国の直轄の例なので、発注者の仕様書・契約書で置き換えてください');
+  for (const rule of scheduleData.rules) {
+    const r = apply(rule, input);
+    if (!r.show) { skipped.push({ id: rule.id, phase: rule.phase, what: rule.what, section: rule.section, reason: r.skip }); continue; }
+    rows.push({
+      id: rule.id,
+      phase: rule.phase,
+      when: rule.when,
+      what: rule.what,
+      to: rule.to,
+      status: r.checks.length ? 'needs_check' : 'applies',
+      checks: r.checks,
+      note: rule.note ?? '',
+      basis: basisOf(rule),
+    });
+  }
+  return { rows, skipped, notes };
+}
+
+function buildSchedule(input = {}) {
+  return buildScheduleDetail(input).rows;
+}
+
+// 規則表の点検(試験と scripts から使う): 抜き書きが原文に入っているか、いつ・何を・誰に・箇所が空でないか、境目が読めるか
+function checkScheduleRules(texts) {
+  const norm = (s) => String(s).replace(/[\s　]+/g, '').replace(/（/g, '(').replace(/）/g, ')');
+  const errors = [];
+  const text = texts[scheduleData.sourceId];
+  if (!text) return ['共通仕様書の原文が無い: ' + scheduleData.sourceId];
+  const ids = new Set();
+  for (const r of scheduleData.rules) {
+    if (ids.has(r.id)) errors.push('id の重なり: ' + r.id);
+    ids.add(r.id);
+    for (const k of ['when', 'what', 'to', 'section', 'quote']) if (!String(r[k] ?? '').trim()) errors.push(r.id + ': ' + k + ' が空');
+    if (!PHASES[r.phase]) errors.push(r.id + ': phase が分からない: ' + r.phase);
+    if (!/^\d+-\d+-\d+-\d+$/.test(r.section)) errors.push(r.id + ': 箇所の番号の形が違う: ' + r.section);
+    if (!norm(text).includes(norm(r.quote))) errors.push(r.id + ': 抜き書きが原文に無い');
+    if (!norm(text).includes(norm(r.section + '　' + r.title.replace(/\(.*\)$/, '')))) errors.push(r.id + ': 箇所の番号と題名が原文の見出しに無い');
+    if (r.threshold) { try { thresholdYen(r); } catch (e) { errors.push(e.message); } }
+    for (const k of Object.keys(r.condition ?? {})) if (!FIELD_LABEL[k]) errors.push(r.id + ': 分からない条件: ' + k);
+  }
+  return errors;
+}
+
+return { PHASE_LABEL, thresholdYen, buildScheduleDetail, buildSchedule, checkScheduleRules };
 })();
 __m["src/sample.mjs"] = (function () {
 // 見本(F05f): 「見本を読み込む」ボタンで画面に入れる、架空の工事の条件と書類。
@@ -1723,16 +1888,17 @@ function startAi(doc) {
 return { parseAiResult, loadAiResult, startAi };
 })();
 __m["src/ui/app.mjs"] = (function () {
-// 画面のつながり(F05a・F05e・F05b): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
+// 画面のつながり(F05a・F05e・F05b・F06a): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult } = __m["src/ui/view.mjs"];
+const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule } = __m["src/ui/view.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
 const { checkTaicho } = __m["src/check-taicho.mjs"];
 const { bidCheck } = __m["src/bid-check.mjs"];
 const { judgeTaicho } = __m["src/taicho.mjs"];
-const { stage1Rows, checkRows, toCsv } = __m["src/export.mjs"];
+const { stage1Rows, checkRows, scheduleRows, toCsv } = __m["src/export.mjs"];
+const { buildScheduleDetail } = __m["src/schedule.mjs"];
 const { SAMPLE } = __m["src/sample.mjs"];
 const { startMask } = __m["src/ui/mask-app.mjs"];
 const { startAi } = __m["src/ui/ai-app.mjs"];
@@ -1765,10 +1931,12 @@ function runBid(doc) {
     last = null;
     bidOut.innerHTML = renderErrors(errors);
     taichoOut.innerHTML = renderErrors(errors);
+    runSchedule(doc, null, errors);
     return;
   }
   last = null;
   const input = readBidForm(values);
+  runSchedule(doc, input);
   try {
     const bid = bidCheck(input);
     const taicho = judgeTaicho(input);
@@ -1782,6 +1950,33 @@ function runBid(doc) {
     bidOut.innerHTML = msg;
     taichoOut.innerHTML = msg;
   }
+}
+
+// 段取りの一覧(F06a): 同じ条件から、着手までの段取りを出す(入札前の確認とは別に動かし、片方が止まっても片方は出す)
+let lastSchedule = null;
+function setScheduleStatus(doc, text) {
+  const el = doc.getElementById('schedule-status');
+  if (el) el.textContent = text;
+}
+function runSchedule(doc, input, errors = []) {
+  const out = doc.getElementById('schedule-result');
+  lastSchedule = null;
+  setScheduleStatus(doc, '');
+  if (!out) return;
+  if (!input) { out.innerHTML = renderErrors(errors); return; }
+  try {
+    const detail = buildScheduleDetail(input);
+    out.innerHTML = renderSchedule(detail.rows, detail);
+    lastSchedule = detail.rows;
+  } catch (e) {
+    out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
+  }
+}
+
+function exportScheduleCsv(doc) {
+  if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
+  downloadText(doc, toCsv(scheduleRows(lastSchedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
+  setScheduleStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
 }
 
 function setExportStatus(doc, text) {
@@ -1893,6 +2088,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
     on('csv-btn', () => exportCsv(doc));
     on('ledger-run', () => runLedgerCheck(doc));
     on('check-csv-btn', () => exportCheckCsv(doc));
+    on('schedule-csv-btn', () => exportScheduleCsv(doc));
     // 台帳の文や条件を変えたら、前の点検の結果は書き出さない
     for (const id of ['ledger-input', ...BID_FORM_IDS]) {
       const el = doc.getElementById(id);
@@ -1907,7 +2103,10 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
     for (const id of BID_FORM_IDS) {
       const el = doc.getElementById(id);
       if (!el) continue;
-      const changed = () => { if (last) { last = null; stale = true; setExportStatus(doc, STALE); } };
+      const changed = () => {
+        if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
+        if (lastSchedule) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
+      };
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
     }
@@ -1918,7 +2117,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { runBid, exportCsv, printResult, runLedgerCheck, exportCheckCsv, loadSample, startApp };
+return { runBid, exportScheduleCsv, exportCsv, printResult, runLedgerCheck, exportCheckCsv, loadSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

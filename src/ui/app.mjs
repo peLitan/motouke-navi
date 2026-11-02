@@ -1,13 +1,14 @@
-// 画面のつながり(F05a・F05e・F05b): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
+// 画面のつながり(F05a・F05e・F05b・F06a): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult } from './view.mjs';
+import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule } from './view.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
-import { stage1Rows, checkRows, toCsv } from '../export.mjs';
+import { stage1Rows, checkRows, scheduleRows, toCsv } from '../export.mjs';
+import { buildScheduleDetail } from '../schedule.mjs';
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
 import { startAi } from './ai-app.mjs';
@@ -40,10 +41,12 @@ export function runBid(doc) {
     last = null;
     bidOut.innerHTML = renderErrors(errors);
     taichoOut.innerHTML = renderErrors(errors);
+    runSchedule(doc, null, errors);
     return;
   }
   last = null;
   const input = readBidForm(values);
+  runSchedule(doc, input);
   try {
     const bid = bidCheck(input);
     const taicho = judgeTaicho(input);
@@ -57,6 +60,33 @@ export function runBid(doc) {
     bidOut.innerHTML = msg;
     taichoOut.innerHTML = msg;
   }
+}
+
+// 段取りの一覧(F06a): 同じ条件から、着手までの段取りを出す(入札前の確認とは別に動かし、片方が止まっても片方は出す)
+let lastSchedule = null;
+function setScheduleStatus(doc, text) {
+  const el = doc.getElementById('schedule-status');
+  if (el) el.textContent = text;
+}
+function runSchedule(doc, input, errors = []) {
+  const out = doc.getElementById('schedule-result');
+  lastSchedule = null;
+  setScheduleStatus(doc, '');
+  if (!out) return;
+  if (!input) { out.innerHTML = renderErrors(errors); return; }
+  try {
+    const detail = buildScheduleDetail(input);
+    out.innerHTML = renderSchedule(detail.rows, detail);
+    lastSchedule = detail.rows;
+  } catch (e) {
+    out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
+  }
+}
+
+export function exportScheduleCsv(doc) {
+  if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
+  downloadText(doc, toCsv(scheduleRows(lastSchedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
+  setScheduleStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
 }
 
 function setExportStatus(doc, text) {
@@ -168,6 +198,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('csv-btn', () => exportCsv(doc));
     on('ledger-run', () => runLedgerCheck(doc));
     on('check-csv-btn', () => exportCheckCsv(doc));
+    on('schedule-csv-btn', () => exportScheduleCsv(doc));
     // 台帳の文や条件を変えたら、前の点検の結果は書き出さない
     for (const id of ['ledger-input', ...BID_FORM_IDS]) {
       const el = doc.getElementById(id);
@@ -182,7 +213,10 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     for (const id of BID_FORM_IDS) {
       const el = doc.getElementById(id);
       if (!el) continue;
-      const changed = () => { if (last) { last = null; stale = true; setExportStatus(doc, STALE); } };
+      const changed = () => {
+        if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
+        if (lastSchedule) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
+      };
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
     }
