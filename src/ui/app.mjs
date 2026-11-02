@@ -105,7 +105,7 @@ function runSchedule(doc, input, errors = []) {
 export function exportScheduleCsv(doc) {
   if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
   downloadText(doc, toCsv(scheduleRows(lastSchedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setScheduleStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setScheduleStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 function setExportStatus(doc, text) {
@@ -137,7 +137,7 @@ export function exportCsv(doc) {
   if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
   const csv = toCsv(stage1Rows(last.bid, last.taicho, NOTICE));
   downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setExportStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setExportStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 export function printResult(doc, win) {
@@ -191,7 +191,7 @@ export function runLedgerCheck(doc) {
 export function exportCheckCsv(doc) {
   if (!lastCheck) { setCheckStatus(doc, '先に「台帳を点検する」を押して結果を出してください。'); return; }
   downloadText(doc, toCsv(checkRows(lastCheck, NOTICE)), '台帳の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setCheckStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setCheckStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 // 台帳の Excel の読み込み(F04c): 作成例の様式の .xlsx を読み、読めた欄を台帳の文にして「施工体制台帳の文」の欄に入れる。
@@ -247,7 +247,7 @@ export function runPlanCheck(doc) {
 export function exportPlanCsv(doc) {
   if (!lastPlan) { setPlanStatus(doc, '先に「目次を点検する」を押して結果を出してください。'); return; }
   downloadText(doc, toCsv(planRows(lastPlan)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setPlanStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setPlanStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 // 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。

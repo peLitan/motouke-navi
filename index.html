@@ -2,15 +2,26 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dH0ojgPAjWgO/whBLfqexmEKj2eZH3670ynKBGcIB6Y='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-NznLFvvCfvDa5quDHFgy+eNqqY9pm6KwmV1Cu8LIAaQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
 <style>
-  body { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.6; }
-  .disclaimer { border: 2px solid #b45309; background: #fffbeb; padding: 0.75rem 1rem; font-weight: bold; }
+  /* 文字(F14d): 本文は16px以上・行間1.7・端末の標準の書体。文字と地の色のコントラストは 4.5:1 以上(単体の試験で計算して確かめる) */
+  html { font-size: 100%; }
+  body { font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; font-size: 1rem; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.7; color: #1f2937; background: #fff; }
+  /* 入力欄・ボタン・整形済みの文も本文と同じ大きさにする(ブラウザの既定は 13px 前後になるため) */
+  button, input, select, textarea { font: inherit; }
+  pre, code { font-family: ui-monospace, Consolas, "BIZ UDGothic", monospace; font-size: 1rem; }
+  /* 目立つ枠は2つだけ: 冒頭の必須の断り書き(#disclaimer)と、対応表の警告(#map-warning)。ほかの注意は灰色の左線の注記(.note) */
+  .disclaimer { border: 3px solid #b45309; background: #fffbeb; color: #1f2937; padding: 0.75rem 1rem; font-weight: bold; }
+  .note { border-left: 4px solid #6b7280; padding: 0.1rem 0 0.1rem 0.75rem; margin: 0.5rem 0; color: #374151; }
+  .req { font-size: 1rem; font-weight: bold; margin-left: 0.25rem; white-space: nowrap; }
+  .req-must { color: #991b1b; }
+  .req-optional { color: #4b5563; }
+  .form-lead { margin: 0.25rem 0 0.75rem; }
   .row { margin: 0.4rem 0; }
-  .hint { margin: 0.2rem 0 0; font-size: 0.9rem; color: #374151; }
+  .hint { margin: 0.1rem 0 0; font-size: 1rem; color: #374151; }
   .radio-group { border: 1px solid #9ca3af; border-radius: 4px; padding: 0.4rem 0.8rem; }
   .radio-group legend { font-weight: bold; padding: 0 0.3rem; }
   .radio-group div { margin: 0.2rem 0; }
@@ -19,7 +30,7 @@
   .human { font-weight: bold; }
   .errors { color: #b91c1c; }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
-  footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
+  footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 1rem; color: #333; }
   .export { margin: 0.5rem 0 1rem; }
   .mask-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   #mask-map table { border-collapse: collapse; }
@@ -31,9 +42,9 @@
   .start { border: 2px solid #1d4ed8; background: #eff6ff; padding: 0.75rem 1rem; margin: 1rem 0; }
   .start h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
   .sample-button { display: inline-block; font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1.5rem; min-height: 3rem; color: #fff; background: #1d4ed8; border: 2px solid #1e3a8a; border-radius: 0.375rem; cursor: pointer; text-align: left; }
-  .sample-button:hover { background: #1e40af; }
+  .sample-button:hover { color: #fff; background: #1e40af; }
   .sample-button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
-  .sample-button .btn-sub { display: block; font-size: 0.9rem; font-weight: normal; }
+  .sample-button .btn-sub { display: block; font-size: 1rem; font-weight: normal; }
   .steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0.75rem 0 0; }
   .steps li { border: 1px solid #1d4ed8; background: #fff; border-radius: 1rem; padding: 0.2rem 0.75rem; }
   .steps li + li::before { content: "→ "; color: #1d4ed8; }
@@ -92,7 +103,7 @@
 <li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
 </ul>
 </div>
-<p class="no-print">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
+<p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 </header>
 <main id="main">
 <section id="bid">
@@ -110,42 +121,49 @@
 </div>
 <p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
-<div class="row"><label for="orderer">発注者</label>
-<select id="orderer" name="orderer">
+<p class="form-lead" id="form-lead">※必須の欄が空のときは、その欄を使う項目を「判断できない」にします(推測で埋めません)。※任意の欄は、当てはまるときだけ入れます。</p>
+<div class="row"><label for="orderer">発注者<span class="req req-must">※必須</span></label>
+<select id="orderer" name="orderer" aria-describedby="orderer-hint">
 <option value="">選んでください</option>
 <option value="public">公共(国・地方公共団体・特殊法人などの公共工事)</option>
 <option value="private">民間</option>
-</select></div>
-<fieldset class="row radio-group" aria-describedby="direct-hint"><legend>元請けか下請けか</legend>
+</select>
+<p id="orderer-hint" class="hint">工事を注文した人(元請けに注文した人)の区分です。下請けで請け負うときも、元の発注者で選びます。</p></div>
+<fieldset class="row radio-group" aria-describedby="direct-hint"><legend>元請けか下請けか<span class="req req-must">※必須</span></legend>
 <div><input type="radio" id="direct-unset" name="role" value="" checked><label for="direct-unset">選んでください(まだ選んでいない)</label></div>
 <div><input type="radio" id="direct" name="role" value="prime"><label for="direct">元請け(発注者から直接請け負う)</label></div>
 <div><input type="radio" id="direct-sub" name="role" value="sub"><label for="direct-sub">下請け(元請けなどから請け負う)</label></div>
-<p id="direct-hint" class="hint">選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p>
+<p id="direct-hint" class="hint">発注者から直接請け負うなら「元請け」、元請けやほかの下請けから請け負うなら「下請け」です。選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p>
 </fieldset>
-<div class="row"><label for="work-type">工事の種類</label>
+<div class="row"><label for="work-type">工事の種類<span class="req req-must">※必須</span></label>
 <select id="work-type" name="work-type" aria-describedby="work-type-hint">
 <option value="">選んでください</option>
 <option value="kenchiku-ikkatsu">建築一式工事</option>
 <option value="other">それ以外の工事</option>
 </select>
 <p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上で「下請け」を選んだ)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></div>
-<div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)</label>
-<input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000"></div>
-<div class="row"><label for="subcontract-total">下請けの総額(円・税込み。下請契約が二以上ならその合計。下請けが無ければ 0)</label>
-<input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000"></div>
-<div class="row"><label for="license">元請けの許可の種類(この工事の業種)</label>
-<select id="license" name="license">
+<div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
+<input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-hint">
+<p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。</p></div>
+<div class="row"><label for="subcontract-total">下請けの総額(円・税込み)<span class="req req-must">※必須</span></label>
+<input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000" aria-describedby="subcontract-total-hint">
+<p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。</p></div>
+<div class="row"><label for="license">元請けの許可の種類(この工事の業種)<span class="req req-must">※必須</span></label>
+<select id="license" name="license" aria-describedby="license-hint">
 <option value="">選んでください</option>
 <option value="tokutei">特定建設業</option>
 <option value="ippan">一般建設業</option>
-</select></div>
-<div class="row"><label for="engineer-qualification">置ける技術者の資格</label>
-<select id="engineer-qualification" name="engineer-qualification">
+</select>
+<p id="license-hint" class="hint">この工事の業種で持っている許可が、特定建設業か一般建設業かを選びます(許可は業種ごとに分かれます)。</p></div>
+<div class="row"><label for="engineer-qualification">置ける技術者の資格<span class="req req-must">※必須</span></label>
+<select id="engineer-qualification" name="engineer-qualification" aria-describedby="engineer-qualification-hint">
 <option value="">選んでください</option>
 <option value="kanri">監理技術者</option>
 <option value="shunin">主任技術者</option>
-</select></div>
-<div class="row"><input type="checkbox" id="ict-measure" name="ict-measure"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる</label></div>
+</select>
+<p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></div>
+<div class="row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
+<p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
 <div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
@@ -154,7 +172,7 @@
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>受注後の段取り(着手から完成・引き渡しまで)</h3>
-<p class="schedule-notice" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
+<p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
 <p>国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 <div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
@@ -171,7 +189,7 @@
 <div class="export">
 <button type="button" id="print-btn">結果を印刷する</button>
 <button type="button" id="csv-btn">結果を CSV に書き出す</button>
-<p>CSV は BOM つきの UTF-8 で、この PC に保存するだけです(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
+<p id="csv-note">Excel で開ける CSV として、この PC に保存します(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
 </div>
 </section>
@@ -204,7 +222,7 @@
 </details>
 <div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
 <input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
-<p class="disclaimer" id="ledger-file-note">ファイルはこの PC の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
+<p class="note" id="ledger-file-note">ファイルはこの PC の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
 <p id="ledger-file-status" aria-live="polite"></p>
 <div id="ledger-unreadable" class="result" aria-live="polite"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
@@ -217,7 +235,7 @@
 <section id="plan-check">
 <h2>3. 施工計画書の目次の点検</h2>
 <p>施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
-<p class="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
+<p class="schedule-notice note">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
 <div class="row"><button type="button" id="plan-run">目次を点検する</button>
@@ -232,8 +250,8 @@
 <section id="mask" class="no-print">
 <h2>A. 文の置き換え(外のサービスに貼る前に)</h2>
 <p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
-<p class="disclaimer" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
-<p class="disclaimer" id="mask-limits">限界(架空の書類3件での測定): 辞書に語を足さないと、人名は1つも見つかりませんでした(漏れの率 41.2%。人名・現場名を「辞書に足す」で足すと 6.7%)。一部だけ残る語(住所や会社名の一部など)が19あり、辞書に足しても減りません。詳しくは docs/mask-rate.md。</p>
+<p class="note" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
+<p class="note" id="mask-limits">限界(架空の書類3件での測定): 辞書に語を足さないと、人名は1つも見つかりませんでした(漏れの率 41.2%。人名・現場名を「辞書に足す」で足すと 6.7%)。一部だけ残る語(住所や会社名の一部など)が19あり、辞書に足しても減りません。詳しくは docs/mask-rate.md。</p>
 <div class="row"><label for="dict-word">辞書に足す語</label>
 <input type="text" id="dict-word" name="dict-word" placeholder="例 甲野 一郎">
 <label for="dict-kind">種類</label>
@@ -252,7 +270,7 @@
 <div id="dict-list"><p>足した語はまだありません。</p></div>
 <div class="row"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
 <input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
-<p class="disclaimer" id="mask-file-note">ファイルはこの PC の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
+<p class="note" id="mask-file-note">ファイルはこの PC の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
 <p id="mask-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-input">置き換える文</label><br>
 <textarea id="mask-input" name="mask-input" rows="8" cols="80"></textarea></div>
@@ -287,7 +305,7 @@
 <section id="ai-check">
 <h2>B. Claude で点検した結果(AI の候補)</h2>
 <p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。書き出した結果のファイルをここで読み込むと、下の欄に出します。</p>
-<p class="disclaimer">ここに出るのは AI の候補です。上の「1.」〜「3.」の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
+<p class="note" id="ai-note">ここに出るのは AI の候補です。上の「1.」〜「3.」の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
 <div class="row"><label for="ai-load">AI の候補を読み込む</label>
 <input type="file" id="ai-load" name="ai-load" accept=".json,application/json"></div>
 <p id="ai-status" aria-live="polite"></p>
@@ -3117,7 +3135,7 @@ function runSchedule(doc, input, errors = []) {
 function exportScheduleCsv(doc) {
   if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
   downloadText(doc, toCsv(scheduleRows(lastSchedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setScheduleStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setScheduleStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 function setExportStatus(doc, text) {
@@ -3149,7 +3167,7 @@ function exportCsv(doc) {
   if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
   const csv = toCsv(stage1Rows(last.bid, last.taicho, NOTICE));
   downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setExportStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setExportStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 function printResult(doc, win) {
@@ -3203,7 +3221,7 @@ function runLedgerCheck(doc) {
 function exportCheckCsv(doc) {
   if (!lastCheck) { setCheckStatus(doc, '先に「台帳を点検する」を押して結果を出してください。'); return; }
   downloadText(doc, toCsv(checkRows(lastCheck, NOTICE)), '台帳の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setCheckStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setCheckStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 // 台帳の Excel の読み込み(F04c): 作成例の様式の .xlsx を読み、読めた欄を台帳の文にして「施工体制台帳の文」の欄に入れる。
@@ -3259,7 +3277,7 @@ function runPlanCheck(doc) {
 function exportPlanCsv(doc) {
   if (!lastPlan) { setPlanStatus(doc, '先に「目次を点検する」を押して結果を出してください。'); return; }
   downloadText(doc, toCsv(planRows(lastPlan)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setPlanStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+  setPlanStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 // 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。
