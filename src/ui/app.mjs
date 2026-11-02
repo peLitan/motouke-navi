@@ -6,6 +6,7 @@ import { renderBidResult, renderTaichoResult, renderErrors } from './view.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
 import { stage1Rows, toCsv } from '../export.mjs';
+import { SAMPLE } from '../sample.mjs';
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
 const NOTICE = '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください';
@@ -96,6 +97,27 @@ export function printResult(doc, win) {
   win.print();
 }
 
+// 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。
+// 書類の入力欄(台帳・目次)がある画面ならそこに入れ、見本の書類の欄にも中身を出す。
+export function loadSample(doc) {
+  for (const [id, v] of Object.entries(SAMPLE.form)) {
+    const el = doc.getElementById(id);
+    if (!el) continue;
+    if (typeof v === 'boolean') el.checked = v;
+    else el.value = String(v);
+  }
+  const put = (id, text) => { const el = doc.getElementById(id); if (el) { if ('value' in el && /^(TEXTAREA|INPUT)$/i.test(el.tagName || '')) el.value = text; else el.textContent = text; } };
+  put('ledger-input', SAMPLE.documents.ledger);
+  put('plan-input', SAMPLE.documents.planToc);
+  put('sample-ledger', SAMPLE.documents.ledger);
+  put('sample-plan', SAMPLE.documents.planToc);
+  const docs = doc.getElementById('sample-docs');
+  if (docs) docs.hidden = false;
+  const st = doc.getElementById('sample-status');
+  if (st) st.textContent = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
+  runBid(doc);
+}
+
 export function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
   const start = () => {
     const on = (id, f) => {
@@ -103,6 +125,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); f(); });
     };
     on('bid-run', () => runBid(doc));
+    on('sample-load', () => loadSample(doc));
     on('print-btn', () => printResult(doc, win));
     on('csv-btn', () => exportCsv(doc));
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)

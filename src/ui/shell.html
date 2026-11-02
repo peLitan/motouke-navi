@@ -19,6 +19,8 @@
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
   .export { margin: 0.5rem 0 1rem; }
+  .sample { border: 1px dashed #2563eb; padding: 0.5rem 1rem; margin: 0.5rem 0 1rem; }
+  pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
     body { max-width: none; padding: 0; font-size: 10.5pt; }
@@ -40,6 +42,11 @@
 <section id="bid">
 <h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
 <p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
+<div class="sample no-print">
+<button type="button" id="sample-load">見本を読み込む</button>
+<span>架空の工事の条件と書類(施工体制台帳・施工計画書の目次)を入れて、そのまま確認します。初めての方はまずこちらを押してください。</span>
+<p id="sample-status" aria-live="polite"></p>
+</div>
 <form id="bid-form" class="form" autocomplete="off">
 <div class="row"><label for="orderer">発注者</label>
 <select id="orderer" name="orderer">
@@ -77,6 +84,13 @@
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<details id="sample-docs" class="no-print" hidden>
+<summary>見本の書類(架空)を見る</summary>
+<h4>施工体制台帳(架空)</h4>
+<pre id="sample-ledger"></pre>
+<h4>施工計画書の目次(架空)</h4>
+<pre id="sample-plan"></pre>
+</details>
 <div class="export">
 <button type="button" id="print-btn">結果を印刷する</button>
 <button type="button" id="csv-btn">結果を CSV に書き出す</button>
