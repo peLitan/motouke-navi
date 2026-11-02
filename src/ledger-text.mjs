@@ -12,7 +12,11 @@ const toHalf = (s) => String(s ?? '').replace(/[０-９]/g, (c) => String.fromCh
 const clean = (s) => String(s ?? '').trim();
 
 // 「金 250,000,000円(税込)」→ 250000000。空なら null。数字で書いていない(「万」など)なら null と注意
+// 括弧の中に「税抜」「税別」「消費税別」「本体」「外税」があれば、額は読まずに null と注意(点検の境目は税込みの額。推測で税込みに直さない)
+const TAX_EXCLUDED_RE = /[(（][^)）]*(?:税抜|税別|本体|外税)[^)）]*[)）]/;
 export function parseAmount(raw) {
+  const ex = toHalf(raw).match(TAX_EXCLUDED_RE);
+  if (ex) return { value: null, error: '金額が税抜きの書き方です' + ex[0] + '。点検の境目は消費税を含む額なので、この額は読みません。税込みの額で書いてください: ' + clean(raw) };
   const s = toHalf(raw).replace(/[(（][^)）]*[)）]/g, '').replace(/^\s*金/, '').replace(/[，,、\s　]/g, '').replace(/円$/, '');
   if (s === '') return { value: null, error: null };
   if (!/^\d+$/.test(s)) return { value: null, error: '金額を読めません(数字と桁区切りで書いてください): ' + clean(raw) };
@@ -72,11 +76,14 @@ function sectionKind(title) {
 }
 
 // 下請けの節の見出しから次数を読む。「二次」「三次」など(漢数字・数字)なら 2 以上、「一次」なら 1、書いていなければ null
+// 「下請負人(一次・二次)」のように違う次数が2つ以上あれば、節の全員の次数は決められないので 'mixed'
 function tierOf(title) {
-  const m = clean(title).match(/([一二三四五六七八九]|[1-9１-９])次/);
-  if (!m) return null;
-  const d = '一二三四五六七八九'.indexOf(m[1]);
-  return d >= 0 ? d + 1 : Number(m[1].replace(/[１-９]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+  const tiers = [...clean(title).matchAll(/([一二三四五六七八九]|[1-9１-９])次/g)].map((m) => {
+    const d = '一二三四五六七八九'.indexOf(m[1]);
+    return d >= 0 ? d + 1 : Number(m[1].replace(/[１-９]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+  });
+  if (tiers.length === 0) return null;
+  return new Set(tiers).size > 1 ? 'mixed' : tiers[0];
 }
 // 「5-1. 子安防水有限会社(一次: 壬生内装株式会社)」の、注文者を書いたかっこ →「一次: 壬生内装株式会社」。無ければ null
 const PARENT_RE = /[(（]\s*((?:[一二三四五六七八九1-9１-９]次|注文者|上位|元方)\s*[:：]\s*[^)）]+)[)）]\s*$/;
@@ -95,7 +102,18 @@ export function parseDedicated(raw) {
 const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
 
 // 技術者の行(「監理技術者 氏名」「主任技術者 氏名」「資格」)を入れる。入れたら true
-function putEngineer(eng, key, value, warn) {
+// 「監理技術者補佐」(第26条第3項ただし書 第2号の補佐する者)の行は、監理技術者の欄に入れず eng.assistant に分けて入れる
+function putEngineer(eng, key, value, warn, asAssistant = false) {
+  if (asAssistant || /補佐/.test(key)) {
+    const first = !eng.assistant;
+    if (first) eng.assistant = { name: '', qualification: '', dedicated: null };
+    if (/専任/.test(key)) { const r = parseDedicated(value); eng.assistant.dedicated = r.value; if (r.error) warn(r.error); }
+    else if (/資格/.test(key)) eng.assistant.qualification = value;
+    else if (/氏名|補佐/.test(key)) eng.assistant.name = value;
+    else return false;
+    if (first) warn('監理技術者補佐の行として読みました。監理技術者の氏名・資格・専任の欄には入れていません(補佐する者が要件を満たすかは、このツールは点検しません)');
+    return true;
+  }
   if (/専任/.test(key)) {
     const r = parseDedicated(value);
     eng.dedicated = r.value;
@@ -120,6 +138,7 @@ export function parseLedgerText(text) {
   let kind = 'top';
   let sub = null;
   let sectionTier = null;
+  let assistantSection = false; // 「## 監理技術者補佐」のような節の中
 
   const amountInto = (obj, key, raw, where) => {
     const r = parseAmount(raw);
@@ -138,15 +157,30 @@ export function parseLedgerText(text) {
     const h = line.match(/^\s*(#{1,6})\s+(.*)$/);
     if (h) {
       const level = h[1].length;
-      if (level === 2) { kind = sectionKind(h[2]); sub = null; sectionTier = kind === 'subs' ? tierOf(h[2]) : null; }
+      if (level === 2) {
+        kind = sectionKind(h[2]); sub = null; sectionTier = kind === 'subs' ? tierOf(h[2]) : null;
+        assistantSection = kind === 'primeEngineer' && /補佐/.test(h[2]);
+        if (sectionTier === 'mixed') warnings.push(lineNo + '行目「' + clean(h[2]) + '」: 見出しに次数が2つ以上あるので、この節の下請けを一次とは数えません。会社名の見出しに「(一次: 注文者の会社名)」のように注文者を書くか、一次と二次の節を分けてください');
+      } else if (level === 3 && kind === 'primeEngineer') {
+        assistantSection = /補佐/.test(h[2]);
+      }
       else if (level === 3 && kind === 'subs') {
         let name = stripNumber(h[2]);
         let tier = sectionTier;
         let orderer = '';
         const pm = name.match(PARENT_RE);
-        if (pm) { orderer = clean(pm[1]); name = clean(name.slice(0, pm.index)); if (tier === null || tier < 2) tier = 2; }
-        // tier: 1 = 元請けが直接結んだ下請け、2 以上 = 再下請け、null = 見出しに書いていない
-        sub = { name, licenseNumber: '', work: '', periodFrom: '', periodTo: '', amount: null, engineer: { ...emptyEngineer(), role: 'shunin' }, tier, orderer };
+        if (pm) { orderer = clean(pm[1]); name = clean(name.slice(0, pm.index)); if (tier === null || tier === 'mixed' || tier < 2) tier = 2; }
+        else if (tier === 'mixed') {
+          // 節の見出しで決まらないときは、会社名の見出しの「(一次)」などで決める
+          const own = name.match(/[(（]\s*([一二三四五六七八九1-9１-９]次)\s*[)）]\s*$/);
+          tier = own ? tierOf(own[1]) : 'mixed';
+          if (own) name = clean(name.slice(0, own.index));
+        }
+        // tier: 1 = 元請けが直接結んだ下請け、2 以上 = 再下請け、null = 見出しに書いていない(一次として数える)
+        // tierUnknown: 節の見出しに次数が2つ以上あり、この下請けの次数が決まらない(tier は null。総額の判定では「判断できない」に回す)
+        const tierUnknown = tier === 'mixed';
+        if (tierUnknown) tier = null;
+        sub = { name, licenseNumber: '', work: '', periodFrom: '', periodTo: '', amount: null, engineer: { ...emptyEngineer(), role: 'shunin' }, tier, orderer, ...(tierUnknown ? { tierUnknown: true } : {}) };
         subcontractors.push(sub);
       }
       return;
@@ -171,7 +205,7 @@ export function parseLedgerText(text) {
       else if (/請負代金/.test(key)) amountInto(project, 'contractAmount', value, where);
       else unknown();
     } else if (kind === 'primeEngineer') {
-      if (!putEngineer(prime.engineer, key, value, (m) => warnings.push(where + ': ' + m))) unknown();
+      if (!putEngineer(prime.engineer, key, value, (m) => warnings.push(where + ': ' + m), assistantSection)) unknown();
     } else if (kind === 'subs') {
       if (!sub) { warnings.push(where + ': 下請けの見出し(### 会社名)の前の行なので読みませんでした'); return; }
       if (/商号|名称/.test(key)) sub.name = value;

@@ -55,7 +55,10 @@ function checkEngineer(owner, target, out, who) {
 // 建設業法 第26条第2項(監理技術者)・第3条第1項第2号と施行令 第2条(特定建設業の許可)
 function checkPrimeAgainstTotal(input, out) {
   // 第26条第2項の「当該建設工事を施工するために締結した下請契約」は元請けが自分で結んだ契約。二次以降(tier が 2 以上)は総額に数えない
-  const subs = (input.subcontractors ?? []).filter((s) => !(Number.isInteger(s?.tier) && s.tier >= 2));
+  // 次数が決まらない下請け(tierUnknown。台帳の見出しが「下請負人(一次・二次)」など)は、一次かもしれないので総額に足すかを決めない
+  const all = (input.subcontractors ?? []).map((s, i) => [s, i]).filter(([s]) => !(Number.isInteger(s?.tier) && s.tier >= 2));
+  const subs = all.filter(([s]) => !s?.tierUnknown).map(([s]) => s);
+  const uncertain = all.filter(([s]) => s?.tierUnknown);
   const prime = input.prime ?? {};
   const target = primeLabel(prime);
   const role = prime.engineer?.role;
@@ -63,7 +66,7 @@ function checkPrimeAgainstTotal(input, out) {
   const t = licenseThreshold();
   const workType = input.project?.workType;
   const needsTotal = role !== 'kanri' || license !== 'tokutei';
-  if (subs.length === 0) return; // 下請契約が無ければ総額の境目の話にならない
+  if (all.length === 0) return; // 下請契約が無ければ総額の境目の話にならない
   if (!needsTotal) return; // 監理技術者・特定建設業なら、総額がいくらでも食い違わない
 
   const unknownAmount = subs.map((s, i) => [s, i]).filter(([s]) => !isAmount(s?.amount));
@@ -73,6 +76,16 @@ function checkPrimeAgainstTotal(input, out) {
   }
   const line = workType === 'kenchiku-ikkatsu' ? t.kenchiku : t.other;
   const known = subs.filter((s) => isAmount(s?.amount)).reduce((a, s) => a + s.amount, 0);
+  const uncertainMax = uncertain.some(([s]) => !isAmount(s?.amount)) ? Infinity : uncertain.reduce((a, [s]) => a + s.amount, 0);
+  if (unknownAmount.length === 0 && uncertain.length > 0 && known < line && known + uncertainMax >= line) {
+    out.undecidable.push({
+      target,
+      field: 'subcontractors.tier',
+      message: '一次か二次以降かが分からない下請けがある(' + uncertain.map(([s, i]) => subLabel(s, i)).join('、') + ')ので、元請けが直接結んだ下請けの総額が ' + yen(line) + ' 以上かを決められず、元請けの技術者(監理技術者か)と許可の種類(特定か)が合っているか判断できません(台帳の会社名の見出しに注文者を書くと決まります)',
+      basis: basisOf('q-kensetsu-26-2', 'q-rei-2-1'),
+    });
+    return;
+  }
   if (unknownAmount.length > 0 && known < line) {
     out.undecidable.push({
       target,

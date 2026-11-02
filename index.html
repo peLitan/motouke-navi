@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-6m/81ybtbDkRPaOP2VCKSCFx4OMSQ8rsfZpC1WEnbWw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sABNaQxpxvvn/32m03P+t/PIcOQm/qQUbgpYdW/yOMY='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -667,7 +667,11 @@ const toHalf = (s) => String(s ?? '').replace(/[０-９]/g, (c) => String.fromCh
 const clean = (s) => String(s ?? '').trim();
 
 // 「金 250,000,000円(税込)」→ 250000000。空なら null。数字で書いていない(「万」など)なら null と注意
+// 括弧の中に「税抜」「税別」「消費税別」「本体」「外税」があれば、額は読まずに null と注意(点検の境目は税込みの額。推測で税込みに直さない)
+const TAX_EXCLUDED_RE = /[(（][^)）]*(?:税抜|税別|本体|外税)[^)）]*[)）]/;
 function parseAmount(raw) {
+  const ex = toHalf(raw).match(TAX_EXCLUDED_RE);
+  if (ex) return { value: null, error: '金額が税抜きの書き方です' + ex[0] + '。点検の境目は消費税を含む額なので、この額は読みません。税込みの額で書いてください: ' + clean(raw) };
   const s = toHalf(raw).replace(/[(（][^)）]*[)）]/g, '').replace(/^\s*金/, '').replace(/[，,、\s　]/g, '').replace(/円$/, '');
   if (s === '') return { value: null, error: null };
   if (!/^\d+$/.test(s)) return { value: null, error: '金額を読めません(数字と桁区切りで書いてください): ' + clean(raw) };
@@ -727,11 +731,14 @@ function sectionKind(title) {
 }
 
 // 下請けの節の見出しから次数を読む。「二次」「三次」など(漢数字・数字)なら 2 以上、「一次」なら 1、書いていなければ null
+// 「下請負人(一次・二次)」のように違う次数が2つ以上あれば、節の全員の次数は決められないので 'mixed'
 function tierOf(title) {
-  const m = clean(title).match(/([一二三四五六七八九]|[1-9１-９])次/);
-  if (!m) return null;
-  const d = '一二三四五六七八九'.indexOf(m[1]);
-  return d >= 0 ? d + 1 : Number(m[1].replace(/[１-９]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+  const tiers = [...clean(title).matchAll(/([一二三四五六七八九]|[1-9１-９])次/g)].map((m) => {
+    const d = '一二三四五六七八九'.indexOf(m[1]);
+    return d >= 0 ? d + 1 : Number(m[1].replace(/[１-９]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+  });
+  if (tiers.length === 0) return null;
+  return new Set(tiers).size > 1 ? 'mixed' : tiers[0];
 }
 // 「5-1. 子安防水有限会社(一次: 壬生内装株式会社)」の、注文者を書いたかっこ →「一次: 壬生内装株式会社」。無ければ null
 const PARENT_RE = /[(（]\s*((?:[一二三四五六七八九1-9１-９]次|注文者|上位|元方)\s*[:：]\s*[^)）]+)[)）]\s*$/;
@@ -750,7 +757,18 @@ function parseDedicated(raw) {
 const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
 
 // 技術者の行(「監理技術者 氏名」「主任技術者 氏名」「資格」)を入れる。入れたら true
-function putEngineer(eng, key, value, warn) {
+// 「監理技術者補佐」(第26条第3項ただし書 第2号の補佐する者)の行は、監理技術者の欄に入れず eng.assistant に分けて入れる
+function putEngineer(eng, key, value, warn, asAssistant = false) {
+  if (asAssistant || /補佐/.test(key)) {
+    const first = !eng.assistant;
+    if (first) eng.assistant = { name: '', qualification: '', dedicated: null };
+    if (/専任/.test(key)) { const r = parseDedicated(value); eng.assistant.dedicated = r.value; if (r.error) warn(r.error); }
+    else if (/資格/.test(key)) eng.assistant.qualification = value;
+    else if (/氏名|補佐/.test(key)) eng.assistant.name = value;
+    else return false;
+    if (first) warn('監理技術者補佐の行として読みました。監理技術者の氏名・資格・専任の欄には入れていません(補佐する者が要件を満たすかは、このツールは点検しません)');
+    return true;
+  }
   if (/専任/.test(key)) {
     const r = parseDedicated(value);
     eng.dedicated = r.value;
@@ -775,6 +793,7 @@ function parseLedgerText(text) {
   let kind = 'top';
   let sub = null;
   let sectionTier = null;
+  let assistantSection = false; // 「## 監理技術者補佐」のような節の中
 
   const amountInto = (obj, key, raw, where) => {
     const r = parseAmount(raw);
@@ -793,15 +812,30 @@ function parseLedgerText(text) {
     const h = line.match(/^\s*(#{1,6})\s+(.*)$/);
     if (h) {
       const level = h[1].length;
-      if (level === 2) { kind = sectionKind(h[2]); sub = null; sectionTier = kind === 'subs' ? tierOf(h[2]) : null; }
+      if (level === 2) {
+        kind = sectionKind(h[2]); sub = null; sectionTier = kind === 'subs' ? tierOf(h[2]) : null;
+        assistantSection = kind === 'primeEngineer' && /補佐/.test(h[2]);
+        if (sectionTier === 'mixed') warnings.push(lineNo + '行目「' + clean(h[2]) + '」: 見出しに次数が2つ以上あるので、この節の下請けを一次とは数えません。会社名の見出しに「(一次: 注文者の会社名)」のように注文者を書くか、一次と二次の節を分けてください');
+      } else if (level === 3 && kind === 'primeEngineer') {
+        assistantSection = /補佐/.test(h[2]);
+      }
       else if (level === 3 && kind === 'subs') {
         let name = stripNumber(h[2]);
         let tier = sectionTier;
         let orderer = '';
         const pm = name.match(PARENT_RE);
-        if (pm) { orderer = clean(pm[1]); name = clean(name.slice(0, pm.index)); if (tier === null || tier < 2) tier = 2; }
-        // tier: 1 = 元請けが直接結んだ下請け、2 以上 = 再下請け、null = 見出しに書いていない
-        sub = { name, licenseNumber: '', work: '', periodFrom: '', periodTo: '', amount: null, engineer: { ...emptyEngineer(), role: 'shunin' }, tier, orderer };
+        if (pm) { orderer = clean(pm[1]); name = clean(name.slice(0, pm.index)); if (tier === null || tier === 'mixed' || tier < 2) tier = 2; }
+        else if (tier === 'mixed') {
+          // 節の見出しで決まらないときは、会社名の見出しの「(一次)」などで決める
+          const own = name.match(/[(（]\s*([一二三四五六七八九1-9１-９]次)\s*[)）]\s*$/);
+          tier = own ? tierOf(own[1]) : 'mixed';
+          if (own) name = clean(name.slice(0, own.index));
+        }
+        // tier: 1 = 元請けが直接結んだ下請け、2 以上 = 再下請け、null = 見出しに書いていない(一次として数える)
+        // tierUnknown: 節の見出しに次数が2つ以上あり、この下請けの次数が決まらない(tier は null。総額の判定では「判断できない」に回す)
+        const tierUnknown = tier === 'mixed';
+        if (tierUnknown) tier = null;
+        sub = { name, licenseNumber: '', work: '', periodFrom: '', periodTo: '', amount: null, engineer: { ...emptyEngineer(), role: 'shunin' }, tier, orderer, ...(tierUnknown ? { tierUnknown: true } : {}) };
         subcontractors.push(sub);
       }
       return;
@@ -826,7 +860,7 @@ function parseLedgerText(text) {
       else if (/請負代金/.test(key)) amountInto(project, 'contractAmount', value, where);
       else unknown();
     } else if (kind === 'primeEngineer') {
-      if (!putEngineer(prime.engineer, key, value, (m) => warnings.push(where + ': ' + m))) unknown();
+      if (!putEngineer(prime.engineer, key, value, (m) => warnings.push(where + ': ' + m), assistantSection)) unknown();
     } else if (kind === 'subs') {
       if (!sub) { warnings.push(where + ': 下請けの見出し(### 会社名)の前の行なので読みませんでした'); return; }
       if (/商号|名称/.test(key)) sub.name = value;
@@ -1806,7 +1840,10 @@ function checkEngineer(owner, target, out, who) {
 // 建設業法 第26条第2項(監理技術者)・第3条第1項第2号と施行令 第2条(特定建設業の許可)
 function checkPrimeAgainstTotal(input, out) {
   // 第26条第2項の「当該建設工事を施工するために締結した下請契約」は元請けが自分で結んだ契約。二次以降(tier が 2 以上)は総額に数えない
-  const subs = (input.subcontractors ?? []).filter((s) => !(Number.isInteger(s?.tier) && s.tier >= 2));
+  // 次数が決まらない下請け(tierUnknown。台帳の見出しが「下請負人(一次・二次)」など)は、一次かもしれないので総額に足すかを決めない
+  const all = (input.subcontractors ?? []).map((s, i) => [s, i]).filter(([s]) => !(Number.isInteger(s?.tier) && s.tier >= 2));
+  const subs = all.filter(([s]) => !s?.tierUnknown).map(([s]) => s);
+  const uncertain = all.filter(([s]) => s?.tierUnknown);
   const prime = input.prime ?? {};
   const target = primeLabel(prime);
   const role = prime.engineer?.role;
@@ -1814,7 +1851,7 @@ function checkPrimeAgainstTotal(input, out) {
   const t = licenseThreshold();
   const workType = input.project?.workType;
   const needsTotal = role !== 'kanri' || license !== 'tokutei';
-  if (subs.length === 0) return; // 下請契約が無ければ総額の境目の話にならない
+  if (all.length === 0) return; // 下請契約が無ければ総額の境目の話にならない
   if (!needsTotal) return; // 監理技術者・特定建設業なら、総額がいくらでも食い違わない
 
   const unknownAmount = subs.map((s, i) => [s, i]).filter(([s]) => !isAmount(s?.amount));
@@ -1824,6 +1861,16 @@ function checkPrimeAgainstTotal(input, out) {
   }
   const line = workType === 'kenchiku-ikkatsu' ? t.kenchiku : t.other;
   const known = subs.filter((s) => isAmount(s?.amount)).reduce((a, s) => a + s.amount, 0);
+  const uncertainMax = uncertain.some(([s]) => !isAmount(s?.amount)) ? Infinity : uncertain.reduce((a, [s]) => a + s.amount, 0);
+  if (unknownAmount.length === 0 && uncertain.length > 0 && known < line && known + uncertainMax >= line) {
+    out.undecidable.push({
+      target,
+      field: 'subcontractors.tier',
+      message: '一次か二次以降かが分からない下請けがある(' + uncertain.map(([s, i]) => subLabel(s, i)).join('、') + ')ので、元請けが直接結んだ下請けの総額が ' + yen(line) + ' 以上かを決められず、元請けの技術者(監理技術者か)と許可の種類(特定か)が合っているか判断できません(台帳の会社名の見出しに注文者を書くと決まります)',
+      basis: basisOf('q-kensetsu-26-2', 'q-rei-2-1'),
+    });
+    return;
+  }
   if (unknownAmount.length > 0 && known < line) {
     out.undecidable.push({
       target,
