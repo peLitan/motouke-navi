@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-q4xRchF6sJWiCBoiVe7rbLIMWRyvpg6n2RscTRVa+bg='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-aVfkJE1FF95TQdsgYAGWYxn/pcft2V71pSwLEkFXvFo='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -125,13 +125,15 @@
 ## 3. 元請の技術者等
 | 監理技術者 氏名 | (氏名) |
 | 資格 | (資格) |
+| 専任・非専任 | 専任 または 非専任 |
 ## 4. 下請負人(一次)
 ### 4-1. (下請けの会社名)
 | 工事内容 | (工事の内容) |
 | 工期 | (始め) から (終わり) まで |
 | 請負代金額 | 金 xxxx円 |
 | 主任技術者 氏名 | (氏名) |
-| 資格 | (資格) |</pre>
+| 資格 | (資格) |
+| 専任・非専任 | 専任 または 非専任 |</pre>
 <p>「見本を読み込む」を押すと、架空の台帳がこの欄に入ります。</p>
 </details>
 <div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
@@ -404,15 +406,18 @@ const CHECK_FIELD = {
   'prime.licenseType': '元請けの許可の種類',
   'project.workType': '工事の種類',
   'subcontractors.amount': '下請けの請負代金の額',
+  'engineer.dedicated': '技術者の専任',
 };
 const fieldLabel = (f) => CHECK_FIELD[f] ?? String(f ?? '');
 
 // 台帳の点検の結果(F05b)。warnings は台帳の文を読んだときの注意(読めなかった行など)
+// 候補に付けた「確かめること」(台帳からは決められない例外)
+const confirmList = (list) => (Array.isArray(list) && list.length ? '<p class="confirm-title">確かめること:</p><ul class="confirm">' + list.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '');
 function renderCheckResult(out, warnings = []) {
   const cands = out.candidates ?? [];
   const und = out.undecidable ?? [];
   const candHtml = cands.length
-    ? '<h3>抜け・食い違いの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.target) + ' — ' + esc(fieldLabel(c.field)) + '</h4><p>' + esc(c.message) + '</p>' + basisList(c.basis) + '</li>').join('') + '</ul>'
+    ? '<h3>抜け・食い違いの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.target) + ' — ' + esc(fieldLabel(c.field)) + '</h4><p>' + esc(c.message) + '</p>' + confirmList(c.confirm) + basisList(c.basis) + '</li>').join('') + '</ul>'
     : '<h3>抜け・食い違いの候補</h3><p>入力の範囲では、候補は出ませんでした(このツールが点検しない記載事項や例外はあります)。</p>';
   const undHtml = und.length
     ? '<h3>判断できない(' + und.length + '件)</h3><ul class="undecidable">' + und.map((u) => '<li><h4>' + esc(u.target) + ' — ' + esc(fieldLabel(u.field)) + '</h4><p>' + esc(u.message) + '</p>' + basisList(u.basis ?? []) + '</li>').join('') + '</ul>'
@@ -509,8 +514,9 @@ __m["src/ledger-text.mjs"] = (function () {
 //
 // 返り値: { project, prime, subcontractors, warnings }
 //   project: { name, place, orderer, contractAmount, periodFrom, periodTo }
-//   prime: { name, licenseNumber, licenseType: 'tokutei'|'ippan'|null, engineer: { role, name, qualification } }
-//   subcontractors: [{ name, licenseNumber, work, periodFrom, periodTo, amount, engineer: { role, name, qualification } }]
+//   prime: { name, licenseNumber, licenseType: 'tokutei'|'ippan'|null, engineer: { role, name, qualification, dedicated } }
+//   subcontractors: [{ name, licenseNumber, work, periodFrom, periodTo, amount, engineer: { role, name, qualification, dedicated } }]
+//   dedicated: 「専任・非専任」の欄が「専任」なら true、「非専任」なら false、欄が無い・空なら null(読めなければ null とし、warnings に書く)
 
 const toHalf = (s) => String(s ?? '').replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
 const clean = (s) => String(s ?? '').trim();
@@ -585,12 +591,27 @@ function tierOf(title) {
 // 「5-1. 子安防水有限会社(一次: 壬生内装株式会社)」の、注文者を書いたかっこ →「一次: 壬生内装株式会社」。無ければ null
 const PARENT_RE = /[(（]\s*((?:[一二三四五六七八九1-9１-９]次|注文者|上位|元方)\s*[:：]\s*[^)）]+)[)）]\s*$/;
 
-const emptyEngineer = () => ({ role: null, name: '', qualification: '' });
+const emptyEngineer = () => ({ role: null, name: '', qualification: '', dedicated: null });
+
+// 「専任・非専任」の欄の値。「専任」→ true、「非専任」→ false、空 → null。それ以外は読めないので null と注意
+function parseDedicated(raw) {
+  const s = clean(raw).replace(/[\s　]/g, '');
+  if (s === '') return { value: null, error: null };
+  if (s === '非専任') return { value: false, error: null };
+  if (s === '専任') return { value: true, error: null };
+  return { value: null, error: '「専任・非専任」の欄を読めません(「専任」か「非専任」と書いてください): ' + clean(raw) };
+}
 // 「4-1. 架空二土木株式会社」→「架空二土木株式会社」
 const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
 
 // 技術者の行(「監理技術者 氏名」「主任技術者 氏名」「資格」)を入れる。入れたら true
-function putEngineer(eng, key, value) {
+function putEngineer(eng, key, value, warn) {
+  if (/専任/.test(key)) {
+    const r = parseDedicated(value);
+    eng.dedicated = r.value;
+    if (r.error) warn(r.error);
+    return true;
+  }
   if (/技術者/.test(key)) {
     if (/監理技術者/.test(key)) eng.role = 'kanri';
     else if (/主任技術者/.test(key)) eng.role = 'shunin';
@@ -660,7 +681,7 @@ function parseLedgerText(text) {
       else if (/請負代金/.test(key)) amountInto(project, 'contractAmount', value, where);
       else unknown();
     } else if (kind === 'primeEngineer') {
-      if (!putEngineer(prime.engineer, key, value)) unknown();
+      if (!putEngineer(prime.engineer, key, value, (m) => warnings.push(where + ': ' + m))) unknown();
     } else if (kind === 'subs') {
       if (!sub) { warnings.push(where + ': 下請けの見出し(### 会社名)の前の行なので読みませんでした'); return; }
       if (/商号|名称/.test(key)) sub.name = value;
@@ -668,7 +689,7 @@ function parseLedgerText(text) {
       else if (/工事(の)?内容/.test(key)) sub.work = value;
       else if (/工期/.test(key)) periodInto(sub, value, where);
       else if (/請負代金/.test(key)) amountInto(sub, 'amount', value, where);
-      else if (!putEngineer(sub.engineer, key, value)) unknown();
+      else if (!putEngineer(sub.engineer, key, value, (m) => warnings.push(where + ': ' + m))) unknown();
     } else {
       warnings.push(where + ': どの節(元請・発注者との契約・技術者・下請負人)の行か分からないので読みませんでした');
     }
@@ -678,7 +699,7 @@ function parseLedgerText(text) {
   return { project, prime, subcontractors, warnings };
 }
 
-return { parseAmount, parseDate, parsePeriod, licenseTypeOf, parseLedgerText };
+return { parseAmount, parseDate, parsePeriod, licenseTypeOf, parseDedicated, parseLedgerText };
 })();
 __m["src/mask/extract.mjs"] = (function () {
 // 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
@@ -1563,13 +1584,15 @@ __m["src/check-taicho.mjs"] = (function () {
 //
 // 入力(台帳の形):
 // { project: { name, orderer, ordererType: 'public'|'private', workType: 'other'|'kenchiku-ikkatsu', contractAmount, periodFrom, periodTo },
-//   prime: { name, licenseType: 'tokutei'|'ippan', licenseNumber, engineer: { role: 'kanri'|'shunin', name, qualification } },
-//   subcontractors: [ { name, licenseNumber, work, periodFrom, periodTo, amount, engineer: { role: 'shunin', name, qualification } } ] }
-// 返り値: { candidates: [{ kind: 'missing'|'mismatch', target, field, message, basis }], undecidable: [{ target, field, message, basis }], notes }
+//   prime: { name, licenseType: 'tokutei'|'ippan', licenseNumber, engineer: { role: 'kanri'|'shunin', name, qualification, dedicated } },
+//   subcontractors: [ { name, licenseNumber, work, periodFrom, periodTo, amount, engineer: { role: 'shunin', name, qualification, dedicated } } ] }
+//   dedicated: true(専任)/ false(非専任)/ 無い・null(台帳に書いていない。専任の点検はしない)
+// 返り値: { candidates: [{ kind: 'missing'|'mismatch', target, field, message, basis, confirm? }], undecidable: [{ target, field, message, basis }], notes }
+//   confirm: 候補のうち、台帳からは決められない例外(ただし書など)。人が確かめること
 const quotesData = __m["data/quotes.json"];
 const sourcesData = __m["data/sources/index.json"];
 const { resolveQuoteIds } = __m["src/taicho.mjs"];
-const { licenseThreshold } = __m["src/bid-check.mjs"];
+const { licenseThreshold, dedicatedThreshold } = __m["src/bid-check.mjs"];
 
 const basisOf = (...ids) => resolveQuoteIds(ids.map((quoteId) => ({ quoteId })), quotesData.quotes, sourcesData.sources, '台帳の点検');
 
@@ -1658,13 +1681,61 @@ function checkPrimeAgainstTotal(input, out) {
   }
 }
 
+// 技術者の専任(建設業法 第26条第3項・施行令 第27条第1項)
+// 台帳に「非専任」と書いた技術者だけを見る。「専任」・書いていない技術者は候補にも「判断できない」にもしない(注意に書く)。
+// 金額の境目は施行令 第27条第1項の抜き書きから読む。工事一件の請負代金の額は、元請けは発注者との契約の額、下請けはその下請契約の額。
+// 第1号(国又は地方公共団体が注文者)に当たるかは、画面の「公共」を当たるものとして読む。民間は第2号・第3号(施設・工作物の種類)で決まり、
+// 台帳からは分からないので「判断できない」にする。
+// ただし書(第26条第3項第1号・第2号)は台帳からは決められないので、候補に confirm として付ける。第1号の「政令で定める金額」の原文はこのツールに取り込んでいない。
+function checkDedicated(owner, target, amount, input, out, who) {
+  const e = owner?.engineer;
+  if (!e || e.dedicated !== false) return;
+  const roleName = e.role === 'kanri' ? '監理技術者' : e.role === 'shunin' ? '主任技術者' : '技術者';
+  const workType = input.project?.workType;
+  const ordererType = input.project?.ordererType;
+  const field = 'engineer.dedicated';
+  const base = ['q-kensetsu-26-3', 'q-rei-27-1'];
+  const amountName = who === '元請け' ? '発注者との請負代金の額' : 'この下請契約の請負代金の額';
+  if (workType !== 'other' && workType !== 'kenchiku-ikkatsu') {
+    out.undecidable.push({ target, field, message: `${who}の${roleName}が非専任ですが、工事の種類(建築一式かそれ以外か)が分からないので、専任が要る金額の境目(施行令 第27条第1項)を決められず判断できません`, basis: basisOf(...base) });
+    return;
+  }
+  const t = dedicatedThreshold();
+  const line = workType === 'kenchiku-ikkatsu' ? t.kenchiku : t.other;
+  if (!isAmount(amount)) {
+    out.undecidable.push({ target, field, message: `${who}の${roleName}が非専任ですが、${amountName}が分からないので、${yen(line)} 以上か(施行令 第27条第1項)を決められず判断できません`, basis: basisOf(...base) });
+    return;
+  }
+  if (amount < line) return;
+  if (ordererType !== 'public') {
+    const why = ordererType === 'private'
+      ? '民間の工事では、施設・工作物が施行令 第27条第1項第2号(第15条第1号・第3号の施設・工作物。第15条の原文はこのツールに取り込んでいない)か第3号(学校・病院・共同住宅・事務所・工場・倉庫など)に当たるかで決まり、台帳からは分からないので判断できません'
+      : '発注者が公共か民間かが分からないので、施行令 第27条第1項の各号に当たるかを決められず判断できません';
+    out.undecidable.push({ target, field, message: `${who}の${roleName}が非専任で、${amountName}(税込み)が ${yen(amount)} と ${yen(line)} 以上です。${why}`, basis: basisOf(...base) });
+    return;
+  }
+  const confirm = [
+    '建設業法 第26条第3項ただし書 第1号: 請負代金の額が政令で定める金額未満で、工事現場間の移動時間・連絡方法などの要件と、情報通信技術を使う措置の要件をすべて満たす場合は、専任でなくてよい(政令で定める金額の原文はこのツールに取り込んでいないので、当たるかを確かめる)',
+    ...(e.role === 'kanri' ? ['建設業法 第26条第3項ただし書 第2号: 監理技術者の職務を補佐する者を工事現場に専任で置く場合は、監理技術者は専任でなくてよい(補佐する者を置いているかを確かめる)'] : []),
+    '「公共」は、施行令 第27条第1項第1号(国又は地方公共団体が注文者である施設又は工作物に関する建設工事)に当たるものとして読んでいる。注文者が国・地方公共団体でなければ、第2号・第3号の施設・工作物かを確かめる',
+  ];
+  out.candidates.push({
+    kind: 'mismatch', target, field,
+    message: `${who}の${roleName}が非専任になっています。${amountName}(税込み)が ${yen(amount)} で ${yen(line)} 以上の、国又は地方公共団体が注文者である工事なので、工事現場ごとに専任の者でなければなりません(ただし書に当たるかは確かめる)`,
+    basis: basisOf(...base, 'q-rei-27-1-1', 'q-kensetsu-26-3-1', ...(e.role === 'kanri' ? ['q-kensetsu-26-3-2'] : [])),
+    confirm,
+  });
+}
+
 function checkTaicho(input = {}) {
   const out = { candidates: [], undecidable: [] };
   const subs = Array.isArray(input.subcontractors) ? input.subcontractors : [];
   checkEngineer(input.prime, primeLabel(input.prime), out, '元請け');
+  checkDedicated(input.prime, primeLabel(input.prime), input.project?.contractAmount, input, out, '元請け');
   subs.forEach((s, i) => {
     checkSubFields(s, i, out);
     checkEngineer(s, subLabel(s, i), out, '下請け');
+    checkDedicated(s, subLabel(s, i), s?.amount, input, out, '下請け');
   });
   checkPrimeAgainstTotal({ ...input, subcontractors: subs }, out);
   out.notes = [
@@ -1673,6 +1744,7 @@ function checkTaicho(input = {}) {
     '施工体系図・施工計画書との突き合わせはしていません(台帳だけを点検します)',
     '金額は税込みで比べます(国交省 建設業許可事務ガイドライン【その他】2.)',
     '建築一式工事は建築工事業の許可で請け負うものと読み、施行令 第2条のただし書の金額を使います',
+    '技術者の専任(建設業法 第26条第3項・施行令 第27条)は、台帳の「専任・非専任」の欄に「非専任」と書いた技術者だけを点検します。欄が無い・空の技術者は点検していません。第26条第3項ただし書(第1号・第2号)・第4項(現場の数)・施行令 第27条第2項(密接な関係のある工事)に当たるかは台帳から決められないので、候補に「確かめること」として付けます',
     '台帳の記載事項のうち、国土交通省令(施行規則)で定める事項はこのツールに取り込んでいないので点検していません',
   ];
   return out;
@@ -1752,7 +1824,7 @@ function checkRows(out, notice) {
   const item = (x) => [x.target, fieldLabel(x.field)].filter(Boolean).join(' — ');
   return [
     COLUMNS.slice(),
-    ...(out.candidates ?? []).map((c) => row('台帳の点検', item(c), '候補', c.message, c.basis ?? [], [])),
+    ...(out.candidates ?? []).map((c) => row('台帳の点検', item(c), '候補', [c.message, ...(c.confirm ?? []).map((x) => '確かめること: ' + x)].join('\n'), c.basis ?? [], [])),
     ...(out.undecidable ?? []).map((u) => row('台帳の点検', item(u), '判断できない', u.message, u.basis ?? [], [])),
     ...(notice ? [row('注意', '注意', '', [notice, ...(out.notes ?? [])].join('\n'), [], [])] : []),
   ];

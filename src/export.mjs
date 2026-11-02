@@ -69,7 +69,7 @@ export function checkRows(out, notice) {
   const item = (x) => [x.target, fieldLabel(x.field)].filter(Boolean).join(' — ');
   return [
     COLUMNS.slice(),
-    ...(out.candidates ?? []).map((c) => row('台帳の点検', item(c), '候補', c.message, c.basis ?? [], [])),
+    ...(out.candidates ?? []).map((c) => row('台帳の点検', item(c), '候補', [c.message, ...(c.confirm ?? []).map((x) => '確かめること: ' + x)].join('\n'), c.basis ?? [], [])),
     ...(out.undecidable ?? []).map((u) => row('台帳の点検', item(u), '判断できない', u.message, u.basis ?? [], [])),
     ...(notice ? [row('注意', '注意', '', [notice, ...(out.notes ?? [])].join('\n'), [], [])] : []),
   ];

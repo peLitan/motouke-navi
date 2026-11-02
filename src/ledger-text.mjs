@@ -4,8 +4,9 @@
 //
 // 返り値: { project, prime, subcontractors, warnings }
 //   project: { name, place, orderer, contractAmount, periodFrom, periodTo }
-//   prime: { name, licenseNumber, licenseType: 'tokutei'|'ippan'|null, engineer: { role, name, qualification } }
-//   subcontractors: [{ name, licenseNumber, work, periodFrom, periodTo, amount, engineer: { role, name, qualification } }]
+//   prime: { name, licenseNumber, licenseType: 'tokutei'|'ippan'|null, engineer: { role, name, qualification, dedicated } }
+//   subcontractors: [{ name, licenseNumber, work, periodFrom, periodTo, amount, engineer: { role, name, qualification, dedicated } }]
+//   dedicated: 「専任・非専任」の欄が「専任」なら true、「非専任」なら false、欄が無い・空なら null(読めなければ null とし、warnings に書く)
 
 const toHalf = (s) => String(s ?? '').replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
 const clean = (s) => String(s ?? '').trim();
@@ -80,12 +81,27 @@ function tierOf(title) {
 // 「5-1. 子安防水有限会社(一次: 壬生内装株式会社)」の、注文者を書いたかっこ →「一次: 壬生内装株式会社」。無ければ null
 const PARENT_RE = /[(（]\s*((?:[一二三四五六七八九1-9１-９]次|注文者|上位|元方)\s*[:：]\s*[^)）]+)[)）]\s*$/;
 
-const emptyEngineer = () => ({ role: null, name: '', qualification: '' });
+const emptyEngineer = () => ({ role: null, name: '', qualification: '', dedicated: null });
+
+// 「専任・非専任」の欄の値。「専任」→ true、「非専任」→ false、空 → null。それ以外は読めないので null と注意
+export function parseDedicated(raw) {
+  const s = clean(raw).replace(/[\s　]/g, '');
+  if (s === '') return { value: null, error: null };
+  if (s === '非専任') return { value: false, error: null };
+  if (s === '専任') return { value: true, error: null };
+  return { value: null, error: '「専任・非専任」の欄を読めません(「専任」か「非専任」と書いてください): ' + clean(raw) };
+}
 // 「4-1. 架空二土木株式会社」→「架空二土木株式会社」
 const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
 
 // 技術者の行(「監理技術者 氏名」「主任技術者 氏名」「資格」)を入れる。入れたら true
-function putEngineer(eng, key, value) {
+function putEngineer(eng, key, value, warn) {
+  if (/専任/.test(key)) {
+    const r = parseDedicated(value);
+    eng.dedicated = r.value;
+    if (r.error) warn(r.error);
+    return true;
+  }
   if (/技術者/.test(key)) {
     if (/監理技術者/.test(key)) eng.role = 'kanri';
     else if (/主任技術者/.test(key)) eng.role = 'shunin';
@@ -155,7 +171,7 @@ export function parseLedgerText(text) {
       else if (/請負代金/.test(key)) amountInto(project, 'contractAmount', value, where);
       else unknown();
     } else if (kind === 'primeEngineer') {
-      if (!putEngineer(prime.engineer, key, value)) unknown();
+      if (!putEngineer(prime.engineer, key, value, (m) => warnings.push(where + ': ' + m))) unknown();
     } else if (kind === 'subs') {
       if (!sub) { warnings.push(where + ': 下請けの見出し(### 会社名)の前の行なので読みませんでした'); return; }
       if (/商号|名称/.test(key)) sub.name = value;
@@ -163,7 +179,7 @@ export function parseLedgerText(text) {
       else if (/工事(の)?内容/.test(key)) sub.work = value;
       else if (/工期/.test(key)) periodInto(sub, value, where);
       else if (/請負代金/.test(key)) amountInto(sub, 'amount', value, where);
-      else if (!putEngineer(sub.engineer, key, value)) unknown();
+      else if (!putEngineer(sub.engineer, key, value, (m) => warnings.push(where + ': ' + m))) unknown();
     } else {
       warnings.push(where + ': どの節(元請・発注者との契約・技術者・下請負人)の行か分からないので読みませんでした');
     }

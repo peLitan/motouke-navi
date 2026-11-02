@@ -90,15 +90,18 @@ export const CHECK_FIELD = {
   'prime.licenseType': '元請けの許可の種類',
   'project.workType': '工事の種類',
   'subcontractors.amount': '下請けの請負代金の額',
+  'engineer.dedicated': '技術者の専任',
 };
 export const fieldLabel = (f) => CHECK_FIELD[f] ?? String(f ?? '');
 
 // 台帳の点検の結果(F05b)。warnings は台帳の文を読んだときの注意(読めなかった行など)
+// 候補に付けた「確かめること」(台帳からは決められない例外)
+const confirmList = (list) => (Array.isArray(list) && list.length ? '<p class="confirm-title">確かめること:</p><ul class="confirm">' + list.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '');
 export function renderCheckResult(out, warnings = []) {
   const cands = out.candidates ?? [];
   const und = out.undecidable ?? [];
   const candHtml = cands.length
-    ? '<h3>抜け・食い違いの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.target) + ' — ' + esc(fieldLabel(c.field)) + '</h4><p>' + esc(c.message) + '</p>' + basisList(c.basis) + '</li>').join('') + '</ul>'
+    ? '<h3>抜け・食い違いの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.target) + ' — ' + esc(fieldLabel(c.field)) + '</h4><p>' + esc(c.message) + '</p>' + confirmList(c.confirm) + basisList(c.basis) + '</li>').join('') + '</ul>'
     : '<h3>抜け・食い違いの候補</h3><p>入力の範囲では、候補は出ませんでした(このツールが点検しない記載事項や例外はあります)。</p>';
   const undHtml = und.length
     ? '<h3>判断できない(' + und.length + '件)</h3><ul class="undecidable">' + und.map((u) => '<li><h4>' + esc(u.target) + ' — ' + esc(fieldLabel(u.field)) + '</h4><p>' + esc(u.message) + '</p>' + basisList(u.basis ?? []) + '</li>').join('') + '</ul>'
