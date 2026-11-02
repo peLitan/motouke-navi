@@ -96,6 +96,12 @@
 - 使うモデルは `claude-opus-5-5`。送り先は `https://api.anthropic.com/v1/messages` だけです
 - 置き換えの漏れは0になりません(上の「文の置き換え」の注意)。送る中身を表示したときに、目で確かめてください
 
+### API に送った内容の扱い
+Anthropic の公式ページ(2026-11-02 に確認)によると、API に送った内容は、既定では学習に使いません。保存されても30日以内に自動で削除されます(利用規約に反すると判定された場合などの例外があります。API のページは「既定では保存しない」と書いていて、ページどうしで書き方が違います)。学習に使われる例外として、フィードバックを送ったとき・利用者が許可したときが挙げられています。使う前に、次のページで今の扱いを確かめてください。
+- API and data retention https://platform.claude.com/docs/en/manage-claude/api-and-data-retention
+- How long do you store my organization's data? https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data
+- Is my data used for model training? https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training
+
 ## Claude Code に組み込む
 Claude Code で書類を点検するときに、`raw/` に置いた生のファイル(元の名前が入ったもの)を Claude Code に読ませず、置き換えた後の中身だけを渡すための設定と道具です。置き場は `integration/claude-code/` で、自分の作業フォルダに中身を写して使います。
 
@@ -136,3 +142,11 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - 「土木工事共通仕様書(案)令和8年3月」(国土交通省) https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html (HTML版【試行版】の第1編 第1章 第1節 総則。掲載ページ https://www.mlit.go.jp/tec/tec_tk_000052.html 。取得日 2026-11-02)。段取りの一覧の根拠として、1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-42 の文だけを、HTML のタグを外したまま `data/sources/mlit-doboku-spec-r8-1-1-1.txt` に写した。全文は再配布しない。PDF版(https://www.mlit.go.jp/tec/content/001990182.pdf。取得日 2026-11-02)とは、1-1-1-6 の文だけを突き合わせた(85・86ページの文字と同じ。施工計画書の目次の点検のページ番号は PDF版のもの)。ほかの条は突き合わせていない
   - 出典: 国土交通省「土木工事共通仕様書(案)令和8年3月」。公共データ利用規約(第1.0版)(PDL1.0)に従って利用する(ページに権利表記が無いので、国土交通省ウェブサイト利用規約 https://www.mlit.go.jp/links/terms-of-use.html による)
   - 加工: 条の文の一部を抜き出し、段取りの規則表(`data/schedule.json`)で、いつ・何を・誰にの形に言い換えた。加工したのはこの作品の作者(開発用のエージェントを含む)。このツールの出力は国土交通省が作成したものではありません
+
+### Anthropic の公式ページ(API に送った内容の扱い)
+「Claude で点検」の「API に送った内容の扱い」の根拠。原文は写していない(題名と URL だけ)。
+| 題名 | URL | 取得日 |
+|---|---|---|
+| API and data retention | https://platform.claude.com/docs/en/manage-claude/api-and-data-retention | 2026-11-02 |
+| How long do you store my organization's data? | https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data | 2026-11-02 |
+| Is my data used for model training? | https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training | 2026-11-02 |
