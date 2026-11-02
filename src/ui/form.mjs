@@ -21,7 +21,7 @@ const CHOICES = {
   license: ['tokutei', 'ippan'],
   'engineer-qualification': ['kanri', 'shunin'],
 };
-// 選ぶ欄: 決めた値のどれかなら、その値。未選択や知らない値は null(判定の側で「入力が足りない」になる)
+// 選ぶ欄: 決めた値のどれかなら、その値。未選択・「分からない」(unknown。F14f)・知らない値は null(判定の側で「入力が足りない」になる)
 const choice = (key, v) => (CHOICES[key].includes(v) ? v : null);
 const flag = (v) => v === true || v === 'true' || v === 'on';
 // 元請けか下請けか(F15b・反証の指摘4): 画面は「選んでいない/元請け/下請け」の3択(ラジオ)。
@@ -35,8 +35,9 @@ export function readDirect(values = {}) {
 
 // 欄の値の入れ物 → 判定の入力。下請けの総額が 0 なら下請契約は無い、空なら有無は分からない(null)
 export function readBidForm(values = {}) {
-  const contract = parseYen(values['contract-amount']);
-  const sub = parseYen(values['subcontract-total']);
+  // 金額の欄の「分からない」(F14f)に印があれば、欄の値は使わない(null。判定の側で「確認が要る」になる)
+  const contract = flag(values['contract-amount-unknown']) ? { value: null } : parseYen(values['contract-amount']);
+  const sub = flag(values['subcontract-total-unknown']) ? { value: null } : parseYen(values['subcontract-total']);
   return {
     orderer: choice('orderer', values.orderer),
     direct: readDirect(values),
@@ -54,11 +55,12 @@ export function readBidForm(values = {}) {
 export function formErrors(values = {}) {
   const out = [];
   for (const [key, name] of [['contract-amount', '請負代金の見込み'], ['subcontract-total', '下請けの総額']]) {
+    if (flag(values[key + '-unknown'])) continue;
     const r = parseYen(values[key]);
     if (r.error) out.push(name + ': ' + r.error);
   }
   return out;
 }
 
-export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'work-type', 'contract-amount', 'subcontract-total', 'license', 'engineer-qualification', 'ict-measure'];
-export const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'ict-measure'];
+export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];
+export const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'contract-amount-unknown', 'subcontract-total-unknown', 'ict-measure'];

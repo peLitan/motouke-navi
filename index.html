@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-bsf+MIcVmOd9z4d3r4PSfpwHmtJVqKZBAEBzftIiEgg='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kMNSyk0hYk6Zj+EYBEwefqZW4jQ65CQkq2ZtnHoGc4g='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -54,6 +54,18 @@
   .badge-required { color: #991b1b; background: #fee2e2; border-color: #b91c1c; }
   .badge-needs_check { color: #713f12; background: #fef3c7; border-color: #a16207; }
   .badge-not_required { color: #14532d; background: #dcfce7; border-color: #15803d; }
+  .badge-unanswered { color: #1f2937; background: #f3f4f6; border-color: #6b7280; border-style: dashed; }
+  /* 答えの状態と結果の順(F14f): 理由・入れた条件・確かめ先の見出し語、仮の一覧の知らせ、見ている法令の範囲、印刷だけに出す確認の欄 */
+  .item .part { font-weight: bold; }
+  .ans-unknown, .ans-unanswered { font-weight: bold; text-decoration: underline; }
+  .provisional { border-left: 4px solid #6b7280; padding: 0.1rem 0 0.1rem 0.75rem; color: #1f2937; }
+  .unknown-check { display: inline-flex; align-items: center; min-height: 2.75rem; margin-left: 0.5rem; }
+  .scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 0 1.5rem; }
+  .scope ul { margin-top: 0; }
+  .print-only { display: none; }
+  .sign-table { border-collapse: collapse; width: 100%; }
+  .sign-table th, .sign-table td { border: 1px solid #1f2937; padding: 0.5rem; height: 2.5rem; text-align: left; }
+  .sign-table th { width: 8rem; }
   .summary { border-left: 6px solid #1e293b; background: #f8fafc; padding: 0.5rem 1rem 0.75rem; margin: 1rem 0 1.5rem; }
   .summary h3 { margin: 0.25rem 0 0.5rem; font-size: 1.35rem; }
   .summary h4 { margin: 0.75rem 0 0.25rem; }
@@ -105,6 +117,8 @@
     details.basis > summary { color: inherit; }
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
+    .print-only { display: block; }
+    .sign-off { break-inside: avoid; margin-top: 1.5rem; }
   }
 </style>
 </head>
@@ -119,6 +133,31 @@
 <li>施工体制台帳を貼ると、抜け・食い違いの候補を根拠の条つきで出す</li>
 <li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
 </ul>
+</div>
+<div class="scope" id="scope">
+<div><p><strong>このツールが見ている法令・資料</strong>(取り込んだ条と節だけ)</p>
+<ul id="scope-seen">
+<li>建設業法 第3条（建設業の許可）</li>
+<li>建設業法 第24条の8（施工体制台帳及び施工体系図の作成等）</li>
+<li>建設業法 第26条（主任技術者及び監理技術者の設置等）</li>
+<li>建設業法施行令 第2条（法第三条第一項第二号の金額）</li>
+<li>建設業法施行令 第7条の4（法第二十四条の八第一項の金額）</li>
+<li>建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事）</li>
+<li>公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等）</li>
+<li>建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)</li>
+<li>土木工事共通仕様書(案)令和8年3月(国土交通省。第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-20・1-1-1-21・1-1-1-23・1-1-1-24・1-1-1-28・1-1-1-33・1-1-1-34・1-1-1-42)</li>
+<li>施工体制台帳(作成例)(国土交通省。Excel の様式。施工体制台帳、施工体系図等のページ)</li>
+</ul>
+</div>
+<div><p><strong>見ていない法令・資料</strong>(結果に入っていないので、別に確かめてください)</p>
+<ul id="scope-not">
+<li>都道府県・市町村の条例・規則・要綱</li>
+<li>工事の契約書・請負契約約款</li>
+<li>発注者の特記仕様書・現場説明書・質問回答書</li>
+<li>自治体・民間の発注者の共通仕様書・要領(段取りは国の直轄の例)</li>
+<li>国土交通省令(建設業法施行規則など。台帳の記載事項の細部・発注者が確認できる措置の中身)</li>
+<li>取り込んだ条より外の条と、ほかの法令(労働安全衛生法・建築基準法など)</li>
+</ul></div>
 </div>
 <p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 </header>
@@ -138,18 +177,20 @@
 </div>
 <p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
-<p class="form-lead" id="form-lead">※必須の欄が空のときは、その欄を使う項目を「判断できない」にします(推測で埋めません)。※任意の欄は、当てはまるときだけ入れます。</p>
+<p class="form-lead" id="form-lead">※必須の質問には、分からなければ「分からない」を選んでください。「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
 <div class="row"><label for="orderer">発注者<span class="req req-must">※必須</span></label>
 <select id="orderer" name="orderer" aria-describedby="orderer-hint">
 <option value="">選んでください</option>
 <option value="public">公共(国・地方公共団体・特殊法人などの公共工事)</option>
 <option value="private">民間</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="orderer-hint" class="hint">工事を注文した人(元請けに注文した人)の区分です。下請けで請け負うときも、元の発注者で選びます。</p></div>
 <fieldset class="row radio-group" aria-describedby="direct-hint"><legend>元請けか下請けか<span class="req req-must">※必須</span></legend>
 <div><input type="radio" id="direct-unset" name="role" value="" checked><label for="direct-unset">選んでください(まだ選んでいない)</label></div>
 <div><input type="radio" id="direct" name="role" value="prime"><label for="direct">元請け(発注者から直接請け負う)</label></div>
 <div><input type="radio" id="direct-sub" name="role" value="sub"><label for="direct-sub">下請け(元請けなどから請け負う)</label></div>
+<div><input type="radio" id="direct-unknown" name="role" value="unknown"><label for="direct-unknown">分からない</label></div>
 <p id="direct-hint" class="hint">発注者から直接請け負うなら「元請け」、元請けやほかの下請けから請け負うなら「下請け」です。選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p>
 </fieldset>
 <div class="row"><label for="work-type">工事の種類<span class="req req-must">※必須</span></label>
@@ -157,19 +198,23 @@
 <option value="">選んでください</option>
 <option value="kenchiku-ikkatsu">建築一式工事</option>
 <option value="other">それ以外の工事</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上で「下請け」を選んだ)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></div>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-hint">
+<span class="unknown-check"><input type="checkbox" id="contract-amount-unknown" name="contract-amount-unknown"><label for="contract-amount-unknown">分からない</label></span>
 <p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。</p></div>
 <div class="row"><label for="subcontract-total">下請けの総額(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000" aria-describedby="subcontract-total-hint">
+<span class="unknown-check"><input type="checkbox" id="subcontract-total-unknown" name="subcontract-total-unknown"><label for="subcontract-total-unknown">分からない</label></span>
 <p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。</p></div>
 <div class="row"><label for="license">元請けの許可の種類(この工事の業種)<span class="req req-must">※必須</span></label>
 <select id="license" name="license" aria-describedby="license-hint">
 <option value="">選んでください</option>
 <option value="tokutei">特定建設業</option>
 <option value="ippan">一般建設業</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="license-hint" class="hint">この工事の業種で持っている許可が、特定建設業か一般建設業かを選びます(許可は業種ごとに分かれます)。</p></div>
 <div class="row"><label for="engineer-qualification">置ける技術者の資格<span class="req req-must">※必須</span></label>
@@ -177,6 +222,7 @@
 <option value="">選んでください</option>
 <option value="kanri">監理技術者</option>
 <option value="shunin">主任技術者</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></div>
 <div class="row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
@@ -196,6 +242,7 @@
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
 </div>
+<div id="open-items" class="result open-items" aria-live="polite" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る項目と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -354,6 +401,13 @@
 <p>段取りの一覧には、国土交通省「土木工事共通仕様書(案)令和8年3月」(https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html。HTML版【試行版】)の第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-20・1-1-1-21・1-1-1-23・1-1-1-24・1-1-1-28・1-1-1-33・1-1-1-34・1-1-1-42 を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。加工: 上の条の文の一部を抜き出し、いつ・何を・誰にの形に言い換えて並べました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
+<div id="sign-off" class="print-only sign-off" aria-hidden="true">
+<p><strong>確認の記録</strong>(印刷した紙に書き込みます)</p>
+<table class="sign-table"><tbody>
+<tr><th scope="row">確認した人</th><td></td></tr>
+<tr><th scope="row">日付</th><td></td></tr>
+</tbody></table>
+</div>
 <script>
 (function () {
 'use strict';
@@ -382,7 +436,7 @@ const CHOICES = {
   license: ['tokutei', 'ippan'],
   'engineer-qualification': ['kanri', 'shunin'],
 };
-// 選ぶ欄: 決めた値のどれかなら、その値。未選択や知らない値は null(判定の側で「入力が足りない」になる)
+// 選ぶ欄: 決めた値のどれかなら、その値。未選択・「分からない」(unknown。F14f)・知らない値は null(判定の側で「入力が足りない」になる)
 const choice = (key, v) => (CHOICES[key].includes(v) ? v : null);
 const flag = (v) => v === true || v === 'true' || v === 'on';
 // 元請けか下請けか(F15b・反証の指摘4): 画面は「選んでいない/元請け/下請け」の3択(ラジオ)。
@@ -396,8 +450,9 @@ function readDirect(values = {}) {
 
 // 欄の値の入れ物 → 判定の入力。下請けの総額が 0 なら下請契約は無い、空なら有無は分からない(null)
 function readBidForm(values = {}) {
-  const contract = parseYen(values['contract-amount']);
-  const sub = parseYen(values['subcontract-total']);
+  // 金額の欄の「分からない」(F14f)に印があれば、欄の値は使わない(null。判定の側で「確認が要る」になる)
+  const contract = flag(values['contract-amount-unknown']) ? { value: null } : parseYen(values['contract-amount']);
+  const sub = flag(values['subcontract-total-unknown']) ? { value: null } : parseYen(values['subcontract-total']);
   return {
     orderer: choice('orderer', values.orderer),
     direct: readDirect(values),
@@ -415,21 +470,147 @@ function readBidForm(values = {}) {
 function formErrors(values = {}) {
   const out = [];
   for (const [key, name] of [['contract-amount', '請負代金の見込み'], ['subcontract-total', '下請けの総額']]) {
+    if (flag(values[key + '-unknown'])) continue;
     const r = parseYen(values[key]);
     if (r.error) out.push(name + ': ' + r.error);
   }
   return out;
 }
 
-const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'work-type', 'contract-amount', 'subcontract-total', 'license', 'engineer-qualification', 'ict-measure'];
-const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'ict-measure'];
+const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];
+const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'contract-amount-unknown', 'subcontract-total-unknown', 'ict-measure'];
 
 return { parseYen, readDirect, readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS };
+})();
+__m["src/ui/answers.mjs"] = (function () {
+// 入力の質問への答えの状態と、結果の項目の見せ方(F14f)。DOM には触らない。
+// 質問の答えは3つに分ける: 答えた(answered)/「分からない」を選んだ(unknown)/まだ答えていない(unanswered)。
+// 判定(bidCheck・judgeTaicho)には、「分からない」も未回答も同じ null を渡す(推測で埋めない)。
+// 画面では、決められなかった項目(needs_check)のうち、未回答の質問を使うものを「未回答」、それ以外を「確認が要る」と出す。
+const { readDirect, parseYen } = __m["src/ui/form.mjs"];
+
+// ※必須の質問(画面の欄の id と名前)。「台帳を発注者が閲覧できる措置」は ※任意 の印の欄なので、ここには入れない
+const QUESTIONS = [
+  { id: 'orderer', name: '発注者' },
+  { id: 'direct', name: '元請けか下請けか' },
+  { id: 'work-type', name: '工事の種類' },
+  { id: 'contract-amount', name: '請負代金の見込み' },
+  { id: 'subcontract-total', name: '下請けの総額' },
+  { id: 'license', name: '元請けの許可の種類' },
+  { id: 'engineer-qualification', name: '置ける技術者の資格' },
+];
+const UNKNOWN = 'unknown'; // 選ぶ欄の「分からない」の値
+const AMOUNT_IDS = ['contract-amount', 'subcontract-total'];
+const flag = (v) => v === true || v === 'true' || v === 'on';
+// 金額の欄の「分からない」の印の欄の id
+const unknownId = (id) => id + '-unknown';
+
+function answerState(values = {}, id) {
+  if (id === 'direct') {
+    if (flag(values['direct-unknown'])) return 'unknown';
+    return readDirect(values) === null ? 'unanswered' : 'answered';
+  }
+  if (AMOUNT_IDS.includes(id)) {
+    if (flag(values[unknownId(id)])) return 'unknown';
+    const r = parseYen(values[id]);
+    return r.value === null ? 'unanswered' : 'answered'; // 読めない値は入力の誤りとして別に出す
+  }
+  const v = String(values[id] ?? '');
+  if (v === UNKNOWN) return 'unknown';
+  return v === '' ? 'unanswered' : 'answered';
+}
+
+function answerStates(values = {}) {
+  return Object.fromEntries(QUESTIONS.map((q) => [q.id, answerState(values, q.id)]));
+}
+const unansweredQuestions = (values = {}) => QUESTIONS.filter((q) => answerState(values, q.id) === 'unanswered');
+const unknownQuestions = (values = {}) => QUESTIONS.filter((q) => answerState(values, q.id) === 'unknown');
+
+// 結果の項目ごとに、判定に使う質問(src/bid-check.mjs・src/taicho.mjs が読む入力)
+const ITEM_DEPS = {
+  'tokutei-license': ['direct', 'subcontract-total', 'work-type'],
+  engineer: ['direct', 'subcontract-total', 'work-type'],
+  taicho: ['orderer', 'direct', 'subcontract-total', 'work-type', 'license'],
+  'taicho-copy': ['orderer', 'direct', 'subcontract-total', 'work-type', 'license'],
+  taikeizu: ['orderer', 'direct', 'subcontract-total', 'work-type', 'license'],
+  dedicated: ['orderer', 'contract-amount', 'work-type'],
+};
+
+// 画面に出す状態: required / not_required / needs_check / unanswered。
+// 決められた項目(要る・要らない)は答えの状態にかかわらずそのまま。決められなかった項目は、使う質問に未回答があれば「未回答」
+function displayStatus(item, values = {}) {
+  if (item.status !== 'needs_check') return item.status;
+  const deps = ITEM_DEPS[item.key] ?? [];
+  return deps.some((id) => answerState(values, id) === 'unanswered') ? 'unanswered' : 'needs_check';
+}
+
+// 理由の「入れた条件」: 項目が使う質問と、その答え
+const VALUE_WORDS = {
+  orderer: { public: '公共', private: '民間' },
+  'work-type': { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' },
+  license: { tokutei: '特定建設業', ippan: '一般建設業' },
+  'engineer-qualification': { kanri: '監理技術者', shunin: '主任技術者' },
+};
+function answerText(values = {}, id) {
+  const st = answerState(values, id);
+  if (st === 'unknown') return '分からない';
+  if (st === 'unanswered') return '未回答';
+  if (id === 'direct') return readDirect(values) ? '元請け' : '下請け';
+  if (AMOUNT_IDS.includes(id)) return parseYen(values[id]).value.toLocaleString('ja-JP') + '円(税込み)';
+  return VALUE_WORDS[id]?.[values[id]] ?? String(values[id]);
+}
+function itemConditions(item, values = {}) {
+  const name = (id) => QUESTIONS.find((q) => q.id === id)?.name ?? id;
+  return (ITEM_DEPS[item.key] ?? []).map((id) => ({ id, name: name(id), text: answerText(values, id), state: answerState(values, id) }));
+}
+
+// 確かめ先: 根拠の原文に、相手(届け出る・見せる・許可をする者)が書かれているものだけを出す。原文に無い相手は出さない
+//   quoteId は data/quotes.json の抜き書き。その原文の言葉を to に使う
+const CONTACTS = {
+  'tokutei-license': () => [{ to: '許可をした行政庁(営業所が二以上の都道府県にあれば国土交通大臣、一の都道府県だけなら営業所の所在地の都道府県知事)', what: 'この業種の許可が特定建設業か一般建設業か', quoteId: 'q-kensetsu-3-1', law: '建設業法 第3条第1項' }],
+  taicho: (orderer) => (orderer === 'public'
+    ? [{ to: '発注者', what: '台帳の写しを出すか、発注者が情報通信技術で施工体制を確認できる措置(国土交通省令で定めるもの)にするか', quoteId: 'q-nyukei-15-2', law: '入契法 第15条第2項' }]
+    : orderer === 'private'
+      ? [{ to: '発注者', what: '発注者から請求があったときに台帳を見せる(閲覧に供する)', quoteId: 'q-kensetsu-24_8-3', law: '建設業法 第24条の8第3項' }]
+      : []),
+  'taicho-copy': (orderer) => (orderer === 'public'
+    ? [{ to: '発注者', what: '台帳の写しを出すか、発注者が情報通信技術で施工体制を確認できる措置(国土交通省令で定めるもの)にするか', quoteId: 'q-nyukei-15-2', law: '入契法 第15条第2項' }]
+    : []),
+};
+function contactsFor(item, values = {}) {
+  const f = CONTACTS[item.key];
+  if (!f) return [];
+  const orderer = answerState(values, 'orderer') === 'answered' ? values.orderer : null;
+  return f(orderer);
+}
+
+// 結果の最後の一覧: 「確認が要る項目」と「未回答」
+//   needsCheck: [{ label, message }](画面の状態が「確認が要る」の項目と、bidCheck の確認が要る点)
+//   unanswered: [{ id, name, items: [項目名] }](未回答の質問と、それを使う項目のうち決められなかったもの)
+//   unknown: [{ id, name, items }](「分からない」を選んだ質問)
+function openItems(bid, values = {}) {
+  const items = bid?.items ?? [];
+  const needsCheck = [];
+  for (const c of bid?.checks ?? []) {
+    const it = items.find((x) => x.key === c.key);
+    if (it && displayStatus(it, values) === 'unanswered') continue; // 未回答の一覧に出す
+    needsCheck.push({ label: c.label, message: c.message });
+  }
+  const affected = (id) => items.filter((it) => it.status === 'needs_check' && (ITEM_DEPS[it.key] ?? []).includes(id)).map((it) => it.label);
+  return {
+    needsCheck,
+    unanswered: unansweredQuestions(values).map((q) => ({ ...q, items: affected(q.id) })),
+    unknown: unknownQuestions(values).map((q) => ({ ...q, items: affected(q.id) })),
+  };
+}
+
+return { QUESTIONS, UNKNOWN, unknownId, answerState, answerStates, unansweredQuestions, unknownQuestions, ITEM_DEPS, displayStatus, answerText, itemConditions, CONTACTS, contactsFor, openItems };
 })();
 __m["src/ui/view.mjs"] = (function () {
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
 // 結果の文字はすべてエスケープする(規則表や入力の文字がそのまま HTML にならないように)。
 const { readDirect } = __m["src/ui/form.mjs"];
+const { displayStatus, itemConditions, contactsFor, openItems, unansweredQuestions, CONTACTS, answerState } = __m["src/ui/answers.mjs"];
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -469,9 +650,9 @@ function amountBasisBlock(ab) {
   return '<div class="amount-basis"><p>金額の比べ方: ' + esc(ab.tax === 'included' ? '税込み' : ab.tax === 'excluded' ? '税抜き' : ab.tax) + '。' + esc(ab.note) + '</p>' + basisList(ab.basis) + '</div>';
 }
 
-const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る' };
-// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=✕と赤系、確認が要る=!と黄系、要らない=✓と緑系)
-const STATUS_MARK = { required: '✕', needs_check: '!', not_required: '✓' };
+const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る', unanswered: '未回答' };
+// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=✕と赤系、確認が要る=!と黄系、要らない=✓と緑系、未回答=?と灰色。F14f)
+const STATUS_MARK = { required: '✕', needs_check: '!', not_required: '✓', unanswered: '?' };
 function statusBadge(status, extra = '') {
   const word = BID_STATUS[status] ?? String(status ?? '');
   const mark = STATUS_MARK[status];
@@ -481,19 +662,60 @@ function statusBadge(status, extra = '') {
 const bidItemId = (key) => 'bid-item-' + String(key ?? '').replace(/[^\w-]/g, '_');
 const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
 
-// 入札前の確認(bidCheck の返り値)
-function renderBidResult(bid) {
+// 入札前の確認(bidCheck の返り値)。values(画面の欄の値)を渡すと、答えの状態(F14f)を使う:
+//   各項目は 結論 → 理由(入れた条件)→ 根拠の条 → 確かめ先 の順。未回答の質問が残るうちは「仮の一覧」と出す。
+//   values が無いときは、判定の状態をそのまま出す(入れた条件は出さない)
+function renderBidResult(bid, values) {
+  const st = (it) => (values ? displayStatus(it, values) : it.status);
   const rows = bid.items.map((it) => {
-    const status = BID_STATUS[it.status] ?? it.status;
+    const s = st(it);
     const value = it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '';
-    return '<li class="item status-' + esc(it.status) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[it.status] ? statusBadge(it.status, value) : esc(status + value)) + '</span></h4>'
-      + '<p>' + esc(it.note) + '</p>' + basisList(it.basis) + exceptionList(it.exceptions) + '</li>';
+    const conds = values ? itemConditions(it, values) : [];
+    const condHtml = conds.length
+      ? '<p class="conditions"><span class="part">入れた条件:</span> ' + conds.map((c) => esc(c.name) + ' <span class="ans ans-' + esc(c.state) + '">' + esc(c.text) + '</span>').join('、') + '</p>'
+      : '';
+    const unansweredNote = s === 'unanswered'
+      ? '<p class="unanswered-note">未回答の質問(' + esc(conds.filter((c) => c.state === 'unanswered').map((c) => c.name).join('・')) + ')に答えると、決まることがあります。</p>'
+      : '';
+    let contactHtml = '';
+    if (s !== 'not_required') {
+      const cs = contactsFor(it, values ?? {});
+      contactHtml = cs.length
+        ? '<p class="contact"><span class="part">確かめ先:</span> ' + cs.map((c) => '<strong>' + esc(c.to) + '</strong> — ' + esc(c.what) + '(' + esc(c.law) + 'の原文による)').join(' / ') + '</p>'
+        : CONTACTS[it.key] && answerState(values ?? {}, 'orderer') !== 'answered'
+          ? '<p class="contact"><span class="part">確かめ先:</span> 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します。</p>'
+          : '<p class="contact"><span class="part">確かめ先:</span> 根拠の原文に相手の定めが無いので、出していません。</p>';
+    }
+    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>'
+      + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml + unansweredNote
+      + basisList(it.basis) + exceptionList(it.exceptions) + contactHtml + '</li>';
   }).join('');
   const checks = bid.checks.length
     ? '<h3>確認が要る点(' + bid.checks.length + '件)</h3><ul class="checks">' + bid.checks.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
-  return '<h3>受注したら要るもの</h3><ul class="items">' + rows + '</ul>' + checks + amountBasisBlock(bid.amountBasis)
+  const un = values ? unansweredQuestions(values) : [];
+  const provisional = un.length
+    ? '<p class="provisional"><strong>仮の一覧です</strong>。未回答の質問が ' + un.length + 'つあります(' + esc(un.map((q) => q.name).join('・')) + ')。答えるか「分からない」を選んでから、もう一度「確認する」を押してください。</p>'
+    : '';
+  return provisional + '<h3>受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3><ul class="items">' + rows + '</ul>' + checks + amountBasisBlock(bid.amountBasis)
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
+}
+
+// 結果の最後の一覧(F14f): 「確認が要る項目」と「未回答」。印刷にも出す
+function renderOpenItems(bid, values = {}) {
+  const o = openItems(bid, values);
+  const need = o.needsCheck.length
+    ? '<ul class="open-checks">' + o.needsCheck.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
+    : '<p>ありません(入れた条件の範囲で。このツールが見ていない法令・資料の確認は別に要ります)。</p>';
+  const known = o.unknown.length
+    ? '<p>「分からない」を選んだ質問: ' + o.unknown.map((q) => esc(q.name) + (q.items.length ? '(使う項目: ' + esc(q.items.join('・')) + ')' : '')).join('、') + '。この質問を使う項目は「確認が要る」にしています。</p>'
+    : '';
+  const un = o.unanswered.length
+    ? '<ul class="open-unanswered">' + o.unanswered.map((q) => '<li><strong>' + esc(q.name) + '</strong>' + (q.items.length ? ' — この質問に答えると決まることがある項目: ' + esc(q.items.join('・')) : '') + '</li>').join('') + '</ul>'
+    : '<p>ありません。</p>';
+  return '<h3 id="open-items-title">確認が要る項目と未回答の質問</h3>'
+    + '<h4>確認が要る項目(' + o.needsCheck.length + '件)</h4>' + need + known
+    + '<h4>未回答(' + o.unanswered.length + '問)</h4>' + un;
 }
 
 const TAICHO_STATUS = {
@@ -653,7 +875,7 @@ function renderPlanResult(out = {}) {
 //   state = { values: 欄の値, errors: [文], bid, taicho, scheduleCount, check, plan, stale }
 const SUMMARY_FIELDS = [
   ['orderer', '発注者', { public: '公共', private: '民間' }],
-  ['direct', '元請けか下請けか', (values) => (readDirect(values) === true ? '元請け(発注者から直接請け負う)' : readDirect(values) === false ? '下請け' : '選んでいません')],
+  ['direct', '元請けか下請けか', (values) => (values['direct-unknown'] === true ? '分からない' : readDirect(values) === true ? '元請け(発注者から直接請け負う)' : readDirect(values) === false ? '下請け' : '選んでいません')],
   ['work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }],
   ['contract-amount', '請負代金の見込み(税込み)', null],
   ['subcontract-total', '下請けの総額(税込み)', null],
@@ -661,8 +883,9 @@ const SUMMARY_FIELDS = [
   ['engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }],
   ['ict-measure', '台帳を発注者が閲覧できる措置(公共)', { true: '講じる', false: '講じない' }],
 ];
-function summaryValue(raw, map, values) {
+function summaryValue(raw, map, values, id) {
   if (typeof map === 'function') return map(values);
+  if (raw === 'unknown' || values[id + '-unknown'] === true) return '分からない'; // F14f の「分からない」
   if (map) {
     const v = map[String(raw)];
     return v ?? '選んでいません';
@@ -679,12 +902,17 @@ function renderSummary(state = {}) {
     parts.push('<p class="summary-error">入力を読めませんでした。<a href="#bid-result">入札前の確認の欄</a>を見て直してください。</p>');
   } else if (state.bid) {
     const items = state.bid.items ?? [];
-    const order = ['required', 'needs_check', 'not_required'];
-    const count = (st) => items.filter((it) => it.status === st).length;
-    parts.push('<h4>受注したら要るもの(' + items.length + '項目)</h4>'
-      + '<ul class="summary-counts">' + order.map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>件</li>').join('') + '</ul>'
-      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
-        .map((it) => '<li>' + statusBadge(it.status, it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
+    // 状態は 要る/確認が要る/未回答/要らない(F14f)。欄の値があれば、決められなかった項目のうち未回答の質問を使うものを「未回答」にする
+    const vals = state.values ?? null;
+    const dst = (it) => (vals ? displayStatus(it, vals) : it.status);
+    const un = vals ? unansweredQuestions(vals) : [];
+    const order = ['required', 'needs_check', 'unanswered', 'not_required'];
+    const count = (st) => items.filter((it) => dst(it) === st).length;
+    parts.push((un.length ? '<p class="provisional"><strong>仮の一覧です</strong>(未回答の質問 ' + un.length + 'つ)。<a href="#open-items">未回答の一覧</a>を見て、答えるか「分からない」を選んでください。</p>' : '')
+      + '<h4>受注したら要るもの(' + items.length + '項目' + (un.length ? '・仮の一覧' : '') + ')</h4>'
+      + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>件</li>').join('') + '</ul>'
+      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
+        .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
       + ((state.bid.checks ?? []).length ? '<p><a href="#bid-result">確認が要る点 ' + state.bid.checks.length + '件</a>を入札前の確認の欄に出しています。</p>' : ''));
   } else {
     parts.push('<h4>受注したら要るもの</h4><p>' + NOT_YET('確認する') + '</p>');
@@ -707,12 +935,12 @@ function renderSummary(state = {}) {
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
   parts.push('<h4>入れた条件</h4><dl class="summary-list">'
-    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values)) + '</dd></div>').join('') + '</dl>');
+    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values, id)) + '</dd></div>').join('') + '</dl>');
   return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
 
-return { esc, scrollTable, basisLabel, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult, SUMMARY_FIELDS, renderSummary };
+return { esc, scrollTable, basisLabel, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult, SUMMARY_FIELDS, renderSummary };
 })();
 __m["src/ledger-text.mjs"] = (function () {
 // 台帳の文を読む(F05b): 見出しと「| 項目 | 内容 |」の表で書いた施工体制台帳の文を、点検(src/check-taicho.mjs)の入力の形にする。
@@ -2496,9 +2724,12 @@ const SAMPLE = {
     'direct-unset': false,
     direct: true,
     'direct-sub': false,
+    'direct-unknown': false,
     'work-type': 'other',
     'contract-amount': '286,000,000',
+    'contract-amount-unknown': false,
     'subcontract-total': '77,000,000',
+    'subcontract-total-unknown': false,
     license: 'tokutei',
     'engineer-qualification': 'kanri',
     'ict-measure': false,
@@ -3055,7 +3286,7 @@ __m["src/ui/app.mjs"] = (function () {
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary } = __m["src/ui/view.mjs"];
+const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems } = __m["src/ui/view.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
 const { readLedgerXlsx, ledgerToText, FIELD_NAMES } = __m["src/ledger-xlsx.mjs"];
 const { checkTaicho } = __m["src/check-taicho.mjs"];
@@ -3104,8 +3335,10 @@ function runBid(doc) {
   const values = collect(doc);
   const errors = formErrors(values);
   Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
+  const openEl = doc.getElementById('open-items');
   if (errors.length) {
     last = null;
+    if (openEl) openEl.innerHTML = renderErrors(errors);
     bidOut.innerHTML = renderErrors(errors);
     taichoOut.innerHTML = renderErrors(errors);
     runSchedule(doc, null, errors);
@@ -3118,7 +3351,9 @@ function runBid(doc) {
   try {
     const bid = bidCheck(input);
     const taicho = judgeTaicho(input);
-    bidOut.innerHTML = renderBidResult(bid);
+    bidOut.innerHTML = renderBidResult(bid, values);
+    // 結果の最後に「確認が要る項目」と「未回答」の一覧(F14f)
+    if (openEl) openEl.innerHTML = renderOpenItems(bid, values);
     taichoOut.innerHTML = renderTaichoResult(taicho);
     last = { bid, taicho };
     summary.bid = bid;

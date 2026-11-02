@@ -26,9 +26,9 @@ test('まとめの枠は 1. の入力欄のすぐ後・入札前の確認の結�
   assert.ok(sum < body.indexOf('id="check-result"') && sum < body.indexOf('id="plan-result"'));
 });
 
-test('結論の印は 要る=✕・確認が要る=!・要らない=✓ で、言葉を必ず添える(色だけで区別しない)', () => {
-  assert.deepEqual(STATUS_MARK, { required: '✕', needs_check: '!', not_required: '✓' });
-  for (const [st, word] of [['required', '要る'], ['needs_check', '確認が要る'], ['not_required', '要らない']]) {
+test('結論の印は 要る=✕・確認が要る=!・要らない=✓・未回答=?(F14f) で、言葉を必ず添える(色だけで区別しない)', () => {
+  assert.deepEqual(STATUS_MARK, { required: '✕', needs_check: '!', not_required: '✓', unanswered: '?' });
+  for (const [st, word] of [['required', '要る'], ['needs_check', '確認が要る'], ['not_required', '要らない'], ['unanswered', '未回答']]) {
     const b = statusBadge(st);
     assert.ok(b.includes('class="badge badge-' + st + '"'));
     assert.ok(b.includes('>' + STATUS_MARK[st] + '</span>'), '記号が無い: ' + st);

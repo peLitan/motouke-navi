@@ -1,6 +1,7 @@
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
 // 結果の文字はすべてエスケープする(規則表や入力の文字がそのまま HTML にならないように)。
 import { readDirect } from './form.mjs';
+import { displayStatus, itemConditions, contactsFor, openItems, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -40,9 +41,9 @@ function amountBasisBlock(ab) {
   return '<div class="amount-basis"><p>金額の比べ方: ' + esc(ab.tax === 'included' ? '税込み' : ab.tax === 'excluded' ? '税抜き' : ab.tax) + '。' + esc(ab.note) + '</p>' + basisList(ab.basis) + '</div>';
 }
 
-export const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る' };
-// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=✕と赤系、確認が要る=!と黄系、要らない=✓と緑系)
-export const STATUS_MARK = { required: '✕', needs_check: '!', not_required: '✓' };
+export const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る', unanswered: '未回答' };
+// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=✕と赤系、確認が要る=!と黄系、要らない=✓と緑系、未回答=?と灰色。F14f)
+export const STATUS_MARK = { required: '✕', needs_check: '!', not_required: '✓', unanswered: '?' };
 export function statusBadge(status, extra = '') {
   const word = BID_STATUS[status] ?? String(status ?? '');
   const mark = STATUS_MARK[status];
@@ -52,19 +53,60 @@ export function statusBadge(status, extra = '') {
 export const bidItemId = (key) => 'bid-item-' + String(key ?? '').replace(/[^\w-]/g, '_');
 export const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
 
-// 入札前の確認(bidCheck の返り値)
-export function renderBidResult(bid) {
+// 入札前の確認(bidCheck の返り値)。values(画面の欄の値)を渡すと、答えの状態(F14f)を使う:
+//   各項目は 結論 → 理由(入れた条件)→ 根拠の条 → 確かめ先 の順。未回答の質問が残るうちは「仮の一覧」と出す。
+//   values が無いときは、判定の状態をそのまま出す(入れた条件は出さない)
+export function renderBidResult(bid, values) {
+  const st = (it) => (values ? displayStatus(it, values) : it.status);
   const rows = bid.items.map((it) => {
-    const status = BID_STATUS[it.status] ?? it.status;
+    const s = st(it);
     const value = it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '';
-    return '<li class="item status-' + esc(it.status) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[it.status] ? statusBadge(it.status, value) : esc(status + value)) + '</span></h4>'
-      + '<p>' + esc(it.note) + '</p>' + basisList(it.basis) + exceptionList(it.exceptions) + '</li>';
+    const conds = values ? itemConditions(it, values) : [];
+    const condHtml = conds.length
+      ? '<p class="conditions"><span class="part">入れた条件:</span> ' + conds.map((c) => esc(c.name) + ' <span class="ans ans-' + esc(c.state) + '">' + esc(c.text) + '</span>').join('、') + '</p>'
+      : '';
+    const unansweredNote = s === 'unanswered'
+      ? '<p class="unanswered-note">未回答の質問(' + esc(conds.filter((c) => c.state === 'unanswered').map((c) => c.name).join('・')) + ')に答えると、決まることがあります。</p>'
+      : '';
+    let contactHtml = '';
+    if (s !== 'not_required') {
+      const cs = contactsFor(it, values ?? {});
+      contactHtml = cs.length
+        ? '<p class="contact"><span class="part">確かめ先:</span> ' + cs.map((c) => '<strong>' + esc(c.to) + '</strong> — ' + esc(c.what) + '(' + esc(c.law) + 'の原文による)').join(' / ') + '</p>'
+        : CONTACTS[it.key] && answerState(values ?? {}, 'orderer') !== 'answered'
+          ? '<p class="contact"><span class="part">確かめ先:</span> 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します。</p>'
+          : '<p class="contact"><span class="part">確かめ先:</span> 根拠の原文に相手の定めが無いので、出していません。</p>';
+    }
+    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>'
+      + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml + unansweredNote
+      + basisList(it.basis) + exceptionList(it.exceptions) + contactHtml + '</li>';
   }).join('');
   const checks = bid.checks.length
     ? '<h3>確認が要る点(' + bid.checks.length + '件)</h3><ul class="checks">' + bid.checks.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
-  return '<h3>受注したら要るもの</h3><ul class="items">' + rows + '</ul>' + checks + amountBasisBlock(bid.amountBasis)
+  const un = values ? unansweredQuestions(values) : [];
+  const provisional = un.length
+    ? '<p class="provisional"><strong>仮の一覧です</strong>。未回答の質問が ' + un.length + 'つあります(' + esc(un.map((q) => q.name).join('・')) + ')。答えるか「分からない」を選んでから、もう一度「確認する」を押してください。</p>'
+    : '';
+  return provisional + '<h3>受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3><ul class="items">' + rows + '</ul>' + checks + amountBasisBlock(bid.amountBasis)
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
+}
+
+// 結果の最後の一覧(F14f): 「確認が要る項目」と「未回答」。印刷にも出す
+export function renderOpenItems(bid, values = {}) {
+  const o = openItems(bid, values);
+  const need = o.needsCheck.length
+    ? '<ul class="open-checks">' + o.needsCheck.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
+    : '<p>ありません(入れた条件の範囲で。このツールが見ていない法令・資料の確認は別に要ります)。</p>';
+  const known = o.unknown.length
+    ? '<p>「分からない」を選んだ質問: ' + o.unknown.map((q) => esc(q.name) + (q.items.length ? '(使う項目: ' + esc(q.items.join('・')) + ')' : '')).join('、') + '。この質問を使う項目は「確認が要る」にしています。</p>'
+    : '';
+  const un = o.unanswered.length
+    ? '<ul class="open-unanswered">' + o.unanswered.map((q) => '<li><strong>' + esc(q.name) + '</strong>' + (q.items.length ? ' — この質問に答えると決まることがある項目: ' + esc(q.items.join('・')) : '') + '</li>').join('') + '</ul>'
+    : '<p>ありません。</p>';
+  return '<h3 id="open-items-title">確認が要る項目と未回答の質問</h3>'
+    + '<h4>確認が要る項目(' + o.needsCheck.length + '件)</h4>' + need + known
+    + '<h4>未回答(' + o.unanswered.length + '問)</h4>' + un;
 }
 
 export const TAICHO_STATUS = {
@@ -224,7 +266,7 @@ export function renderPlanResult(out = {}) {
 //   state = { values: 欄の値, errors: [文], bid, taicho, scheduleCount, check, plan, stale }
 export const SUMMARY_FIELDS = [
   ['orderer', '発注者', { public: '公共', private: '民間' }],
-  ['direct', '元請けか下請けか', (values) => (readDirect(values) === true ? '元請け(発注者から直接請け負う)' : readDirect(values) === false ? '下請け' : '選んでいません')],
+  ['direct', '元請けか下請けか', (values) => (values['direct-unknown'] === true ? '分からない' : readDirect(values) === true ? '元請け(発注者から直接請け負う)' : readDirect(values) === false ? '下請け' : '選んでいません')],
   ['work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }],
   ['contract-amount', '請負代金の見込み(税込み)', null],
   ['subcontract-total', '下請けの総額(税込み)', null],
@@ -232,8 +274,9 @@ export const SUMMARY_FIELDS = [
   ['engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }],
   ['ict-measure', '台帳を発注者が閲覧できる措置(公共)', { true: '講じる', false: '講じない' }],
 ];
-function summaryValue(raw, map, values) {
+function summaryValue(raw, map, values, id) {
   if (typeof map === 'function') return map(values);
+  if (raw === 'unknown' || values[id + '-unknown'] === true) return '分からない'; // F14f の「分からない」
   if (map) {
     const v = map[String(raw)];
     return v ?? '選んでいません';
@@ -250,12 +293,17 @@ export function renderSummary(state = {}) {
     parts.push('<p class="summary-error">入力を読めませんでした。<a href="#bid-result">入札前の確認の欄</a>を見て直してください。</p>');
   } else if (state.bid) {
     const items = state.bid.items ?? [];
-    const order = ['required', 'needs_check', 'not_required'];
-    const count = (st) => items.filter((it) => it.status === st).length;
-    parts.push('<h4>受注したら要るもの(' + items.length + '項目)</h4>'
-      + '<ul class="summary-counts">' + order.map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>件</li>').join('') + '</ul>'
-      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
-        .map((it) => '<li>' + statusBadge(it.status, it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
+    // 状態は 要る/確認が要る/未回答/要らない(F14f)。欄の値があれば、決められなかった項目のうち未回答の質問を使うものを「未回答」にする
+    const vals = state.values ?? null;
+    const dst = (it) => (vals ? displayStatus(it, vals) : it.status);
+    const un = vals ? unansweredQuestions(vals) : [];
+    const order = ['required', 'needs_check', 'unanswered', 'not_required'];
+    const count = (st) => items.filter((it) => dst(it) === st).length;
+    parts.push((un.length ? '<p class="provisional"><strong>仮の一覧です</strong>(未回答の質問 ' + un.length + 'つ)。<a href="#open-items">未回答の一覧</a>を見て、答えるか「分からない」を選んでください。</p>' : '')
+      + '<h4>受注したら要るもの(' + items.length + '項目' + (un.length ? '・仮の一覧' : '') + ')</h4>'
+      + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>件</li>').join('') + '</ul>'
+      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
+        .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
       + ((state.bid.checks ?? []).length ? '<p><a href="#bid-result">確認が要る点 ' + state.bid.checks.length + '件</a>を入札前の確認の欄に出しています。</p>' : ''));
   } else {
     parts.push('<h4>受注したら要るもの</h4><p>' + NOT_YET('確認する') + '</p>');
@@ -278,7 +326,7 @@ export function renderSummary(state = {}) {
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
   parts.push('<h4>入れた条件</h4><dl class="summary-list">'
-    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values)) + '</dd></div>').join('') + '</dl>');
+    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values, id)) + '</dd></div>').join('') + '</dl>');
   return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }

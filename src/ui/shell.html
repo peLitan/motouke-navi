@@ -54,6 +54,18 @@
   .badge-required { color: #991b1b; background: #fee2e2; border-color: #b91c1c; }
   .badge-needs_check { color: #713f12; background: #fef3c7; border-color: #a16207; }
   .badge-not_required { color: #14532d; background: #dcfce7; border-color: #15803d; }
+  .badge-unanswered { color: #1f2937; background: #f3f4f6; border-color: #6b7280; border-style: dashed; }
+  /* 答えの状態と結果の順(F14f): 理由・入れた条件・確かめ先の見出し語、仮の一覧の知らせ、見ている法令の範囲、印刷だけに出す確認の欄 */
+  .item .part { font-weight: bold; }
+  .ans-unknown, .ans-unanswered { font-weight: bold; text-decoration: underline; }
+  .provisional { border-left: 4px solid #6b7280; padding: 0.1rem 0 0.1rem 0.75rem; color: #1f2937; }
+  .unknown-check { display: inline-flex; align-items: center; min-height: 2.75rem; margin-left: 0.5rem; }
+  .scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 0 1.5rem; }
+  .scope ul { margin-top: 0; }
+  .print-only { display: none; }
+  .sign-table { border-collapse: collapse; width: 100%; }
+  .sign-table th, .sign-table td { border: 1px solid #1f2937; padding: 0.5rem; height: 2.5rem; text-align: left; }
+  .sign-table th { width: 8rem; }
   .summary { border-left: 6px solid #1e293b; background: #f8fafc; padding: 0.5rem 1rem 0.75rem; margin: 1rem 0 1.5rem; }
   .summary h3 { margin: 0.25rem 0 0.5rem; font-size: 1.35rem; }
   .summary h4 { margin: 0.75rem 0 0.25rem; }
@@ -105,6 +117,8 @@
     details.basis > summary { color: inherit; }
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
+    .print-only { display: block; }
+    .sign-off { break-inside: avoid; margin-top: 1.5rem; }
   }
 </style>
 </head>
@@ -119,6 +133,20 @@
 <li>施工体制台帳を貼ると、抜け・食い違いの候補を根拠の条つきで出す</li>
 <li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
 </ul>
+</div>
+<div class="scope" id="scope">
+<div><p><strong>このツールが見ている法令・資料</strong>(取り込んだ条と節だけ)</p>
+{{SCOPE}}
+</div>
+<div><p><strong>見ていない法令・資料</strong>(結果に入っていないので、別に確かめてください)</p>
+<ul id="scope-not">
+<li>都道府県・市町村の条例・規則・要綱</li>
+<li>工事の契約書・請負契約約款</li>
+<li>発注者の特記仕様書・現場説明書・質問回答書</li>
+<li>自治体・民間の発注者の共通仕様書・要領(段取りは国の直轄の例)</li>
+<li>国土交通省令(建設業法施行規則など。台帳の記載事項の細部・発注者が確認できる措置の中身)</li>
+<li>取り込んだ条より外の条と、ほかの法令(労働安全衛生法・建築基準法など)</li>
+</ul></div>
 </div>
 <p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 </header>
@@ -138,18 +166,20 @@
 </div>
 <p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
-<p class="form-lead" id="form-lead">※必須の欄が空のときは、その欄を使う項目を「判断できない」にします(推測で埋めません)。※任意の欄は、当てはまるときだけ入れます。</p>
+<p class="form-lead" id="form-lead">※必須の質問には、分からなければ「分からない」を選んでください。「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
 <div class="row"><label for="orderer">発注者<span class="req req-must">※必須</span></label>
 <select id="orderer" name="orderer" aria-describedby="orderer-hint">
 <option value="">選んでください</option>
 <option value="public">公共(国・地方公共団体・特殊法人などの公共工事)</option>
 <option value="private">民間</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="orderer-hint" class="hint">工事を注文した人(元請けに注文した人)の区分です。下請けで請け負うときも、元の発注者で選びます。</p></div>
 <fieldset class="row radio-group" aria-describedby="direct-hint"><legend>元請けか下請けか<span class="req req-must">※必須</span></legend>
 <div><input type="radio" id="direct-unset" name="role" value="" checked><label for="direct-unset">選んでください(まだ選んでいない)</label></div>
 <div><input type="radio" id="direct" name="role" value="prime"><label for="direct">元請け(発注者から直接請け負う)</label></div>
 <div><input type="radio" id="direct-sub" name="role" value="sub"><label for="direct-sub">下請け(元請けなどから請け負う)</label></div>
+<div><input type="radio" id="direct-unknown" name="role" value="unknown"><label for="direct-unknown">分からない</label></div>
 <p id="direct-hint" class="hint">発注者から直接請け負うなら「元請け」、元請けやほかの下請けから請け負うなら「下請け」です。選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p>
 </fieldset>
 <div class="row"><label for="work-type">工事の種類<span class="req req-must">※必須</span></label>
@@ -157,19 +187,23 @@
 <option value="">選んでください</option>
 <option value="kenchiku-ikkatsu">建築一式工事</option>
 <option value="other">それ以外の工事</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上で「下請け」を選んだ)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></div>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-hint">
+<span class="unknown-check"><input type="checkbox" id="contract-amount-unknown" name="contract-amount-unknown"><label for="contract-amount-unknown">分からない</label></span>
 <p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。</p></div>
 <div class="row"><label for="subcontract-total">下請けの総額(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000" aria-describedby="subcontract-total-hint">
+<span class="unknown-check"><input type="checkbox" id="subcontract-total-unknown" name="subcontract-total-unknown"><label for="subcontract-total-unknown">分からない</label></span>
 <p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。</p></div>
 <div class="row"><label for="license">元請けの許可の種類(この工事の業種)<span class="req req-must">※必須</span></label>
 <select id="license" name="license" aria-describedby="license-hint">
 <option value="">選んでください</option>
 <option value="tokutei">特定建設業</option>
 <option value="ippan">一般建設業</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="license-hint" class="hint">この工事の業種で持っている許可が、特定建設業か一般建設業かを選びます(許可は業種ごとに分かれます)。</p></div>
 <div class="row"><label for="engineer-qualification">置ける技術者の資格<span class="req req-must">※必須</span></label>
@@ -177,6 +211,7 @@
 <option value="">選んでください</option>
 <option value="kanri">監理技術者</option>
 <option value="shunin">主任技術者</option>
+<option value="unknown">分からない</option>
 </select>
 <p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></div>
 <div class="row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
@@ -196,6 +231,7 @@
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
 </div>
+<div id="open-items" class="result open-items" aria-live="polite" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る項目と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -342,6 +378,13 @@
 <p>段取りの一覧には、国土交通省「土木工事共通仕様書(案)令和8年3月」(https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html。HTML版【試行版】)の第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-20・1-1-1-21・1-1-1-23・1-1-1-24・1-1-1-28・1-1-1-33・1-1-1-34・1-1-1-42 を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。加工: 上の条の文の一部を抜き出し、いつ・何を・誰にの形に言い換えて並べました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
+<div id="sign-off" class="print-only sign-off" aria-hidden="true">
+<p><strong>確認の記録</strong>(印刷した紙に書き込みます)</p>
+<table class="sign-table"><tbody>
+<tr><th scope="row">確認した人</th><td></td></tr>
+<tr><th scope="row">日付</th><td></td></tr>
+</tbody></table>
+</div>
 {{SCRIPT}}
 </body>
 </html>

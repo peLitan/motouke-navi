@@ -93,13 +93,20 @@ export function sourcesHtml() {
   return `<ul>\n${items.join('\n')}\n</ul>\n<p>法令は改正されることがあります。取得日から時間がたって古くなったら、判定の前に e-Gov 法令検索や国土交通省の資料の原文を確かめ直してください。この画面は取得日の時点の原文の抜き書きで判定しています。</p>`;
 }
 
+// 冒頭の「このツールが見ている法令・資料」(F14f): data/sources/index.json の題名をそのまま並べる(取り込んでいない条は書かない)
+export function scopeHtml() {
+  const { sources } = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'sources', 'index.json'), 'utf8'));
+  return `<ul id="scope-seen">\n${sources.map((s) => `<li>${escHtml(s.title)}</li>`).join('\n')}\n</ul>`;
+}
+
 export function buildHtml() {
   const shell = fs.readFileSync(SHELL, 'utf8');
-  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}']) {
+  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}']) {
     if (!shell.includes(key)) throw new Error('shell.html に ' + key + ' の場所が無い');
   }
   const withBody = shell
     .replace('{{SOURCES}}', () => sourcesHtml())
+    .replace('{{SCOPE}}', () => scopeHtml())
     .replace('{{SCRIPT}}', () => `<script>\n${bundle()}</script>`);
   return withBody.replace('{{CSP}}', () => makeCsp(withBody));
 }

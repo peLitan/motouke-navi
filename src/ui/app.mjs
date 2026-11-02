@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary } from './view.mjs';
+import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems } from './view.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
@@ -51,8 +51,10 @@ export function runBid(doc) {
   const values = collect(doc);
   const errors = formErrors(values);
   Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
+  const openEl = doc.getElementById('open-items');
   if (errors.length) {
     last = null;
+    if (openEl) openEl.innerHTML = renderErrors(errors);
     bidOut.innerHTML = renderErrors(errors);
     taichoOut.innerHTML = renderErrors(errors);
     runSchedule(doc, null, errors);
@@ -65,7 +67,9 @@ export function runBid(doc) {
   try {
     const bid = bidCheck(input);
     const taicho = judgeTaicho(input);
-    bidOut.innerHTML = renderBidResult(bid);
+    bidOut.innerHTML = renderBidResult(bid, values);
+    // 結果の最後に「確認が要る項目」と「未回答」の一覧(F14f)
+    if (openEl) openEl.innerHTML = renderOpenItems(bid, values);
     taichoOut.innerHTML = renderTaichoResult(taicho);
     last = { bid, taicho };
     summary.bid = bid;

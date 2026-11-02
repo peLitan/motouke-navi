@@ -70,7 +70,8 @@ test('目立つ枠は冒頭の必須の断り書きと対応表の警告の2つ�
 
 test('入札前の確認の入力欄に ※必須/※任意 と1行の補足がある', () => {
   const form = body.match(/<form id="bid-form"[\s\S]*?<\/form>/)[0];
-  assert.match(form, /※必須の欄が空のときは、その欄を使う項目を「判断できない」にします/);
+  // F14f で説明を「分からない」と「未回答」の扱いに書き換えた
+  assert.match(form, /「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします/);
   // 欄ごとの名前(label・legend)に印
   const need = { orderer: '必須', 'work-type': '必須', 'contract-amount': '必須', 'subcontract-total': '必須', license: '必須', 'engineer-qualification': '必須', 'ict-measure': '任意' };
   for (const [id, kind] of Object.entries(need)) {
