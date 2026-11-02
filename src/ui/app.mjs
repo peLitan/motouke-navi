@@ -1,11 +1,13 @@
-// 画面のつながり(F05a・F05e): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
+// 画面のつながり(F05a・F05e・F05b): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors } from './view.mjs';
+import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult } from './view.mjs';
+import { parseLedgerText } from '../ledger-text.mjs';
+import { checkTaicho } from '../check-taicho.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
-import { stage1Rows, toCsv } from '../export.mjs';
+import { stage1Rows, checkRows, toCsv } from '../export.mjs';
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
 import { downloadText } from './download.mjs';
@@ -86,6 +88,51 @@ export function printResult(doc, win) {
   win.print();
 }
 
+// 台帳の点検(F05b): 貼った台帳の文を読み、点検の候補を出す。
+// 発注者(公共・民間)と工事の種類は上の選ぶ欄の値を使う。元請けの許可の種類は台帳の許可番号から読み、読めなければ上の欄の値を使う。
+let lastCheck = null;
+function setCheckStatus(doc, text) {
+  const el = doc.getElementById('check-status');
+  if (el) el.textContent = text;
+}
+
+export function runLedgerCheck(doc) {
+  const outEl = doc.getElementById('check-result');
+  const input = doc.getElementById('ledger-input');
+  lastCheck = null;
+  setCheckStatus(doc, '');
+  const text = input ? String(input.value ?? '') : '';
+  if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本を読み込む」を押してください。']); return; }
+  try {
+    const ledger = parseLedgerText(text);
+    const warnings = ledger.warnings.slice();
+    const values = collect(doc);
+    const form = readBidForm(values);
+    ledger.project.ordererType = form.orderer ?? undefined;
+    ledger.project.workType = form.workType ?? undefined;
+    if (!ledger.prime.licenseType) {
+      if (form.license) {
+        ledger.prime.licenseType = form.license;
+        warnings.push('元請けの許可の種類は台帳から読めなかったので、上の欄「元請けの許可の種類」の値を使いました');
+      } else {
+        warnings.push('元請けの許可の種類が台帳からも上の欄からも分かりません。特定建設業の許可の候補は、この点を確かめてから見てください');
+      }
+    }
+    if (!form.workType) warnings.push('上の欄の「工事の種類」が選ばれていないので、下請けの総額の境目(施行令 第2条)を決められないことがあります');
+    const out = checkTaicho(ledger);
+    outEl.innerHTML = renderCheckResult(out, warnings);
+    lastCheck = out;
+  } catch (e) {
+    outEl.innerHTML = renderErrors(['点検の途中で止まりました(抜き書きの誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
+  }
+}
+
+export function exportCheckCsv(doc) {
+  if (!lastCheck) { setCheckStatus(doc, '先に「台帳を点検する」を押して結果を出してください。'); return; }
+  downloadText(doc, toCsv(checkRows(lastCheck, NOTICE)), '台帳の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
+  setCheckStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+}
+
 // 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。
 // 書類の入力欄(台帳・目次)がある画面ならそこに入れ、見本の書類の欄にも中身を出す。
 export function loadSample(doc) {
@@ -105,6 +152,7 @@ export function loadSample(doc) {
   const st = doc.getElementById('sample-status');
   if (st) st.textContent = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
   runBid(doc);
+  if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
 }
 
 export function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
@@ -117,6 +165,16 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('sample-load', () => loadSample(doc));
     on('print-btn', () => printResult(doc, win));
     on('csv-btn', () => exportCsv(doc));
+    on('ledger-run', () => runLedgerCheck(doc));
+    on('check-csv-btn', () => exportCheckCsv(doc));
+    // 台帳の文や条件を変えたら、前の点検の結果は書き出さない
+    for (const id of ['ledger-input', ...BID_FORM_IDS]) {
+      const el = doc.getElementById(id);
+      if (!el) continue;
+      const changed = () => { if (lastCheck) { lastCheck = null; setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。'); } };
+      el.addEventListener('input', changed);
+      el.addEventListener('change', changed);
+    }
     startMask(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {

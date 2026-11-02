@@ -78,3 +78,35 @@ export function renderTaichoResult(t) {
 export function renderErrors(list) {
   return '<div class="errors"><p>入力を読めませんでした。直してからもう一度押してください。</p><ul>' + list.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
 }
+
+// 台帳の点検(checkTaicho の返り値)の欄の名前(画面と CSV で使う)
+export const CHECK_FIELD = {
+  name: '商号又は名称',
+  work: '工事の内容',
+  period: '工期',
+  engineer: '技術者の氏名',
+  'engineer.qualification': '技術者の資格',
+  'prime.engineer.role': '元請けの技術者(監理技術者か)',
+  'prime.licenseType': '元請けの許可の種類',
+  'project.workType': '工事の種類',
+  'subcontractors.amount': '下請けの請負代金の額',
+};
+export const fieldLabel = (f) => CHECK_FIELD[f] ?? String(f ?? '');
+
+// 台帳の点検の結果(F05b)。warnings は台帳の文を読んだときの注意(読めなかった行など)
+export function renderCheckResult(out, warnings = []) {
+  const cands = out.candidates ?? [];
+  const und = out.undecidable ?? [];
+  const candHtml = cands.length
+    ? '<h3>抜け・食い違いの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.target) + ' — ' + esc(fieldLabel(c.field)) + '</h4><p>' + esc(c.message) + '</p>' + basisList(c.basis) + '</li>').join('') + '</ul>'
+    : '<h3>抜け・食い違いの候補</h3><p>入力の範囲では、候補は出ませんでした(このツールが点検しない記載事項や例外はあります)。</p>';
+  const undHtml = und.length
+    ? '<h3>判断できない(' + und.length + '件)</h3><ul class="undecidable">' + und.map((u) => '<li><h4>' + esc(u.target) + ' — ' + esc(fieldLabel(u.field)) + '</h4><p>' + esc(u.message) + '</p>' + basisList(u.basis ?? []) + '</li>').join('') + '</ul>'
+    : '';
+  const warnHtml = warnings.length
+    ? '<details class="warnings" open><summary>台帳の文を読んだときの注意(' + warnings.length + '件)</summary><ul>' + warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul></details>'
+    : '';
+  const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
+  return warnHtml + candHtml + undHtml + notes
+    + '<p class="human">指摘の候補です。台帳が正しいかの最後の判断は、契約書・下請けの書類などを確かめたうえで人がしてください</p>';
+}

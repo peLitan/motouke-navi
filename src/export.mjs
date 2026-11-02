@@ -1,7 +1,7 @@
 // 結果の書き出し(F05e)。判定の結果を「行の配列」にし、CSV の文字列にする。
 // DOM には触らない。画面(src/ui/app.mjs)が、この文字列を Blob にしてダウンロードさせる(通信はしない)。
 // のちの段の結果も、同じ列(COLUMNS)の行を作る関数を足せば、同じ toCsv で書き出せる。
-import { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS } from './ui/view.mjs';
+import { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel } from './ui/view.mjs';
 
 // すべての結果で共通の列
 export const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '例外・読み方の注意'];
@@ -61,6 +61,17 @@ export function stage1Rows(bid, t, notice) {
     ...taichoRows(t).slice(1),
     ...amountBasisRows(t.amountBasis, '施工体制台帳'),
     row('注意', '注意', '', [notice, bid.disclaimer].filter(Boolean).join('\n'), [], []),
+  ];
+}
+
+// 台帳の点検(checkTaicho の返り値): 見出しの行 + 候補ごとに1行 + 判断できないことごとに1行(F05b)
+export function checkRows(out, notice) {
+  const item = (x) => [x.target, fieldLabel(x.field)].filter(Boolean).join(' — ');
+  return [
+    COLUMNS.slice(),
+    ...(out.candidates ?? []).map((c) => row('台帳の点検', item(c), '候補', c.message, c.basis ?? [], [])),
+    ...(out.undecidable ?? []).map((u) => row('台帳の点検', item(u), '判断できない', u.message, u.basis ?? [], [])),
+    ...(notice ? [row('注意', '注意', '', [notice, ...(out.notes ?? [])].join('\n'), [], [])] : []),
   ];
 }
 
