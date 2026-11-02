@@ -1,5 +1,5 @@
 {
-  "note": "法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は URL と取得日だけを残す(全文は再配布しない)",
+  "note": "法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は、根拠に使う節だけを PDF から文字のまま写して保存する(全文は再配布しない)",
   "sources": [
     {
       "id": "kensetsu-3",
@@ -102,7 +102,9 @@
       "section": "【その他】2.",
       "page": 44,
       "fetchedAt": "2026-11-02",
-      "file": null
+      "file": "mlit-kyoka-guideline-sonota-2.txt",
+      "excerpt": "44ページの「２．法等における「請負代金の額」等の内容について」の見出しと本文だけ。PDF の文字(ToUnicode)をそのまま取り出した",
+      "license": "PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
     }
   ]
 }

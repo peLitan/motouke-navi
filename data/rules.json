@@ -1,5 +1,5 @@
 {
-  "note": "規則表。1行 = 1つの決まり。condition の欄がすべて入力と同じ行が当てはまる。result は判定の結果(status = 台帳を作るか、copyToOrderer = 写しを発注者に出すか)。basis は data/quotes.json の抜き書きの id。exceptions は、根拠の原文にある例外・参照(ただし・を除き・この限りでない・準用・読み替え)をこの行でどう扱ったか。値の意味: orderer は public(公共工事)か private(民間工事)、direct は発注者から直接請け負ったか、hasSubcontract は下請契約を結んだか、ictMeasure は発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を受注者が講じているか",
+  "note": "規則表。1行 = 1つの決まり。condition の欄がすべて入力と同じ行が当てはまる。result は判定の結果(status = 台帳を作るか、copyToOrderer = 写しを発注者に出すか)。basis は data/quotes.json の抜き書きの id。exceptions は、根拠の原文にある例外・参照(ただし・を除き・この限りでない・準用・読み替え)をこの行でどう扱ったか。値の意味: orderer は public(公共工事)か private(民間工事)、direct は発注者から直接請け負ったか、hasSubcontract は下請契約を結んだか、ictMeasure は発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を受注者が講じているか。民間の行の値: subcontractTotal は発注者から直接請け負った工事の下請契約の請負代金の総額(円・消費税込み。amountBasis を見る)、workType は kenchiku-ikkatsu(建築一式工事)か other(それ以外)、license は元請けの許可の種類で tokutei(特定建設業)か ippan(一般建設業)。condition の値がオブジェクトのときは比べ方(gte = 以上、lt = 未満、in = どれか、notIn = どれでもない)",
   "rules": [
     {
       "id": "pub-taicho-create",
@@ -156,6 +156,369 @@
         "入契法 第15条第1項の読み替え: 建設業法 第24条の8第2項の「特定建設業者」は、公共工事では「建設業者」と読む(通知の相手は台帳を作る元請け)",
         "通知する事項の細目は国土交通省令で定める(このツールは省令の原文を取得していない)"
       ]
+    },
+    {
+      "id": "prv-taicho-create",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "tokutei",
+        "workType": {
+          "notIn": [
+            "kenchiku-ikkatsu"
+          ]
+        },
+        "subcontractTotal": {
+          "gte": 50000000
+        }
+      },
+      "action": "特定建設業者が発注者から直接請け負い、下請けの総額(税込み)が五千万円以上なので、施工体制台帳を作り、工事現場ごとに備え置く。民間工事なので写しを発注者に出す決まりは無いが、発注者から請求があれば台帳を閲覧させる",
+      "result": {
+        "status": "required",
+        "copyToOrderer": "not_required"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-1-taicho"
+        },
+        {
+          "quoteId": "q-rei-7_4-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-3"
+        },
+        {
+          "quoteId": "q-nyukei-15-2"
+        }
+      ],
+      "exceptions": [
+        "施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた",
+        "建設業法 第24条の8第1項の「国土交通省令で定めるところにより」「国土交通省令で定める事項」: 台帳の書き方・記載事項は省令による(このツールは省令の原文を取得していない)",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)",
+        "写しを発注者に出す決まりは入契法 第15条第2項で、対象は「公共工事の受注者」に限る。民間工事には当たらないので copyToOrderer は not_required。同項の「を除き」(措置)と「読み替えて適用される」は公共工事の話なので、この行では使わない",
+        "閲覧: 発注者から請求があったときは台帳を閲覧させる(建設業法 第24条の8第3項)"
+      ]
+    },
+    {
+      "id": "prv-taicho-create-kenchiku",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "tokutei",
+        "workType": "kenchiku-ikkatsu",
+        "subcontractTotal": {
+          "gte": 80000000
+        }
+      },
+      "action": "特定建設業者が発注者から直接請け負った建築一式工事で、下請けの総額(税込み)が八千万円以上なので、施工体制台帳を作り、工事現場ごとに備え置く。民間工事なので写しを発注者に出す決まりは無いが、発注者から請求があれば台帳を閲覧させる",
+      "result": {
+        "status": "required",
+        "copyToOrderer": "not_required"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-1-taicho"
+        },
+        {
+          "quoteId": "q-rei-7_4-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-3"
+        },
+        {
+          "quoteId": "q-nyukei-15-2"
+        }
+      ],
+      "exceptions": [
+        "施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた",
+        "建設業法 第24条の8第1項の「国土交通省令で定めるところにより」「国土交通省令で定める事項」: 台帳の書き方・記載事項は省令による(このツールは省令の原文を取得していない)",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)",
+        "写しを発注者に出す決まりは入契法 第15条第2項で、対象は「公共工事の受注者」に限る。民間工事には当たらないので copyToOrderer は not_required。同項の「を除き」(措置)と「読み替えて適用される」は公共工事の話なので、この行では使わない",
+        "閲覧: 発注者から請求があったときは台帳を閲覧させる(建設業法 第24条の8第3項)"
+      ]
+    },
+    {
+      "id": "prv-below",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "tokutei",
+        "workType": {
+          "notIn": [
+            "kenchiku-ikkatsu"
+          ]
+        },
+        "subcontractTotal": {
+          "lt": 50000000
+        }
+      },
+      "action": "下請けの総額(税込み)が五千万円未満なので、施工体制台帳を作る決まりに当たらない(総額が増えて五千万円以上になったら作る)",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-rei-7_4-1"
+        }
+      ],
+      "exceptions": [
+        "施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"
+      ]
+    },
+    {
+      "id": "prv-below-kenchiku",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "tokutei",
+        "workType": "kenchiku-ikkatsu",
+        "subcontractTotal": {
+          "lt": 80000000
+        }
+      },
+      "action": "建築一式工事で下請けの総額(税込み)が八千万円未満なので、施工体制台帳を作る決まりに当たらない(総額が増えて八千万円以上になったら作る)",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-rei-7_4-1"
+        }
+      ],
+      "exceptions": [
+        "施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"
+      ]
+    },
+    {
+      "id": "prv-ippan-over",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "ippan",
+        "workType": {
+          "notIn": [
+            "kenchiku-ikkatsu"
+          ]
+        },
+        "subcontractTotal": {
+          "gte": 50000000
+        }
+      },
+      "action": "一般建設業の許可で、下請けの総額(税込み)が五千万円以上の下請契約を結んで元請けとして施工しようとしている。発注者から直接請け負い、この額の下請契約を結んで施工するのは特定建設業の許可の区分(建設業法 第3条第1項第2号)なので、元請けの許可の種類(業種ごとの特定・一般)を許可通知書などで確かめる。特定建設業の許可なら施工体制台帳を作る。あわせて、許可の業種が建築工事業かも確かめる(施行令 第2条のただし書により、建築工事業なら特定建設業の許可が要る境目は八千万円になる。このツールは許可の業種を入力に持たず、工事の種類で境目を選んでいる)",
+      "result": {
+        "status": "needs_check"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-3-1-2"
+        },
+        {
+          "quoteId": "q-rei-2-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-rei-7_4-1"
+        }
+      ],
+      "exceptions": [
+        "建設業法 第3条第1項の「ただし」(軽微な建設工事のみを請け負う者は許可が要らない): 下請けの総額が境目以上の工事を元請けとして施工する場面なので、この行では扱わない",
+        "建設業法 第3条第1項の「準ずる」(営業所の定義): 許可の種類の確認には関わらないので、この行では扱わない",
+        "施行令 第2条の「ただし」: 許可を受けようとする建設業が建築工事業なら八千万円。このツールは工事の種類(建築一式工事か)で行を分けていて、許可の業種(建築工事業か)とは別のもの。建築一式工事なら建築工事業の許可で請け負うのが通常だが、それはツールの読み方で原文には無い",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)",
+        "施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた"
+      ]
+    },
+    {
+      "id": "prv-ippan-over-kenchiku",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "ippan",
+        "workType": "kenchiku-ikkatsu",
+        "subcontractTotal": {
+          "gte": 80000000
+        }
+      },
+      "action": "一般建設業の許可で、建築一式工事の下請けの総額(税込み)が八千万円以上の下請契約を結んで元請けとして施工しようとしている。この額の下請契約を結んで施工するのは特定建設業の許可の区分(建設業法 第3条第1項第2号)なので、元請けの許可の種類(業種ごとの特定・一般)を許可通知書などで確かめる。特定建設業の許可なら施工体制台帳を作る。あわせて、許可の業種が建築工事業かも確かめる(施行令 第2条のただし書により、建築工事業なら特定建設業の許可が要る境目は八千万円になる。このツールは許可の業種を入力に持たず、工事の種類で境目を選んでいる)",
+      "result": {
+        "status": "needs_check"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-3-1-2"
+        },
+        {
+          "quoteId": "q-rei-2-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-rei-7_4-1"
+        }
+      ],
+      "exceptions": [
+        "建設業法 第3条第1項の「ただし」(軽微な建設工事のみを請け負う者は許可が要らない): 下請けの総額が境目以上の工事を元請けとして施工する場面なので、この行では扱わない",
+        "建設業法 第3条第1項の「準ずる」(営業所の定義): 許可の種類の確認には関わらないので、この行では扱わない",
+        "施行令 第2条の「ただし」: 許可を受けようとする建設業が建築工事業なら八千万円。このツールは工事の種類(建築一式工事か)で行を分けていて、許可の業種(建築工事業か)とは別のもの。建築一式工事なら建築工事業の許可で請け負うのが通常だが、それはツールの読み方で原文には無い",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)",
+        "施行令 第7条の4 の「ただし」: 特定建設業者が発注者から直接請け負った工事が建築一式工事なら八千万円。建築一式工事の行と、それ以外の行に分けた"
+      ]
+    },
+    {
+      "id": "prv-ippan-below",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "ippan",
+        "workType": {
+          "notIn": [
+            "kenchiku-ikkatsu"
+          ]
+        },
+        "subcontractTotal": {
+          "lt": 50000000
+        }
+      },
+      "action": "一般建設業者なので、施工体制台帳を作る決まり(建設業法 第24条の8第1項。対象は特定建設業者)に当たらない。下請けの総額(税込み)は特定建設業の許可が要る境目(五千万円)より下なので、許可の種類の確認も要らない",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-kensetsu-3-1-2"
+        },
+        {
+          "quoteId": "q-rei-2-1"
+        }
+      ],
+      "exceptions": [
+        "建設業法 第3条第1項の「ただし」(軽微な建設工事)と「準ずる」(営業所): 許可の種類の確認には関わらないので、この行では扱わない",
+        "施行令 第2条の「ただし」: 建築工事業の許可なら境目は八千万円。境目未満の判定は五千万円・八千万円のどちらで見ても変わらない側だけにしてある(一式でない工事は五千万円未満、建築一式工事は八千万円未満)。建築一式工事で五千万円以上八千万円未満のとき、許可の業種が建築工事業でなければ特定の許可が要る場合があるが、このツールは建築一式工事を建築工事業の許可で請け負うものと読んでいる(ツールの読み方で原文には無い)",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"
+      ]
+    },
+    {
+      "id": "prv-ippan-below-kenchiku",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": true,
+        "hasSubcontract": true,
+        "license": "ippan",
+        "workType": "kenchiku-ikkatsu",
+        "subcontractTotal": {
+          "lt": 80000000
+        }
+      },
+      "action": "一般建設業者なので、施工体制台帳を作る決まり(建設業法 第24条の8第1項。対象は特定建設業者)に当たらない。建築一式工事で下請けの総額(税込み)は八千万円より下なので、許可の種類の確認も要らない",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-kensetsu-3-1-2"
+        },
+        {
+          "quoteId": "q-rei-2-1"
+        }
+      ],
+      "exceptions": [
+        "建設業法 第3条第1項の「ただし」(軽微な建設工事)と「準ずる」(営業所): 許可の種類の確認には関わらないので、この行では扱わない",
+        "施行令 第2条の「ただし」: 建築工事業の許可なら境目は八千万円。境目未満の判定は五千万円・八千万円のどちらで見ても変わらない側だけにしてある(一式でない工事は五千万円未満、建築一式工事は八千万円未満)。建築一式工事で五千万円以上八千万円未満のとき、許可の業種が建築工事業でなければ特定の許可が要る場合があるが、このツールは建築一式工事を建築工事業の許可で請け負うものと読んでいる(ツールの読み方で原文には無い)",
+        "金額は消費税及び地方消費税を含む額で比べる(amountBasis。国交省 建設業許可事務ガイドライン【その他】2.)"
+      ]
+    },
+    {
+      "id": "prv-not-direct",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "direct": false
+      },
+      "action": "発注者から直接請け負っていないので、元請けとして施工体制台帳を作る対象にしない(下請けとして再下請に出したときの通知は別)",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        }
+      ],
+      "exceptions": [
+        "建設業法 第24条の8第1項は「発注者から直接建設工事を請け負つた場合」に限る。下請けの総額や許可の種類にかかわらず、この要件に当たらなければ作る対象にならない"
+      ]
+    },
+    {
+      "id": "prv-no-subcontract",
+      "scope": "private",
+      "condition": {
+        "orderer": "private",
+        "hasSubcontract": false
+      },
+      "action": "下請契約を結んでいないので、施工体制台帳は作らなくてよい(下請契約を結び、総額が境目以上になったら作る)",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        }
+      ],
+      "exceptions": [
+        "建設業法 第24条の8第1項は「締結した下請契約の請負代金の額」が境目以上のときに限る。下請契約が無ければ当たらない"
+      ]
     }
-  ]
+  ],
+  "amountBasis": {
+    "tax": "included",
+    "note": "下請けの総額などの「請負代金の額」は、消費税及び地方消費税の額を含めて境目と比べる。画面の金額の入力欄は税込みで入れる",
+    "basis": [
+      {
+        "quoteId": "q-mlit-guideline-tax"
+      }
+    ]
+  }
 }
