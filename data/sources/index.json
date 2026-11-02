@@ -1,0 +1,108 @@
+{
+  "note": "法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は URL と取得日だけを残す(全文は再配布しない)",
+  "sources": [
+    {
+      "id": "kensetsu-3",
+      "kind": "law",
+      "law": "建設業法",
+      "lawId": "324AC0000000100",
+      "article": "3",
+      "title": "建設業法 第3条（建設業の許可）",
+      "url": "https://laws.e-gov.go.jp/law/324AC0000000100",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml",
+      "revisionId": "324AC0000000100_20251212_506AC0000000049",
+      "fetchedAt": "2026-11-02",
+      "file": "law-kensetsu-3.txt"
+    },
+    {
+      "id": "kensetsu-24_8",
+      "kind": "law",
+      "law": "建設業法",
+      "lawId": "324AC0000000100",
+      "article": "24の8",
+      "title": "建設業法 第24条の8（施工体制台帳及び施工体系図の作成等）",
+      "url": "https://laws.e-gov.go.jp/law/324AC0000000100",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml",
+      "revisionId": "324AC0000000100_20251212_506AC0000000049",
+      "fetchedAt": "2026-11-02",
+      "file": "law-kensetsu-24_8.txt"
+    },
+    {
+      "id": "kensetsu-26",
+      "kind": "law",
+      "law": "建設業法",
+      "lawId": "324AC0000000100",
+      "article": "26",
+      "title": "建設業法 第26条（主任技術者及び監理技術者の設置等）",
+      "url": "https://laws.e-gov.go.jp/law/324AC0000000100",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml",
+      "revisionId": "324AC0000000100_20251212_506AC0000000049",
+      "fetchedAt": "2026-11-02",
+      "file": "law-kensetsu-26.txt"
+    },
+    {
+      "id": "rei-2",
+      "kind": "law",
+      "law": "建設業法施行令",
+      "lawId": "331CO0000000273",
+      "article": "2",
+      "title": "建設業法施行令 第2条（法第三条第一項第二号の金額）",
+      "url": "https://laws.e-gov.go.jp/law/331CO0000000273",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml",
+      "revisionId": "331CO0000000273_20260401_507CO0000000412",
+      "fetchedAt": "2026-11-02",
+      "file": "law-rei-2.txt"
+    },
+    {
+      "id": "rei-7_4",
+      "kind": "law",
+      "law": "建設業法施行令",
+      "lawId": "331CO0000000273",
+      "article": "7の4",
+      "title": "建設業法施行令 第7条の4（法第二十四条の八第一項の金額）",
+      "url": "https://laws.e-gov.go.jp/law/331CO0000000273",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml",
+      "revisionId": "331CO0000000273_20260401_507CO0000000412",
+      "fetchedAt": "2026-11-02",
+      "file": "law-rei-7_4.txt"
+    },
+    {
+      "id": "rei-27",
+      "kind": "law",
+      "law": "建設業法施行令",
+      "lawId": "331CO0000000273",
+      "article": "27",
+      "title": "建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事）",
+      "url": "https://laws.e-gov.go.jp/law/331CO0000000273",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml",
+      "revisionId": "331CO0000000273_20260401_507CO0000000412",
+      "fetchedAt": "2026-11-02",
+      "file": "law-rei-27.txt"
+    },
+    {
+      "id": "nyukei-15",
+      "kind": "law",
+      "law": "公共工事の入札及び契約の適正化の促進に関する法律",
+      "lawId": "412AC0000000127",
+      "article": "15",
+      "title": "公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等）",
+      "url": "https://laws.e-gov.go.jp/law/412AC0000000127",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/412AC0000000127?response_format=xml",
+      "revisionId": "412AC0000000127_20251212_506AC0000000049",
+      "fetchedAt": "2026-11-02",
+      "file": "law-nyukei-15.txt"
+    },
+    {
+      "id": "mlit-kyoka-guideline",
+      "kind": "document",
+      "title": "建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)",
+      "publisher": "国土交通省",
+      "url": "https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf",
+      "pageUrl": "https://www.mlit.go.jp/totikensangyo/const/sosei_const_tk1_000002.html",
+      "section": "【その他】2.",
+      "page": 44,
+      "fetchedAt": "2026-11-02",
+      "file": null
+    }
+  ]
+}
