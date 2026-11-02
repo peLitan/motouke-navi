@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-osskLkrArPo45pShqeinXhL0TDxD4Jx7X7nGChF74XE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-6m/81ybtbDkRPaOP2VCKSCFx4OMSQ8rsfZpC1WEnbWw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -11,6 +11,9 @@
   .disclaimer { border: 2px solid #b45309; background: #fffbeb; padding: 0.75rem 1rem; font-weight: bold; }
   .row { margin: 0.4rem 0; }
   .hint { margin: 0.2rem 0 0; font-size: 0.9rem; color: #374151; }
+  .radio-group { border: 1px solid #9ca3af; border-radius: 4px; padding: 0.4rem 0.8rem; }
+  .radio-group legend { font-weight: bold; padding: 0 0.3rem; }
+  .radio-group div { margin: 0.2rem 0; }
   .row label { margin-right: 0.5rem; }
   .result { border: 1px solid #ccc; padding: 0.5rem 1rem; margin-bottom: 1rem; }
   .human { font-weight: bold; }
@@ -103,14 +106,19 @@
 <option value="public">公共(国・地方公共団体・特殊法人などの公共工事)</option>
 <option value="private">民間</option>
 </select></div>
-<div class="row"><input type="checkbox" id="direct" name="direct"><label for="direct">発注者から直接請け負う(元請け)</label></div>
+<fieldset class="row radio-group" aria-describedby="direct-hint"><legend>元請けか下請けか</legend>
+<div><input type="radio" id="direct-unset" name="role" value="" checked><label for="direct-unset">選んでください(まだ選んでいない)</label></div>
+<div><input type="radio" id="direct" name="role" value="prime"><label for="direct">元請け(発注者から直接請け負う)</label></div>
+<div><input type="radio" id="direct-sub" name="role" value="sub"><label for="direct-sub">下請け(元請けなどから請け負う)</label></div>
+<p id="direct-hint" class="hint">選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p>
+</fieldset>
 <div class="row"><label for="work-type">工事の種類</label>
 <select id="work-type" name="work-type" aria-describedby="work-type-hint">
 <option value="">選んでください</option>
 <option value="kenchiku-ikkatsu">建築一式工事</option>
 <option value="other">それ以外の工事</option>
 </select>
-<p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上の「発注者から直接請け負う」に印が無い)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></div>
+<p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上で「下請け」を選んだ)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></div>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)</label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000"></div>
 <div class="row"><label for="subcontract-total">下請けの総額(円・税込み。下請契約が二以上ならその合計。下請けが無ければ 0)</label>
@@ -332,6 +340,14 @@ const CHOICES = {
 // 選ぶ欄: 決めた値のどれかなら、その値。未選択や知らない値は null(判定の側で「入力が足りない」になる)
 const choice = (key, v) => (CHOICES[key].includes(v) ? v : null);
 const flag = (v) => v === true || v === 'true' || v === 'on';
+// 元請けか下請けか(F15b・反証の指摘4): 画面は「選んでいない/元請け/下請け」の3択(ラジオ)。
+// 欄 direct(元請け)に印があれば true、欄 direct-sub(下請け)に印があれば false、どちらも無ければ null(判断できない)。
+// 印が無いことを「下請け」と読まない
+function readDirect(values = {}) {
+  if (flag(values.direct)) return true;
+  if (flag(values['direct-sub'])) return false;
+  return null;
+}
 
 // 欄の値の入れ物 → 判定の入力。下請けの総額が 0 なら下請契約は無い、空なら有無は分からない(null)
 function readBidForm(values = {}) {
@@ -339,7 +355,7 @@ function readBidForm(values = {}) {
   const sub = parseYen(values['subcontract-total']);
   return {
     orderer: choice('orderer', values.orderer),
-    direct: flag(values.direct),
+    direct: readDirect(values),
     workType: choice('work-type', values['work-type']),
     contractAmount: contract.value,
     hasSubcontract: sub.value === null ? null : sub.value > 0,
@@ -360,14 +376,15 @@ function formErrors(values = {}) {
   return out;
 }
 
-const BID_FORM_IDS = ['orderer', 'direct', 'work-type', 'contract-amount', 'subcontract-total', 'license', 'engineer-qualification', 'ict-measure'];
-const CHECKBOX_IDS = ['direct', 'ict-measure'];
+const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'work-type', 'contract-amount', 'subcontract-total', 'license', 'engineer-qualification', 'ict-measure'];
+const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'ict-measure'];
 
-return { parseYen, readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS };
+return { parseYen, readDirect, readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS };
 })();
 __m["src/ui/view.mjs"] = (function () {
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
 // 結果の文字はすべてエスケープする(規則表や入力の文字がそのまま HTML にならないように)。
+const { readDirect } = __m["src/ui/form.mjs"];
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -574,7 +591,7 @@ function renderPlanResult(out = {}) {
 //   state = { values: 欄の値, errors: [文], bid, taicho, scheduleCount, check, plan, stale }
 const SUMMARY_FIELDS = [
   ['orderer', '発注者', { public: '公共', private: '民間' }],
-  ['direct', '発注者から直接請け負う(元請け)', { true: 'はい', false: 'いいえ' }],
+  ['direct', '元請けか下請けか', (values) => (readDirect(values) === true ? '元請け(発注者から直接請け負う)' : readDirect(values) === false ? '下請け' : '選んでいません')],
   ['work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }],
   ['contract-amount', '請負代金の見込み(税込み)', null],
   ['subcontract-total', '下請けの総額(税込み)', null],
@@ -582,7 +599,8 @@ const SUMMARY_FIELDS = [
   ['engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }],
   ['ict-measure', '台帳を発注者が閲覧できる措置(公共)', { true: '講じる', false: '講じない' }],
 ];
-function summaryValue(raw, map) {
+function summaryValue(raw, map, values) {
+  if (typeof map === 'function') return map(values);
   if (map) {
     const v = map[String(raw)];
     return v ?? '選んでいません';
@@ -627,7 +645,7 @@ function renderSummary(state = {}) {
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
   parts.push('<h4>入れた条件</h4><dl class="summary-list">'
-    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map)) + '</dd></div>').join('') + '</dl>');
+    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values)) + '</dd></div>').join('') + '</dl>');
   return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
@@ -1391,7 +1409,8 @@ const OPS = {
   gte: (x, v) => typeof x === 'number' && Number.isFinite(x) && x >= v,
   lt: (x, v) => typeof x === 'number' && Number.isFinite(x) && x < v,
   in: (x, v) => Array.isArray(v) && v.includes(x),
-  notIn: (x, v) => Array.isArray(v) && !v.includes(x),
+  // 未選択(null・undefined)は「どれでもない」に数えない(未選択を「建築一式ではない」と決めない。反証の指摘2)
+  notIn: (x, v) => Array.isArray(v) && x !== null && x !== undefined && !v.includes(x),
 };
 function matchesValue(spec, x) {
   if (spec !== null && typeof spec === 'object' && !Array.isArray(spec)) {
@@ -1405,10 +1424,27 @@ function matchesValue(spec, x) {
   return x === spec;
 }
 
-// 行の condition の欄がすべて入力に当てはまれば、その行が当てはまる。入力に欄が無い(undefined)ときは当てはまらない
+// 行の condition の欄がすべて入力に当てはまれば、その行が当てはまる。
+// 入力に欄が無い(undefined)か未選択(null)のときは当てはまらない(未入力から言い切らない。反証の指摘2・4)
 function matchesCondition(condition, input) {
   if (!condition || typeof condition !== 'object') return false;
-  return Object.entries(condition).every(([k, v]) => input?.[k] !== undefined && matchesValue(v, input[k]));
+  return Object.entries(condition).every(([k, v]) => input?.[k] !== undefined && input[k] !== null && matchesValue(v, input[k]));
+}
+
+// 判定に使う入力の欄の名前(判断できないときに、どの欄が足りないかを出す)
+const INPUT_NAMES = {
+  orderer: '発注者(公共か民間か)',
+  direct: '元請けか下請けか',
+  hasSubcontract: '下請けの総額(下請けの有無)',
+  subcontractTotal: '下請けの総額',
+  workType: '工事の種類',
+  license: '元請けの許可の種類',
+  ictMeasure: '台帳を発注者が閲覧できる措置',
+};
+// 規則表の条件に出てくる欄のうち、入力が無い・未選択のもの
+function missingInputs(input, rules) {
+  const keys = [...new Set(rules.flatMap((r) => Object.keys(r.condition || {})))];
+  return keys.filter((k) => input?.[k] === undefined || input?.[k] === null);
 }
 
 // 行の根拠(quoteId の並び)を、法令名・条・項・号・原文の抜き書きにする。見つからない抜き書きは例外にする
@@ -1467,7 +1503,15 @@ function judgeWithTables(input, { rules, quotes, sources, amountBasis }) {
   if (usesAmount && amountBasis) {
     out.amountBasis = { tax: amountBasis.tax, note: amountBasis.note, basis: resolveQuoteIds(amountBasis.basis || [], quotes, sources, '規則表の amountBasis') };
   }
-  if (status === 'unknown') out.message = '規則表に当てはまる行が無いので判断できません(入力の欄が足りないか、まだ規則表に無い場合です)';
+  if (status === 'unknown') {
+    // 台帳の要否(status)を決める行の条件のうち、入力が無い・未選択の欄を挙げる(写しの措置の欄は台帳の要否に関わらないので除く)
+    const statusRules = rules.filter((r) => r.result?.status !== undefined);
+    const missing = missingInputs(input, statusRules);
+    out.missing = missing;
+    out.message = missing.length
+      ? '判断できません。次の欄が未選択・未入力です: ' + missing.map((k) => INPUT_NAMES[k] ?? k).join('、') + '(未入力のまま「作らなくてよい」とは決めません)'
+      : '規則表に当てはまる行が無いので判断できません(まだ規則表に無い場合です)';
+  }
   else if (status === 'needs_check') out.message = '確かめることがあります: ' + matched.filter((r) => r.result?.status === 'needs_check').map((r) => r.action).join(' / ');
   else if (copyToOrderer === 'unknown') out.message = '写しの提出が要るかは判断できません(措置を講じているかの入力が無い)';
   return out;
@@ -1478,7 +1522,7 @@ function judgeTaicho(input) {
   return judgeWithTables(input, { rules: rulesData.rules, quotes: quotesData.quotes, sources: sourcesData.sources, amountBasis: rulesData.amountBasis });
 }
 
-return { matchesValue, matchesCondition, resolveBasis, resolveQuoteIds, judgeWithTables, judgeTaicho };
+return { matchesValue, matchesCondition, missingInputs, resolveBasis, resolveQuoteIds, judgeWithTables, judgeTaicho };
 })();
 __m["src/bid-check.mjs"] = (function () {
 // 入札前の確認(F10): 案件の条件から、受注したら要るものを根拠の条つきで並べる。
@@ -2320,7 +2364,9 @@ const SAMPLE = {
   note: 'すべて架空の工事・会社・人です。実在のものとは関係ありません。下請けの総額は 44,000,000円 + 33,000,000円 = 77,000,000円(税込み)としています。',
   form: {
     orderer: 'public',
+    'direct-unset': false,
     direct: true,
+    'direct-sub': false,
     'work-type': 'other',
     'contract-amount': '286,000,000',
     'subcontract-total': '77,000,000',

@@ -12,7 +12,8 @@ const OPS = {
   gte: (x, v) => typeof x === 'number' && Number.isFinite(x) && x >= v,
   lt: (x, v) => typeof x === 'number' && Number.isFinite(x) && x < v,
   in: (x, v) => Array.isArray(v) && v.includes(x),
-  notIn: (x, v) => Array.isArray(v) && !v.includes(x),
+  // 未選択(null・undefined)は「どれでもない」に数えない(未選択を「建築一式ではない」と決めない。反証の指摘2)
+  notIn: (x, v) => Array.isArray(v) && x !== null && x !== undefined && !v.includes(x),
 };
 export function matchesValue(spec, x) {
   if (spec !== null && typeof spec === 'object' && !Array.isArray(spec)) {
@@ -26,10 +27,27 @@ export function matchesValue(spec, x) {
   return x === spec;
 }
 
-// 行の condition の欄がすべて入力に当てはまれば、その行が当てはまる。入力に欄が無い(undefined)ときは当てはまらない
+// 行の condition の欄がすべて入力に当てはまれば、その行が当てはまる。
+// 入力に欄が無い(undefined)か未選択(null)のときは当てはまらない(未入力から言い切らない。反証の指摘2・4)
 export function matchesCondition(condition, input) {
   if (!condition || typeof condition !== 'object') return false;
-  return Object.entries(condition).every(([k, v]) => input?.[k] !== undefined && matchesValue(v, input[k]));
+  return Object.entries(condition).every(([k, v]) => input?.[k] !== undefined && input[k] !== null && matchesValue(v, input[k]));
+}
+
+// 判定に使う入力の欄の名前(判断できないときに、どの欄が足りないかを出す)
+const INPUT_NAMES = {
+  orderer: '発注者(公共か民間か)',
+  direct: '元請けか下請けか',
+  hasSubcontract: '下請けの総額(下請けの有無)',
+  subcontractTotal: '下請けの総額',
+  workType: '工事の種類',
+  license: '元請けの許可の種類',
+  ictMeasure: '台帳を発注者が閲覧できる措置',
+};
+// 規則表の条件に出てくる欄のうち、入力が無い・未選択のもの
+export function missingInputs(input, rules) {
+  const keys = [...new Set(rules.flatMap((r) => Object.keys(r.condition || {})))];
+  return keys.filter((k) => input?.[k] === undefined || input?.[k] === null);
 }
 
 // 行の根拠(quoteId の並び)を、法令名・条・項・号・原文の抜き書きにする。見つからない抜き書きは例外にする
@@ -88,7 +106,15 @@ export function judgeWithTables(input, { rules, quotes, sources, amountBasis }) 
   if (usesAmount && amountBasis) {
     out.amountBasis = { tax: amountBasis.tax, note: amountBasis.note, basis: resolveQuoteIds(amountBasis.basis || [], quotes, sources, '規則表の amountBasis') };
   }
-  if (status === 'unknown') out.message = '規則表に当てはまる行が無いので判断できません(入力の欄が足りないか、まだ規則表に無い場合です)';
+  if (status === 'unknown') {
+    // 台帳の要否(status)を決める行の条件のうち、入力が無い・未選択の欄を挙げる(写しの措置の欄は台帳の要否に関わらないので除く)
+    const statusRules = rules.filter((r) => r.result?.status !== undefined);
+    const missing = missingInputs(input, statusRules);
+    out.missing = missing;
+    out.message = missing.length
+      ? '判断できません。次の欄が未選択・未入力です: ' + missing.map((k) => INPUT_NAMES[k] ?? k).join('、') + '(未入力のまま「作らなくてよい」とは決めません)'
+      : '規則表に当てはまる行が無いので判断できません(まだ規則表に無い場合です)';
+  }
   else if (status === 'needs_check') out.message = '確かめることがあります: ' + matched.filter((r) => r.result?.status === 'needs_check').map((r) => r.action).join(' / ');
   else if (copyToOrderer === 'unknown') out.message = '写しの提出が要るかは判断できません(措置を講じているかの入力が無い)';
   return out;

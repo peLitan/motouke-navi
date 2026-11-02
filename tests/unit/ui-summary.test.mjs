@@ -74,7 +74,7 @@ test('renderSummary: 件数・一覧・台帳の候補・目次の抜け・入�
     { key: 'd', label: '項目D', status: 'required' },
   ], checks: [{ key: 'b', label: '項目B', message: 'x' }] };
   const out = renderSummary({
-    values: { orderer: 'private', direct: false, 'work-type': '', 'contract-amount': '1,000', 'subcontract-total': '', license: 'ippan', 'engineer-qualification': 'shunin', 'ict-measure': false },
+    values: { orderer: 'private', direct: false, 'direct-sub': true, 'work-type': '', 'contract-amount': '1,000', 'subcontract-total': '', license: 'ippan', 'engineer-qualification': 'shunin', 'ict-measure': false },
     bid, taicho: { status: 'not_required' }, scheduleCount: 3,
     check: { candidates: [{}, {}, {}], undecidable: [{}] }, plan: { candidates: [{}, {}], undecidable: [] },
   });
@@ -95,7 +95,7 @@ test('renderSummary: 件数・一覧・台帳の候補・目次の抜け・入�
   const pairs = [...dl[1].matchAll(/<dt>([^<]*)<\/dt><dd>([^<]*)<\/dd>/g)].map((m) => [m[1], m[2]]);
   assert.equal(pairs.length, 8);
   assert.deepEqual(pairs[0], ['発注者', '民間']);
-  assert.deepEqual(pairs[1], ['発注者から直接請け負う(元請け)', 'いいえ']);
+  assert.deepEqual(pairs[1], ['元請けか下請けか', '下請け']);
   assert.deepEqual(pairs[2], ['工事の種類', '選んでいません']);
   assert.deepEqual(pairs[3], ['請負代金の見込み(税込み)', '1,000 円']);
   assert.deepEqual(pairs[4], ['下請けの総額(税込み)', '入れていません']);

@@ -24,6 +24,14 @@ const CHOICES = {
 // 選ぶ欄: 決めた値のどれかなら、その値。未選択や知らない値は null(判定の側で「入力が足りない」になる)
 const choice = (key, v) => (CHOICES[key].includes(v) ? v : null);
 const flag = (v) => v === true || v === 'true' || v === 'on';
+// 元請けか下請けか(F15b・反証の指摘4): 画面は「選んでいない/元請け/下請け」の3択(ラジオ)。
+// 欄 direct(元請け)に印があれば true、欄 direct-sub(下請け)に印があれば false、どちらも無ければ null(判断できない)。
+// 印が無いことを「下請け」と読まない
+export function readDirect(values = {}) {
+  if (flag(values.direct)) return true;
+  if (flag(values['direct-sub'])) return false;
+  return null;
+}
 
 // 欄の値の入れ物 → 判定の入力。下請けの総額が 0 なら下請契約は無い、空なら有無は分からない(null)
 export function readBidForm(values = {}) {
@@ -31,7 +39,7 @@ export function readBidForm(values = {}) {
   const sub = parseYen(values['subcontract-total']);
   return {
     orderer: choice('orderer', values.orderer),
-    direct: flag(values.direct),
+    direct: readDirect(values),
     workType: choice('work-type', values['work-type']),
     contractAmount: contract.value,
     hasSubcontract: sub.value === null ? null : sub.value > 0,
@@ -52,5 +60,5 @@ export function formErrors(values = {}) {
   return out;
 }
 
-export const BID_FORM_IDS = ['orderer', 'direct', 'work-type', 'contract-amount', 'subcontract-total', 'license', 'engineer-qualification', 'ict-measure'];
-export const CHECKBOX_IDS = ['direct', 'ict-measure'];
+export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'work-type', 'contract-amount', 'subcontract-total', 'license', 'engineer-qualification', 'ict-measure'];
+export const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'ict-measure'];

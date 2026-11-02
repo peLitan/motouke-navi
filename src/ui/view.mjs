@@ -1,5 +1,6 @@
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
 // 結果の文字はすべてエスケープする(規則表や入力の文字がそのまま HTML にならないように)。
+import { readDirect } from './form.mjs';
 
 export function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -206,7 +207,7 @@ export function renderPlanResult(out = {}) {
 //   state = { values: 欄の値, errors: [文], bid, taicho, scheduleCount, check, plan, stale }
 export const SUMMARY_FIELDS = [
   ['orderer', '発注者', { public: '公共', private: '民間' }],
-  ['direct', '発注者から直接請け負う(元請け)', { true: 'はい', false: 'いいえ' }],
+  ['direct', '元請けか下請けか', (values) => (readDirect(values) === true ? '元請け(発注者から直接請け負う)' : readDirect(values) === false ? '下請け' : '選んでいません')],
   ['work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }],
   ['contract-amount', '請負代金の見込み(税込み)', null],
   ['subcontract-total', '下請けの総額(税込み)', null],
@@ -214,7 +215,8 @@ export const SUMMARY_FIELDS = [
   ['engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }],
   ['ict-measure', '台帳を発注者が閲覧できる措置(公共)', { true: '講じる', false: '講じない' }],
 ];
-function summaryValue(raw, map) {
+function summaryValue(raw, map, values) {
+  if (typeof map === 'function') return map(values);
   if (map) {
     const v = map[String(raw)];
     return v ?? '選んでいません';
@@ -259,7 +261,7 @@ export function renderSummary(state = {}) {
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
   parts.push('<h4>入れた条件</h4><dl class="summary-list">'
-    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map)) + '</dd></div>').join('') + '</dl>');
+    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values)) + '</dd></div>').join('') + '</dl>');
   return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }

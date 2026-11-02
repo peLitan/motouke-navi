@@ -79,7 +79,9 @@ export const SAMPLE = {
   note: 'すべて架空の工事・会社・人です。実在のものとは関係ありません。下請けの総額は 44,000,000円 + 33,000,000円 = 77,000,000円(税込み)としています。',
   form: {
     orderer: 'public',
+    'direct-unset': false,
     direct: true,
+    'direct-sub': false,
     'work-type': 'other',
     'contract-amount': '286,000,000',
     'subcontract-total': '77,000,000',
