@@ -92,3 +92,25 @@ test('judgeTaicho(民間): 金額を使わない行だけが当てはまると�
   assert.equal(out.status, 'not_required');
   assert.equal(out.amountBasis, undefined);
 });
+
+// ---- F03d: 民間の再下請の通知(建設業法 第24条の8第2項)。値はすべて架空 ----
+test('judgeTaicho(民間・直接でない・下請あり): 台帳は作らず、元請けへの通知は確かめる行(prv-sub-notify)が付く', () => {
+  const out = judgeTaicho({ orderer: 'private', direct: false, hasSubcontract: true, subcontractTotal: 10_000_000, workType: 'other', license: 'ippan' });
+  assert.equal(out.status, 'not_required');
+  const r = out.reasons.find((x) => x.ruleId === 'prv-sub-notify');
+  assert.ok(r, '民間の通知の行が付かない');
+  assert.ok(r.basis.some((b) => String(b.article) === '24の8' && b.paragraph === 2), '第24条の8第2項の根拠が無い');
+  assert.ok(r.exceptions.some((e) => e.includes('前項の建設工事')));
+});
+
+test('judgeTaicho(民間・直接でない・下請なし): 通知の行は付かない', () => {
+  const out = judgeTaicho({ orderer: 'private', direct: false, hasSubcontract: false, workType: 'other', license: 'ippan' });
+  assert.ok(!out.reasons.some((x) => x.ruleId === 'prv-sub-notify'));
+});
+
+test('規則表: 民間の通知の行は通知を「確かめる」にし、公共の通知の行と食い違わない', async () => {
+  const { default: d } = await import('../../data/rules.json', { with: { type: 'json' } });
+  const prv = d.rules.find((x) => x.id === 'prv-sub-notify');
+  assert.equal(prv.result.notifyPrime, 'needs_check');
+  assert.equal(prv.result.status, undefined, '台帳の要否は prv-not-direct が決める');
+});
