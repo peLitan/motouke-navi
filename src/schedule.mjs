@@ -1,4 +1,4 @@
-// 段取りの一覧(F06a: 着手まで。国の直轄の土木工事の例)。
+// 段取りの一覧(F06a: 着手まで、F06b: 施工中から完成・引き渡しまで。国の直轄の土木工事の例)。
 // data/schedule.json の規則表の行を、入力の条件に当てはめて「いつ・何を・誰に・根拠(共通仕様書の箇所と原文)」の行にする。
 // 条件や金額の境目はコードに書き込まない(規則表の condition と、抜き書きから読む threshold)。
 // 入力が分からない条件は、推測で決めずに「確かめる」の注意を付けて行を出す。
@@ -8,8 +8,13 @@ import sourcesData from '../data/sources/index.json' with { type: 'json' };
 const FIELD_LABEL = {
   hasSubcontract: '下請契約があるか',
   ictMeasure: '発注者が情報通信技術で確認できる措置を講じているか',
+  hasSuppliedMaterial: '支給材料・貸与品があるか',
+  hasDesignatedSurplus: '設計図書に定められた現場発生品があるか',
 };
-const PHASES = { start: '着手まで' };
+// 段の並び(この順に行を出す)。段に分けたのはこのツールの整理で、共通仕様書は段で分けていない
+const PHASES = { start: '着手まで', work: '施工中', completion: '完成・引き渡し' };
+// 工事目的物そのものの引き渡しは共通仕様書に無く、契約書による(exceptions の F06b の回答 A)
+export const HANDOVER_NOTE = '工事目的物そのものの引き渡しは、契約書(公共工事標準請負契約約款 第32条)によります。このツールは契約書を取得していないので、引き渡しの手続は一覧に入れていません。「完成・引き渡し」の段の引き渡しの行は、共通仕様書 1-1-1-21 の現場発生品の引き渡しです';
 export const PHASE_LABEL = PHASES;
 
 const isUnknown = (v) => v === undefined || v === null || (typeof v === 'number' && !Number.isFinite(v));
@@ -70,7 +75,10 @@ export function buildScheduleDetail(input = {}) {
     return { rows, skipped: scheduleData.rules.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes };
   }
   if (input.orderer === 'private') notes.push('民間工事です。この一覧は国の直轄の例なので、発注者の仕様書・契約書で置き換えてください');
-  for (const rule of scheduleData.rules) {
+  notes.push(HANDOVER_NOTE);
+  const order = Object.keys(PHASES);
+  const rules = [...scheduleData.rules].sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
+  for (const rule of rules) {
     const r = apply(rule, input);
     if (!r.show) { skipped.push({ id: rule.id, phase: rule.phase, what: rule.what, section: rule.section, reason: r.skip }); continue; }
     rows.push({

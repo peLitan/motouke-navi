@@ -138,9 +138,9 @@ export function renderAiCandidates(list = [], warnings = []) {
     + '<p class="human">AI の候補です。法令の決まりで判定した結果ではありません。根拠の条も AI が挙げたもので、このツールは原文と照らしていません。最後の判断は人がしてください</p>';
 }
 
-// 段取りの一覧(F06a)。rows は buildSchedule の行、detail は buildScheduleDetail の skipped・notes(無くてよい)
+// 段取りの一覧(F06a・F06b)。rows は buildSchedule の行、detail は buildScheduleDetail の skipped・notes(無くてよい)
 export const SCHEDULE_STATUS = { applies: '行う', needs_check: '確かめる' };
-export const SCHEDULE_PHASE = { start: '着手まで' };
+export const SCHEDULE_PHASE = { start: '着手まで', work: '施工中', completion: '完成・引き渡し' };
 export function renderSchedule(rows = [], detail = {}) {
   const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];

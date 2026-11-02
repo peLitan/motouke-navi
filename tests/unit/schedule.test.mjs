@@ -66,3 +66,41 @@ test('表示と CSV: 文字はエスケープし、CSV は見出し + 1行ずつ
   assert.ok(toCsv(csvRows).startsWith('﻿'));
   assert.match(renderSchedule([]), /出す段取りの行がありません/);
 });
+
+// F06b: 施工中から完成・引き渡しまで
+test('F06b: 段は 着手まで → 施工中 → 完成・引き渡し の順で、表示と CSV に段の名前が出る', () => {
+  const rows = buildSchedule(base);
+  const phases = [...new Set(rows.map((r) => r.phase))];
+  assert.deepEqual(phases, ['start', 'work', 'completion']);
+  const html = renderSchedule(rows, buildScheduleDetail(base));
+  assert.ok(html.includes('施工中(') && html.includes('完成・引き渡し('));
+  const csv = scheduleRows(rows);
+  assert.ok(csv.some((c) => c[0] === '施工中') && csv.some((c) => c[0] === '完成・引き渡し'));
+});
+
+test('F06b: 引き渡しの行は現場発生品(1-1-1-21)で、工事目的物の引き渡しは契約書によると断る', () => {
+  const d = buildScheduleDetail(base);
+  const r = d.rows.find((x) => x.id === 'done-surplus');
+  assert.equal(r.phase, 'completion');
+  assert.equal(r.basis.section, '1-1-1-21');
+  assert.match(r.when, /原文に時期の定めは無い。完成検査の前に済んでいるか確かめる/);
+  assert.match(r.note, /このツールの整理/);
+  assert.ok(d.notes.some((n) => /工事目的物そのものの引き渡し/.test(n) && /第32条/.test(n) && /取得していない/.test(n)));
+  assert.ok(renderSchedule(d.rows, d).includes('工事目的物そのものの引き渡し'));
+});
+
+test('F06b: 現場発生品・支給材料が分からなければ「確かめる」、無ければ出さずに理由を残す', () => {
+  const unk = buildSchedule(base);
+  assert.equal(unk.find((r) => r.id === 'done-surplus').status, 'needs_check');
+  assert.match(unk.find((r) => r.id === 'done-supplied').checks[0], /支給材料・貸与品があるか/);
+  const none = buildScheduleDetail({ ...base, hasDesignatedSurplus: false, hasSuppliedMaterial: false });
+  assert.ok(!ids(none.rows).includes('done-surplus') && !ids(none.rows).includes('done-supplied'));
+  assert.ok(none.skipped.some((s) => s.id === 'done-surplus'));
+  const yes = buildSchedule({ ...base, hasDesignatedSurplus: true, hasSuppliedMaterial: true });
+  assert.equal(yes.find((r) => r.id === 'done-surplus').status, 'applies');
+});
+
+test('F06b: コリンズの完成時の登録も 500万円の境目で出し分ける', () => {
+  assert.ok(ids(buildSchedule({ ...base, contractAmount: 5000000 })).includes('done-corins'));
+  assert.ok(!ids(buildSchedule({ ...base, contractAmount: 4999999 })).includes('done-corins'));
+});
