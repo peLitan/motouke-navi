@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-iNmR+wrQ8W5a6R5ZaVWtI/Zdp73j6Qvlnbt0NniONnE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-frYzhc/PrxYwYd6XvFikJzfErib1WFF9c6oAA0AMoKY='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -19,11 +19,23 @@
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
   .export { margin: 0.5rem 0 1rem; }
-  .sample { border: 1px dashed #2563eb; padding: 0.5rem 1rem; margin: 0.5rem 0 1rem; }
   .mask-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   #mask-map table { border-collapse: collapse; }
   #mask-map td, #mask-map th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; }
+  /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
+  .lead { margin: 0.5rem 0 1rem; }
+  .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
+  .start { border: 2px solid #1d4ed8; background: #eff6ff; padding: 0.75rem 1rem; margin: 1rem 0; }
+  .start h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+  .sample-button { display: inline-block; font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1.5rem; min-height: 3rem; color: #fff; background: #1d4ed8; border: 2px solid #1e3a8a; border-radius: 0.375rem; cursor: pointer; text-align: left; }
+  .sample-button:hover { background: #1e40af; }
+  .sample-button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .sample-button .btn-sub { display: block; font-size: 0.9rem; font-weight: normal; }
+  .steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0.75rem 0 0; }
+  .steps li { border: 1px solid #1d4ed8; background: #fff; border-radius: 1rem; padding: 0.2rem 0.75rem; }
+  .steps li + li::before { content: "→ "; color: #1d4ed8; }
+  .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
     body { max-width: none; padding: 0; font-size: 10.5pt; }
@@ -39,17 +51,31 @@
 <header>
 <h1>施工体制の確認の候補</h1>
 <p class="disclaimer" id="disclaimer">指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</p>
+<div class="lead" id="lead">
+<p><strong>このツールでできること</strong></p>
+<ul id="can-do">
+<li>工事の条件から、受注したら要るもの(許可・技術者・施工体制台帳など)と受注後の段取りを、根拠の条つきで出す</li>
+<li>施工体制台帳を貼ると、抜け・食い違いの候補を根拠の条つきで出す</li>
+<li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
+</ul>
+</div>
 <p class="no-print">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 </header>
 <main id="main">
 <section id="bid">
 <h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
-<p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
-<div class="sample no-print">
-<button type="button" id="sample-load">見本を読み込む</button>
-<span>架空の工事の条件と書類(施工体制台帳・施工計画書の目次)を入れて、そのまま確認します。初めての方はまずこちらを押してください。</span>
+<div class="start no-print" id="start">
+<h2>まず見本で試す</h2>
+<p>架空の工事の条件と書類を入れて、1.〜3. の確認をそのまま出します。初めての方はまずこのボタンを押してください。</p>
+<button type="button" id="sample-load" class="sample-button"><span class="btn-main">見本で試す(架空の工事)</span><span class="btn-sub">見本を読み込む(条件・施工体制台帳・施工計画書の目次)</span></button>
 <p id="sample-status" aria-live="polite"></p>
+<ol class="steps" id="steps" aria-label="使う順番">
+<li>1 条件を入れる</li>
+<li>2 結果を見る</li>
+<li>3 書類を確かめる</li>
+</ol>
 </div>
+<p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
 <div class="row"><label for="orderer">発注者</label>
 <select id="orderer" name="orderer">
@@ -134,7 +160,7 @@
 | 主任技術者 氏名 | (氏名) |
 | 資格 | (資格) |
 | 専任・非専任 | 専任 または 非専任 |</pre>
-<p>「見本を読み込む」を押すと、架空の台帳がこの欄に入ります。</p>
+<p>「見本で試す」を押すと、架空の台帳がこの欄に入ります。</p>
 </details>
 <div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
 <input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
@@ -149,7 +175,7 @@
 <div id="check-result" class="result" aria-live="polite"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
 </section>
 <section id="plan-check">
-<h2>2-2. 施工計画書の目次の点検</h2>
+<h2>3. 施工計画書の目次の点検</h2>
 <p>施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
 <p class="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
@@ -159,8 +185,12 @@
 <p id="plan-status" aria-live="polite"></p>
 <div id="plan-result" class="result" aria-live="polite"><p>目次を貼って「目次を点検する」を押してください。</p></div>
 </section>
+<div class="other-tools no-print" id="other-tools">
+<h2>ここからは別の道具</h2>
+<p>A・B は、上の 1.〜3.(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
+</div>
 <section id="mask" class="no-print">
-<h2>3. 文の置き換え(外のサービスに貼る前に)</h2>
+<h2>A. 文の置き換え(外のサービスに貼る前に)</h2>
 <p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
 <p class="disclaimer" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
 <p class="disclaimer" id="mask-limits">限界(架空の書類3件での測定): 辞書に語を足さないと、人名は1つも見つかりませんでした(漏れの率 41.2%。人名・現場名を「辞書に足す」で足すと 6.7%)。一部だけ残る語(住所や会社名の一部など)が19あり、辞書に足しても減りません。詳しくは docs/mask-rate.md。</p>
@@ -215,9 +245,9 @@
 <p id="map-status" aria-live="polite"></p>
 </section>
 <section id="ai-check">
-<h2>4. Claude で点検した結果(AI の候補)</h2>
-<p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「3.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。書き出した結果のファイルをここで読み込むと、下の欄に出します。</p>
-<p class="disclaimer">ここに出るのは AI の候補です。上の「1.」「2.」の、法令の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
+<h2>B. Claude で点検した結果(AI の候補)</h2>
+<p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。書き出した結果のファイルをここで読み込むと、下の欄に出します。</p>
+<p class="disclaimer">ここに出るのは AI の候補です。上の「1.」〜「3.」の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
 <div class="row"><label for="ai-load">AI の候補を読み込む</label>
 <input type="file" id="ai-load" name="ai-load" accept=".json,application/json"></div>
 <p id="ai-status" aria-live="polite"></p>
@@ -2688,7 +2718,7 @@ function startMask(doc) {
 return { parseThresholds, renderMap, renderTerms, runMask, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, loadMaskFile, startMask };
 })();
 __m["src/ui/ai-app.mjs"] = (function () {
-// 画面の「4. Claude で点検した結果(AI の候補)」(F12a)。
+// 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。
 // 画面は通信しない。手元のプログラム(tools/claude-check.mjs)が書き出した結果の JSON を、利用者が選んで読み込み、別の欄に出すだけ。
 const { renderAiCandidates } = __m["src/ui/view.mjs"];
 
@@ -2871,7 +2901,7 @@ function runLedgerCheck(doc) {
   lastCheck = null;
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本を読み込む」を押してください。']); return; }
+  if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本で試す」を押してください。']); return; }
   try {
     const ledger = parseLedgerText(text);
     const warnings = ledger.warnings.slice();
@@ -2937,7 +2967,7 @@ function runPlanCheck(doc) {
   lastPlan = null;
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本を読み込む」を押してください。']); return; }
+  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本で試す」を押してください。']); return; }
   try {
     const form = readBidForm(collect(doc));
     const out = checkPlanToc(text, { workType: form.workType ?? undefined });

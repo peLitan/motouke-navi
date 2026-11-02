@@ -135,7 +135,7 @@ export function runLedgerCheck(doc) {
   lastCheck = null;
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本を読み込む」を押してください。']); return; }
+  if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本で試す」を押してください。']); return; }
   try {
     const ledger = parseLedgerText(text);
     const warnings = ledger.warnings.slice();
@@ -201,7 +201,7 @@ export function runPlanCheck(doc) {
   lastPlan = null;
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本を読み込む」を押してください。']); return; }
+  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本で試す」を押してください。']); return; }
   try {
     const form = readBidForm(collect(doc));
     const out = checkPlanToc(text, { workType: form.workType ?? undefined });

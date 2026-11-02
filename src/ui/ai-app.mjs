@@ -1,4 +1,4 @@
-// 画面の「4. Claude で点検した結果(AI の候補)」(F12a)。
+// 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。
 // 画面は通信しない。手元のプログラム(tools/claude-check.mjs)が書き出した結果の JSON を、利用者が選んで読み込み、別の欄に出すだけ。
 import { renderAiCandidates } from './view.mjs';
 
