@@ -10,6 +10,7 @@
   body { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.6; }
   .disclaimer { border: 2px solid #b45309; background: #fffbeb; padding: 0.75rem 1rem; font-weight: bold; }
   .row { margin: 0.4rem 0; }
+  .hint { margin: 0.2rem 0 0; font-size: 0.9rem; color: #374151; }
   .row label { margin-right: 0.5rem; }
   .result { border: 1px solid #ccc; padding: 0.5rem 1rem; margin-bottom: 1rem; }
   .human { font-weight: bold; }
@@ -104,11 +105,12 @@
 </select></div>
 <div class="row"><input type="checkbox" id="direct" name="direct"><label for="direct">発注者から直接請け負う(元請け)</label></div>
 <div class="row"><label for="work-type">工事の種類</label>
-<select id="work-type" name="work-type">
+<select id="work-type" name="work-type" aria-describedby="work-type-hint">
 <option value="">選んでください</option>
 <option value="kenchiku-ikkatsu">建築一式工事</option>
 <option value="other">それ以外の工事</option>
-</select></div>
+</select>
+<p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上の「発注者から直接請け負う」に印が無い)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></div>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)</label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000"></div>
 <div class="row"><label for="subcontract-total">下請けの総額(円・税込み。下請契約が二以上ならその合計。下請けが無ければ 0)</label>

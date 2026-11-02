@@ -107,21 +107,38 @@ function checkPrimeAgainstTotal(input, out) {
 // 第1号(国又は地方公共団体が注文者)に当たるかは、画面の「公共」を当たるものとして読む。民間は第2号・第3号(施設・工作物の種類)で決まり、
 // 台帳からは分からないので「判断できない」にする。
 // ただし書(第26条第3項第1号・第2号)は台帳からは決められないので、候補に confirm として付ける。第1号の「政令で定める金額」の原文はこのツールに取り込んでいない。
+// 境目の「当該建設工事が建築一式工事である場合」の当該建設工事は、元請けなら発注者から請け負った工事(画面の「工事の種類」)、
+// 下請けならその下請工事。下請けの工事の種類は画面の欄では決まらないので、台帳の「工事内容」に「建築一式」とあれば建築一式、
+// それ以外はそれ以外の工事(四千五百万円)を既定にし、二つの境目の間の額なら「下請けの工事が建築一式なら」を確かめることに付ける(反証の指摘1)。
+function dedicatedLine(owner, input, who, t) {
+  if (who === '元請け') {
+    const workType = input.project?.workType;
+    if (workType !== 'other' && workType !== 'kenchiku-ikkatsu') return null;
+    return { line: workType === 'kenchiku-ikkatsu' ? t.kenchiku : t.other, assumed: false };
+  }
+  if (/建築一式/.test(String(owner?.work ?? ''))) return { line: t.kenchiku, assumed: false };
+  return { line: t.other, assumed: true };
+}
+
 function checkDedicated(owner, target, amount, input, out, who) {
   const e = owner?.engineer;
   if (!e || e.dedicated !== false) return;
   const roleName = e.role === 'kanri' ? '監理技術者' : e.role === 'shunin' ? '主任技術者' : '技術者';
-  const workType = input.project?.workType;
   const ordererType = input.project?.ordererType;
   const field = 'engineer.dedicated';
   const base = ['q-kensetsu-26-3', 'q-rei-27-1'];
   const amountName = who === '元請け' ? '発注者との請負代金の額' : 'この下請契約の請負代金の額';
-  if (workType !== 'other' && workType !== 'kenchiku-ikkatsu') {
+  const t = dedicatedThreshold();
+  const d = dedicatedLine(owner, input, who, t);
+  if (!d) {
     out.undecidable.push({ target, field, message: `${who}の${roleName}が非専任ですが、工事の種類(建築一式かそれ以外か)が分からないので、専任が要る金額の境目(施行令 第27条第1項)を決められず判断できません`, basis: basisOf(...base) });
     return;
   }
-  const t = dedicatedThreshold();
-  const line = workType === 'kenchiku-ikkatsu' ? t.kenchiku : t.other;
+  const line = d.line;
+  // 下請けの工事の種類を既定で読んだときの断り(境目の間の額のときだけ結論が変わる)
+  const assumedNote = d.assumed && isAmount(amount) && amount < t.kenchiku
+    ? `下請けの工事の種類は台帳から決められないので、建築一式工事でない(境目 ${yen(t.other)})として比べた。この下請工事が建築一式工事なら境目は ${yen(t.kenchiku)} で、専任は要らない(施行令 第27条第1項の「当該建設工事」は、下請けならその下請工事)`
+    : null;
   if (!isAmount(amount)) {
     out.undecidable.push({ target, field, message: `${who}の${roleName}が非専任ですが、${amountName}が分からないので、${yen(line)} 以上か(施行令 第27条第1項)を決められず判断できません`, basis: basisOf(...base) });
     return;
@@ -131,10 +148,11 @@ function checkDedicated(owner, target, amount, input, out, who) {
     const why = ordererType === 'private'
       ? '民間の工事では、施設・工作物が施行令 第27条第1項第2号(第15条第1号・第3号の施設・工作物。第15条の原文はこのツールに取り込んでいない)か第3号(学校・病院・共同住宅・事務所・工場・倉庫など)に当たるかで決まり、台帳からは分からないので判断できません'
       : '発注者が公共か民間かが分からないので、施行令 第27条第1項の各号に当たるかを決められず判断できません';
-    out.undecidable.push({ target, field, message: `${who}の${roleName}が非専任で、${amountName}(税込み)が ${yen(amount)} と ${yen(line)} 以上です。${why}`, basis: basisOf(...base) });
+    out.undecidable.push({ target, field, message: `${who}の${roleName}が非専任で、${amountName}(税込み)が ${yen(amount)} と ${yen(line)} 以上です。${why}` + (assumedNote ? `(${assumedNote})` : ''), basis: basisOf(...base) });
     return;
   }
   const confirm = [
+    ...(assumedNote ? [assumedNote] : []),
     '建設業法 第26条第3項ただし書 第1号: 請負代金の額が政令で定める金額未満で、工事現場間の移動時間・連絡方法などの要件と、情報通信技術を使う措置の要件をすべて満たす場合は、専任でなくてよい(政令で定める金額の原文はこのツールに取り込んでいないので、当たるかを確かめる)',
     ...(e.role === 'kanri' ? ['建設業法 第26条第3項ただし書 第2号: 監理技術者の職務を補佐する者を工事現場に専任で置く場合は、監理技術者は専任でなくてよい(補佐する者を置いているかを確かめる)'] : []),
     '「公共」は、施行令 第27条第1項第1号(国又は地方公共団体が注文者である施設又は工作物に関する建設工事)に当たるものとして読んでいる。注文者が国・地方公共団体でなければ、第2号・第3号の施設・工作物かを確かめる',
@@ -164,7 +182,7 @@ export function checkTaicho(input = {}) {
     '施工体系図・施工計画書との突き合わせはしていません(台帳だけを点検します)',
     '金額は税込みで比べます(国交省 建設業許可事務ガイドライン【その他】2.)',
     '建築一式工事は建築工事業の許可で請け負うものと読み、施行令 第2条のただし書の金額を使います',
-    '技術者の専任(建設業法 第26条第3項・施行令 第27条)は、台帳の「専任・非専任」の欄に「非専任」と書いた技術者だけを点検します。欄が無い・空の技術者は点検していません。第26条第3項ただし書(第1号・第2号)・第4項(現場の数)・施行令 第27条第2項(密接な関係のある工事)に当たるかは台帳から決められないので、候補に「確かめること」として付けます',
+    '技術者の専任(建設業法 第26条第3項・施行令 第27条)は、台帳の「専任・非専任」の欄に「非専任」と書いた技術者だけを点検します。欄が無い・空の技術者は点検していません。金額の境目の工事の種類は、元請けは上の欄の「工事の種類」、下請けはその下請工事で決めます(施行令 第27条第1項の「当該建設工事」)。下請けは台帳の「工事内容」に「建築一式」と書いていなければ建築一式工事でない(4,500万円)として比べ、建築一式なら9,000万円になることを「確かめること」に付けます。第26条第3項ただし書(第1号・第2号)・第4項(現場の数)・施行令 第27条第2項(密接な関係のある工事)に当たるかは台帳から決められないので、候補に「確かめること」として付けます',
     '台帳の記載事項のうち、国土交通省令(施行規則)で定める事項はこのツールに取り込んでいないので点検していません',
   ];
   return out;
