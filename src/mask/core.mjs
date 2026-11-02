@@ -1,6 +1,7 @@
 // 置き換えの部品(F11a): 文の中の人名・会社名・場所の名前・住所・電話・メールなどを記号に置き換え、対応表を持ち、戻ってきた文を元に戻す。
 // この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
-// 対応表はこの部品の中(メモリ)だけに持つ。ファイルにもブラウザにも残さない(ページを閉じれば消える)。
+// 対応表はこの部品の中(メモリ)だけに持つ。ブラウザには残さない(ページを閉じれば消える)。
+// 利用者が求めたときだけ、exportMap で対応表を文字列(JSON)にし、importMap で読み込む(F11d)。その文字列には元の名前が入っている。
 //
 // 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
 // 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形。重なったら優先の高いほう、同じなら長いほうを取る。
@@ -78,6 +79,50 @@ function bandAmounts(text, thresholds) {
     const n = parseAmount(all);
     return n === null ? all : bandLabel(n, thresholds);
   });
+}
+
+// 対応表のファイル(F11d)
+export const MAP_FORMAT = 'mask-map';
+export const MAP_VERSION = 1;
+export const MAP_NOTICE = 'このファイルには元の名前が入っています。外へ送らず、要らなくなったら消してください。';
+
+const isText = (v) => typeof v === 'string' && v.trim() !== '';
+
+// 対応表のファイルを読んで確かめる。おかしければ、どこがおかしいかを書いた Error を投げる
+export function parseMapFile(text) {
+  let data;
+  try {
+    data = JSON.parse(String(text ?? ''));
+  } catch {
+    throw new Error('対応表のファイルとして読めません(JSON の形になっていません)。書き出した対応表のファイルを選んでください。');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT) {
+    throw new Error('対応表のファイルではありません(format が "' + MAP_FORMAT + '" ではありません)。');
+  }
+  if (data.version !== MAP_VERSION) throw new Error('対応表のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
+  if (!Array.isArray(data.entries)) throw new Error('対応表のファイルに entries(対応表の行)がありません。');
+  const terms = data.terms === undefined ? [] : data.terms;
+  if (!Array.isArray(terms)) throw new Error('対応表のファイルの terms(足した語)が並びになっていません。');
+  const tokens = new Set();
+  const originals = new Set();
+  const entries = data.entries.map((e, i) => {
+    const at = '対応表の ' + (i + 1) + ' 行目';
+    if (!e || typeof e !== 'object') throw new Error(at + 'が読めません。');
+    if (!isText(e.token) || !isText(e.original) || !isText(e.kind)) throw new Error(at + 'に記号・元の語・種類のどれかがありません。');
+    if (tokens.has(e.token)) throw new Error(at + 'の記号 ' + e.token + ' が、ほかの行と重なっています。');
+    const key = e.original.replace(/[\s\u3000]+/g, '');
+    if (originals.has(key)) throw new Error(at + 'の元の語が、ほかの行と重なっています。');
+    tokens.add(e.token);
+    originals.add(key);
+    const variants = Array.isArray(e.variants) ? e.variants.filter(isText) : [];
+    if (!variants.includes(e.original)) variants.unshift(e.original);
+    return { token: e.token, original: e.original, kind: e.kind, variants };
+  });
+  const words = terms.map((t, i) => {
+    if (!t || !isText(t.word) || !isText(t.kind)) throw new Error('足した語の ' + (i + 1) + ' 番目に語か種類がありません。');
+    return { word: t.word.trim(), kind: t.kind.trim() };
+  });
+  return { entries, terms: words };
 }
 
 export function createMasker({ dictionaries = [] } = {}) {
@@ -192,5 +237,33 @@ export function createMasker({ dictionaries = [] } = {}) {
     if (!keepTerms) userTerms.length = 0;
   }
 
-  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, labelOf, labels: () => ({ ...labels }) };
+  // 対応表を書き出す(F11d)。JSON の文字列で、元の語・記号・種類・足した語を含む。元の名前が入っているので扱いに注意する
+  function exportMap() {
+    return JSON.stringify({
+      format: MAP_FORMAT,
+      version: MAP_VERSION,
+      notice: MAP_NOTICE,
+      entries: [...byOriginal.values()].map((e) => ({ token: e.token, original: e.original, kind: e.kind, variants: [...e.variants] })),
+      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
+    }, null, 2);
+  }
+
+  // 書き出した対応表を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる。
+  // 中身をすべて確かめてから入れ替える。おかしければ何も変えずに Error で止まる
+  function importMap(text) {
+    const data = parseMapFile(text);
+    reset();
+    for (const t of data.terms) userTerms.push({ word: t.word, kind: t.kind, re: termRegExp(t.word) });
+    for (const e of data.entries) {
+      const entry = { token: e.token, original: e.original, kind: e.kind, label: labelOf(e.kind), variants: e.variants };
+      byOriginal.set(keyOf(e.original), entry);
+      byToken.set(e.token, entry);
+      // 次に作る記号が読み込んだ記号と重ならないよう、種類ごとの番号を進めておく
+      const m = e.token.match(/(\d+)〕$/);
+      if (m) counters[e.kind] = Math.max(counters[e.kind] || 0, Number(m[1]));
+    }
+    return { entries: data.entries.length, terms: data.terms.length };
+  }
+
+  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, labelOf, labels: () => ({ ...labels }) };
 }

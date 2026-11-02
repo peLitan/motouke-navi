@@ -1,6 +1,8 @@
 // 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
-// 対応表と足した語は、この画面のメモリの中だけに持つ(保存しない。ページを閉じれば消える)。
-import { createMasker, parseAmount } from '../mask/core.mjs';
+// 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
+// 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
+import { createMasker, parseAmount, MAP_NOTICE } from '../mask/core.mjs';
+import { downloadText } from './download.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
 import { esc } from './view.mjs';
 
@@ -69,12 +71,52 @@ export function addDictWord(doc) {
 
 export function resetMask(doc) {
   getMasker().reset();
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
   if (list) list.innerHTML = renderTerms([]);
   setText(doc, 'dict-status', '対応表と足した語を消しました。');
+}
+
+const today = () => {
+  const d = new Date();
+  const z = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+};
+
+// 対応表を書き出す(F11d)。元の名前が入っていることを画面に出し、確かめてから書き出す
+export function exportMaskMap(doc, win) {
+  const m = getMasker();
+  if (!m.entries().length && !m.terms().length) {
+    setText(doc, 'map-status', '書き出す対応表がまだありません。先に「置き換える」を押してください。');
+    return false;
+  }
+  setText(doc, 'map-status', MAP_NOTICE);
+  if (win && typeof win.confirm === 'function' && !win.confirm(MAP_NOTICE + '\n書き出しますか。')) {
+    setText(doc, 'map-status', '書き出しをやめました。' + MAP_NOTICE);
+    return false;
+  }
+  downloadText(doc, m.exportMap(), '置き換えの対応表_' + today() + '.json', 'application/json;charset=utf-8');
+  setText(doc, 'map-status', '対応表を書き出しました。' + MAP_NOTICE);
+  return true;
+}
+
+// 書き出した対応表のファイルの中身を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる
+export function importMaskMap(doc, text) {
+  const m = getMasker();
+  try {
+    const n = m.importMap(text);
+    const mapEl = doc.getElementById('mask-map');
+    if (mapEl) mapEl.innerHTML = renderMap(m.entries());
+    const list = doc.getElementById('dict-list');
+    if (list) list.innerHTML = renderTerms(m.terms());
+    setText(doc, 'map-status', '対応表を読み込みました(対応表 ' + n.entries + ' 行・足した語 ' + n.terms + ' 件)。「元に戻す」で使えます。読み込んだファイルにも元の名前が入っています。');
+    return true;
+  } catch (e) {
+    setText(doc, 'map-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の対応表はそのままです。');
+    return false;
+  }
 }
 
 export function startMask(doc) {
@@ -86,4 +128,14 @@ export function startMask(doc) {
   on('unmask-run', () => runUnmask(doc));
   on('dict-add', () => addDictWord(doc));
   on('mask-reset', () => resetMask(doc));
+  on('map-export', () => exportMaskMap(doc, doc.defaultView));
+  const file = doc.getElementById('map-import');
+  if (file) {
+    file.addEventListener('change', async () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      importMaskMap(doc, await f.text());
+      file.value = '';
+    });
+  }
 }

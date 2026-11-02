@@ -8,6 +8,7 @@ import { judgeTaicho } from '../taicho.mjs';
 import { stage1Rows, toCsv } from '../export.mjs';
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
+import { downloadText } from './download.mjs';
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
 const NOTICE = '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください';
@@ -70,19 +71,6 @@ function today() {
   const d = new Date();
   const z = (n) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
-}
-
-// 文字列をファイルとして保存させる。Blob とリンクの download を使うだけで、外へは送らない
-export function downloadText(doc, text, fileName, type) {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const a = doc.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  doc.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 export function exportCsv(doc) {

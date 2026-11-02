@@ -103,7 +103,7 @@
 </section>
 <section id="mask" class="no-print">
 <h2>2. 文の置き換え(外のサービスに貼る前に)</h2>
-<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ち、保存しません(ページを閉じると消えます)。</p>
+<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
 <p class="disclaimer" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
 <div class="row"><label for="dict-word">辞書に足す語</label>
 <input type="text" id="dict-word" name="dict-word" placeholder="例 甲野 一郎">
@@ -144,6 +144,12 @@
 <textarea id="unmask-input" name="unmask-input" rows="6" cols="80"></textarea></div>
 <div class="row"><button type="button" id="unmask-run">元に戻す</button></div>
 <pre id="unmask-output"></pre>
+<h3>対応表の書き出しと読み込み</h3>
+<p class="disclaimer" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この PC に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
+<div class="row"><button type="button" id="map-export">対応表を書き出す</button>
+<label for="map-import">対応表を読み込む</label>
+<input type="file" id="map-import" name="map-import" accept=".json,application/json"></div>
+<p id="map-status" aria-live="polite"></p>
 </section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>

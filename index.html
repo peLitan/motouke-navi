@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-S/Wc3QMbBvoonqpVfBy55zcGIhK+otOY+IrfnrzDAEo='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-r2NY23eari8FCCJw5Qm4XVpiP4MiRkFqaRrBtZm7zZo='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -103,7 +103,7 @@
 </section>
 <section id="mask" class="no-print">
 <h2>2. 文の置き換え(外のサービスに貼る前に)</h2>
-<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ち、保存しません(ページを閉じると消えます)。</p>
+<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
 <p class="disclaimer" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
 <div class="row"><label for="dict-word">辞書に足す語</label>
 <input type="text" id="dict-word" name="dict-word" placeholder="例 甲野 一郎">
@@ -144,6 +144,12 @@
 <textarea id="unmask-input" name="unmask-input" rows="6" cols="80"></textarea></div>
 <div class="row"><button type="button" id="unmask-run">元に戻す</button></div>
 <pre id="unmask-output"></pre>
+<h3>対応表の書き出しと読み込み</h3>
+<p class="disclaimer" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この PC に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
+<div class="row"><button type="button" id="map-export">対応表を書き出す</button>
+<label for="map-import">対応表を読み込む</label>
+<input type="file" id="map-import" name="map-import" accept=".json,application/json"></div>
+<p id="map-status" aria-live="polite"></p>
 </section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
@@ -828,7 +834,8 @@ return { SAMPLE };
 __m["src/mask/core.mjs"] = (function () {
 // 置き換えの部品(F11a): 文の中の人名・会社名・場所の名前・住所・電話・メールなどを記号に置き換え、対応表を持ち、戻ってきた文を元に戻す。
 // この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
-// 対応表はこの部品の中(メモリ)だけに持つ。ファイルにもブラウザにも残さない(ページを閉じれば消える)。
+// 対応表はこの部品の中(メモリ)だけに持つ。ブラウザには残さない(ページを閉じれば消える)。
+// 利用者が求めたときだけ、exportMap で対応表を文字列(JSON)にし、importMap で読み込む(F11d)。その文字列には元の名前が入っている。
 //
 // 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
 // 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形。重なったら優先の高いほう、同じなら長いほうを取る。
@@ -906,6 +913,50 @@ function bandAmounts(text, thresholds) {
     const n = parseAmount(all);
     return n === null ? all : bandLabel(n, thresholds);
   });
+}
+
+// 対応表のファイル(F11d)
+const MAP_FORMAT = 'mask-map';
+const MAP_VERSION = 1;
+const MAP_NOTICE = 'このファイルには元の名前が入っています。外へ送らず、要らなくなったら消してください。';
+
+const isText = (v) => typeof v === 'string' && v.trim() !== '';
+
+// 対応表のファイルを読んで確かめる。おかしければ、どこがおかしいかを書いた Error を投げる
+function parseMapFile(text) {
+  let data;
+  try {
+    data = JSON.parse(String(text ?? ''));
+  } catch {
+    throw new Error('対応表のファイルとして読めません(JSON の形になっていません)。書き出した対応表のファイルを選んでください。');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT) {
+    throw new Error('対応表のファイルではありません(format が "' + MAP_FORMAT + '" ではありません)。');
+  }
+  if (data.version !== MAP_VERSION) throw new Error('対応表のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
+  if (!Array.isArray(data.entries)) throw new Error('対応表のファイルに entries(対応表の行)がありません。');
+  const terms = data.terms === undefined ? [] : data.terms;
+  if (!Array.isArray(terms)) throw new Error('対応表のファイルの terms(足した語)が並びになっていません。');
+  const tokens = new Set();
+  const originals = new Set();
+  const entries = data.entries.map((e, i) => {
+    const at = '対応表の ' + (i + 1) + ' 行目';
+    if (!e || typeof e !== 'object') throw new Error(at + 'が読めません。');
+    if (!isText(e.token) || !isText(e.original) || !isText(e.kind)) throw new Error(at + 'に記号・元の語・種類のどれかがありません。');
+    if (tokens.has(e.token)) throw new Error(at + 'の記号 ' + e.token + ' が、ほかの行と重なっています。');
+    const key = e.original.replace(/[\s\u3000]+/g, '');
+    if (originals.has(key)) throw new Error(at + 'の元の語が、ほかの行と重なっています。');
+    tokens.add(e.token);
+    originals.add(key);
+    const variants = Array.isArray(e.variants) ? e.variants.filter(isText) : [];
+    if (!variants.includes(e.original)) variants.unshift(e.original);
+    return { token: e.token, original: e.original, kind: e.kind, variants };
+  });
+  const words = terms.map((t, i) => {
+    if (!t || !isText(t.word) || !isText(t.kind)) throw new Error('足した語の ' + (i + 1) + ' 番目に語か種類がありません。');
+    return { word: t.word.trim(), kind: t.kind.trim() };
+  });
+  return { entries, terms: words };
 }
 
 function createMasker({ dictionaries = [] } = {}) {
@@ -1020,10 +1071,55 @@ function createMasker({ dictionaries = [] } = {}) {
     if (!keepTerms) userTerms.length = 0;
   }
 
-  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, labelOf, labels: () => ({ ...labels }) };
+  // 対応表を書き出す(F11d)。JSON の文字列で、元の語・記号・種類・足した語を含む。元の名前が入っているので扱いに注意する
+  function exportMap() {
+    return JSON.stringify({
+      format: MAP_FORMAT,
+      version: MAP_VERSION,
+      notice: MAP_NOTICE,
+      entries: [...byOriginal.values()].map((e) => ({ token: e.token, original: e.original, kind: e.kind, variants: [...e.variants] })),
+      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
+    }, null, 2);
+  }
+
+  // 書き出した対応表を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる。
+  // 中身をすべて確かめてから入れ替える。おかしければ何も変えずに Error で止まる
+  function importMap(text) {
+    const data = parseMapFile(text);
+    reset();
+    for (const t of data.terms) userTerms.push({ word: t.word, kind: t.kind, re: termRegExp(t.word) });
+    for (const e of data.entries) {
+      const entry = { token: e.token, original: e.original, kind: e.kind, label: labelOf(e.kind), variants: e.variants };
+      byOriginal.set(keyOf(e.original), entry);
+      byToken.set(e.token, entry);
+      // 次に作る記号が読み込んだ記号と重ならないよう、種類ごとの番号を進めておく
+      const m = e.token.match(/(\d+)〕$/);
+      if (m) counters[e.kind] = Math.max(counters[e.kind] || 0, Number(m[1]));
+    }
+    return { entries: data.entries.length, terms: data.terms.length };
+  }
+
+  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, labelOf, labels: () => ({ ...labels }) };
 }
 
-return { parseAmount, formatYen, bandLabel, createMasker };
+return { parseAmount, formatYen, bandLabel, MAP_FORMAT, MAP_VERSION, MAP_NOTICE, parseMapFile, createMasker };
+})();
+__m["src/ui/download.mjs"] = (function () {
+// 画面の書き出し(F05e・F11d が使う)
+// 文字列をファイルとして保存させる。Blob とリンクの download を使うだけで、外へは送らない
+function downloadText(doc, text, fileName, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = doc.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  doc.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+return { downloadText };
 })();
 __m["src/mask/dict-construction.mjs"] = (function () {
 // 置き換えの部品(src/mask/core.mjs)に渡す、建設の辞書(F11a)。
@@ -1058,8 +1154,10 @@ return { CONSTRUCTION_DICT };
 })();
 __m["src/ui/mask-app.mjs"] = (function () {
 // 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
-// 対応表と足した語は、この画面のメモリの中だけに持つ(保存しない。ページを閉じれば消える)。
-const { createMasker, parseAmount } = __m["src/mask/core.mjs"];
+// 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
+// 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
+const { createMasker, parseAmount, MAP_NOTICE } = __m["src/mask/core.mjs"];
+const { downloadText } = __m["src/ui/download.mjs"];
 const { CONSTRUCTION_DICT } = __m["src/mask/dict-construction.mjs"];
 const { esc } = __m["src/ui/view.mjs"];
 
@@ -1128,12 +1226,52 @@ function addDictWord(doc) {
 
 function resetMask(doc) {
   getMasker().reset();
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
   if (list) list.innerHTML = renderTerms([]);
   setText(doc, 'dict-status', '対応表と足した語を消しました。');
+}
+
+const today = () => {
+  const d = new Date();
+  const z = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+};
+
+// 対応表を書き出す(F11d)。元の名前が入っていることを画面に出し、確かめてから書き出す
+function exportMaskMap(doc, win) {
+  const m = getMasker();
+  if (!m.entries().length && !m.terms().length) {
+    setText(doc, 'map-status', '書き出す対応表がまだありません。先に「置き換える」を押してください。');
+    return false;
+  }
+  setText(doc, 'map-status', MAP_NOTICE);
+  if (win && typeof win.confirm === 'function' && !win.confirm(MAP_NOTICE + '\n書き出しますか。')) {
+    setText(doc, 'map-status', '書き出しをやめました。' + MAP_NOTICE);
+    return false;
+  }
+  downloadText(doc, m.exportMap(), '置き換えの対応表_' + today() + '.json', 'application/json;charset=utf-8');
+  setText(doc, 'map-status', '対応表を書き出しました。' + MAP_NOTICE);
+  return true;
+}
+
+// 書き出した対応表のファイルの中身を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる
+function importMaskMap(doc, text) {
+  const m = getMasker();
+  try {
+    const n = m.importMap(text);
+    const mapEl = doc.getElementById('mask-map');
+    if (mapEl) mapEl.innerHTML = renderMap(m.entries());
+    const list = doc.getElementById('dict-list');
+    if (list) list.innerHTML = renderTerms(m.terms());
+    setText(doc, 'map-status', '対応表を読み込みました(対応表 ' + n.entries + ' 行・足した語 ' + n.terms + ' 件)。「元に戻す」で使えます。読み込んだファイルにも元の名前が入っています。');
+    return true;
+  } catch (e) {
+    setText(doc, 'map-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の対応表はそのままです。');
+    return false;
+  }
 }
 
 function startMask(doc) {
@@ -1145,9 +1283,19 @@ function startMask(doc) {
   on('unmask-run', () => runUnmask(doc));
   on('dict-add', () => addDictWord(doc));
   on('mask-reset', () => resetMask(doc));
+  on('map-export', () => exportMaskMap(doc, doc.defaultView));
+  const file = doc.getElementById('map-import');
+  if (file) {
+    file.addEventListener('change', async () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      importMaskMap(doc, await f.text());
+      file.value = '';
+    });
+  }
 }
 
-return { parseThresholds, renderMap, renderTerms, runMask, runUnmask, addDictWord, resetMask, startMask };
+return { parseThresholds, renderMap, renderTerms, runMask, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, startMask };
 })();
 __m["src/ui/app.mjs"] = (function () {
 // 画面のつながり(F05a・F05e): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
@@ -1160,6 +1308,7 @@ const { judgeTaicho } = __m["src/taicho.mjs"];
 const { stage1Rows, toCsv } = __m["src/export.mjs"];
 const { SAMPLE } = __m["src/sample.mjs"];
 const { startMask } = __m["src/ui/mask-app.mjs"];
+const { downloadText } = __m["src/ui/download.mjs"];
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
 const NOTICE = '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください';
@@ -1224,19 +1373,6 @@ function today() {
   return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
 }
 
-// 文字列をファイルとして保存させる。Blob とリンクの download を使うだけで、外へは送らない
-function downloadText(doc, text, fileName, type) {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const a = doc.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  doc.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 function exportCsv(doc) {
   if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
   const csv = toCsv(stage1Rows(last.bid, last.taicho, NOTICE));
@@ -1297,7 +1433,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { runBid, downloadText, exportCsv, printResult, loadSample, startApp };
+return { runBid, exportCsv, printResult, loadSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();
