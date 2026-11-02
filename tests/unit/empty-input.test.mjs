@@ -66,9 +66,10 @@ test('元請け・下請けを選べば、これまでどおり判定する(下�
   assert.equal(judgeTaicho({ ...base, direct: false }).status, 'not_required');
 });
 
-test('下請けが無い(総額 0)なら、元請けか未選択でも台帳は作らない(未入力から決めていない)', () => {
+test('下請けが無い(総額 0)でも、元請けか未選択なら「作る」と言い切らず、足りない欄に元請けか下請けかを出す(F15d: 下請けなしの行は元請けの行)', () => {
   const out = judgeTaicho({ orderer: 'public', direct: null, hasSubcontract: false, subcontractTotal: 0 });
-  assert.equal(out.status, 'not_required');
+  assert.notEqual(out.status, 'required');
+  assert.ok(!out.reasons.some((r) => /no-subcontract/.test(r.ruleId)));
 });
 
 test('画面: 元請けか下請けかは 選んでください/元請け/下請け の3択で、最初は「選んでください」', () => {

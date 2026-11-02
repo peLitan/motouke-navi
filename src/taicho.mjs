@@ -108,7 +108,10 @@ export function judgeWithTables(input, { rules, quotes, sources, amountBasis }) 
   }
   if (status === 'unknown') {
     // 台帳の要否(status)を決める行の条件のうち、入力が無い・未選択の欄を挙げる(写しの措置の欄は台帳の要否に関わらないので除く)
-    const statusRules = rules.filter((r) => r.result?.status !== undefined);
+    // 入力済みの欄が行の条件と食い違う行(公共なのに民間の行など)は数えない。未選択の欄が埋まれば当てはまりうる行だけを見る
+    const given = (k) => input?.[k] !== undefined && input?.[k] !== null;
+    const statusRules = rules.filter((r) => r.result?.status !== undefined
+      && Object.entries(r.condition || {}).every(([k, v]) => !given(k) || matchesValue(v, input[k])));
     const missing = missingInputs(input, statusRules);
     out.missing = missing;
     out.message = missing.length

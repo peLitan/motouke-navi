@@ -69,9 +69,14 @@ function checkPrimeAgainstTotal(input, out) {
   if (all.length === 0) return; // 下請契約が無ければ総額の境目の話にならない
   if (!needsTotal) return; // 監理技術者・特定建設業なら、総額がいくらでも食い違わない
 
+  // 「判断できない」の文には、分からない方(技術者の役割か許可の種類か)だけを書く(反証の指摘7。読めている事実と食い違わせない)
+  const askRole = role !== 'kanri';
+  const askLicense = license !== 'tokutei';
+  const askText = [askRole ? '元請けの技術者(監理技術者か)' : null, askLicense ? '許可の種類(特定か)' : null].filter(Boolean).join('と');
+  const askBasis = [...(askRole ? ['q-kensetsu-26-2'] : []), ...(askLicense ? ['q-kensetsu-3-1-2'] : []), 'q-rei-2-1'];
   const unknownAmount = subs.map((s, i) => [s, i]).filter(([s]) => !isAmount(s?.amount));
   if (workType !== 'other' && workType !== 'kenchiku-ikkatsu') {
-    out.undecidable.push({ target, field: 'project.workType', message: '工事の種類(建築一式かそれ以外か)が分からないので、下請けの総額の境目(施行令 第2条)を決められず、技術者・許可の種類が合っているか判断できません', basis: basisOf('q-rei-2-1') });
+    out.undecidable.push({ target, field: 'project.workType', message: '工事の種類(建築一式かそれ以外か)が分からないので、下請けの総額の境目(施行令 第2条)を決められず、' + askText + 'が合っているか判断できません', basis: basisOf(...askBasis) });
     return;
   }
   const line = workType === 'kenchiku-ikkatsu' ? t.kenchiku : t.other;
@@ -81,8 +86,8 @@ function checkPrimeAgainstTotal(input, out) {
     out.undecidable.push({
       target,
       field: 'subcontractors.tier',
-      message: '一次か二次以降かが分からない下請けがある(' + uncertain.map(([s, i]) => subLabel(s, i)).join('、') + ')ので、元請けが直接結んだ下請けの総額が ' + yen(line) + ' 以上かを決められず、元請けの技術者(監理技術者か)と許可の種類(特定か)が合っているか判断できません(台帳の会社名の見出しに注文者を書くと決まります)',
-      basis: basisOf('q-kensetsu-26-2', 'q-rei-2-1'),
+      message: '一次か二次以降かが分からない下請けがある(' + uncertain.map(([s, i]) => subLabel(s, i)).join('、') + ')ので、元請けが直接結んだ下請けの総額が ' + yen(line) + ' 以上かを決められず、' + askText + 'が合っているか判断できません(台帳の会社名の見出しに注文者を書くと決まります)',
+      basis: basisOf(...askBasis),
     });
     return;
   }
@@ -90,22 +95,34 @@ function checkPrimeAgainstTotal(input, out) {
     out.undecidable.push({
       target,
       field: 'subcontractors.amount',
-      message: '請負代金の額が分からない下請けがある(' + unknownAmount.map(([s, i]) => subLabel(s, i)).join('、') + ')ので、下請けの総額が ' + yen(line) + ' 以上かを決められず、元請けの技術者(監理技術者か)と許可の種類(特定か)が合っているか判断できません',
-      basis: basisOf('q-kensetsu-26-2', 'q-rei-2-1'),
+      message: '請負代金の額が分からない下請けがある(' + unknownAmount.map(([s, i]) => subLabel(s, i)).join('、') + ')ので、下請けの総額が ' + yen(line) + ' 以上かを決められず、' + askText + 'が合っているか判断できません',
+      basis: basisOf(...askBasis),
     });
     return;
   }
   // 分かっている額だけで境目以上なら、分からない額があっても総額は境目以上
   if (known < line) return;
   const totalText = (unknownAmount.length > 0 ? '分かっている額だけで ' : '') + yen(known);
-  if (role !== 'kanri') {
+  // 元請けの技術者の氏名が空(台帳に技術者の節が無いなど)なら、checkEngineer が抜けの候補を出している。
+  // 同じ技術者を「監理技術者になっていません」でもう一度出さず、抜けの候補に「監理技術者を置く」を書き足す(反証の指摘9)
+  const engineerMissing = !prime.engineer || blank(prime.engineer.name);
+  if (askRole && engineerMissing) {
+    const m = out.candidates.find((c) => c.target === target && c.field === 'engineer');
+    if (m) {
+      m.message += '(下請けの総額(税込み)が ' + totalText + ' で ' + yen(line) + ' 以上なので、監理技術者を置く工事です)';
+      m.basis = [...m.basis, ...basisOf('q-kensetsu-26-2', 'q-rei-2-1')];
+    }
+  } else if (askRole && blank(role)) {
+    // 氏名はあるが、主任技術者か監理技術者かを台帳から読めない。監理技術者でないと決めずに「判断できない」にする
+    out.undecidable.push({ target, field: 'prime.engineer.role', message: '下請けの総額(税込み)が ' + totalText + ' で ' + yen(line) + ' 以上なので監理技術者が要りますが、台帳から元請けの技術者が監理技術者か主任技術者かを読めないので判断できません', basis: basisOf('q-kensetsu-26-2', 'q-rei-2-1') });
+  } else if (askRole) {
     out.candidates.push({
       kind: 'mismatch', target, field: 'prime.engineer.role',
       message: '下請けの総額(税込み)が ' + totalText + ' で、' + yen(line) + ' 以上なのに、元請けの技術者が監理技術者になっていません',
       basis: basisOf('q-kensetsu-26-2', 'q-rei-2-1'),
     });
   }
-  if (license !== 'tokutei') {
+  if (askLicense) {
     out.candidates.push({
       kind: 'mismatch', target, field: 'prime.licenseType',
       message: '下請けの総額(税込み)が ' + totalText + ' で、' + yen(line) + ' 以上なのに、元請けの許可の種類が特定建設業になっていません',
