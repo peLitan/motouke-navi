@@ -9,7 +9,7 @@
 <style>
   /* 文字(F14d): 本文は16px以上・行間1.7・端末の標準の書体。文字と地の色のコントラストは 4.5:1 以上(単体の試験で計算して確かめる) */
   html { font-size: 100%; }
-  body { font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; font-size: 1rem; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.7; color: #1f2937; background: #fff; }
+  body { font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; font-size: 1rem; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.7; color: #1f2937; background: #fff; overflow-wrap: break-word; }
   /* 入力欄・ボタン・整形済みの文も本文と同じ大きさにする(ブラウザの既定は 13px 前後になるため) */
   button, input, select, textarea { font: inherit; }
   pre, code { font-family: ui-monospace, Consolas, "BIZ UDGothic", monospace; font-size: 1rem; }
@@ -24,7 +24,7 @@
   .hint { margin: 0.1rem 0 0; font-size: 1rem; color: #374151; }
   .radio-group { border: 1px solid #9ca3af; border-radius: 4px; padding: 0.4rem 0.8rem; }
   .radio-group legend { font-weight: bold; padding: 0 0.3rem; }
-  .radio-group div { margin: 0.2rem 0; }
+  .radio-group div { margin: 0.2rem 0; display: flex; align-items: center; min-height: 2.75rem; }
   .row label { margin-right: 0.5rem; }
   .result { border: 1px solid #ccc; padding: 0.5rem 1rem; margin-bottom: 1rem; }
   .human { font-weight: bold; }
@@ -32,10 +32,10 @@
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 1rem; color: #333; }
   .export { margin: 0.5rem 0 1rem; }
-  .mask-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .mask-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
   #mask-map table { border-collapse: collapse; }
   #mask-map td, #mask-map th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
-  pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; }
+  pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
   .lead { margin: 0.5rem 0 1rem; }
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
@@ -70,18 +70,35 @@
   .not-yet { color: #475569; }
   @media (max-width: 30rem) { .summary-row { grid-template-columns: 1fr; } }
   /* 折りたたみ(F14c): 根拠の原文と段取りの表は閉じておく。見出しは中身が分かる言葉にし、押せることが分かる形にする */
-  details > summary { cursor: pointer; padding: 0.15rem 0; }
+  details > summary { cursor: pointer; padding: 0.55rem 0; }
   details > summary:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
   details.basis > summary { color: #1e3a8a; }
   details.schedule-table { margin: 0.5rem 0; }
   details.schedule-table > summary { font-weight: bold; font-size: 1.1rem; }
   .schedule-lead { margin: 0.25rem 0 0.5rem; }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
+  /* 狭い画面(F14e): 幅320〜400px でもページ全体は横に動かない。入力欄は枠の幅まで、表は枠(.table-scroll)の中だけで横に動く。
+     ボタン・入力欄・折りたたみの見出しは指で押せる高さ(44px = 2.75rem)にする */
+  *, *::before, *::after { box-sizing: border-box; }
+  input, select, textarea { max-width: 100%; }
+  textarea { width: 100%; }
+  input[type="text"], select { min-height: 2.75rem; padding: 0.25rem 0.5rem; }
+  button { min-height: 2.75rem; padding: 0.4rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; }
+  input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
+  .table-scroll { max-width: 100%; overflow-x: auto; margin: 0.25rem 0 0.75rem; }
+  .table-scroll:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .table-scroll table.schedule { min-width: 36rem; }
+  @media (max-width: 40rem) {
+    body { padding: 0.75rem; }
+    .mask-cols { grid-template-columns: minmax(0, 1fr); }
+    .sample-button { display: block; width: 100%; }
+  }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
     body { max-width: none; padding: 0; font-size: 10.5pt; }
     button, .export, .no-print { display: none !important; }
     .result { border: none; padding: 0; }
+    .table-scroll { overflow: visible; }
     .item, .reasons li { break-inside: avoid; }
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }

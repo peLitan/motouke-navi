@@ -2,14 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-NznLFvvCfvDa5quDHFgy+eNqqY9pm6KwmV1Cu8LIAaQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-bsf+MIcVmOd9z4d3r4PSfpwHmtJVqKZBAEBzftIiEgg='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
 <style>
   /* 文字(F14d): 本文は16px以上・行間1.7・端末の標準の書体。文字と地の色のコントラストは 4.5:1 以上(単体の試験で計算して確かめる) */
   html { font-size: 100%; }
-  body { font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; font-size: 1rem; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.7; color: #1f2937; background: #fff; }
+  body { font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; font-size: 1rem; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.7; color: #1f2937; background: #fff; overflow-wrap: break-word; }
   /* 入力欄・ボタン・整形済みの文も本文と同じ大きさにする(ブラウザの既定は 13px 前後になるため) */
   button, input, select, textarea { font: inherit; }
   pre, code { font-family: ui-monospace, Consolas, "BIZ UDGothic", monospace; font-size: 1rem; }
@@ -24,7 +24,7 @@
   .hint { margin: 0.1rem 0 0; font-size: 1rem; color: #374151; }
   .radio-group { border: 1px solid #9ca3af; border-radius: 4px; padding: 0.4rem 0.8rem; }
   .radio-group legend { font-weight: bold; padding: 0 0.3rem; }
-  .radio-group div { margin: 0.2rem 0; }
+  .radio-group div { margin: 0.2rem 0; display: flex; align-items: center; min-height: 2.75rem; }
   .row label { margin-right: 0.5rem; }
   .result { border: 1px solid #ccc; padding: 0.5rem 1rem; margin-bottom: 1rem; }
   .human { font-weight: bold; }
@@ -32,10 +32,10 @@
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 1rem; color: #333; }
   .export { margin: 0.5rem 0 1rem; }
-  .mask-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .mask-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
   #mask-map table { border-collapse: collapse; }
   #mask-map td, #mask-map th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
-  pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; }
+  pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
   .lead { margin: 0.5rem 0 1rem; }
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
@@ -70,18 +70,35 @@
   .not-yet { color: #475569; }
   @media (max-width: 30rem) { .summary-row { grid-template-columns: 1fr; } }
   /* 折りたたみ(F14c): 根拠の原文と段取りの表は閉じておく。見出しは中身が分かる言葉にし、押せることが分かる形にする */
-  details > summary { cursor: pointer; padding: 0.15rem 0; }
+  details > summary { cursor: pointer; padding: 0.55rem 0; }
   details > summary:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
   details.basis > summary { color: #1e3a8a; }
   details.schedule-table { margin: 0.5rem 0; }
   details.schedule-table > summary { font-weight: bold; font-size: 1.1rem; }
   .schedule-lead { margin: 0.25rem 0 0.5rem; }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
+  /* 狭い画面(F14e): 幅320〜400px でもページ全体は横に動かない。入力欄は枠の幅まで、表は枠(.table-scroll)の中だけで横に動く。
+     ボタン・入力欄・折りたたみの見出しは指で押せる高さ(44px = 2.75rem)にする */
+  *, *::before, *::after { box-sizing: border-box; }
+  input, select, textarea { max-width: 100%; }
+  textarea { width: 100%; }
+  input[type="text"], select { min-height: 2.75rem; padding: 0.25rem 0.5rem; }
+  button { min-height: 2.75rem; padding: 0.4rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; }
+  input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
+  .table-scroll { max-width: 100%; overflow-x: auto; margin: 0.25rem 0 0.75rem; }
+  .table-scroll:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .table-scroll table.schedule { min-width: 36rem; }
+  @media (max-width: 40rem) {
+    body { padding: 0.75rem; }
+    .mask-cols { grid-template-columns: minmax(0, 1fr); }
+    .sample-button { display: block; width: 100%; }
+  }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
     body { max-width: none; padding: 0; font-size: 10.5pt; }
     button, .export, .no-print { display: none !important; }
     .result { border: none; padding: 0; }
+    .table-scroll { overflow: visible; }
     .item, .reasons li { break-inside: avoid; }
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
@@ -418,6 +435,12 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// 表は横に動かせる枠に入れる(F14e)。狭い画面(幅320〜400px)でもページ全体は横に動かず、表だけがこの枠の中で横に動く。
+// キーボードでも動かせるように tabindex を付け、枠の名前(aria-label)を付ける
+function scrollTable(label, tableHtml) {
+  return '<div class="table-scroll" role="region" tabindex="0" aria-label="' + esc(label) + '">' + tableHtml + '</div>';
+}
+
 // 根拠の条の書き方: 「建設業法 第24条の8第1項第2号」。条の無い資料(ガイドライン)は資料名と節
 function basisLabel(b) {
   if (!b.article) return [b.title ?? b.law, b.section, b.page ? b.page + 'ページ' : null].filter(Boolean).join(' ');
@@ -543,8 +566,8 @@ const XLSX_VALUE = (ledger, key) => key.split('.').reduce((o, k) => (o == null ?
 function renderXlsxResult(r, fieldNames = {}) {
   const read = Object.entries(r.found ?? {}).filter(([k]) => !(r.unreadable ?? []).some((u) => u.key === k));
   const readHtml = read.length
-    ? '<h4>読めた欄(' + read.length + ')</h4><table><thead><tr><th>欄</th><th>セル</th><th>値</th></tr></thead><tbody>'
-      + read.map(([k, f]) => '<tr><td>' + esc(fieldNames[k] ?? k) + '</td><td>' + esc(f.value) + '</td><td>' + esc(XLSX_VALUE(r.ledger, k)) + '</td></tr>').join('') + '</tbody></table>'
+    ? '<h4>読めた欄(' + read.length + ')</h4>' + scrollTable('読めた欄の表', '<table><thead><tr><th>欄</th><th>セル</th><th>値</th></tr></thead><tbody>'
+      + read.map(([k, f]) => '<tr><td>' + esc(fieldNames[k] ?? k) + '</td><td>' + esc(f.value) + '</td><td>' + esc(XLSX_VALUE(r.ledger, k)) + '</td></tr>').join('') + '</tbody></table>')
     : '<h4>読めた欄</h4><p>ありません。</p>';
   const un = r.unreadable ?? [];
   const unHtml = un.length
@@ -576,12 +599,12 @@ function renderSchedule(rows = [], detail = {}) {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
     return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
-      + '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
+      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
         + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
         + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
         + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
-      + '</tbody></table>'
+      + '</tbody></table>')
       + '<details class="basis schedule-basis"><summary>根拠: 共通仕様書の原文(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
       + '</ul></details>';
@@ -679,8 +702,8 @@ function renderSummary(state = {}) {
     const und = (state.plan.undecidable ?? []).length;
     rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : '記載項目の抜けの候補 <strong>' + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
   } else rows.push(['施工計画書の目次の点検', NOT_YET('目次を点検する'), 'plan-result']);
-  parts.push('<h4>書類と段取り</h4><table class="summary-table"><tbody>'
-    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>');
+  parts.push('<h4>書類と段取り</h4>' + scrollTable('書類と段取りの表', '<table class="summary-table"><tbody>'
+    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>'));
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
   parts.push('<h4>入れた条件</h4><dl class="summary-list">'
@@ -689,7 +712,7 @@ function renderSummary(state = {}) {
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
 
-return { esc, basisLabel, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult, SUMMARY_FIELDS, renderSummary };
+return { esc, scrollTable, basisLabel, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, renderPlanResult, SUMMARY_FIELDS, renderSummary };
 })();
 __m["src/ledger-text.mjs"] = (function () {
 // 台帳の文を読む(F05b): 見出しと「| 項目 | 内容 |」の表で書いた施工体制台帳の文を、点検(src/check-taicho.mjs)の入力の形にする。
@@ -2816,7 +2839,7 @@ __m["src/ui/mask-app.mjs"] = (function () {
 const { createMasker, parseAmount, MAP_NOTICE } = __m["src/mask/core.mjs"];
 const { downloadText } = __m["src/ui/download.mjs"];
 const { CONSTRUCTION_DICT } = __m["src/mask/dict-construction.mjs"];
-const { esc } = __m["src/ui/view.mjs"];
+const { esc, scrollTable } = __m["src/ui/view.mjs"];
 const { extractText } = __m["src/mask/extract.mjs"];
 
 let masker = null;
@@ -2840,7 +2863,7 @@ function renderMap(entries) {
   if (!entries.length) return '<p>置き換えた語はありません。辞書に無い語は残ります。後の欄を確かめてください。</p>';
   const rows = entries.map((e) => '<tr><td>' + esc(e.token) + '</td><td>' + esc(e.label) + '</td><td>' + esc(e.original)
     + (e.variants && e.variants.length > 1 ? '(ほかの書き方: ' + esc(e.variants.slice(1).join('、')) + ')' : '') + '</td></tr>');
-  return '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>';
+  return scrollTable('対応表', '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
 }
 
 function renderTerms(terms) {

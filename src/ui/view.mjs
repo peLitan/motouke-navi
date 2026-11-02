@@ -6,6 +6,12 @@ export function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// 表は横に動かせる枠に入れる(F14e)。狭い画面(幅320〜400px)でもページ全体は横に動かず、表だけがこの枠の中で横に動く。
+// キーボードでも動かせるように tabindex を付け、枠の名前(aria-label)を付ける
+export function scrollTable(label, tableHtml) {
+  return '<div class="table-scroll" role="region" tabindex="0" aria-label="' + esc(label) + '">' + tableHtml + '</div>';
+}
+
 // 根拠の条の書き方: 「建設業法 第24条の8第1項第2号」。条の無い資料(ガイドライン)は資料名と節
 export function basisLabel(b) {
   if (!b.article) return [b.title ?? b.law, b.section, b.page ? b.page + 'ページ' : null].filter(Boolean).join(' ');
@@ -131,8 +137,8 @@ const XLSX_VALUE = (ledger, key) => key.split('.').reduce((o, k) => (o == null ?
 export function renderXlsxResult(r, fieldNames = {}) {
   const read = Object.entries(r.found ?? {}).filter(([k]) => !(r.unreadable ?? []).some((u) => u.key === k));
   const readHtml = read.length
-    ? '<h4>読めた欄(' + read.length + ')</h4><table><thead><tr><th>欄</th><th>セル</th><th>値</th></tr></thead><tbody>'
-      + read.map(([k, f]) => '<tr><td>' + esc(fieldNames[k] ?? k) + '</td><td>' + esc(f.value) + '</td><td>' + esc(XLSX_VALUE(r.ledger, k)) + '</td></tr>').join('') + '</tbody></table>'
+    ? '<h4>読めた欄(' + read.length + ')</h4>' + scrollTable('読めた欄の表', '<table><thead><tr><th>欄</th><th>セル</th><th>値</th></tr></thead><tbody>'
+      + read.map(([k, f]) => '<tr><td>' + esc(fieldNames[k] ?? k) + '</td><td>' + esc(f.value) + '</td><td>' + esc(XLSX_VALUE(r.ledger, k)) + '</td></tr>').join('') + '</tbody></table>')
     : '<h4>読めた欄</h4><p>ありません。</p>';
   const un = r.unreadable ?? [];
   const unHtml = un.length
@@ -164,12 +170,12 @@ export function renderSchedule(rows = [], detail = {}) {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
     return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
-      + '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
+      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
         + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
         + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
         + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
-      + '</tbody></table>'
+      + '</tbody></table>')
       + '<details class="basis schedule-basis"><summary>根拠: 共通仕様書の原文(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
       + '</ul></details>';
@@ -267,8 +273,8 @@ export function renderSummary(state = {}) {
     const und = (state.plan.undecidable ?? []).length;
     rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : '記載項目の抜けの候補 <strong>' + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
   } else rows.push(['施工計画書の目次の点検', NOT_YET('目次を点検する'), 'plan-result']);
-  parts.push('<h4>書類と段取り</h4><table class="summary-table"><tbody>'
-    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>');
+  parts.push('<h4>書類と段取り</h4>' + scrollTable('書類と段取りの表', '<table class="summary-table"><tbody>'
+    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>'));
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
   parts.push('<h4>入れた条件</h4><dl class="summary-list">'

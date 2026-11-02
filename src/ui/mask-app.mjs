@@ -4,7 +4,7 @@
 import { createMasker, parseAmount, MAP_NOTICE } from '../mask/core.mjs';
 import { downloadText } from './download.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
-import { esc } from './view.mjs';
+import { esc, scrollTable } from './view.mjs';
 import { extractText } from '../mask/extract.mjs';
 
 let masker = null;
@@ -28,7 +28,7 @@ export function renderMap(entries) {
   if (!entries.length) return '<p>置き換えた語はありません。辞書に無い語は残ります。後の欄を確かめてください。</p>';
   const rows = entries.map((e) => '<tr><td>' + esc(e.token) + '</td><td>' + esc(e.label) + '</td><td>' + esc(e.original)
     + (e.variants && e.variants.length > 1 ? '(ほかの書き方: ' + esc(e.variants.slice(1).join('、')) + ')' : '') + '</td></tr>');
-  return '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>';
+  return scrollTable('対応表', '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
 }
 
 export function renderTerms(terms) {
