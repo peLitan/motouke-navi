@@ -1,0 +1,161 @@
+{
+  "note": "規則表。1行 = 1つの決まり。condition の欄がすべて入力と同じ行が当てはまる。result は判定の結果(status = 台帳を作るか、copyToOrderer = 写しを発注者に出すか)。basis は data/quotes.json の抜き書きの id。exceptions は、根拠の原文にある例外・参照(ただし・を除き・この限りでない・準用・読み替え)をこの行でどう扱ったか。値の意味: orderer は public(公共工事)か private(民間工事)、direct は発注者から直接請け負ったか、hasSubcontract は下請契約を結んだか、ictMeasure は発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を受注者が講じているか",
+  "rules": [
+    {
+      "id": "pub-taicho-create",
+      "scope": "public",
+      "condition": {
+        "orderer": "public",
+        "direct": true,
+        "hasSubcontract": true
+      },
+      "action": "施工体制台帳を作り、工事現場ごとに備え置く",
+      "result": {
+        "status": "required"
+      },
+      "basis": [
+        {
+          "quoteId": "q-nyukei-15-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-1-taicho"
+        }
+      ],
+      "exceptions": [
+        "入契法 第15条第1項の読み替え: 公共工事では、建設業法 第24条の8第1項の「特定建設業者」を「建設業者」と、金額の要件(下請契約の総額が政令で定める金額以上)を「下請契約を締結した」と読む。このため、公共工事では許可の種類(特定・一般)と下請けの総額にかかわらず、下請契約を結べば作る",
+        "施行令 第7条の4 の金額(ただし書の建築一式工事の金額を含む)は、この読み替えにより公共工事には使わない"
+      ]
+    },
+    {
+      "id": "pub-copy-submit",
+      "scope": "public",
+      "condition": {
+        "orderer": "public",
+        "direct": true,
+        "hasSubcontract": true,
+        "ictMeasure": false
+      },
+      "action": "作った施工体制台帳(記載事項の変更に伴い新たに作ったものを含む)の写しを発注者に出す",
+      "result": {
+        "copyToOrderer": "required"
+      },
+      "basis": [
+        {
+          "quoteId": "q-nyukei-15-2"
+        }
+      ],
+      "exceptions": [
+        "入契法 第15条第2項の「を除き」: 発注者が情報通信技術で施工体制を確かめられる措置(国土交通省令で定めるもの)を講じている場合は出さなくてよい。この場合は行 pub-copy-exempt が当てはまる",
+        "入契法 第15条第2項の「読み替えて適用される」: 対象は第1項で読み替えた建設業法 第24条の8第1項により台帳を作る受注者に限る(行 pub-taicho-create と同じ条件)",
+        "入契法 第15条第2項の後段「同条第三項の規定は、適用しない」: 「同条」は、この項の中で直前に出てくる建設業法 第24条の8 を指すと読み、同条第3項(発注者の請求による閲覧)は適用しないとした(この読み方はツールの解釈。原文に条の名は書いていない)",
+        "措置に当たるかは国土交通省令で定めるもの(このツールは省令の原文を取得していないので、措置を講じていないことは利用者が確かめる)"
+      ]
+    },
+    {
+      "id": "pub-copy-exempt",
+      "scope": "public",
+      "condition": {
+        "orderer": "public",
+        "direct": true,
+        "hasSubcontract": true,
+        "ictMeasure": true
+      },
+      "action": "措置を講じているので、写しを発注者に出さなくてよい(台帳は作る)",
+      "result": {
+        "copyToOrderer": "not_required"
+      },
+      "basis": [
+        {
+          "quoteId": "q-nyukei-15-2"
+        }
+      ],
+      "exceptions": [
+        "入契法 第15条第2項の「を除き」をこの行で扱う。措置に当たるかは国土交通省令で定めるもの(このツールは省令の原文を取得していないので、措置に当たるかは利用者が確かめる)",
+        "台帳の作成そのものは免除されない(行 pub-taicho-create)"
+      ]
+    },
+    {
+      "id": "pub-no-subcontract",
+      "scope": "public",
+      "condition": {
+        "orderer": "public",
+        "hasSubcontract": false
+      },
+      "action": "下請契約を結んでいないので、施工体制台帳は作らなくてよい(下請契約を結んだら作る)",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-nyukei-15-1"
+        },
+        {
+          "quoteId": "q-nyukei-15-2"
+        }
+      ],
+      "exceptions": [
+        "入契法 第15条第1項の読み替え: 公共工事で台帳を作る条件は「下請契約を締結した」こと。結んでいなければ作る条件に当たらない",
+        "入契法 第15条第2項の「作成しなければならないこととされているものに限る」: 写しを出すのは台帳を作る受注者だけなので、台帳を作らなければ写しも出すものが無い(not_applicable)"
+      ]
+    },
+    {
+      "id": "pub-not-direct",
+      "scope": "public",
+      "condition": {
+        "orderer": "public",
+        "direct": false
+      },
+      "action": "発注者から直接請け負っていないので、元請けとして施工体制台帳を作る対象にしない",
+      "result": {
+        "status": "not_required",
+        "copyToOrderer": "not_applicable"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-nyukei-15-1"
+        }
+      ],
+      "exceptions": [
+        "入契法 第15条第1項の読み替えは「特定建設業者」と金額の要件を変えるが、「発注者から直接建設工事を請け負つた場合」の要件は変えない"
+      ]
+    },
+    {
+      "id": "pub-sub-notify",
+      "scope": "public",
+      "condition": {
+        "orderer": "public",
+        "direct": false,
+        "hasSubcontract": true
+      },
+      "action": "下請負人として請け負った工事を他の建設業を営む者に請け負わせたので、元請けに再下請の商号・工事の内容・工期などを通知する",
+      "result": {
+        "notifyPrime": "required"
+      },
+      "basis": [
+        {
+          "quoteId": "q-kensetsu-24_8-2"
+        },
+        {
+          "quoteId": "q-kensetsu-24_8-1"
+        },
+        {
+          "quoteId": "q-nyukei-15-1"
+        }
+      ],
+      "exceptions": [
+        "入契法 第15条第1項の読み替え: 建設業法 第24条の8第2項の「特定建設業者」は、公共工事では「建設業者」と読む(通知の相手は台帳を作る元請け)",
+        "通知する事項の細目は国土交通省令で定める(このツールは省令の原文を取得していない)"
+      ]
+    }
+  ]
+}
