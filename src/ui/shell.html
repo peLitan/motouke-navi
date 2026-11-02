@@ -20,6 +20,9 @@
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
   .export { margin: 0.5rem 0 1rem; }
   .sample { border: 1px dashed #2563eb; padding: 0.5rem 1rem; margin: 0.5rem 0 1rem; }
+  .mask-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  #mask-map table { border-collapse: collapse; }
+  #mask-map td, #mask-map th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
@@ -97,6 +100,50 @@
 <p>CSV は BOM つきの UTF-8 で、この PC に保存するだけです(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
 </div>
+</section>
+<section id="mask" class="no-print">
+<h2>2. 文の置き換え(外のサービスに貼る前に)</h2>
+<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ち、保存しません(ページを閉じると消えます)。</p>
+<p class="disclaimer" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
+<div class="row"><label for="dict-word">辞書に足す語</label>
+<input type="text" id="dict-word" name="dict-word" placeholder="例 甲野 一郎">
+<label for="dict-kind">種類</label>
+<select id="dict-kind" name="dict-kind">
+<option value="person">人名</option>
+<option value="company">会社名</option>
+<option value="site">現場名</option>
+<option value="address">住所</option>
+<option value="phone">電話</option>
+<option value="email">メール</option>
+<option value="license">許可番号</option>
+<option value="other">その他の語</option>
+</select>
+<button type="button" id="dict-add">辞書に足す</button></div>
+<p id="dict-status" aria-live="polite"></p>
+<div id="dict-list"><p>足した語はまだありません。</p></div>
+<div class="row"><label for="mask-input">置き換える文</label><br>
+<textarea id="mask-input" name="mask-input" rows="8" cols="80"></textarea></div>
+<div class="row"><label for="mask-amounts">金額の扱い</label>
+<select id="mask-amounts" name="mask-amounts">
+<option value="keep" selected>そのまま</option>
+<option value="band">境目以上・未満の形にする</option>
+</select>
+<label for="mask-thresholds">境目(円。空白か読点で区切る)</label>
+<input type="text" id="mask-thresholds" name="mask-thresholds" placeholder="例 50,000,000"></div>
+<div class="row"><button type="button" id="mask-run">置き換える</button>
+<button type="button" id="mask-reset">対応表と足した語を消す</button></div>
+<p id="mask-status" aria-live="polite"></p>
+<div class="mask-cols">
+<div><h3>前</h3><pre id="mask-before"></pre></div>
+<div><h3>後</h3><pre id="mask-after"></pre></div>
+</div>
+<h3>対応表</h3>
+<div id="mask-map"></div>
+<h3>元に戻す</h3>
+<div class="row"><label for="unmask-input">戻ってきた文(記号を含む文)</label><br>
+<textarea id="unmask-input" name="unmask-input" rows="6" cols="80"></textarea></div>
+<div class="row"><button type="button" id="unmask-run">元に戻す</button></div>
+<pre id="unmask-output"></pre>
 </section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>

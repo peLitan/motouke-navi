@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pxwIquMT2ET8vjSMhEr5Xl2VN7mlgdj/NNVaW9U1AkI='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-S/Wc3QMbBvoonqpVfBy55zcGIhK+otOY+IrfnrzDAEo='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -20,6 +20,9 @@
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
   .export { margin: 0.5rem 0 1rem; }
   .sample { border: 1px dashed #2563eb; padding: 0.5rem 1rem; margin: 0.5rem 0 1rem; }
+  .mask-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  #mask-map table { border-collapse: collapse; }
+  #mask-map td, #mask-map th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
@@ -97,6 +100,50 @@
 <p>CSV は BOM つきの UTF-8 で、この PC に保存するだけです(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
 </div>
+</section>
+<section id="mask" class="no-print">
+<h2>2. 文の置き換え(外のサービスに貼る前に)</h2>
+<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ち、保存しません(ページを閉じると消えます)。</p>
+<p class="disclaimer" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
+<div class="row"><label for="dict-word">辞書に足す語</label>
+<input type="text" id="dict-word" name="dict-word" placeholder="例 甲野 一郎">
+<label for="dict-kind">種類</label>
+<select id="dict-kind" name="dict-kind">
+<option value="person">人名</option>
+<option value="company">会社名</option>
+<option value="site">現場名</option>
+<option value="address">住所</option>
+<option value="phone">電話</option>
+<option value="email">メール</option>
+<option value="license">許可番号</option>
+<option value="other">その他の語</option>
+</select>
+<button type="button" id="dict-add">辞書に足す</button></div>
+<p id="dict-status" aria-live="polite"></p>
+<div id="dict-list"><p>足した語はまだありません。</p></div>
+<div class="row"><label for="mask-input">置き換える文</label><br>
+<textarea id="mask-input" name="mask-input" rows="8" cols="80"></textarea></div>
+<div class="row"><label for="mask-amounts">金額の扱い</label>
+<select id="mask-amounts" name="mask-amounts">
+<option value="keep" selected>そのまま</option>
+<option value="band">境目以上・未満の形にする</option>
+</select>
+<label for="mask-thresholds">境目(円。空白か読点で区切る)</label>
+<input type="text" id="mask-thresholds" name="mask-thresholds" placeholder="例 50,000,000"></div>
+<div class="row"><button type="button" id="mask-run">置き換える</button>
+<button type="button" id="mask-reset">対応表と足した語を消す</button></div>
+<p id="mask-status" aria-live="polite"></p>
+<div class="mask-cols">
+<div><h3>前</h3><pre id="mask-before"></pre></div>
+<div><h3>後</h3><pre id="mask-after"></pre></div>
+</div>
+<h3>対応表</h3>
+<div id="mask-map"></div>
+<h3>元に戻す</h3>
+<div class="row"><label for="unmask-input">戻ってきた文(記号を含む文)</label><br>
+<textarea id="unmask-input" name="unmask-input" rows="6" cols="80"></textarea></div>
+<div class="row"><button type="button" id="unmask-run">元に戻す</button></div>
+<pre id="unmask-output"></pre>
 </section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
@@ -778,6 +825,330 @@ const SAMPLE = {
 
 return { SAMPLE };
 })();
+__m["src/mask/core.mjs"] = (function () {
+// 置き換えの部品(F11a): 文の中の人名・会社名・場所の名前・住所・電話・メールなどを記号に置き換え、対応表を持ち、戻ってきた文を元に戻す。
+// この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
+// 対応表はこの部品の中(メモリ)だけに持つ。ファイルにもブラウザにも残さない(ページを閉じれば消える)。
+//
+// 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
+// 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形。重なったら優先の高いほう、同じなら長いほうを取る。
+
+const DEFAULT_LABELS = {
+  person: '人名',
+  company: '会社名',
+  site: '現場名',
+  address: '住所',
+  phone: '電話',
+  email: 'メール',
+  other: '語',
+};
+
+const NAME_CHARS = '[\\p{Script=Han}\\p{Script=Katakana}ー々〆ヶA-Za-z0-9＆&・]';
+const CORP = '(?:株式会社|有限会社|合同会社|合資会社|合名会社|一般社団法人|一般財団法人|[((](?:株|有)[))])';
+const DIGIT = '[0-9０-９]';
+const HYPHEN = '[-−‐‑–ー－]';
+const STOP = '[^\\s、。,，.()()「」『』\\[\\]【】:：;；]';
+
+// 部品が持つ形(分野によらないもの)
+const CORE_PATTERNS = [
+  { kind: 'email', re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/gu },
+  { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{1,4}${HYPHEN}${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
+  { kind: 'phone', re: new RegExp(`[((][0０]${DIGIT}{1,4}[))]\\s*${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
+  { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{9,10}(?![0-9０-９])`, 'gu') },
+  // 会社名: 「〇〇株式会社」「株式会社〇〇」。名前は漢字・カタカナ・英数字だけとし、ひらがな(「は」「として」など)の手前・後ろで切る
+  { kind: 'company', re: new RegExp(`${NAME_CHARS}{1,20}${CORP}`, 'gu') },
+  { kind: 'company', re: new RegExp(`${CORP}${NAME_CHARS}{1,20}`, 'gu') },
+  // 住所: 「〇〇都道府県 + 〇〇市区町村郡 + 町名 + 番地」
+  { kind: 'address', re: new RegExp(`\\p{Script=Han}{1,3}[都道府県]${STOP}{1,20}?[市区町村郡]${STOP.slice(0, -1)}0-9０-９]{0,20}(?:${DIGIT}+(?:${HYPHEN}${DIGIT}+)*(?:番地|番|号)?)?`, 'gu') },
+];
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// 語を、空白の違い(半角・全角・無し)を許して探す形にする
+function termRegExp(word) {
+  const parts = String(word).trim().split(/[\s　]+/).filter(Boolean).map(escapeRe);
+  return new RegExp(parts.join('[\\s\\u3000]*'), 'gu');
+}
+
+const withGlobal = (re) => (re.flags.includes('g') ? new RegExp(re.source, re.flags) : new RegExp(re.source, re.flags + 'g'));
+
+// 全角の数字を半角に
+const toHalf = (s) => String(s).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[，,]/g, '');
+
+// 金額の文字(「52,000,000」「5,200万」「1億2,000万」、後ろの「円」は無くてもよい)を数にする。読めなければ null
+function parseAmount(text) {
+  const s = toHalf(String(text ?? '').trim()).replace(/円$/, '').replace(/\s+/g, '');
+  const m = s.match(/^(?:(\d+(?:\.\d+)?)億)?(?:(\d+(?:\.\d+)?)万)?(\d+)?$/);
+  if (!m || (!m[1] && !m[2] && !m[3])) return null;
+  return Math.round((Number(m[1] || 0) * 1e8) + (Number(m[2] || 0) * 1e4) + Number(m[3] || 0));
+}
+
+function formatYen(n) {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円';
+}
+
+const AMOUNT_RE = new RegExp(`(?:(${DIGIT}[0-9０-９,，]*(?:\\.${DIGIT}+)?)億)?(?:(${DIGIT}[0-9０-９,，]*(?:\\.${DIGIT}+)?)万)?(${DIGIT}[0-9０-９,，]*)?円`, 'gu');
+
+// 金額を「境目以上・未満」の形にする(元の金額は書かない)
+function bandLabel(amount, thresholds) {
+  const ts = [...new Set(thresholds.filter((t) => Number.isFinite(t) && t > 0))].sort((a, b) => a - b);
+  if (!ts.length) return '〔金額〕';
+  if (amount < ts[0]) return `〔金額 ${formatYen(ts[0])}未満〕`;
+  for (let i = 0; i < ts.length - 1; i++) {
+    if (amount >= ts[i] && amount < ts[i + 1]) return `〔金額 ${formatYen(ts[i])}以上${formatYen(ts[i + 1])}未満〕`;
+  }
+  return `〔金額 ${formatYen(ts[ts.length - 1])}以上〕`;
+}
+
+function bandAmounts(text, thresholds) {
+  return text.replace(AMOUNT_RE, (all, oku, man, rest) => {
+    if (!oku && !man && !rest) return all;
+    const n = parseAmount(all);
+    return n === null ? all : bandLabel(n, thresholds);
+  });
+}
+
+function createMasker({ dictionaries = [] } = {}) {
+  const labels = { ...DEFAULT_LABELS };
+  const dictTerms = [];
+  const dictPatterns = [];
+  for (const d of dictionaries) {
+    if (!d) continue;
+    Object.assign(labels, d.labels || {});
+    for (const t of d.terms || []) dictTerms.push({ kind: t.kind, re: termRegExp(t.word) });
+    for (const p of d.patterns || []) dictPatterns.push({ kind: p.kind, re: withGlobal(p.re) });
+  }
+  const userTerms = []; // { word, kind, re }
+  const byOriginal = new Map(); // 元の語(空白を除いた形)→ 対応表の1行
+  const byToken = new Map(); // 記号 → 対応表の1行
+  const counters = {};
+
+  const labelOf = (kind) => labels[kind] || String(kind);
+
+  function addTerm(word, kind) {
+    const w = String(word ?? '').trim();
+    const k = String(kind ?? '').trim() || 'other';
+    if (!w) throw new Error('語が空です');
+    const old = userTerms.find((t) => t.word === w);
+    if (old) { old.kind = k; return { word: w, kind: k }; }
+    userTerms.push({ word: w, kind: k, re: termRegExp(w) });
+    return { word: w, kind: k };
+  }
+
+  function removeTerm(word) {
+    const i = userTerms.findIndex((t) => t.word === String(word ?? '').trim());
+    if (i >= 0) userTerms.splice(i, 1);
+  }
+
+  const terms = () => userTerms.map(({ word, kind }) => ({ word, kind, label: labelOf(kind) }));
+
+  // 元の語に記号を割り当てる。同じ語にはいつも同じ記号(空白の有無だけの違いは同じ語とみなし、戻すときは最初に出た書き方にする)。
+  // 文の中に既にある文字列と同じ記号は使わない
+  const keyOf = (s) => s.replace(/[\s\u3000]+/g, '');
+  function tokenFor(original, kind, text) {
+    const hit = byOriginal.get(keyOf(original));
+    if (hit) {
+      if (!hit.variants.includes(original)) hit.variants.push(original);
+      return hit;
+    }
+    let token;
+    do {
+      counters[kind] = (counters[kind] || 0) + 1;
+      token = `〔${labelOf(kind)}${counters[kind]}〕`;
+    } while (byToken.has(token) || text.includes(token));
+    const entry = { token, original, kind, label: labelOf(kind), variants: [original] };
+    byOriginal.set(keyOf(original), entry);
+    byToken.set(token, entry);
+    return entry;
+  }
+
+  function findSpans(text) {
+    const groups = [userTerms, dictTerms, dictPatterns, CORE_PATTERNS];
+    const cands = [];
+    groups.forEach((list, priority) => {
+      for (const { kind, re } of list) {
+        const r = new RegExp(re.source, re.flags);
+        for (const m of text.matchAll(r)) {
+          if (!m[0]) continue;
+          cands.push({ start: m.index, end: m.index + m[0].length, kind, priority });
+        }
+      }
+    });
+    cands.sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start) || a.start - b.start);
+    const chosen = [];
+    for (const c of cands) {
+      if (chosen.some((x) => c.start < x.end && x.start < c.end)) continue;
+      chosen.push(c);
+    }
+    return chosen.sort((a, b) => a.start - b.start);
+  }
+
+  // options.amounts: 'keep'(既定。金額はそのまま)か 'band'(境目以上・未満の形。options.thresholds の数を境目にする)
+  function mask(text, options = {}) {
+    const src = String(text ?? '');
+    const spans = findSpans(src);
+    let out = '';
+    let pos = 0;
+    const used = [];
+    for (const s of spans) {
+      const original = src.slice(s.start, s.end);
+      const entry = tokenFor(original, s.kind, src);
+      out += src.slice(pos, s.start) + entry.token;
+      pos = s.end;
+      if (!used.includes(entry)) used.push(entry);
+    }
+    out += src.slice(pos);
+    if (options.amounts === 'band') out = bandAmounts(out, (options.thresholds || []).map(Number));
+    return { masked: out, map: used.map((e) => ({ ...e, variants: [...e.variants] })) };
+  }
+
+  // 記号を元の語に戻す。知らない記号はそのまま残す(金額の「境目」の形は元に戻らない)
+  function unmask(text) {
+    const src = String(text ?? '');
+    if (!byToken.size) return src;
+    const tokens = [...byToken.keys()].sort((a, b) => b.length - a.length).map(escapeRe);
+    return src.replace(new RegExp(tokens.join('|'), 'gu'), (t) => byToken.get(t).original);
+  }
+
+  const entries = () => [...byOriginal.values()].map((e) => ({ ...e, variants: [...e.variants] }));
+
+  // 対応表と足した語を消す
+  function reset({ keepTerms = false } = {}) {
+    byOriginal.clear();
+    byToken.clear();
+    for (const k of Object.keys(counters)) delete counters[k];
+    if (!keepTerms) userTerms.length = 0;
+  }
+
+  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, labelOf, labels: () => ({ ...labels }) };
+}
+
+return { parseAmount, formatYen, bandLabel, createMasker };
+})();
+__m["src/mask/dict-construction.mjs"] = (function () {
+// 置き換えの部品(src/mask/core.mjs)に渡す、建設の辞書(F11a)。
+// 部品は分野の語を持たないので、建設業の許可番号の形や共同企業体の名前の形はここに置く。
+// 語(terms)は空にしておく。人名・現場名は案件ごとに違うので、画面の「辞書に足す」で足す。
+
+const DIGIT = '[0-9０-９]';
+const HYPHEN = '[-−‐‑–ー－]';
+
+const CONSTRUCTION_DICT = {
+  name: '建設',
+  labels: {
+    license: '許可番号',
+    site: '現場名',
+  },
+  terms: [],
+  patterns: [
+    // 建設業の許可番号: 「国土交通大臣 許可(特-06)第00000号」「〇〇県知事 許可(般-05)第00000号」
+    {
+      kind: 'license',
+      re: new RegExp(`(?:国土交通大臣|\\p{Script=Han}{1,3}[都道府県]知事)[\\s\\u3000]*許可[\\s\\u3000]*[((][\\s\\u3000]*(?:特|般)[\\s\\u3000]*${HYPHEN}?[\\s\\u3000]*${DIGIT}{1,2}[\\s\\u3000]*[))][\\s\\u3000]*第[\\s\\u3000]*${DIGIT}+[\\s\\u3000]*号`, 'gu'),
+    },
+    // 共同企業体(JV)の名前: 「甲乙特定建設工事共同企業体」「甲乙JV」
+    {
+      kind: 'company',
+      re: /[\p{Script=Han}\p{Script=Katakana}ー・A-Za-z0-9]{1,30}?(?:特定建設工事共同企業体|経常建設共同企業体|共同企業体|ＪＶ|JV)/gu,
+    },
+  ],
+};
+
+return { CONSTRUCTION_DICT };
+})();
+__m["src/ui/mask-app.mjs"] = (function () {
+// 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
+// 対応表と足した語は、この画面のメモリの中だけに持つ(保存しない。ページを閉じれば消える)。
+const { createMasker, parseAmount } = __m["src/mask/core.mjs"];
+const { CONSTRUCTION_DICT } = __m["src/mask/dict-construction.mjs"];
+const { esc } = __m["src/ui/view.mjs"];
+
+let masker = null;
+const getMasker = () => (masker ||= createMasker({ dictionaries: [CONSTRUCTION_DICT] }));
+
+const setText = (doc, id, text) => { const el = doc.getElementById(id); if (el) el.textContent = text; };
+const valueOf = (doc, id) => { const el = doc.getElementById(id); return el ? String(el.value ?? '') : ''; };
+
+// 境目の欄(「50,000,000 80,000,000」「5000万、8000万」など。空白・読点・改行で区切る)を数の並びにする
+function parseThresholds(text) {
+  const nums = [];
+  const bad = [];
+  for (const part of String(text ?? '').split(/[\s　、;；/／]+/).filter(Boolean)) {
+    const n = parseAmount(part);
+    if (n === null || n <= 0) bad.push(part); else nums.push(n);
+  }
+  return { nums, bad };
+}
+
+function renderMap(entries) {
+  if (!entries.length) return '<p>置き換えた語はありません。辞書に無い語は残ります。後の欄を確かめてください。</p>';
+  const rows = entries.map((e) => '<tr><td>' + esc(e.token) + '</td><td>' + esc(e.label) + '</td><td>' + esc(e.original)
+    + (e.variants && e.variants.length > 1 ? '(ほかの書き方: ' + esc(e.variants.slice(1).join('、')) + ')' : '') + '</td></tr>');
+  return '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>';
+}
+
+function renderTerms(terms) {
+  if (!terms.length) return '<p>足した語はまだありません。</p>';
+  return '<ul>' + terms.map((t) => '<li>' + esc(t.word) + '(' + esc(t.label) + ')</li>').join('') + '</ul>';
+}
+
+function runMask(doc) {
+  const m = getMasker();
+  const text = valueOf(doc, 'mask-input');
+  const amounts = valueOf(doc, 'mask-amounts') === 'band' ? 'band' : 'keep';
+  const { nums, bad } = parseThresholds(valueOf(doc, 'mask-thresholds'));
+  const notes = [];
+  if (amounts === 'band' && bad.length) notes.push('境目の欄で読めなかった値: ' + bad.join('、') + '(数字で入れてください)');
+  if (amounts === 'band' && !nums.length) notes.push('境目が無いので、金額はすべて「〔金額〕」にしました。');
+  const r = m.mask(text, { amounts, thresholds: nums });
+  setText(doc, 'mask-before', text);
+  setText(doc, 'mask-after', r.masked);
+  const mapEl = doc.getElementById('mask-map');
+  if (mapEl) mapEl.innerHTML = renderMap(r.map);
+  if (amounts === 'band') notes.push('金額の「境目」の形は、戻しても元の金額には戻りません。');
+  setText(doc, 'mask-status', notes.join(' '));
+}
+
+function runUnmask(doc) {
+  setText(doc, 'unmask-output', getMasker().unmask(valueOf(doc, 'unmask-input')));
+}
+
+function addDictWord(doc) {
+  const word = valueOf(doc, 'dict-word').trim();
+  const kind = valueOf(doc, 'dict-kind') || 'other';
+  if (!word) { setText(doc, 'dict-status', '足す語を入れてください。'); return; }
+  const m = getMasker();
+  m.addTerm(word, kind);
+  setText(doc, 'dict-status', '「' + word + '」を' + m.labelOf(kind) + 'として足しました。もう一度「置き換える」を押すと使います。');
+  const w = doc.getElementById('dict-word');
+  if (w) w.value = '';
+  const list = doc.getElementById('dict-list');
+  if (list) list.innerHTML = renderTerms(m.terms());
+}
+
+function resetMask(doc) {
+  getMasker().reset();
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status']) setText(doc, id, '');
+  const mapEl = doc.getElementById('mask-map');
+  if (mapEl) mapEl.innerHTML = '';
+  const list = doc.getElementById('dict-list');
+  if (list) list.innerHTML = renderTerms([]);
+  setText(doc, 'dict-status', '対応表と足した語を消しました。');
+}
+
+function startMask(doc) {
+  const on = (id, f) => {
+    const btn = doc.getElementById(id);
+    if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); f(); });
+  };
+  on('mask-run', () => runMask(doc));
+  on('unmask-run', () => runUnmask(doc));
+  on('dict-add', () => addDictWord(doc));
+  on('mask-reset', () => resetMask(doc));
+}
+
+return { parseThresholds, renderMap, renderTerms, runMask, runUnmask, addDictWord, resetMask, startMask };
+})();
 __m["src/ui/app.mjs"] = (function () {
 // 画面のつながり(F05a・F05e): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
@@ -788,6 +1159,7 @@ const { bidCheck } = __m["src/bid-check.mjs"];
 const { judgeTaicho } = __m["src/taicho.mjs"];
 const { stage1Rows, toCsv } = __m["src/export.mjs"];
 const { SAMPLE } = __m["src/sample.mjs"];
+const { startMask } = __m["src/ui/mask-app.mjs"];
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
 const NOTICE = '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください';
@@ -909,6 +1281,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
     on('sample-load', () => loadSample(doc));
     on('print-btn', () => printResult(doc, win));
     on('csv-btn', () => exportCsv(doc));
+    startMask(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {
       const el = doc.getElementById(id);

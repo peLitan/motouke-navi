@@ -7,6 +7,7 @@ import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
 import { stage1Rows, toCsv } from '../export.mjs';
 import { SAMPLE } from '../sample.mjs';
+import { startMask } from './mask-app.mjs';
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
 const NOTICE = '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください';
@@ -128,6 +129,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('sample-load', () => loadSample(doc));
     on('print-btn', () => printResult(doc, win));
     on('csv-btn', () => exportCsv(doc));
+    startMask(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {
       const el = doc.getElementById(id);
