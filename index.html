@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-9E1wOvJZXAldIstcIPTn1iS3eXI9p/KUF7keWjhYzos='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dH0ojgPAjWgO/whBLfqexmEKj2eZH3670ynKBGcIB6Y='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -58,6 +58,13 @@
   .summary-stale, .summary-error { border: 2px solid #b91c1c; background: #fff; color: #991b1b; padding: 0.25rem 0.5rem; font-weight: bold; }
   .not-yet { color: #475569; }
   @media (max-width: 30rem) { .summary-row { grid-template-columns: 1fr; } }
+  /* 折りたたみ(F14c): 根拠の原文と段取りの表は閉じておく。見出しは中身が分かる言葉にし、押せることが分かる形にする */
+  details > summary { cursor: pointer; padding: 0.15rem 0; }
+  details > summary:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  details.basis > summary { color: #1e3a8a; }
+  details.schedule-table { margin: 0.5rem 0; }
+  details.schedule-table > summary { font-weight: bold; font-size: 1.1rem; }
+  .schedule-lead { margin: 0.25rem 0 0.5rem; }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
@@ -66,6 +73,9 @@
     .result { border: none; padding: 0; }
     .item, .reasons li { break-inside: avoid; }
     details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    details.basis > summary { color: inherit; }
+    table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
   }
 </style>
@@ -401,8 +411,9 @@ function basisLabel(b) {
 }
 
 function basisList(list = []) {
-  if (!list.length) return '<p class="basis-none">根拠の条: 無し</p>';
-  return '<details class="basis"><summary>根拠の条: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
+  if (!list.length) return '<p class="basis-none">根拠: 無し</p>';
+  // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
+  return '<details class="basis"><summary>根拠: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
     + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
     + '</ul></details>';
 }
@@ -541,23 +552,33 @@ const SCHEDULE_PHASE = { start: '着手まで', work: '施工中', completion: '
 function renderSchedule(rows = [], detail = {}) {
   const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
+  const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
+  // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
   const tables = phases.map((ph) => {
     const list = rows.filter((r) => r.phase === ph);
-    return '<h3>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h3>'
+    const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
+    return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
       + '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
         + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
         + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
-        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>'
-        + '<details class="basis"><summary>' + esc(r.basis.section) + ' ' + esc(r.basis.sectionTitle ?? '') + '</summary><p>' + esc(r.basis.doc) + '(取得日 ' + esc(r.basis.fetchedAt) + ')</p><blockquote>' + esc(r.basis.quote) + '</blockquote></details>'
-        + '</td></tr>').join('')
-      + '</tbody></table>';
+        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
+      + '</tbody></table>'
+      + '<details class="basis schedule-basis"><summary>根拠: 共通仕様書の原文(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
+      + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
+      + '</ul></details>';
   }).join('');
-  const body = rows.length ? tables : '<p>入れた条件では、出す段取りの行がありません。</p>';
+  // 結論(何件あるか・段ごとの件数)は閉じずに出し、表は「受注後の段取り(○件)」の折りたたみに入れる
+  const lead = rows.length
+    ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。表は下の「受注後の段取り」を開くと見られます。</p>'
+    : '';
+  const body = rows.length
+    ? '<details class="schedule-table"><summary>受注後の段取り(' + rows.length + '件)</summary>' + tables + '</details>'
+    : '<p>入れた条件では、出す段取りの行がありません。</p>';
   const skipped = (detail.skipped ?? []).length
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
-  return notes + body + skipped
+  return lead + notes + body + skipped
     + '<p class="human">国の直轄の例です。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
@@ -3104,9 +3125,17 @@ function setExportStatus(doc, text) {
   if (el) el.textContent = text;
 }
 
-// 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)
-function openDetails(doc) {
-  for (const d of doc.querySelectorAll('details')) d.open = true;
+// 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)。
+// 印刷のために開いたものだけを覚えておき、印刷が終わったら(afterprint)閉じ直す
+let openedForPrint = [];
+function openDetailsForPrint(doc) {
+  for (const d of doc.querySelectorAll('details')) {
+    if (!d.open) { d.open = true; if (!openedForPrint.includes(d)) openedForPrint.push(d); }
+  }
+}
+function restoreDetailsAfterPrint() {
+  for (const d of openedForPrint) d.open = false;
+  openedForPrint = [];
 }
 
 // 今日の日付(ファイル名に使う。PC の時計の日付)
@@ -3125,7 +3154,7 @@ function exportCsv(doc) {
 
 function printResult(doc, win) {
   if (!last) setExportStatus(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
-  openDetails(doc);
+  openDetailsForPrint(doc);
   win.print();
 }
 
@@ -3313,13 +3342,16 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       el.addEventListener('change', changed);
     }
     // ブラウザのメニューから印刷したときも、折りたたみを開く
-    if (win && win.addEventListener) win.addEventListener('beforeprint', () => openDetails(doc));
+    if (win && win.addEventListener) {
+      win.addEventListener('beforeprint', () => openDetailsForPrint(doc));
+      win.addEventListener('afterprint', () => restoreDetailsAfterPrint());
+    }
   };
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start);
   else start();
 }
 
-return { runBid, exportScheduleCsv, exportCsv, printResult, runLedgerCheck, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, startApp };
+return { runBid, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

@@ -113,9 +113,17 @@ function setExportStatus(doc, text) {
   if (el) el.textContent = text;
 }
 
-// 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)
-function openDetails(doc) {
-  for (const d of doc.querySelectorAll('details')) d.open = true;
+// 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)。
+// 印刷のために開いたものだけを覚えておき、印刷が終わったら(afterprint)閉じ直す
+let openedForPrint = [];
+export function openDetailsForPrint(doc) {
+  for (const d of doc.querySelectorAll('details')) {
+    if (!d.open) { d.open = true; if (!openedForPrint.includes(d)) openedForPrint.push(d); }
+  }
+}
+export function restoreDetailsAfterPrint() {
+  for (const d of openedForPrint) d.open = false;
+  openedForPrint = [];
 }
 
 // 今日の日付(ファイル名に使う。PC の時計の日付)
@@ -134,7 +142,7 @@ export function exportCsv(doc) {
 
 export function printResult(doc, win) {
   if (!last) setExportStatus(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
-  openDetails(doc);
+  openDetailsForPrint(doc);
   win.print();
 }
 
@@ -322,7 +330,10 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       el.addEventListener('change', changed);
     }
     // ブラウザのメニューから印刷したときも、折りたたみを開く
-    if (win && win.addEventListener) win.addEventListener('beforeprint', () => openDetails(doc));
+    if (win && win.addEventListener) {
+      win.addEventListener('beforeprint', () => openDetailsForPrint(doc));
+      win.addEventListener('afterprint', () => restoreDetailsAfterPrint());
+    }
   };
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start);
   else start();

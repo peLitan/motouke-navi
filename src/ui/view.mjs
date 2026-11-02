@@ -17,8 +17,9 @@ export function basisLabel(b) {
 }
 
 function basisList(list = []) {
-  if (!list.length) return '<p class="basis-none">根拠の条: 無し</p>';
-  return '<details class="basis"><summary>根拠の条: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
+  if (!list.length) return '<p class="basis-none">根拠: 無し</p>';
+  // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
+  return '<details class="basis"><summary>根拠: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
     + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
     + '</ul></details>';
 }
@@ -157,23 +158,33 @@ export const SCHEDULE_PHASE = { start: '着手まで', work: '施工中', comple
 export function renderSchedule(rows = [], detail = {}) {
   const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
+  const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
+  // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
   const tables = phases.map((ph) => {
     const list = rows.filter((r) => r.phase === ph);
-    return '<h3>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h3>'
+    const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
+    return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
       + '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
         + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
         + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
-        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>'
-        + '<details class="basis"><summary>' + esc(r.basis.section) + ' ' + esc(r.basis.sectionTitle ?? '') + '</summary><p>' + esc(r.basis.doc) + '(取得日 ' + esc(r.basis.fetchedAt) + ')</p><blockquote>' + esc(r.basis.quote) + '</blockquote></details>'
-        + '</td></tr>').join('')
-      + '</tbody></table>';
+        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
+      + '</tbody></table>'
+      + '<details class="basis schedule-basis"><summary>根拠: 共通仕様書の原文(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
+      + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
+      + '</ul></details>';
   }).join('');
-  const body = rows.length ? tables : '<p>入れた条件では、出す段取りの行がありません。</p>';
+  // 結論(何件あるか・段ごとの件数)は閉じずに出し、表は「受注後の段取り(○件)」の折りたたみに入れる
+  const lead = rows.length
+    ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。表は下の「受注後の段取り」を開くと見られます。</p>'
+    : '';
+  const body = rows.length
+    ? '<details class="schedule-table"><summary>受注後の段取り(' + rows.length + '件)</summary>' + tables + '</details>'
+    : '<p>入れた条件では、出す段取りの行がありません。</p>';
   const skipped = (detail.skipped ?? []).length
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
-  return notes + body + skipped
+  return lead + notes + body + skipped
     + '<p class="human">国の直轄の例です。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
