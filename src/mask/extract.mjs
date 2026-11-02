@@ -1,0 +1,254 @@
+// 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
+// 外の部品(ライブラリ)は使わない。zip の展開は、ブラウザと Node に標準である DecompressionStream('deflate-raw') を使う。
+// 取り出すのは文字だけ。書式・画像・埋め込みのファイルは読まない。
+// 返すのは1つの文字列(段落・行ごとに改行、表のセルはタブで区切る)。
+
+export const MASK_FILE_TYPES = ['.txt', '.docx', '.xlsx'];
+
+const MAX_FILE = 30 * 1024 * 1024;       // 読むファイルの大きさの上限
+const MAX_ENTRY = 50 * 1024 * 1024;      // zip の中の1つのファイルを開いた後の大きさの上限(展開しすぎを防ぐ)
+
+const extOf = (name) => {
+  const m = String(name ?? '').toLowerCase().match(/\.[a-z0-9]+$/);
+  return m ? m[0] : '';
+};
+
+const toBytes = (data) => {
+  if (data instanceof Uint8Array) return data;
+  if (data instanceof ArrayBuffer) return new Uint8Array(data);
+  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  throw new Error('ファイルの中身が読めません(バイトの並びを渡してください)');
+};
+
+// ---- .txt ----
+// UTF-8(BOM の有無どちらも)を先に試し、UTF-8 として読めなければ Shift_JIS として読む
+export function decodeText(bytes) {
+  let b = bytes;
+  if (b.length >= 3 && b[0] === 0xef && b[1] === 0xbb && b[2] === 0xbf) b = b.subarray(3);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(b);
+  } catch {
+    try {
+      return new TextDecoder('shift_jis', { fatal: true }).decode(b);
+    } catch {
+      throw new Error('文字のファイルとして読めません(UTF-8 か Shift_JIS で保存してください)');
+    }
+  }
+}
+
+// ---- zip ----
+const u16 = (b, o) => b[o] | (b[o + 1] << 8);
+const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
+
+async function inflateRaw(data, limit) {
+  if (typeof DecompressionStream !== 'function') throw new Error('この環境では .docx・.xlsx を開けません(DecompressionStream がありません)');
+  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  const reader = stream.getReader();
+  const parts = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > limit) { await reader.cancel(); throw new Error('ファイルの中身が大きすぎます'); }
+    parts.push(value);
+  }
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+
+// zip の中央ディレクトリを読み、名前 → 取り出す関数 の表を返す
+export function listZip(bytes) {
+  const b = bytes;
+  let eocd = -1;
+  for (let i = b.length - 22; i >= 0 && i >= b.length - 22 - 0xffff; i--) {
+    if (u32(b, i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('.docx・.xlsx の形(zip)になっていません。壊れているか、別の形式のファイルです');
+  const count = u16(b, eocd + 10);
+  let off = u32(b, eocd + 16);
+  const entries = new Map();
+  for (let k = 0; k < count; k++) {
+    if (off + 46 > b.length || u32(b, off) !== 0x02014b50) throw new Error('zip の目次が壊れています');
+    const flags = u16(b, off + 8);
+    const method = u16(b, off + 10);
+    const csize = u32(b, off + 20);
+    const usize = u32(b, off + 24);
+    const nlen = u16(b, off + 28), elen = u16(b, off + 30), clen = u16(b, off + 32);
+    const local = u32(b, off + 42);
+    const name = new TextDecoder('utf-8').decode(b.subarray(off + 46, off + 46 + nlen));
+    entries.set(name, { flags, method, csize, usize, local });
+    off += 46 + nlen + elen + clen;
+  }
+  return entries;
+}
+
+async function readEntry(bytes, entry, name) {
+  if (entry.flags & 1) throw new Error('パスワードのかかったファイルは開けません(' + name + ')');
+  const b = bytes;
+  const lo = entry.local;
+  if (lo + 30 > b.length || u32(b, lo) !== 0x04034b50) throw new Error('zip の中身が壊れています(' + name + ')');
+  const start = lo + 30 + u16(b, lo + 26) + u16(b, lo + 28);
+  const body = b.subarray(start, start + entry.csize);
+  if (entry.method === 0) return body;
+  if (entry.method === 8) return inflateRaw(body, MAX_ENTRY);
+  throw new Error('この圧縮の形式には対応していません(' + name + ')');
+}
+
+async function readXml(bytes, entries, name) {
+  const e = entries.get(name);
+  if (!e) return null;
+  return new TextDecoder('utf-8').decode(await readEntry(bytes, e, name));
+}
+
+// ---- XML ----
+export function unescapeXml(s) {
+  return String(s).replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, (all, ent) => {
+    if (ent === 'amp') return '&';
+    if (ent === 'lt') return '<';
+    if (ent === 'gt') return '>';
+    if (ent === 'quot') return '"';
+    if (ent === 'apos') return "'";
+    const n = ent[1] === 'x' ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10);
+    try { return String.fromCodePoint(n); } catch { return all; }
+  });
+}
+
+const attr = (tag, key) => {
+  const m = tag.match(new RegExp('\\s' + key + '\\s*=\\s*"([^"]*)"'));
+  return m ? unescapeXml(m[1]) : null;
+};
+
+// ---- .docx ----
+// 段落(w:p)ごとに1行。分かれた文字の塊(w:t)はつなぐ。w:tab はタブ、w:br・w:cr は改行。表のセルの段落もそれぞれ1行
+function docxXmlToText(xml) {
+  const body = xml.replace(/<w:(?:delText|instrText)\b[^>]*>[\s\S]*?<\/w:(?:delText|instrText)>/g, ''); // 消した文字・フィールドの命令は除く
+  const lines = [];
+  for (const pm of body.matchAll(/<w:p\b[^>]*?(?:\/>|>([\s\S]*?)<\/w:p>)/g)) {
+    const inner = pm[1] || '';
+    let line = '';
+    for (const t of inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>|<w:t\b[^>]*\/>|<w:(tab|br|cr)\b[^>]*\/?>/g)) {
+      if (t[2] === 'tab') line += '\t';
+      else if (t[2]) line += '\n';
+      else if (t[1] !== undefined) line += unescapeXml(t[1]);
+    }
+    lines.push(line);
+  }
+  return lines.join('\n');
+}
+
+async function extractDocx(bytes) {
+  const entries = listZip(bytes);
+  const main = await readXml(bytes, entries, 'word/document.xml');
+  if (main === null) throw new Error('.docx の本文(word/document.xml)が見つかりません');
+  const parts = [docxXmlToText(main)];
+  // 頭書き・脚注・足書きにも名前が入ることがあるので、あれば後ろに足す
+  const extra = [...entries.keys()].filter((n) => /^word\/(header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(n)).sort();
+  for (const n of extra) {
+    const t = docxXmlToText(await readXml(bytes, entries, n)).trim();
+    if (t) parts.push(t);
+  }
+  return parts.join('\n');
+}
+
+// ---- .xlsx ----
+// 共有文字列: si ごとに、その中の t をつなぐ(ふりがな rPh は除く)
+function sharedStrings(xml) {
+  if (!xml) return [];
+  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>|<si\b[^>]*\/>/g)].map((m) => {
+    const inner = (m[1] || '').replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '');
+    return [...inner.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join('');
+  });
+}
+
+const colIndex = (ref) => {
+  const m = String(ref ?? '').match(/^([A-Z]+)/);
+  if (!m) return null;
+  let n = 0;
+  for (const c of m[1]) n = n * 26 + (c.charCodeAt(0) - 64);
+  return n - 1;
+};
+
+function sheetXmlToText(xml, shared) {
+  const lines = [];
+  for (const rm of xml.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+    const cells = [];
+    let next = 0;
+    for (const cm of (rm[1] || '').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const tag = '<c ' + cm[1];
+      const inner = cm[2] || '';
+      const type = attr(tag, 't');
+      const ci = colIndex(attr(tag, 'r'));
+      const at = ci === null ? next : ci;
+      let v = '';
+      if (type === 'inlineStr') {
+        v = [...inner.replace(/<rPh\b[^>]*>[\s\S]*?<\/rPh>/g, '').matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1])).join('');
+      } else {
+        const vm = inner.match(/<v\b[^>]*>([\s\S]*?)<\/v>/);
+        const raw = vm ? unescapeXml(vm[1]) : '';
+        if (type === 's') v = shared[Number(raw)] ?? '';
+        else if (type === 'b') v = raw === '1' ? 'TRUE' : raw === '0' ? 'FALSE' : raw;
+        else v = raw; // 数・式の結果の文字(str)・エラー(e)はそのまま
+      }
+      cells[at] = v;
+      next = at + 1;
+    }
+    const line = Array.from(cells, (x) => x ?? '').join('\t').replace(/\t+$/, '');
+    if (line) lines.push(line);
+  }
+  return lines.join('\n');
+}
+
+const resolvePath = (base, target) => {
+  if (target.startsWith('/')) return target.slice(1);
+  const parts = base.split('/').slice(0, -1);
+  for (const seg of target.split('/')) {
+    if (seg === '..') parts.pop();
+    else if (seg && seg !== '.') parts.push(seg);
+  }
+  return parts.join('/');
+};
+
+async function extractXlsx(bytes) {
+  const entries = listZip(bytes);
+  const shared = sharedStrings(await readXml(bytes, entries, 'xl/sharedStrings.xml'));
+  const wb = await readXml(bytes, entries, 'xl/workbook.xml');
+  const rels = (await readXml(bytes, entries, 'xl/_rels/workbook.xml.rels')) || '';
+  const relMap = new Map([...rels.matchAll(/<Relationship\b[^>]*>/g)].map((m) => [attr(m[0], 'Id'), attr(m[0], 'Target')]));
+  // ブックに書かれたシートの順に読む。読めなければ、名前の順に xl/worksheets/ を読む
+  let sheets = [];
+  if (wb) {
+    for (const m of wb.matchAll(/<sheet\b[^>]*>/g)) {
+      const target = relMap.get(attr(m[0], 'r:id'));
+      if (target) sheets.push({ name: attr(m[0], 'name') || '', path: resolvePath('xl/workbook.xml', target) });
+    }
+  }
+  if (!sheets.length) {
+    sheets = [...entries.keys()].filter((n) => /^xl\/worksheets\/[^/]+\.xml$/.test(n)).sort().map((n) => ({ name: '', path: n }));
+  }
+  if (!sheets.length) throw new Error('.xlsx の中にシートが見つかりません');
+  const out = [];
+  for (const s of sheets) {
+    const xml = await readXml(bytes, entries, s.path);
+    if (xml === null) continue;
+    const text = sheetXmlToText(xml, shared);
+    if (sheets.length > 1) out.push('[シート: ' + s.name + ']');
+    if (text) out.push(text);
+  }
+  return out.join('\n');
+}
+
+// ファイルの名前(拡張子で形式を決める)と中身(Uint8Array か ArrayBuffer)から、文字を取り出す
+export async function extractText(name, data) {
+  const ext = extOf(name);
+  if (!MASK_FILE_TYPES.includes(ext)) {
+    throw new Error('対応していない形式です(' + (ext || '拡張子なし') + ')。読めるのは ' + MASK_FILE_TYPES.join('・') + ' です。PDF・.doc・.xls は、文字をコピーして貼り付けてください');
+  }
+  const bytes = toBytes(data);
+  if (bytes.length > MAX_FILE) throw new Error('ファイルが大きすぎます(上限 ' + (MAX_FILE / 1024 / 1024) + 'MB)');
+  if (ext === '.txt') return decodeText(bytes);
+  if (ext === '.docx') return extractDocx(bytes);
+  return extractXlsx(bytes);
+}

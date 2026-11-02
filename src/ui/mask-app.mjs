@@ -5,6 +5,7 @@ import { createMasker, parseAmount, MAP_NOTICE } from '../mask/core.mjs';
 import { downloadText } from './download.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
 import { esc } from './view.mjs';
+import { extractText } from '../mask/extract.mjs';
 
 let masker = null;
 const getMasker = () => (masker ||= createMasker({ dictionaries: [CONSTRUCTION_DICT] }));
@@ -119,6 +120,23 @@ export function importMaskMap(doc, text) {
   }
 }
 
+// ファイルを読み、取り出した文字を「置き換える文」の欄に入れる(F11c)。置き換えは利用者が「置き換える」を押してから
+export async function loadMaskFile(doc, file) {
+  if (!file) return false;
+  try {
+    const buf = await file.arrayBuffer();
+    const text = await extractText(file.name, new Uint8Array(buf));
+    const input = doc.getElementById('mask-input');
+    if (input) input.value = text;
+    const lines = text ? text.split(/\r?\n/).length : 0;
+    setText(doc, 'mask-file-status', '「' + file.name + '」から文字を取り出しました(' + lines + ' 行)。中身を確かめてから「置き換える」を押してください。');
+    return true;
+  } catch (e) {
+    setText(doc, 'mask-file-status', '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e)));
+    return false;
+  }
+}
+
 export function startMask(doc) {
   const on = (id, f) => {
     const btn = doc.getElementById(id);
@@ -129,6 +147,15 @@ export function startMask(doc) {
   on('dict-add', () => addDictWord(doc));
   on('mask-reset', () => resetMask(doc));
   on('map-export', () => exportMaskMap(doc, doc.defaultView));
+  const src = doc.getElementById('mask-file');
+  if (src) {
+    src.addEventListener('change', async () => {
+      const f = src.files && src.files[0];
+      if (!f) return;
+      await loadMaskFile(doc, f);
+      src.value = '';
+    });
+  }
   const file = doc.getElementById('map-import');
   if (file) {
     file.addEventListener('change', async () => {

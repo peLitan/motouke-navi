@@ -173,6 +173,10 @@
 <button type="button" id="dict-add">辞書に足す</button></div>
 <p id="dict-status" aria-live="polite"></p>
 <div id="dict-list"><p>足した語はまだありません。</p></div>
+<div class="row"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
+<input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+<p class="disclaimer" id="mask-file-note">ファイルはこの PC の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
+<p id="mask-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-input">置き換える文</label><br>
 <textarea id="mask-input" name="mask-input" rows="8" cols="80"></textarea></div>
 <div class="row"><label for="mask-amounts">金額の扱い</label>
