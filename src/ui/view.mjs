@@ -32,8 +32,8 @@ function amountBasisBlock(ab) {
   return '<div class="amount-basis"><p>金額の比べ方: ' + esc(ab.tax === 'included' ? '税込み' : ab.tax === 'excluded' ? '税抜き' : ab.tax) + '。' + esc(ab.note) + '</p>' + basisList(ab.basis) + '</div>';
 }
 
-const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る' };
-const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
+export const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る' };
+export const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
 
 // 入札前の確認(bidCheck の返り値)
 export function renderBidResult(bid) {
@@ -50,13 +50,13 @@ export function renderBidResult(bid) {
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
 }
 
-const TAICHO_STATUS = {
+export const TAICHO_STATUS = {
   required: '作る',
   not_required: '作らなくてよい',
   needs_check: '確認が要る(先に確かめることがある)',
   unknown: '判断できない(入力を足すか、確認が必要)',
 };
-const COPY_STATUS = {
+export const COPY_STATUS = {
   required: '発注者に出す',
   not_required: '出さなくてよい',
   not_applicable: '台帳を作らないので出すものが無い',

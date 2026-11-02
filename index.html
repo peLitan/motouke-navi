@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-WvFG99+bOzUIZC1nQv3utdA1+N6BdHyMylWNdJ+GajM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Sr4n1bGdLlela1PeYfwKCXbnX0MlyDVQL+cLCxT9Yu8='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -18,13 +18,23 @@
   .errors { color: #b91c1c; }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
+  .export { margin: 0.5rem 0 1rem; }
+  /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
+  @media print {
+    body { max-width: none; padding: 0; font-size: 10.5pt; }
+    button, .export, .no-print { display: none !important; }
+    .result { border: none; padding: 0; }
+    .item, .reasons li { break-inside: avoid; }
+    details > summary { list-style: none; }
+    a { color: inherit; text-decoration: none; }
+  }
 </style>
 </head>
 <body>
 <header>
 <h1>施工体制の確認の候補</h1>
 <p class="disclaimer" id="disclaimer">指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</p>
-<p>この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
+<p class="no-print">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 </header>
 <main id="main">
 <section id="bid">
@@ -67,6 +77,12 @@
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div class="export">
+<button type="button" id="print-btn">結果を印刷する</button>
+<button type="button" id="csv-btn">結果を CSV に書き出す</button>
+<p>CSV は BOM つきの UTF-8 で、この PC に保存するだけです(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
+<p id="export-status" aria-live="polite"></p>
+</div>
 </section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
@@ -237,7 +253,7 @@ function renderErrors(list) {
   return '<div class="errors"><p>入力を読めませんでした。直してからもう一度押してください。</p><ul>' + list.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
 }
 
-return { esc, basisLabel, renderBidResult, renderTaichoResult, renderErrors };
+return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors };
 })();
 __m["data/quotes.json"] = {"note":"法令の抜き書き。text は data/sources の原文に一字一句そのまま入っている文(空白の違いだけ許す)。文の一部を抜くときも、ただし書・「を除き」・読み替え・適用しないの部分は切り落とさない。paragraph は項の番号、item は号の番号(無ければ null)。照合は src/quote-check.mjs と scripts/check-quotes.mjs","quotes":[{"id":"q-kensetsu-24_8-1","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"特定建設業者は、発注者から直接建設工事を請け負つた場合において、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になるときは"},{"id":"q-kensetsu-24_8-1-taicho","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"施工体制台帳を作成し、工事現場ごとに備え置かなければならない。"},{"id":"q-kensetsu-24_8-2","sourceId":"kensetsu-24_8","article":"24の8","paragraph":2,"item":null,"text":"前項の建設工事の下請負人は、その請け負つた建設工事を他の建設業を営む者に請け負わせたときは、国土交通省令で定めるところにより、同項の特定建設業者に対して、当該他の建設業を営む者の商号又は名称、当該者の請け負つた建設工事の内容及び工期その他の国土交通省令で定める事項を通知しなければならない。"},{"id":"q-kensetsu-24_8-4","sourceId":"kensetsu-24_8","article":"24の8","paragraph":4,"item":null,"text":"第一項の特定建設業者は、国土交通省令で定めるところにより、当該建設工事における各下請負人の施工の分担関係を表示した施工体系図を作成し、これを当該工事現場の見やすい場所に掲げなければならない。"},{"id":"q-rei-7_4-1","sourceId":"rei-7_4","article":"7の4","paragraph":1,"item":null,"text":"法第二十四条の八第一項の政令で定める金額は、五千万円とする。ただし、特定建設業者が発注者から直接請け負つた建設工事が建築一式工事である場合においては、八千万円とする。"},{"id":"q-nyukei-15-1","sourceId":"nyukei-15","article":"15","paragraph":1,"item":null,"text":"公共工事についての建設業法第二十四条の八第一項、第二項及び第四項の規定の適用については、これらの規定中「特定建設業者」とあるのは「建設業者」と、同条第一項中「締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になる」とあるのは「下請契約を締結した」と、同条第四項中「見やすい場所」とあるのは「工事関係者が見やすい場所及び公衆が見やすい場所」とする。"},{"id":"q-nyukei-15-2","sourceId":"nyukei-15","article":"15","paragraph":2,"item":null,"text":"公共工事の受注者（前項の規定により読み替えて適用される建設業法第二十四条の八第一項の規定により同項に規定する施工体制台帳（以下「施工体制台帳」という。）を作成しなければならないこととされているものに限る。）は、当該公共工事に関する工事現場の施工体制を発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、作成した施工体制台帳（同項の規定により記載すべきものとされた事項に変更が生じたことに伴い新たに作成されたものを含む。）の写しを発注者に提出しなければならない。この場合においては、同条第三項の規定は、適用しない。"},{"id":"q-kensetsu-3-1","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":null,"text":"建設業を営もうとする者は、次に掲げる区分により、この章で定めるところにより、二以上の都道府県の区域内に営業所（本店又は支店若しくは政令で定めるこれに準ずるものをいう。以下同じ。）を設けて営業をしようとする場合にあつては国土交通大臣の、一の都道府県の区域内にのみ営業所を設けて営業をしようとする場合にあつては当該営業所の所在地を管轄する都道府県知事の許可を受けなければならない。ただし、政令で定める軽微な建設工事のみを請け負うことを営業とする者は、この限りでない。"},{"id":"q-kensetsu-3-1-2","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":2,"text":"その者が発注者から直接請け負う一件の建設工事につき、その工事の全部又は一部を、下請代金の額（その工事に係る下請契約が二以上あるときは、下請代金の額の総額）が政令で定める金額以上となる下請契約を締結して施工しようとするもの"},{"id":"q-rei-2-1","sourceId":"rei-2","article":"2","paragraph":1,"item":null,"text":"法第三条第一項第二号の政令で定める金額は、五千万円とする。ただし、同項の許可を受けようとする建設業が建築工事業である場合においては、八千万円とする。"},{"id":"q-kensetsu-26-1","sourceId":"kensetsu-26","article":"26","paragraph":1,"item":null,"text":"建設業者は、その請け負つた建設工事を施工するときは、当該建設工事に関し第七条第二号イ、ロ又はハに該当する者で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「主任技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-2","sourceId":"kensetsu-26","article":"26","paragraph":2,"item":null,"text":"発注者から直接建設工事を請け負つた特定建設業者は、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が第三条第一項第二号の政令で定める金額以上になる場合においては、前項の規定にかかわらず、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者（当該建設工事に係る建設業が指定建設業である場合にあつては、同号イに該当する者又は同号ハの規定により国土交通大臣が同号イに掲げる者と同等以上の能力を有するものと認定した者）で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「監理技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-3","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":null,"text":"公共性のある施設若しくは工作物又は多数の者が利用する施設若しくは工作物に関する重要な建設工事で政令で定めるものについては、前二項の規定により置かなければならない主任技術者又は監理技術者は、工事現場ごとに、専任の者でなければならない。ただし、次に掲げる主任技術者又は監理技術者については、この限りでない。"},{"id":"q-kensetsu-26-3-1","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":1,"text":"一　当該建設工事が次のイからハまでに掲げる要件のいずれにも該当する場合における主任技術者又は監理技術者\n　イ　当該建設工事の請負代金の額が政令で定める金額未満となるものであること。\n　ロ　当該建設工事の工事現場間の移動時間又は連絡方法その他の当該工事現場の施工体制の確保のために必要な事項に関し国土交通省令で定める要件に適合するものであること。\n　ハ　主任技術者又は監理技術者が当該建設工事の工事現場の状況の確認その他の当該工事現場に係る第二十六条の四第一項に規定する職務を情報通信技術を利用する方法により行うため必要な措置として国土交通省令で定めるものが講じられるものであること。"},{"id":"q-kensetsu-26-3-2","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":2,"text":"二　当該建設工事の工事現場に、当該監理技術者の行うべき第二十六条の四第一項に規定する職務を補佐する者として、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者に準ずる者として政令で定める者を専任で置く場合における監理技術者"},{"id":"q-kensetsu-26-4","sourceId":"kensetsu-26","article":"26","paragraph":4,"item":null,"text":"前項ただし書の規定は、同項各号の建設工事の工事現場の数が、同一の主任技術者又は監理技術者が各工事現場に係る第二十六条の四第一項に規定する職務を行つたとしてもその適切な遂行に支障を生ずるおそれがないものとして政令で定める数を超えるときは、適用しない。"},{"id":"q-rei-27-1","sourceId":"rei-27","article":"27","paragraph":1,"item":null,"text":"法第二十六条第三項の政令で定める重要な建設工事は、次の各号のいずれかに該当する建設工事で工事一件の請負代金の額が四千五百万円（当該建設工事が建築一式工事である場合にあつては、九千万円）以上のものとする。"},{"id":"q-rei-27-1-1","sourceId":"rei-27","article":"27","paragraph":1,"item":1,"text":"国又は地方公共団体が注文者である施設又は工作物に関する建設工事"},{"id":"q-rei-27-2","sourceId":"rei-27","article":"27","paragraph":2,"item":null,"text":"前項に規定する建設工事のうち密接な関係のある二以上の建設工事を同一の建設業者が同一の場所又は近接した場所において施工するものについては、同一の専任の主任技術者がこれらの建設工事を管理することができる。"},{"id":"q-kensetsu-24_8-3","sourceId":"kensetsu-24_8","article":"24の8","paragraph":3,"item":null,"text":"第一項の特定建設業者は、同項の発注者から請求があつたときは、同項の規定により備え置かれた施工体制台帳を、その発注者の閲覧に供しなければならない。"},{"id":"q-mlit-guideline-tax","sourceId":"mlit-kyoka-guideline","article":null,"paragraph":null,"item":null,"section":"【その他】2.","page":44,"text":"法、令及び規則の規定中、「請負代金の額」その他の個々の取引に係る請負代金に係る用語は、当該取引に係る消費税及び地方消費税の額を含むものとする。"}]};
 __m["data/sources/index.json"] = {"note":"法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は、根拠に使う節だけを PDF から文字のまま写して保存する(全文は再配布しない)","sources":[{"id":"kensetsu-3","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"3","title":"建設業法 第3条（建設業の許可）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-3.txt"},{"id":"kensetsu-24_8","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"24の8","title":"建設業法 第24条の8（施工体制台帳及び施工体系図の作成等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-24_8.txt"},{"id":"kensetsu-26","kind":"law","law":"建設業法","lawId":"324AC0000000100","article":"26","title":"建設業法 第26条（主任技術者及び監理技術者の設置等）","url":"https://laws.e-gov.go.jp/law/324AC0000000100","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml","revisionId":"324AC0000000100_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-kensetsu-26.txt"},{"id":"rei-2","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"2","title":"建設業法施行令 第2条（法第三条第一項第二号の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-2.txt"},{"id":"rei-7_4","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"7の4","title":"建設業法施行令 第7条の4（法第二十四条の八第一項の金額）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-7_4.txt"},{"id":"rei-27","kind":"law","law":"建設業法施行令","lawId":"331CO0000000273","article":"27","title":"建設業法施行令 第27条（専任の主任技術者又は監理技術者を必要とする建設工事）","url":"https://laws.e-gov.go.jp/law/331CO0000000273","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml","revisionId":"331CO0000000273_20260401_507CO0000000412","fetchedAt":"2026-11-02","file":"law-rei-27.txt"},{"id":"nyukei-15","kind":"law","law":"公共工事の入札及び契約の適正化の促進に関する法律","lawId":"412AC0000000127","article":"15","title":"公共工事の入札及び契約の適正化の促進に関する法律 第15条（施工体制台帳の作成及び提出等）","url":"https://laws.e-gov.go.jp/law/412AC0000000127","apiUrl":"https://laws.e-gov.go.jp/api/2/law_data/412AC0000000127?response_format=xml","revisionId":"412AC0000000127_20251212_506AC0000000049","fetchedAt":"2026-11-02","file":"law-nyukei-15.txt"},{"id":"mlit-kyoka-guideline","kind":"document","title":"建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)","publisher":"国土交通省","url":"https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf","pageUrl":"https://www.mlit.go.jp/totikensangyo/const/sosei_const_tk1_000002.html","section":"【その他】2.","page":44,"fetchedAt":"2026-11-02","file":"mlit-kyoka-guideline-sonota-2.txt","excerpt":"44ページの「２．法等における「請負代金の額」等の内容について」の見出しと本文だけ。PDF の文字(ToUnicode)をそのまま取り出した","license":"PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"}]};
@@ -570,14 +586,103 @@ function bidCheck(input = {}) {
 
 return { kanjiYen, dedicatedThreshold, licenseThreshold, bidCheck };
 })();
+__m["src/export.mjs"] = (function () {
+// 結果の書き出し(F05e)。判定の結果を「行の配列」にし、CSV の文字列にする。
+// DOM には触らない。画面(src/ui/app.mjs)が、この文字列を Blob にしてダウンロードさせる(通信はしない)。
+// のちの段の結果も、同じ列(COLUMNS)の行を作る関数を足せば、同じ toCsv で書き出せる。
+const { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS } = __m["src/ui/view.mjs"];
+
+// すべての結果で共通の列
+const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '例外・読み方の注意'];
+
+const uniq = (xs) => [...new Set(xs)];
+
+// 根拠(basis の配列)を、列「根拠の条」「根拠の原文」「取得日」の3つの欄にする。1つの欄の中は改行で区切る
+function basisCells(list = []) {
+  return [
+    uniq(list.map(basisLabel)).join('\n'),
+    list.map((b) => '【' + basisLabel(b) + '】' + (b.quote ?? '')).join('\n'),
+    uniq(list.map((b) => b.fetchedAt).filter(Boolean)).join('\n'),
+  ];
+}
+
+function row(section, label, status, note, basis, exceptions = []) {
+  return [section, label, status, note ?? '', ...basisCells(basis), (exceptions ?? []).join('\n')];
+}
+
+// 入札前の確認(bidCheck の返り値): 見出しの行 + 項目ごとに1行
+function bidRows(bid) {
+  return [COLUMNS.slice(), ...bid.items.map((it) => {
+    const status = (BID_STATUS[it.status] ?? it.status) + (it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '');
+    return row('入札前の確認', it.label, status, it.note, it.basis, it.exceptions);
+  })];
+}
+
+// 入札前の確認の「確認が要る点」(見出しの行なし)
+function bidCheckRows(bid) {
+  return (bid.checks ?? []).map((c) => row('確認が要る点', c.label, BID_STATUS.needs_check, c.message, c.basis ?? [], []));
+}
+
+// 施工体制台帳が要るか(judgeTaicho の返り値): 見出しの行 + 台帳・写しの結論の2行 + 当てはめた規則表の行ごとに1行
+function taichoRows(t) {
+  const all = t.reasons.flatMap((r) => r.basis ?? []);
+  return [
+    COLUMNS.slice(),
+    row('施工体制台帳', '施工体制台帳', TAICHO_STATUS[t.status] ?? t.status, t.message ?? '', all, []),
+    row('施工体制台帳', '写しを発注者に出すか', COPY_STATUS[t.copyToOrderer] ?? t.copyToOrderer, '', [], []),
+    ...t.reasons.map((r) => row('施工体制台帳(当てはめた規則)', r.ruleId ?? '', '', r.action, r.basis, r.exceptions)),
+  ];
+}
+
+// 金額の比べ方(amountBasis)の行。無ければ空
+function amountBasisRows(ab, section) {
+  if (!ab) return [];
+  const tax = ab.tax === 'included' ? '税込み' : ab.tax === 'excluded' ? '税抜き' : String(ab.tax ?? '');
+  return [row(section, '金額の比べ方', tax, ab.note, ab.basis, [])];
+}
+
+// 1段目(入札前と台帳)の書き出しの行。最後に、候補であって最後は人が判断する旨を入れる
+function stage1Rows(bid, t, notice) {
+  return [
+    ...bidRows(bid),
+    ...bidCheckRows(bid),
+    ...amountBasisRows(bid.amountBasis, '入札前の確認'),
+    ...taichoRows(t).slice(1),
+    ...amountBasisRows(t.amountBasis, '施工体制台帳'),
+    row('注意', '注意', '', [notice, bid.disclaimer].filter(Boolean).join('\n'), [], []),
+  ];
+}
+
+// 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする
+function cell(v) {
+  const s = v === null || v === undefined ? '' : String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+// 行の配列 → CSV の文字列(先頭に BOM、行の区切りは CRLF。Excel で文字化けしないように)
+function toCsv(rows) {
+  return '﻿' + rows.map((r) => r.map(cell).join(',') + '\r\n').join('');
+}
+
+return { COLUMNS, bidRows, bidCheckRows, taichoRows, amountBasisRows, stage1Rows, toCsv };
+})();
 __m["src/ui/app.mjs"] = (function () {
-// 画面のつながり(F05a): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。
+// 画面のつながり(F05a・F05e): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
 const { renderBidResult, renderTaichoResult, renderErrors } = __m["src/ui/view.mjs"];
 const { bidCheck } = __m["src/bid-check.mjs"];
 const { judgeTaicho } = __m["src/taicho.mjs"];
+const { stage1Rows, toCsv } = __m["src/export.mjs"];
+
+// 書き出しの最後に入れる文(画面の上の注意と同じ)
+const NOTICE = '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください';
+
+// 最後に「確認する」で出した結果。印刷と CSV はこれを使う(ページを閉じれば消える)
+let last = null;
+const STALE = '条件が変わりました。もう一度「確認する」を押してから、印刷・書き出しをしてください。';
+let stale = false; // 結果を出したあとに条件を変えたか
 
 function collect(doc) {
   const values = {};
@@ -595,14 +700,21 @@ function runBid(doc) {
   const values = collect(doc);
   const errors = formErrors(values);
   if (errors.length) {
+    last = null;
     bidOut.innerHTML = renderErrors(errors);
     taichoOut.innerHTML = renderErrors(errors);
     return;
   }
+  last = null;
   const input = readBidForm(values);
   try {
-    bidOut.innerHTML = renderBidResult(bidCheck(input));
-    taichoOut.innerHTML = renderTaichoResult(judgeTaicho(input));
+    const bid = bidCheck(input);
+    const taicho = judgeTaicho(input);
+    bidOut.innerHTML = renderBidResult(bid);
+    taichoOut.innerHTML = renderTaichoResult(taicho);
+    last = { bid, taicho };
+    stale = false;
+    setExportStatus(doc, '');
   } catch (e) {
     const msg = renderErrors(['判定の途中で止まりました(規則表か抜き書きの誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
     bidOut.innerHTML = msg;
@@ -610,16 +722,74 @@ function runBid(doc) {
   }
 }
 
-function startApp(doc) {
+function setExportStatus(doc, text) {
+  const el = doc.getElementById('export-status');
+  if (el) el.textContent = text;
+}
+
+// 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)
+function openDetails(doc) {
+  for (const d of doc.querySelectorAll('details')) d.open = true;
+}
+
+// 今日の日付(ファイル名に使う。PC の時計の日付)
+function today() {
+  const d = new Date();
+  const z = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+}
+
+// 文字列をファイルとして保存させる。Blob とリンクの download を使うだけで、外へは送らない
+function downloadText(doc, text, fileName, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = doc.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  doc.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportCsv(doc) {
+  if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
+  const csv = toCsv(stage1Rows(last.bid, last.taicho, NOTICE));
+  downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
+  setExportStatus(doc, 'CSV を書き出しました(BOM つき UTF-8)。');
+}
+
+function printResult(doc, win) {
+  if (!last) setExportStatus(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
+  openDetails(doc);
+  win.print();
+}
+
+function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
   const start = () => {
-    const btn = doc.getElementById('bid-run');
-    if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); runBid(doc); });
+    const on = (id, f) => {
+      const btn = doc.getElementById(id);
+      if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); f(); });
+    };
+    on('bid-run', () => runBid(doc));
+    on('print-btn', () => printResult(doc, win));
+    on('csv-btn', () => exportCsv(doc));
+    // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
+    for (const id of BID_FORM_IDS) {
+      const el = doc.getElementById(id);
+      if (!el) continue;
+      const changed = () => { if (last) { last = null; stale = true; setExportStatus(doc, STALE); } };
+      el.addEventListener('input', changed);
+      el.addEventListener('change', changed);
+    }
+    // ブラウザのメニューから印刷したときも、折りたたみを開く
+    if (win && win.addEventListener) win.addEventListener('beforeprint', () => openDetails(doc));
   };
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start);
   else start();
 }
 
-return { runBid, startApp };
+return { runBid, downloadText, exportCsv, printResult, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

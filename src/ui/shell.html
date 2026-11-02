@@ -18,13 +18,23 @@
   .errors { color: #b91c1c; }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
+  .export { margin: 0.5rem 0 1rem; }
+  /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
+  @media print {
+    body { max-width: none; padding: 0; font-size: 10.5pt; }
+    button, .export, .no-print { display: none !important; }
+    .result { border: none; padding: 0; }
+    .item, .reasons li { break-inside: avoid; }
+    details > summary { list-style: none; }
+    a { color: inherit; text-decoration: none; }
+  }
 </style>
 </head>
 <body>
 <header>
 <h1>施工体制の確認の候補</h1>
 <p class="disclaimer" id="disclaimer">指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</p>
-<p>この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
+<p class="no-print">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 </header>
 <main id="main">
 <section id="bid">
@@ -67,6 +77,12 @@
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div class="export">
+<button type="button" id="print-btn">結果を印刷する</button>
+<button type="button" id="csv-btn">結果を CSV に書き出す</button>
+<p>CSV は BOM つきの UTF-8 で、この PC に保存するだけです(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
+<p id="export-status" aria-live="polite"></p>
+</div>
 </section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
