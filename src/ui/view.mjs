@@ -110,3 +110,14 @@ export function renderCheckResult(out, warnings = []) {
   return warnHtml + candHtml + undHtml + notes
     + '<p class="human">指摘の候補です。台帳が正しいかの最後の判断は、契約書・下請けの書類などを確かめたうえで人がしてください</p>';
 }
+
+// Claude の指摘(F12a)。法令の決まりで判定した結果とは別の欄に、1件ずつ「AI の候補」と付けて出す
+export function renderAiCandidates(list = [], warnings = []) {
+  const warnHtml = warnings.length ? '<ul class="warnings">' + warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul>' : '';
+  const body = list.length
+    ? '<ul class="ai-candidates">' + list.map((c) => '<li class="ai-candidate"><span class="ai-label">[' + esc(c.label || 'AI の候補') + ']</span> '
+      + (c.file ? '<span class="ai-file">' + esc(c.file) + ':</span> ' : '') + esc(c.message) + '<p class="ai-basis">根拠(AI が挙げたもの。原文で確かめていません): ' + esc(c.basis) + '</p></li>').join('') + '</ul>'
+    : '<p>AI の候補はありません。</p>';
+  return '<h3>AI の候補(' + list.length + '件)</h3>' + warnHtml + body
+    + '<p class="human">AI の候補です。法令の決まりで判定した結果ではありません。根拠の条も AI が挙げたもので、このツールは原文と照らしていません。最後の判断は人がしてください</p>';
+}

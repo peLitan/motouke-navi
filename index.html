@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Wvg7T4bBrkjNnGCmejM3dYc5Jaq1NuoBhFH3NLv9cZw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-7LB8jY5q5WsW0zSDYECuw6rVg3O0prhv+LQlX5W9bkc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>施工体制の確認の候補</title>
@@ -182,6 +182,15 @@
 <label for="map-import">対応表を読み込む</label>
 <input type="file" id="map-import" name="map-import" accept=".json,application/json"></div>
 <p id="map-status" aria-live="polite"></p>
+</section>
+<section id="ai-check">
+<h2>4. Claude で点検した結果(AI の候補)</h2>
+<p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「3.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。書き出した結果のファイルをここで読み込むと、下の欄に出します。</p>
+<p class="disclaimer">ここに出るのは AI の候補です。上の「1.」「2.」の、法令の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
+<div class="row"><label for="ai-load">AI の候補を読み込む</label>
+<input type="file" id="ai-load" name="ai-load" accept=".json,application/json"></div>
+<p id="ai-status" aria-live="polite"></p>
+<div id="ai-result" class="result" aria-live="polite"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
 </section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
@@ -384,7 +393,18 @@ function renderCheckResult(out, warnings = []) {
     + '<p class="human">指摘の候補です。台帳が正しいかの最後の判断は、契約書・下請けの書類などを確かめたうえで人がしてください</p>';
 }
 
-return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult };
+// Claude の指摘(F12a)。法令の決まりで判定した結果とは別の欄に、1件ずつ「AI の候補」と付けて出す
+function renderAiCandidates(list = [], warnings = []) {
+  const warnHtml = warnings.length ? '<ul class="warnings">' + warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul>' : '';
+  const body = list.length
+    ? '<ul class="ai-candidates">' + list.map((c) => '<li class="ai-candidate"><span class="ai-label">[' + esc(c.label || 'AI の候補') + ']</span> '
+      + (c.file ? '<span class="ai-file">' + esc(c.file) + ':</span> ' : '') + esc(c.message) + '<p class="ai-basis">根拠(AI が挙げたもの。原文で確かめていません): ' + esc(c.basis) + '</p></li>').join('') + '</ul>'
+    : '<p>AI の候補はありません。</p>';
+  return '<h3>AI の候補(' + list.length + '件)</h3>' + warnHtml + body
+    + '<p class="human">AI の候補です。法令の決まりで判定した結果ではありません。根拠の条も AI が挙げたもので、このツールは原文と照らしていません。最後の判断は人がしてください</p>';
+}
+
+return { esc, basisLabel, BID_STATUS, ENGINEER, renderBidResult, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, renderAiCandidates };
 })();
 __m["src/ledger-text.mjs"] = (function () {
 // 台帳の文を読む(F05b): 見出しと「| 項目 | 内容 |」の表で書いた施工体制台帳の文を、点検(src/check-taicho.mjs)の入力の形にする。
@@ -1655,6 +1675,52 @@ function startMask(doc) {
 
 return { parseThresholds, renderMap, renderTerms, runMask, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, startMask };
 })();
+__m["src/ui/ai-app.mjs"] = (function () {
+// 画面の「4. Claude で点検した結果(AI の候補)」(F12a)。
+// 画面は通信しない。手元のプログラム(tools/claude-check.mjs)が書き出した結果の JSON を、利用者が選んで読み込み、別の欄に出すだけ。
+const { renderAiCandidates } = __m["src/ui/view.mjs"];
+
+const RESULT_FORMAT = 'ai-candidates';
+
+// 結果のファイルの中身を確かめる。おかしければ理由を書いた Error
+function parseAiResult(text) {
+  let d;
+  try { d = JSON.parse(text); } catch { throw new Error('JSON として読めません。'); }
+  if (!d || d.format !== RESULT_FORMAT) throw new Error('AI の候補の結果のファイルではありません(format が違います)。');
+  if (!Array.isArray(d.candidates)) throw new Error('候補の一覧がありません。');
+  const candidates = d.candidates.map((c, i) => {
+    if (!c || typeof c.message !== 'string' || !c.message.trim() || typeof c.basis !== 'string' || !c.basis.trim()) throw new Error((i + 1) + ' 件目の候補に、指摘か根拠がありません。');
+    return { label: 'AI の候補', file: typeof c.file === 'string' ? c.file : '', message: c.message, basis: c.basis };
+  });
+  const warnings = Array.isArray(d.warnings) ? d.warnings.map(String) : [];
+  return { candidates, warnings };
+}
+
+function loadAiResult(doc, text) {
+  const out = doc.getElementById('ai-result');
+  const status = doc.getElementById('ai-status');
+  try {
+    const r = parseAiResult(text);
+    out.innerHTML = renderAiCandidates(r.candidates, r.warnings);
+    if (status) status.textContent = 'AI の候補を ' + r.candidates.length + ' 件読み込みました。';
+  } catch (e) {
+    if (status) status.textContent = '読み込めませんでした: ' + e.message;
+  }
+}
+
+function startAi(doc) {
+  const file = doc.getElementById('ai-load');
+  if (!file) return;
+  file.addEventListener('change', async () => {
+    const f = file.files && file.files[0];
+    if (!f) return;
+    loadAiResult(doc, await f.text());
+    file.value = '';
+  });
+}
+
+return { parseAiResult, loadAiResult, startAi };
+})();
 __m["src/ui/app.mjs"] = (function () {
 // 画面のつながり(F05a・F05e・F05b): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
@@ -1668,6 +1734,7 @@ const { judgeTaicho } = __m["src/taicho.mjs"];
 const { stage1Rows, checkRows, toCsv } = __m["src/export.mjs"];
 const { SAMPLE } = __m["src/sample.mjs"];
 const { startMask } = __m["src/ui/mask-app.mjs"];
+const { startAi } = __m["src/ui/ai-app.mjs"];
 const { downloadText } = __m["src/ui/download.mjs"];
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
@@ -1834,6 +1901,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       el.addEventListener('change', changed);
     }
     startMask(doc);
+    startAi(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {
       const el = doc.getElementById(id);

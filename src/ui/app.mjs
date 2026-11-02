@@ -10,6 +10,7 @@ import { judgeTaicho } from '../taicho.mjs';
 import { stage1Rows, checkRows, toCsv } from '../export.mjs';
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
+import { startAi } from './ai-app.mjs';
 import { downloadText } from './download.mjs';
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
@@ -176,6 +177,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       el.addEventListener('change', changed);
     }
     startMask(doc);
+    startAi(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {
       const el = doc.getElementById(id);

@@ -183,6 +183,15 @@
 <input type="file" id="map-import" name="map-import" accept=".json,application/json"></div>
 <p id="map-status" aria-live="polite"></p>
 </section>
+<section id="ai-check">
+<h2>4. Claude で点検した結果(AI の候補)</h2>
+<p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「3.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。書き出した結果のファイルをここで読み込むと、下の欄に出します。</p>
+<p class="disclaimer">ここに出るのは AI の候補です。上の「1.」「2.」の、法令の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
+<div class="row"><label for="ai-load">AI の候補を読み込む</label>
+<input type="file" id="ai-load" name="ai-load" accept=".json,application/json"></div>
+<p id="ai-status" aria-live="polite"></p>
+<div id="ai-result" class="result" aria-live="polite"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
+</section>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
 <div id="sources-dates">
