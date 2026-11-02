@@ -9,6 +9,14 @@
 <style>
   body { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.6; }
   .disclaimer { border: 2px solid #b45309; background: #fffbeb; padding: 0.75rem 1rem; font-weight: bold; }
+  .row { margin: 0.4rem 0; }
+  .row label { margin-right: 0.5rem; }
+  .result { border: 1px solid #ccc; padding: 0.5rem 1rem; margin-bottom: 1rem; }
+  .status-required .status { color: #1d4ed8; }
+  .status-needs_check .status { color: #b91c1c; }
+  .human { font-weight: bold; }
+  .errors { color: #b91c1c; }
+  blockquote { margin: 0.25rem 0 0.5rem 1rem; color: #444; }
   footer { margin-top: 2rem; border-top: 1px solid #ccc; font-size: 0.9rem; color: #333; }
 </style>
 </head>
@@ -19,6 +27,53 @@
 <p>この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 </header>
 <main id="main">
+<section id="bid">
+<h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
+<p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
+<form id="bid-form" class="form" autocomplete="off">
+<div class="row"><label for="orderer">発注者</label>
+<select id="orderer" name="orderer">
+<option value="">選んでください</option>
+<option value="public">公共(国・地方公共団体・特殊法人などの公共工事)</option>
+<option value="private">民間</option>
+</select></div>
+<div class="row"><input type="checkbox" id="direct" name="direct"><label for="direct">発注者から直接請け負う(元請け)</label></div>
+<div class="row"><label for="work-type">工事の種類</label>
+<select id="work-type" name="work-type">
+<option value="">選んでください</option>
+<option value="kenchiku-ikkatsu">建築一式工事</option>
+<option value="other">それ以外の工事</option>
+</select></div>
+<div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)</label>
+<input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000"></div>
+<div class="row"><label for="subcontract-total">下請けの総額(円・税込み。下請契約が二以上ならその合計。下請けが無ければ 0)</label>
+<input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000"></div>
+<div class="row"><label for="license">元請けの許可の種類(この工事の業種)</label>
+<select id="license" name="license">
+<option value="">選んでください</option>
+<option value="tokutei">特定建設業</option>
+<option value="ippan">一般建設業</option>
+</select></div>
+<div class="row"><label for="engineer-qualification">置ける技術者の資格</label>
+<select id="engineer-qualification" name="engineer-qualification">
+<option value="">選んでください</option>
+<option value="kanri">監理技術者</option>
+<option value="shunin">主任技術者</option>
+</select></div>
+<div class="row"><input type="checkbox" id="ict-measure" name="ict-measure"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる</label></div>
+<div class="row"><button type="button" id="bid-run">確認する</button></div>
+</form>
+<h3>入札前の確認</h3>
+<div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<h3>施工体制台帳が要るか</h3>
+<div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+</section>
+<section id="sources">
+<h2>使った法令と資料(取得日)</h2>
+<div id="sources-dates">
+{{SOURCES}}
+</div>
+</section>
 </main>
 <footer id="credits">
 <h2>使った資料の表示</h2>
@@ -26,5 +81,6 @@
 <p>加工: 上の節の一部を抜き出し、判定の根拠(金額を税込みで比べること)に使いました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
+{{SCRIPT}}
 </body>
 </html>
