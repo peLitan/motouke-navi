@@ -1,7 +1,8 @@
 // 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
 // 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
 // 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
-import { createMasker, parseAmount, MAP_NOTICE } from '../mask/core.mjs';
+// 足した語だけを「辞書を書き出す」で辞書のファイルにし、「辞書を読み込む」で読み込める(F19a)。こちらも元の名前が入っている。
+import { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } from '../mask/core.mjs';
 import { downloadText } from './download.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
 import { esc, scrollTable } from './view.mjs';
@@ -162,7 +163,7 @@ export function resetMask(doc) {
   decisions.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status', 'dict-file-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
@@ -214,6 +215,40 @@ export function importMaskMap(doc, text) {
   }
 }
 
+const DICT_MAX_BYTES = 1024 * 1024;
+
+// 辞書(足した語と種類)を書き出す(F19a)。元の名前が入っていることを画面に出し、確かめてから書き出す
+export function exportDictFile(doc, win) {
+  const m = getMasker();
+  if (!m.terms().length) {
+    setText(doc, 'dict-file-status', '書き出す語がまだありません。先に「辞書に足す」で語を足してください。');
+    return false;
+  }
+  setText(doc, 'dict-file-status', DICT_NOTICE);
+  if (win && typeof win.confirm === 'function' && !win.confirm(DICT_NOTICE + '\n書き出しますか。')) {
+    setText(doc, 'dict-file-status', '書き出しをやめました。' + DICT_NOTICE);
+    return false;
+  }
+  downloadText(doc, m.exportDict(), '置き換えの辞書_' + today() + '.json', 'application/json;charset=utf-8');
+  setText(doc, 'dict-file-status', '辞書を書き出しました(' + m.terms().length + ' 語)。' + DICT_NOTICE);
+  return true;
+}
+
+// 書き出した辞書のファイルの中身を読み込む(F19a)。今の足した語に加える。壊れたファイル・形の違うファイルは読み込まず、理由を出す
+export function importDictFile(doc, text) {
+  const m = getMasker();
+  try {
+    const n = m.importDict(text);
+    const list = doc.getElementById('dict-list');
+    if (list) list.innerHTML = renderTerms(m.terms());
+    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。');
+    return true;
+  } catch (e) {
+    setText(doc, 'dict-file-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の辞書はそのままです。');
+    return false;
+  }
+}
+
 // ファイルを読み、取り出した文字を「置き換える文」の欄に入れる(F11c)。置き換えは利用者が「置き換える」を押してから
 export async function loadMaskFile(doc, file) {
   if (!file) return false;
@@ -241,6 +276,7 @@ export function startMask(doc) {
   on('dict-add', () => addDictWord(doc));
   on('mask-reset', () => resetMask(doc));
   on('map-export', () => exportMaskMap(doc, doc.defaultView));
+  on('dict-export', () => exportDictFile(doc, doc.defaultView));
   // 選ぶ表のボタンは描き直すたびに作り直すので、表の枠で受ける
   const rv = doc.getElementById('mask-review');
   if (rv) {
@@ -258,6 +294,16 @@ export function startMask(doc) {
       if (!f) return;
       await loadMaskFile(doc, f);
       src.value = '';
+    });
+  }
+  const dictFile = doc.getElementById('dict-import');
+  if (dictFile) {
+    dictFile.addEventListener('change', async () => {
+      const f = dictFile.files && dictFile.files[0];
+      if (!f) return;
+      if (f.size > DICT_MAX_BYTES) setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。');
+      else importDictFile(doc, await f.text());
+      dictFile.value = '';
     });
   }
   const file = doc.getElementById('map-import');

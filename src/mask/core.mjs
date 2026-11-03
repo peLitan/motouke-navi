@@ -2,6 +2,7 @@
 // この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
 // 対応表はこの部品の中(メモリ)だけに持つ。ブラウザには残さない(ページを閉じれば消える)。
 // 利用者が求めたときだけ、exportMap で対応表を文字列(JSON)にし、importMap で読み込む(F11d)。その文字列には元の名前が入っている。
+// 足した語だけは exportDict / importDict で辞書のファイル(JSON)にできる(F19a)。こちらにも元の名前が入っている。
 //
 // 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
 // 辞書は文脈の規則(contextPatterns: [{ kind, rule, re, accept? }])も持てる(F17a)。まわりの語から見つけた確信の弱い語で、
@@ -125,6 +126,52 @@ export function parseMapFile(text) {
     return { word: t.word.trim(), kind: t.kind.trim() };
   });
   return { entries, terms: words };
+}
+
+// 辞書のファイル(F19a): 「辞書に足す」で足した語と種類だけを入れる。記号・対応表は入れない。元の名前が入っている
+export const DICT_FORMAT = 'mask-dict';
+export const DICT_VERSION = 1;
+export const DICT_NOTICE = 'このファイルには元の名前(辞書に足した人名・会社名・現場名など)が入っています。外へ送らず、要らなくなったら消してください。';
+const DICT_MAX_TERMS = 5000;
+const DICT_MAX_WORD = 200;
+
+// 辞書のファイルを読んで確かめる。kinds は受け付ける種類(labels の key)。おかしければ、どこがおかしいかを書いた Error を投げる
+export function parseDictFile(text, kinds) {
+  let data;
+  try {
+    data = JSON.parse(String(text ?? ''));
+  } catch {
+    throw new Error('辞書のファイルとして読めません(JSON の形になっていません)。書き出した辞書のファイルを選んでください。');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('辞書のファイルではありません(中身が JSON のオブジェクトではありません)。');
+  if (data.format === MAP_FORMAT) throw new Error('これは対応表のファイルです。対応表は「対応表を読み込む」で読み込んでください。');
+  if (data.format !== DICT_FORMAT) throw new Error('辞書のファイルではありません(format が "' + DICT_FORMAT + '" ではありません)。');
+  if (data.version !== DICT_VERSION) throw new Error('辞書のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
+  if (!Array.isArray(data.terms)) throw new Error('辞書のファイルに terms(足した語の並び)がありません。');
+  if (!data.terms.length) throw new Error('辞書のファイルに語が1つもありません。');
+  if (data.terms.length > DICT_MAX_TERMS) throw new Error('辞書のファイルの語が多すぎます(' + data.terms.length + ' 件。' + DICT_MAX_TERMS + ' 件まで)。');
+  const known = new Set(kinds || []);
+  const seen = new Map();
+  const out = [];
+  data.terms.forEach((t, i) => {
+    const at = '辞書の ' + (i + 1) + ' 番目の語';
+    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new Error(at + 'が読めません。');
+    if (!isText(t.word)) throw new Error(at + 'に word(語)がありません。');
+    if (!isText(t.kind)) throw new Error(at + 'に kind(種類)がありません。');
+    const word = t.word.trim();
+    const kind = t.kind.trim();
+    if (word.length > DICT_MAX_WORD) throw new Error(at + 'が長すぎます(' + DICT_MAX_WORD + ' 字まで)。');
+    if (/[\u0000-\u001f\u007f]/u.test(word)) throw new Error(at + 'に改行や制御文字が入っています。');
+    if (known.size && !known.has(kind)) throw new Error(at + 'の種類 "' + kind + '" は、この画面の種類にありません。');
+    const prev = seen.get(word);
+    if (prev !== undefined) {
+      if (prev !== kind) throw new Error(at + '「' + word + '」が、ほかの番目と違う種類で重なっています。');
+      return;
+    }
+    seen.set(word, kind);
+    out.push({ word, kind });
+  });
+  return out;
 }
 
 export function createMasker({ dictionaries = [] } = {}) {
@@ -289,5 +336,29 @@ export function createMasker({ dictionaries = [] } = {}) {
     return { entries: data.entries.length, terms: data.terms.length };
   }
 
-  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, labelOf, labels: () => ({ ...labels }) };
+  // 辞書を書き出す(F19a)。足した語と種類だけの JSON の文字列。元の名前が入っているので扱いに注意する
+  function exportDict() {
+    return JSON.stringify({
+      format: DICT_FORMAT,
+      version: DICT_VERSION,
+      notice: DICT_NOTICE,
+      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
+    }, null, 2);
+  }
+
+  // 書き出した辞書を読み込む(F19a)。今の足した語に加える(同じ語は読み込んだ種類にする)。対応表は変えない。
+  // 中身をすべて確かめてから加える。おかしければ何も変えずに Error で止まる
+  function importDict(text) {
+    const words = parseDictFile(text, Object.keys(labels));
+    let added = 0;
+    let changed = 0;
+    for (const t of words) {
+      const old = userTerms.find((u) => u.word === t.word);
+      if (!old) added += 1; else if (old.kind !== t.kind) changed += 1;
+      addTerm(t.word, t.kind);
+    }
+    return { read: words.length, added, changed, total: userTerms.length };
+  }
+
+  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, exportDict, importDict, labelOf, labels: () => ({ ...labels }) };
 }

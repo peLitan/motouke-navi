@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-AZOCvw/2uU1uK/WTUoZFN/GWEv2hkVTyOWgcvPqSYWE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L1U2xF5nuburSa3I5ruoEUTSJvy1/0iqWgDSKUQp3fQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>初めての元請けの確認ツール(仮)</title>
@@ -369,6 +369,11 @@
 <button type="button" id="dict-add">辞書に足す</button></div>
 <p id="dict-status" aria-live="polite"></p>
 <div id="dict-list"><p>足した語はまだありません。</p></div>
+<p class="note" id="dict-file-note">足した語は、ページを閉じると消えます(ブラウザには保存しません)。次に使うときのために「辞書を書き出す」でこの PC に JSON のファイルとして保存し、「辞書を読み込む」で読み込めます。このファイルには元の名前が入っています。外の AI などへ送らず、要らなくなったら消してください。</p>
+<div class="row"><button type="button" id="dict-export">辞書を書き出す</button>
+<label for="dict-import">辞書を読み込む</label>
+<input type="file" id="dict-import" name="dict-import" accept=".json,application/json"></div>
+<p id="dict-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
 <input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
 <p class="note" id="mask-file-note">ファイルはこの PC の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
@@ -3069,6 +3074,7 @@ __m["src/mask/core.mjs"] = (function () {
 // この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
 // 対応表はこの部品の中(メモリ)だけに持つ。ブラウザには残さない(ページを閉じれば消える)。
 // 利用者が求めたときだけ、exportMap で対応表を文字列(JSON)にし、importMap で読み込む(F11d)。その文字列には元の名前が入っている。
+// 足した語だけは exportDict / importDict で辞書のファイル(JSON)にできる(F19a)。こちらにも元の名前が入っている。
 //
 // 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
 // 辞書は文脈の規則(contextPatterns: [{ kind, rule, re, accept? }])も持てる(F17a)。まわりの語から見つけた確信の弱い語で、
@@ -3192,6 +3198,52 @@ function parseMapFile(text) {
     return { word: t.word.trim(), kind: t.kind.trim() };
   });
   return { entries, terms: words };
+}
+
+// 辞書のファイル(F19a): 「辞書に足す」で足した語と種類だけを入れる。記号・対応表は入れない。元の名前が入っている
+const DICT_FORMAT = 'mask-dict';
+const DICT_VERSION = 1;
+const DICT_NOTICE = 'このファイルには元の名前(辞書に足した人名・会社名・現場名など)が入っています。外へ送らず、要らなくなったら消してください。';
+const DICT_MAX_TERMS = 5000;
+const DICT_MAX_WORD = 200;
+
+// 辞書のファイルを読んで確かめる。kinds は受け付ける種類(labels の key)。おかしければ、どこがおかしいかを書いた Error を投げる
+function parseDictFile(text, kinds) {
+  let data;
+  try {
+    data = JSON.parse(String(text ?? ''));
+  } catch {
+    throw new Error('辞書のファイルとして読めません(JSON の形になっていません)。書き出した辞書のファイルを選んでください。');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('辞書のファイルではありません(中身が JSON のオブジェクトではありません)。');
+  if (data.format === MAP_FORMAT) throw new Error('これは対応表のファイルです。対応表は「対応表を読み込む」で読み込んでください。');
+  if (data.format !== DICT_FORMAT) throw new Error('辞書のファイルではありません(format が "' + DICT_FORMAT + '" ではありません)。');
+  if (data.version !== DICT_VERSION) throw new Error('辞書のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
+  if (!Array.isArray(data.terms)) throw new Error('辞書のファイルに terms(足した語の並び)がありません。');
+  if (!data.terms.length) throw new Error('辞書のファイルに語が1つもありません。');
+  if (data.terms.length > DICT_MAX_TERMS) throw new Error('辞書のファイルの語が多すぎます(' + data.terms.length + ' 件。' + DICT_MAX_TERMS + ' 件まで)。');
+  const known = new Set(kinds || []);
+  const seen = new Map();
+  const out = [];
+  data.terms.forEach((t, i) => {
+    const at = '辞書の ' + (i + 1) + ' 番目の語';
+    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new Error(at + 'が読めません。');
+    if (!isText(t.word)) throw new Error(at + 'に word(語)がありません。');
+    if (!isText(t.kind)) throw new Error(at + 'に kind(種類)がありません。');
+    const word = t.word.trim();
+    const kind = t.kind.trim();
+    if (word.length > DICT_MAX_WORD) throw new Error(at + 'が長すぎます(' + DICT_MAX_WORD + ' 字まで)。');
+    if (/[\u0000-\u001f\u007f]/u.test(word)) throw new Error(at + 'に改行や制御文字が入っています。');
+    if (known.size && !known.has(kind)) throw new Error(at + 'の種類 "' + kind + '" は、この画面の種類にありません。');
+    const prev = seen.get(word);
+    if (prev !== undefined) {
+      if (prev !== kind) throw new Error(at + '「' + word + '」が、ほかの番目と違う種類で重なっています。');
+      return;
+    }
+    seen.set(word, kind);
+    out.push({ word, kind });
+  });
+  return out;
 }
 
 function createMasker({ dictionaries = [] } = {}) {
@@ -3356,10 +3408,34 @@ function createMasker({ dictionaries = [] } = {}) {
     return { entries: data.entries.length, terms: data.terms.length };
   }
 
-  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, labelOf, labels: () => ({ ...labels }) };
+  // 辞書を書き出す(F19a)。足した語と種類だけの JSON の文字列。元の名前が入っているので扱いに注意する
+  function exportDict() {
+    return JSON.stringify({
+      format: DICT_FORMAT,
+      version: DICT_VERSION,
+      notice: DICT_NOTICE,
+      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
+    }, null, 2);
+  }
+
+  // 書き出した辞書を読み込む(F19a)。今の足した語に加える(同じ語は読み込んだ種類にする)。対応表は変えない。
+  // 中身をすべて確かめてから加える。おかしければ何も変えずに Error で止まる
+  function importDict(text) {
+    const words = parseDictFile(text, Object.keys(labels));
+    let added = 0;
+    let changed = 0;
+    for (const t of words) {
+      const old = userTerms.find((u) => u.word === t.word);
+      if (!old) added += 1; else if (old.kind !== t.kind) changed += 1;
+      addTerm(t.word, t.kind);
+    }
+    return { read: words.length, added, changed, total: userTerms.length };
+  }
+
+  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, exportDict, importDict, labelOf, labels: () => ({ ...labels }) };
 }
 
-return { parseAmount, formatYen, bandLabel, MAP_FORMAT, MAP_VERSION, MAP_NOTICE, parseMapFile, createMasker };
+return { parseAmount, formatYen, bandLabel, MAP_FORMAT, MAP_VERSION, MAP_NOTICE, parseMapFile, DICT_FORMAT, DICT_VERSION, DICT_NOTICE, parseDictFile, createMasker };
 })();
 __m["src/ui/download.mjs"] = (function () {
 // 画面の書き出し(F05e・F11d が使う)
@@ -3649,7 +3725,8 @@ __m["src/ui/mask-app.mjs"] = (function () {
 // 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
 // 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
 // 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
-const { createMasker, parseAmount, MAP_NOTICE } = __m["src/mask/core.mjs"];
+// 足した語だけを「辞書を書き出す」で辞書のファイルにし、「辞書を読み込む」で読み込める(F19a)。こちらも元の名前が入っている。
+const { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } = __m["src/mask/core.mjs"];
 const { downloadText } = __m["src/ui/download.mjs"];
 const { CONSTRUCTION_DICT } = __m["src/mask/dict-construction.mjs"];
 const { esc, scrollTable } = __m["src/ui/view.mjs"];
@@ -3810,7 +3887,7 @@ function resetMask(doc) {
   decisions.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status', 'dict-file-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
@@ -3862,6 +3939,40 @@ function importMaskMap(doc, text) {
   }
 }
 
+const DICT_MAX_BYTES = 1024 * 1024;
+
+// 辞書(足した語と種類)を書き出す(F19a)。元の名前が入っていることを画面に出し、確かめてから書き出す
+function exportDictFile(doc, win) {
+  const m = getMasker();
+  if (!m.terms().length) {
+    setText(doc, 'dict-file-status', '書き出す語がまだありません。先に「辞書に足す」で語を足してください。');
+    return false;
+  }
+  setText(doc, 'dict-file-status', DICT_NOTICE);
+  if (win && typeof win.confirm === 'function' && !win.confirm(DICT_NOTICE + '\n書き出しますか。')) {
+    setText(doc, 'dict-file-status', '書き出しをやめました。' + DICT_NOTICE);
+    return false;
+  }
+  downloadText(doc, m.exportDict(), '置き換えの辞書_' + today() + '.json', 'application/json;charset=utf-8');
+  setText(doc, 'dict-file-status', '辞書を書き出しました(' + m.terms().length + ' 語)。' + DICT_NOTICE);
+  return true;
+}
+
+// 書き出した辞書のファイルの中身を読み込む(F19a)。今の足した語に加える。壊れたファイル・形の違うファイルは読み込まず、理由を出す
+function importDictFile(doc, text) {
+  const m = getMasker();
+  try {
+    const n = m.importDict(text);
+    const list = doc.getElementById('dict-list');
+    if (list) list.innerHTML = renderTerms(m.terms());
+    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。');
+    return true;
+  } catch (e) {
+    setText(doc, 'dict-file-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の辞書はそのままです。');
+    return false;
+  }
+}
+
 // ファイルを読み、取り出した文字を「置き換える文」の欄に入れる(F11c)。置き換えは利用者が「置き換える」を押してから
 async function loadMaskFile(doc, file) {
   if (!file) return false;
@@ -3889,6 +4000,7 @@ function startMask(doc) {
   on('dict-add', () => addDictWord(doc));
   on('mask-reset', () => resetMask(doc));
   on('map-export', () => exportMaskMap(doc, doc.defaultView));
+  on('dict-export', () => exportDictFile(doc, doc.defaultView));
   // 選ぶ表のボタンは描き直すたびに作り直すので、表の枠で受ける
   const rv = doc.getElementById('mask-review');
   if (rv) {
@@ -3908,6 +4020,16 @@ function startMask(doc) {
       src.value = '';
     });
   }
+  const dictFile = doc.getElementById('dict-import');
+  if (dictFile) {
+    dictFile.addEventListener('change', async () => {
+      const f = dictFile.files && dictFile.files[0];
+      if (!f) return;
+      if (f.size > DICT_MAX_BYTES) setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。');
+      else importDictFile(doc, await f.text());
+      dictFile.value = '';
+    });
+  }
   const file = doc.getElementById('map-import');
   if (file) {
     file.addEventListener('change', async () => {
@@ -3919,7 +4041,7 @@ function startMask(doc) {
   }
 }
 
-return { parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, maskedText, decideMask, runMask, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, loadMaskFile, startMask };
+return { parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, maskedText, decideMask, runMask, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, startMask };
 })();
 __m["src/ui/ai-app.mjs"] = (function () {
 // 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。

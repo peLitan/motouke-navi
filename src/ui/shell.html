@@ -357,6 +357,11 @@
 <button type="button" id="dict-add">辞書に足す</button></div>
 <p id="dict-status" aria-live="polite"></p>
 <div id="dict-list"><p>足した語はまだありません。</p></div>
+<p class="note" id="dict-file-note">足した語は、ページを閉じると消えます(ブラウザには保存しません)。次に使うときのために「辞書を書き出す」でこの PC に JSON のファイルとして保存し、「辞書を読み込む」で読み込めます。このファイルには元の名前が入っています。外の AI などへ送らず、要らなくなったら消してください。</p>
+<div class="row"><button type="button" id="dict-export">辞書を書き出す</button>
+<label for="dict-import">辞書を読み込む</label>
+<input type="file" id="dict-import" name="dict-import" accept=".json,application/json"></div>
+<p id="dict-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
 <input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
 <p class="note" id="mask-file-note">ファイルはこの PC の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
