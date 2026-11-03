@@ -126,3 +126,65 @@ test('係(agents): 置いた係のファイルに、プラグインでは無視�
     for (const key of IGNORED_AGENT_FIELDS) assert.ok(!new RegExp(`^${key}\\s*:`, 'm').test(fm[1]), `${f} に ${key}`);
   }
 });
+
+// F20c: 反証の係(plugin/agents/refuter.md)
+const frontmatter = (text) => {
+  const fm = /^---\n([\s\S]*?)\n---\n/.exec(text);
+  if (!fm) return null;
+  const out = {};
+  for (const line of fm[1].split('\n')) {
+    const m = /^([A-Za-z]+)\s*:\s*(.*)$/.exec(line);
+    if (m) out[m[1]] = m[2].trim();
+  }
+  return out;
+};
+
+test('反証の係: agents/refuter.md があり、frontmatter に name・description・tools。本文がある', () => {
+  const text = fs.readFileSync(path.join(PLUGIN, 'agents', 'refuter.md'), 'utf8');
+  const fm = frontmatter(text);
+  assert.ok(fm, 'frontmatter が無い');
+  assert.equal(fm.name, 'refuter');
+  assert.match(fm.name, /^[a-z0-9]+(-[a-z0-9]+)*$/);
+  assert.ok(fm.description && fm.description.length > 20);
+  // tools を書かないと呼び出した側の道具をすべて受け継ぐので、必ず書く
+  assert.ok(fm.tools, 'tools が無い(書かないと道具をすべて受け継ぐ)');
+  assert.ok(text.slice(text.indexOf('\n---\n', 4) + 5).trim().length > 200, '本文が無い');
+});
+
+test('反証の係: 道具は masked-files の read_masked だけ。Read などファイルを読む道具・コマンド・書き込み・Web を持たない', async () => {
+  const fm = frontmatter(fs.readFileSync(path.join(PLUGIN, 'agents', 'refuter.md'), 'utf8'));
+  const tools = fm.tools.split(',').map((s) => s.trim()).filter(Boolean);
+  assert.ok(tools.length >= 1);
+  const pluginName = readJson('.claude-plugin/plugin.json').name;
+  const serverNames = Object.keys(readJson('.mcp.json').mcpServers);
+  // 道具はプラグインのフォルダを MASK_TOOL_DIR で受け取る(.mcp.json と同じ)
+  const saved = process.env.MASK_TOOL_DIR;
+  process.env.MASK_TOOL_DIR = PLUGIN;
+  let TOOLS;
+  try {
+    ({ TOOLS } = await import(pathToFileURL(path.join(PLUGIN, 'mcp', 'masked-files.mjs')).href + '?f20c'));
+  } finally {
+    if (saved === undefined) delete process.env.MASK_TOOL_DIR; else process.env.MASK_TOOL_DIR = saved;
+  }
+  const toolNames = TOOLS.map((t) => t.name);
+  for (const t of tools) {
+    // MCP の道具の名前(プラグインから入れた場合と、プロジェクトの .mcp.json で入れた場合)
+    const m = /^mcp__(?:plugin_([a-z0-9-]+)_)?([a-z0-9-]+)__([a-z0-9_]+)$/.exec(t);
+    assert.ok(m, `${t} は MCP の道具ではない`);
+    if (m[1] !== undefined) assert.equal(m[1], pluginName, `${t} のプラグインの名前`);
+    assert.ok(serverNames.includes(m[2]), `${t} の道具の名前が .mcp.json に無い`);
+    assert.ok(toolNames.includes(m[3]), `${t} が masked-files に無い`);
+  }
+  // 持たせない道具(名前で書いても、* でも)
+  for (const bad of ['Read', 'Grep', 'Glob', 'Bash', 'PowerShell', 'Edit', 'Write', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Agent', '*']) {
+    assert.ok(!tools.includes(bad), `tools に ${bad}`);
+  }
+  assert.ok(tools.every((t) => t.startsWith('mcp__')));
+});
+
+test('反証の係: 無視される項目(hooks・mcpServers・permissionMode・initialPrompt)を書かず、守りは hooks/hooks.json にある', () => {
+  const fm = frontmatter(fs.readFileSync(path.join(PLUGIN, 'agents', 'refuter.md'), 'utf8'));
+  for (const key of IGNORED_AGENT_FIELDS) assert.equal(fm[key], undefined, key);
+  const pre = readJson('hooks/hooks.json').hooks.PreToolUse[0];
+  assert.ok(pre.matcher.split('|').includes('Read'));
+});
