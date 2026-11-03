@@ -208,7 +208,8 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 使い方:
 1. 作業フォルダに `raw/` を作り、生のファイルを置く(Excel・Word は文のファイル .txt・.csv などにしてから置く)
 2. `integration/claude-code/` の `.claude/`・`.mcp.json`・`hooks/`・`mcp/` を作業フォルダに写す
-3. 環境変数 `MASK_TOOL_DIR` にこのツールのフォルダを入れる(道具が `src/mask/` を使うため)。人名・現場名は辞書に足さないと見つからないので、画面の「対応表を書き出す」で保存した対応表を `MASK_MAP` に指定すると、その語も同じ記号で置き換える
+3. 環境変数 `MASK_TOOL_DIR` にこのツールのフォルダを入れる(道具が `src/mask/` を使うため)。人名・現場名は辞書に足さないと見つからないので、画面の「対応表を書き出す」で保存した対応表を `MASK_MAP` に指定すると、その語も同じ記号で置き換える。画面の「辞書を書き出す」で保存した辞書のファイル(`format: "mask-dict"`)を `MASK_DICT` に指定すると、辞書に足した語も置き換える(F28c。対応表と両方を指定したときは、対応表の記号を使い、辞書の語を加える)。辞書を読めないとき(ファイルが無い・形が違う・対応表のファイルを渡した・1MB を超える)は、置き換えずに中身を返すことはせず、理由の種類だけを返す。辞書の語とファイルの名前は返す文にも道具の出力にも出さない
+   - `.mcp.json` の `env` に `"MASK_DICT": "${MASK_DICT:-}"` を足してください(`MASK_MAP` と同じ書き方)。足していないときに Claude Code が端末の環境変数を道具へ渡すかは確かめていません
 4. 作業フォルダで Claude Code を開き、「raw/台帳.txt を read_masked で読んで点検して」のように頼む
 
 限界(必ず読んでください):
@@ -229,7 +230,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 
 - `.claude-plugin/plugin.json`: プラグインの名前(`motouke-navi-guard`)などの宣言。`.claude-plugin/` にはこのファイルだけを置き、ほかの部品はプラグインの直下に置く
 - `hooks/hooks.json`: PreToolUse(Read・Grep・Glob・Bash・PowerShell・Edit・Write・NotebookEdit)と UserPromptSubmit で `${CLAUDE_PLUGIN_ROOT}/scripts/guard-raw.mjs` を動かす。`raw/` を指すと終了コード 2 で止め、理由を標準エラーに出す
-- `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える
+- `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える。辞書のファイルを使うときは環境変数 `MASK_DICT` に辞書のパスを入れる(上の「使い方」の 3.)
 - `scripts/guard-raw.mjs`・`mcp/masked-files.mjs`・`src/mask/`: `integration/claude-code/` と `src/mask/` の写し。プラグインは入れたときに別の場所へ写されるので、置き換えの部品も中に置いている。元を直したら `node scripts/sync-plugin.mjs` で写しを作り直す(写しが元と同じことは `tests/unit/plugin-structure.test.mjs` で確かめる)
 
 - `skills/construction-check/`: 建設の書類を点検する Skill(F20b)

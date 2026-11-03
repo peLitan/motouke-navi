@@ -12,6 +12,8 @@
 //   MASK_ROOT      作業フォルダ(raw/ のある所)。既定は起動したときのフォルダ(Claude Code はプロジェクトのフォルダで起動する)
 //   MASK_TOOL_DIR  このツール(src/mask/ のあるリポジトリ)のフォルダ。既定はこのファイルから3つ上。作業フォルダに写したときは指定する
 //   MASK_MAP       画面の「対応表を書き出す」で保存した対応表の JSON。指定すると、その語(人名・現場名など)も同じ記号で置き換える
+//   MASK_DICT      画面の「辞書を書き出す」で保存した辞書の JSON(format: "mask-dict")。指定すると、足した語(人名・現場名など)も置き換える(F28c)。
+//                  MASK_MAP と両方を指定したときは、対応表を読んでから辞書の語を加える。読めないときは理由の種類だけを返し、辞書の中身(語)は返事にも記録にも出さない
 //
 // 限界: 置き換えの漏れは0にならない(README の「文の置き換え」)。読めるのは文のファイル(.txt .md .csv .tsv .json)だけ。
 
@@ -134,7 +136,20 @@ export function formatList({ files, truncated }) {
   return out.join('\n');
 }
 
-function makeMasker(mapPath) {
+// 辞書のファイル(F28c)を読む。読めないときの文には、ファイルの名前・語・core.mjs の理由の文(語が入ることがある)を入れない
+function readDictFile(dictPath) {
+  let st;
+  try { st = fs.statSync(dictPath); } catch { throw new ToolError('MASK_DICT の辞書のファイルがありません。パスを確かめてください。'); }
+  if (!st.isFile()) throw new ToolError('MASK_DICT の辞書がファイルではありません。パスを確かめてください。');
+  if (st.size > MAX_BYTES) throw new ToolError('MASK_DICT の辞書のファイルが大きすぎます(1MB まで)。');
+  try {
+    return fs.readFileSync(dictPath, 'utf8');
+  } catch {
+    throw new ToolError('MASK_DICT の辞書のファイルを開けませんでした。');
+  }
+}
+
+export function makeMasker(mapPath, dictPath) {
   const m = createMasker({ dictionaries: [CONSTRUCTION_DICT] });
   if (mapPath) {
     try {
@@ -144,15 +159,25 @@ function makeMasker(mapPath) {
       throw new ToolError('MASK_MAP の対応表を読めませんでした。ファイルを確かめてください。');
     }
   }
+  // importMap は足した語を入れ替えるので、辞書は対応表の後に加える
+  if (dictPath) {
+    const text = readDictFile(dictPath);
+    try {
+      m.importDict(text);
+    } catch {
+      // core.mjs の理由の文には語が入ることがあるので出さない
+      throw new ToolError('MASK_DICT の辞書を読めませんでした。画面の「辞書を書き出す」で保存したファイル(format: "mask-dict")か確かめてください。');
+    }
+  }
   return m;
 }
 
 // 置き換えた中身と、見本の語の確かめ(F28a)の結果を返す。見本は置き換えた中身にも対応表にも入らない
-export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, rand } = {}) {
+export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, dictPath = process.env.MASK_DICT, rand } = {}) {
   const file = resolveRawFile(root, rel);
   const text = fs.readFileSync(file, 'utf8');
   if (text.includes('\u0000')) throw new ToolError('文のファイルではないようです。');
-  const m = makeMasker(mapPath);
+  const m = makeMasker(mapPath, dictPath);
   const { masked } = m.mask(text);
   const check = checkDecoys(m, text, rand ? { rand } : {});
   return { masked, check };
@@ -166,7 +191,7 @@ const ok = (id, result) => ({ jsonrpc: '2.0', id, result });
 const err = (id, code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
 
 // 1通の JSON-RPC を処理して返事を返す(通知なら null)
-export async function handleMessage(msg, { root = process.env.MASK_ROOT || process.cwd(), mapPath } = {}) {
+export async function handleMessage(msg, { root = process.env.MASK_ROOT || process.cwd(), mapPath, dictPath } = {}) {
   if (!msg || typeof msg !== 'object' || msg.jsonrpc !== '2.0') return err(msg?.id ?? null, -32600, 'Invalid Request');
   const { id, method, params } = msg;
   const isNotice = id === undefined || id === null;
@@ -190,7 +215,10 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
         if (name === 'list_masked') {
           return ok(id, { content: [{ type: 'text', text: formatList(listRawFiles(root, params?.arguments?.dir)) }], isError: false });
         }
-        const { masked, check } = readMaskedWithCheck(root, params?.arguments?.path, mapPath === undefined ? {} : { mapPath });
+        const opts = {};
+        if (mapPath !== undefined) opts.mapPath = mapPath;
+        if (dictPath !== undefined) opts.dictPath = dictPath;
+        const { masked, check } = readMaskedWithCheck(root, params?.arguments?.path, opts);
         // 1つ目は置き換えた中身(今までどおり)、2つ目は見本の語の確かめの結果(F28a)
         return ok(id, { content: [{ type: 'text', text: masked }, { type: 'text', text: decoyMessage(check) }], isError: false });
       } catch (e) {
