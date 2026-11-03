@@ -200,12 +200,21 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える
 - `scripts/guard-raw.mjs`・`mcp/masked-files.mjs`・`src/mask/`: `integration/claude-code/` と `src/mask/` の写し。プラグインは入れたときに別の場所へ写されるので、置き換えの部品も中に置いている。元を直したら `node scripts/sync-plugin.mjs` で写しを作り直す(写しが元と同じことは `tests/unit/plugin-structure.test.mjs` で確かめる)
 
+- `skills/construction-check/`: 建設の書類を点検する Skill(F20b)
+  - `SKILL.md`(500 行以内): 書類は道具 `masked-files` の `read_masked` で置き換えた後の中身だけを読み、取得した条に照らして抜けや食い違いの「候補」を、法令名・条・項・号と原文の短い抜き書きつきで書く手順。見ていない条は根拠にせず人に回す
+  - `reference/articles.md`: 取得した8つの条(建設業法 第3条・第24条の8・第26条、建設業法施行令 第2条・第7条の4・第27条、入札契約適正化法 第15条、建設業法施行規則 第14条の2)の作る側の言葉での要約と、見ていない条の一覧(取得した条の中から引かれている条)。要約は入口で、根拠は原文
+  - `reference/sources/`: 取得した法令の原文と取得日の一覧(`data/sources/` の写し)
+  - `scripts/check-articles.mjs`: 点検の結果(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる。`node plugin/skills/construction-check/scripts/check-articles.mjs <指摘のファイル>` で、条番号ごとに「ある」「無い」(取得していない条・無い項や号)「確かめられない」(「法第○条」「同条」のように法令名が無い)を出し、1つでも「ある」以外があれば終了コード 1。項・号の切り出しは `src/quote-check.mjs` の写し(`lib/quote-check.mjs`)を使う
+
 試し方: `claude --plugin-dir ./plugin` で Claude Code を開く(そのセッションだけ読み込まれ、設定には何も書かれない)。プラグインを直したら `/reload-plugins` で読み込み直す。形の確かめには `claude plugin validate ./plugin` が使える
 
 限界(必ず読んでください):
 - プラグインは権限の決まり(`permissions.deny`)と sandbox の設定を配れません(プラグインの settings で効くのは `agent` と `subagentStatusLine` だけ)。権限の守り(`permissions.deny`)は利用者のプロジェクトの settings に置く必要があります。プラグインはフックの守りだけを配ります。`cat` などのコマンドでの読み取りを sandbox で止めるには、上の「Claude Code に組み込む」の `.claude/settings.json` を作業フォルダに置いてください
 - 道具の作業フォルダ(`raw/` を探す所)は、道具が起動したときのフォルダ(または環境変数 `MASK_ROOT`)です。`.mcp.json` で `${CLAUDE_PROJECT_DIR}` が展開されるかは確かめられなかったので使っていません。プラグインの道具が、どのフォルダで起動されるかも確かめられませんでした
 - フックの限界は上の「Claude Code に組み込む」と同じです(コマンドは文字列で `raw/` を探すだけ、など)
+- Skill の条番号の確かめは、その条・項・号・細分が取得した原文にあるかだけを見ます。指摘の中身が条の文に合っているか、条件に当てはまるかは確かめません。条番号の取り出しは「建設業法第26条第3項第1号イ」のような書き方を文字の形で探すだけなので、「法第○条」「同条」「前項」のような書き方や、法令名と条の間に別の語が入った書き方は確かめられません(「確かめられない」になるか、拾われません)
+- 取得した条は8つだけです。点検に関わる条(一括下請負・契約書面・下請代金の支払いなど)の多くは取得しておらず、Skill はそれを根拠にできません。見ていない条の一覧も、取得した条から引かれている条を拾っただけで、すべてではありません
+- `SKILL.md` の frontmatter(`name`・`description`)の書き方は、渡された公式ページの抜き書きに Skill のページが無かったので、公式のページでは確かめられませんでした。Skill が呼ばれることの確かめは、人が `claude --plugin-dir ./plugin` で行う予定です(まだしていません)
 - 試験(`tests/unit/plugin-structure.test.mjs`)は、ファイルの形と、フックのコマンドが指すファイルの判断の関数、プラグインを別の場所に写したときの道具の返事を、関数として確かめたものです(フックを別のプロセスとして動かした確かめはしていません)。実際に Claude Code にプラグインとして読み込ませた確かめは、まだしていません(人が行う予定)
 
 確かめた公式のページ(Claude Code の文書。取得日 2026-11-03。作る係の sandbox からは開けなかったので、統括の係が sandbox の外で開いて要点を渡した。題名は受け取っていないので URL の末尾の名前で示す):
