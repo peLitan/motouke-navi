@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sw5Zm6OGrQFl7pluxVWXfLM0h61SXgmOZ5PvfbPWVFU='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-a0/eGXOTzwigB9J2+XzAOUFejCKcPtRHNeS50BIuKMY='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -2613,7 +2613,7 @@ function checkTaicho(input = {}) {
     '金額は税込みで比べます(国交省 建設業許可事務ガイドライン【その他】2.)',
     '建築一式工事は建築工事業の許可で請け負うものと読み、施行令 第2条のただし書の金額を使います',
     '技術者の専任(建設業法 第26条第3項・施行令 第27条)は、台帳の「専任・非専任」の欄に「非専任」と書いた技術者だけを点検します。欄が無い・空の技術者は点検していません。金額の境目の工事の種類は、元請けは上の欄の「工事の種類」、下請けはその下請工事で決めます(施行令 第27条第1項の「当該建設工事」)。下請けは台帳の「工事内容」に「建築一式」と書いていなければ建築一式工事でない(4,500万円)として比べ、建築一式なら9,000万円になることを「確かめること」に付けます。第26条第3項ただし書(第1号・第2号)・第4項(現場の数)・施行令 第27条第2項(密接な関係のある工事)に当たるかは台帳から決められないので、候補に「確かめること」として付けます',
-    '台帳の記載事項のうち、国土交通省令(施行規則)で定める事項はこのツールに取り込んでいないので点検していません',
+    'この候補の点検には、国土交通省令(建設業法施行規則)を使っていません。施行規則 第14条の2 第1項の記載事項は、候補とは別の「台帳の記載事項の表」で、欄に値があるか・空か・判断できないかだけを出します(第2項〜第4項と、施行規則のほかの条は取り込んでいません)',
   ];
   return out;
 }
