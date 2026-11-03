@@ -138,9 +138,10 @@ test('法令の2つの一覧は、題の分かる閉じた details の中にあ�
   assert.ok(!/no-print/.test(body.match(/<p class="scope-not-line"[^>]*>/)[0]), '印刷で消える');
 });
 
-test('題は何のツールか分かる名前(作品名が決まるまでは(仮))。<title> も同じ', () => {
+test('題は作品名「Motouke Navi」に何のツールかの説明を添えたもの。<title> も同じ', () => {
   const h1 = text(body.match(/<h1>([\s\S]*?)<\/h1>/)[1]);
-  assert.equal(h1, '初めての元請けの確認ツール(仮)');
+  assert.equal(h1, 'Motouke Navi(はじめての元請けの確認ツール)');
+  assert.ok(!html.includes('(仮)'), '(仮) が残っている');
   assert.equal(html.match(/<title>([^<]*)<\/title>/)[1], h1);
   assert.ok(!html.includes('施工体制の確認の候補'), '古い題が残っている');
 });
