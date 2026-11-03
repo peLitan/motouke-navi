@@ -2,7 +2,7 @@
 // 採点(見つけた・見落とし・言い過ぎ)は、この出力と仕込み表を、採点する人が照らして行う。仕込み表はこのスクリプトは読まない。
 // 点検するもの: 施工体制台帳.md(checkTaicho)と 施工計画書_目次.md(checkPlanToc)。施工体系図.md はツールに点検の機能が無いので読まない。
 // 画面では「工事の種類」を上の選ぶ欄で人が選ぶ。このスクリプトでは下の DEFAULT_FORM で渡す(作る係が工事の名前と台帳の「許可を受けた建設業」から選んだもの)。
-// 発注者の区分(公共・民間)は、技術者の専任の点検(施行令 第27条第1項第1号)に使う。作る係が台帳の「発注者」の欄から選んだ値。書類どうしで発注者が違っても、この点検は気づかない。
+// 発注者の区分(公共・民間)は、技術者の専任の点検(施行令 第27条第1項第1号)に使う。作る係が台帳の「発注者」の欄から選んだ値。台帳の名前と食い違って読めれば判断できないに出すが、書類どうしで発注者が違っても、この点検は気づかない。
 // 使い方: node scripts/run-fixtures.mjs [出力のファイル]   (省くと標準出力)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { parseLedgerText } from '../src/ledger-text.mjs';
 import { checkTaicho } from '../src/check-taicho.mjs';
 import { checkPlanToc } from '../src/plan-check.mjs';
+import { checkChecklistText } from '../src/checklist.mjs';
+import { addChecklistCandidates } from '../src/ledger-check.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dir = path.join(root, 'fixtures');
@@ -29,10 +31,12 @@ for (const name of fs.readdirSync(dir).sort()) {
   const c = { case: name, form, taicho: null, plan: null };
   const ledgerFile = path.join(p, '施工体制台帳.md');
   if (fs.existsSync(ledgerFile)) {
-    const ledger = parseLedgerText(fs.readFileSync(ledgerFile, 'utf8'));
+    const text = fs.readFileSync(ledgerFile, 'utf8');
+    const ledger = parseLedgerText(text);
     ledger.project.workType = form.workType;
     ledger.project.ordererType = form.ordererType;
-    const r = checkTaicho(ledger);
+    // 記載事項の表の「空」の行も候補に出す(画面と同じ。F29b)
+    const r = addChecklistCandidates(checkTaicho(ledger), ledger, checkChecklistText(text));
     c.taicho = {
       // 「点検に使っていないので読み飛ばしました」は数だけにする(採点に関わらないため)
       readWarnings: ledger.warnings.filter((w) => !/読み飛ばしました/.test(w)),

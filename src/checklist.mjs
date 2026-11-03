@@ -6,12 +6,13 @@
 // - 空: 事項に当たる欄が見つかり、値が空。条文に「〜ときは」があるものは、台帳から当てはまると分かるときだけ空にする
 //       (下請負人の許可番号に値があれば建設業者、一次の下請けなら作成建設業者が請け負わせたもの、として扱う)
 // - 判断できない: 欄が見つからない(別の名前や別紙・作業員名簿に書いてあるかもしれない)、当てはまるか台帳から決まらない
-//       「〜ときは」の事項の欄が空、このツールでは読まない事柄(法第19条の2の通知事項など)がある、Excel からは読まない欄
+//       「〜ときは」の事項の欄が空、資格の欄に値があってもどの資格の区分か決められない(F29b)、このツールでは読まない事柄(法第19条の2の通知事項など)がある、Excel からは読まない欄
 // 欄が見つからないことを「空」とは言わない(見出しの違いで書いてある事項を「無い」と言い過ぎないため)。
 // 1つの事項に欄が2つ以上あるとき(名称・内容・工期など)は、空の欄が1つでもあれば空、なければ見つからない欄が1つでもあれば判断できない。
 import checklistData from '../data/checklist.json' with { type: 'json' };
 import quotesData from '../data/quotes.json' with { type: 'json' };
 import { ledgerRows } from './ledger-text.mjs';
+import { qualificationUnclear } from './ledger-reading.mjs';
 
 export const STATUS_LABEL = { value: '値', empty: '空', unknown: '判断できない' };
 const ITEM_KANJI = ['', '一', '二', '三', '四'];
@@ -69,7 +70,9 @@ function matchParts(it, rows, heading) {
       const sp = splitCell(row, re);
       if (sp && sp.mismatch) return { label: p.label, state: 'mismatch', value: row.value, key: row.key, line: row.line };
       const v = sp ? sp.value : row.value;
-      return { label: p.label, state: isBlank(v) ? 'blank' : 'found', value: v, key: row.key, line: row.line, ...(sp ? { split: true } : {}) };
+      // 資格の欄に値があっても、どの資格の区分か決められなければ「値」にしない(F29b)
+      const state = isBlank(v) ? 'blank' : p.qualification && qualificationUnclear(v) ? 'unclear' : 'found';
+      return { label: p.label, state, value: v, key: row.key, line: row.line, ...(sp ? { split: true } : {}) };
     }
     if (p.heading && !isBlank(heading)) return { label: p.label, state: 'found', value: heading, key: '見出し' };
     return { label: p.label, state: 'missing', value: '' };
@@ -94,27 +97,31 @@ const CONDITION_TEXT = {
   unknown: '条文に「〜ときは」がある事項',
 };
 
+const metText = (it) => CONDITION_TEXT[it.condition] + 'で、台帳から当てはまると読みました(' + (it.condition === 'license' ? '許可番号の欄に値がある' : '一次の下請け') + ')';
+
 function judge(it, parts, cond, extraReason) {
   const blank = parts.filter((p) => p.state === 'blank');
   const missing = parts.filter((p) => p.state === 'missing');
   const unread = parts.filter((p) => p.state === 'unread');
   const mismatch = parts.filter((p) => p.state === 'mismatch');
+  const unclear = parts.filter((p) => p.state === 'unclear');
   const reasons = [];
   let status;
   // 「置くとき」の事項で、氏名の欄に「なし」と書いてあり、ほかの欄が無いとき(置いていないと書いたもの)は値
   const absent = it.noneMeansAbsent && parts[0].state === 'found' && isNone(parts[0].value)
-    && parts.slice(1).every((p) => p.state === 'missing' || (p.state === 'found' && isNone(p.value)));
+    && parts.slice(1).every((p) => p.state === 'missing' || ((p.state === 'found' || p.state === 'unclear') && isNone(p.value)));
   if (absent) {
     status = 'value';
     reasons.push('「' + parts[0].value + '」と書いてあり、置いていないと読みました(書いてあるまま。中身が正しいかはこのツールは見ていません)');
   } else if (blank.length && (cond === null || cond === 'met')) {
     status = 'empty';
     reasons.push('欄はあるが値が空: ' + blank.map((p) => p.label + '(' + p.key + (p.line ? '・' + p.line + '行目' : '') + ')').join('、'));
-    if (cond === 'met') reasons.push(CONDITION_TEXT[it.condition] + 'で、台帳から当てはまると読みました(' + (it.condition === 'license' ? '許可番号の欄に値がある' : '一次の下請け') + ')');
-  } else if (blank.length || missing.length || unread.length || mismatch.length) {
+    if (cond === 'met') reasons.push(metText(it));
+  } else if (blank.length || missing.length || unread.length || mismatch.length || unclear.length) {
     status = 'unknown';
     if (cond === 'none') reasons.push('許可番号の欄が「なし」と書いてあるので、下請負人を建設業者とは決めません(建設業者のときの事項なので、当てはまるかを台帳から決められません)');
     if (mismatch.length) reasons.push('1つの行にまとめた欄の数と、「/」で分けた値の数が合わないので、どの値がどの欄のものか決められません: ' + mismatch.map((p) => p.label + '(' + p.key + (p.line ? '・' + p.line + '行目' : '') + ')').join('、'));
+    if (unclear.length) reasons.push('資格の欄に値はありますが、どの資格の区分(法第7条第2号イ・ロ・ハ)かを台帳から決められません: ' + unclear.map((p) => p.label + '「' + p.value + '」').join('、'));
     if (blank.length) reasons.push('欄はあるが値が空: ' + blank.map((p) => p.label).join('、') + '。' + CONDITION_TEXT[it.condition ?? 'unknown'] + 'で、当てはまるかを台帳から決められません');
     if (missing.length) reasons.push('台帳に欄が見つかりません: ' + missing.map((p) => p.label).join('、') + '(別の名前の欄や、別紙・作業員名簿に書いてあるかもしれません)');
     if (unread.length) reasons.push('このツールでは読まない事柄: ' + unread.map((p) => p.label).join('、'));
@@ -135,7 +142,7 @@ function rowOf(it, entity, parts, cond, extraReason) {
   // 1つの欄(「健康保険 / 厚生年金 / 雇用保険」のような行)に当たった欄はまとめて1回だけ出す
   const shown = [];
   for (const p of parts) {
-    const text = ({ found: p.value, blank: '(空)', missing: '(欄が見つからない)', unread: '(読まない)', mismatch: p.value + '(欄と値の数が合わない)' })[p.state];
+    const text = ({ found: p.value, blank: '(空)', missing: '(欄が見つからない)', unread: '(読まない)', mismatch: p.value + '(欄と値の数が合わない)', unclear: p.value + '(資格の区分を決められない)' })[p.state];
     const same = p.line && shown.find((x) => x.line === p.line && x.text === text);
     if (same) same.labels.push(p.label); else shown.push({ line: p.line, labels: [p.label], text });
   }
@@ -144,6 +151,8 @@ function rowOf(it, entity, parts, cond, extraReason) {
     id: it.id + (entity.key ? '@' + entity.key : ''),
     itemId: it.id,
     entity: entity.label,
+    ...(entity.subIndex !== undefined ? { subIndex: entity.subIndex } : {}),
+    ...(status === 'empty' && cond === 'met' ? { condition: metText(it) } : {}),
     label: it.label,
     status,
     statusLabel: STATUS_LABEL[status],
@@ -176,7 +185,7 @@ export function checkChecklistText(text) {
   subs.forEach((s, i) => {
     // 次数が見出しに無い(null)・2つ以上で決まらない('mixed')ときは、一次と決めない(第四号トは 判断できない になる)
     const tierText = typeof s.tier === 'number' ? (KANSUJI[s.tier] ?? String(s.tier)) + '次' : (s.tier === 'mixed' ? '次数が決まらない' : '次数が見出しに無い');
-    const entity = { label: '下請負人 ' + s.name + '(' + tierText + ')', key: 'sub' + (i + 1) };
+    const entity = { label: '下請負人 ' + s.name + '(' + tierText + ')', key: 'sub' + (i + 1), subIndex: i };
     for (const it of CHECKLIST_ITEMS.filter((x) => x.scope === 'sub')) {
       rows.push(rowOf(it, entity, matchParts(it, s.rows, s.name), conditionOf(it, s.rows, s.tier)));
     }

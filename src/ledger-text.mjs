@@ -200,7 +200,7 @@ export function parseLedgerText(text) {
       else if (/許可番号/.test(key)) { prime.licenseNumber = value; prime.licenseType = licenseTypeOf(value); }
       else unknown();
     } else if (kind === 'project') {
-      if (/^発注者/.test(key)) project.orderer = value;
+      if (/^発注者(?!.*(?:住所|所在地|監督))/.test(key)) project.orderer = value;
       else if (/工期/.test(key)) periodInto(project, value, where);
       else if (/請負代金/.test(key)) amountInto(project, 'contractAmount', value, where);
       else unknown();

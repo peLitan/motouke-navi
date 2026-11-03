@@ -1,7 +1,7 @@
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
 // 結果の文字はすべてエスケープする(規則表や入力の文字がそのまま HTML にならないように)。
 import { readDirect } from './form.mjs';
-import { CHECKLIST_REFERENCE, CHECKLIST_LAW } from '../checklist.mjs';
+import { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } from '../checklist.mjs';
 import { sourceVersion, versionText } from '../source-version.mjs';
 import { displayStatus, itemConditions, contactsFor, openItems, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
@@ -152,8 +152,10 @@ export const CHECK_FIELD = {
   'project.workType': '工事の種類',
   'subcontractors.amount': '下請けの請負代金の額',
   'engineer.dedicated': '技術者の専任',
+  'project.ordererType': '発注者(公共か民間か)',
 };
-export const fieldLabel = (f) => CHECK_FIELD[f] ?? String(f ?? '');
+// 記載事項の表から足した候補(F29b)の field は 'checklist.<事項の id>'
+export const fieldLabel = (f) => CHECK_FIELD[f] ?? CHECKLIST_ITEMS.find((it) => 'checklist.' + it.id === f)?.label ?? String(f ?? '');
 
 // 台帳の点検の結果(F05b)。warnings は台帳の文を読んだときの注意(読めなかった行など)
 // 候補に付けた「確かめること」(台帳からは決められない例外)

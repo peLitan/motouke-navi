@@ -7,6 +7,7 @@ import { checkChecklistText } from '../checklist.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
+import { addChecklistCandidates } from '../ledger-check.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
 import { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, toCsv } from '../export.mjs';
@@ -189,7 +190,12 @@ export function runLedgerCheck(doc) {
       }
     }
     if (!form.workType) warnings.push('上の欄の「工事の種類」が選ばれていないので、下請けの総額の境目(施行令 第2条)を決められないことがあります');
-    const out = checkTaicho(ledger);
+    let out = checkTaicho(ledger);
+    try {
+      out = addChecklistCandidates(out, ledger, checkChecklistText(text));
+    } catch (e) {
+      warnings.push('記載事項の「空」の行を候補に足す途中で止まりました: ' + String(e && e.message ? e.message : e));
+    }
     outEl.innerHTML = renderCheckResult(out, warnings);
     lastCheck = out;
     summary.check = out;

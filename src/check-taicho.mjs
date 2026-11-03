@@ -13,6 +13,7 @@ import quotesData from '../data/quotes.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { resolveQuoteIds } from './taicho.mjs';
 import { licenseThreshold, dedicatedThreshold } from './bid-check.mjs';
+import { ordererConflict } from './ledger-reading.mjs';
 
 const basisOf = (...ids) => resolveQuoteIds(ids.map((quoteId) => ({ quoteId })), quotesData.quotes, sourcesData.sources, '台帳の点検');
 
@@ -21,8 +22,8 @@ const isAmount = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
 const yen = (n) => n.toLocaleString('ja-JP') + '円';
 
 // 台帳の下請けを指す名前。名称が空なら何件目かで指す
-const subLabel = (s, i) => (blank(s?.name) ? `下請け ${i + 1}件目(名称が空)` : String(s.name).trim());
-const primeLabel = (p) => (blank(p?.name) ? '元請け(名称が空)' : String(p.name).trim());
+export const subLabel = (s, i) => (blank(s?.name) ? `下請け ${i + 1}件目(名称が空)` : String(s.name).trim());
+export const primeLabel = (p) => (blank(p?.name) ? '元請け(名称が空)' : String(p.name).trim());
 
 // 下請けの行の抜け(建設業法 第24条の8第1項: 下請負人の商号又は名称、工事の内容及び工期を台帳に書く)
 function checkSubFields(s, i, out) {
@@ -154,7 +155,9 @@ function checkDedicated(owner, target, amount, input, out, who) {
   const e = owner?.engineer;
   if (!e || e.dedicated !== false) return;
   const roleName = e.role === 'kanri' ? '監理技術者' : e.role === 'shunin' ? '主任技術者' : '技術者';
-  const ordererType = input.project?.ordererType;
+  // 「公共」を選んでも、台帳の発注者が民間と読めるときは公共と決めない(F29b)。「民間」はもともと候補にせず判断できないに回す
+  const chosen = input.project?.ordererType;
+  const ordererType = chosen === 'public' && ordererConflict(input.project) ? undefined : chosen;
   const field = 'engineer.dedicated';
   const base = ['q-kensetsu-26-3', 'q-rei-27-1'];
   const amountName = who === '元請け' ? '発注者との請負代金の額' : 'この下請契約の請負代金の額';
@@ -198,6 +201,10 @@ function checkDedicated(owner, target, amount, input, out, who) {
 export function checkTaicho(input = {}) {
   const out = { candidates: [], undecidable: [] };
   const subs = Array.isArray(input.subcontractors) ? input.subcontractors : [];
+  if (ordererConflict(input.project)) {
+    const chosen = input.project.ordererType === 'public' ? '公共' : '民間';
+    out.undecidable.push({ target: '発注者「' + String(input.project.orderer).trim() + '」', field: 'project.ordererType', message: '台帳の発注者の名前と、上の欄で選んだ「' + chosen + '」が食い違って読めるので、国又は地方公共団体が注文者の工事(施行令 第27条第1項第1号)かを決められず判断できません。発注者の名前と上の欄を確かめてください', basis: basisOf('q-rei-27-1-1') });
+  }
   checkEngineer(input.prime, primeLabel(input.prime), out, '元請け');
   checkDedicated(input.prime, primeLabel(input.prime), input.project?.contractAmount, input, out, '元請け');
   subs.forEach((s, i) => {
@@ -213,7 +220,7 @@ export function checkTaicho(input = {}) {
     '金額は税込みで比べます(国交省 建設業許可事務ガイドライン【その他】2.)',
     '建築一式工事は建築工事業の許可で請け負うものと読み、施行令 第2条のただし書の金額を使います',
     '技術者の専任(建設業法 第26条第3項・施行令 第27条)は、台帳の「専任・非専任」の欄に「非専任」と書いた技術者だけを点検します。欄が無い・空の技術者は点検していません。金額の境目の工事の種類は、元請けは上の欄の「工事の種類」、下請けはその下請工事で決めます(施行令 第27条第1項の「当該建設工事」)。下請けは台帳の「工事内容」に「建築一式」と書いていなければ建築一式工事でない(4,500万円)として比べ、建築一式なら9,000万円になることを「確かめること」に付けます。第26条第3項ただし書(第1号・第2号)・第4項(現場の数)・施行令 第27条第2項(密接な関係のある工事)に当たるかは台帳から決められないので、候補に「確かめること」として付けます',
-    'この候補の点検には、国土交通省令(建設業法施行規則)を使っていません。施行規則 第14条の2 第1項の記載事項は、候補とは別の「台帳の記載事項の表」で、欄に値があるか・空か・判断できないかだけを出します(第2項〜第4項と、施行規則のほかの条は取り込んでいません)',
+    '施行規則 第14条の2 第1項の記載事項は「台帳の記載事項の表」で、欄に値があるか・空か・判断できないかだけを出します。「空」の行は、台帳の文を点検するときは候補にも出します(同じ欄は二重に出しません)。第2項〜第4項と、施行規則のほかの条は取り込んでいません',
   ];
   return out;
 }
