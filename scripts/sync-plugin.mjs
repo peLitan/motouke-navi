@@ -1,4 +1,4 @@
-// plugin/ の中の写しを、元のファイル(F13 の integration/claude-code/、src/mask/、F20b の src/quote-check.mjs と data/sources/ の法令の原文)から作り直す(F20a・F20b)
+// plugin/ の中の写しを、元のファイル(F13 の integration/claude-code/、src/mask/、F20b・F26a の src/quote-check.mjs と data/sources/ の法令の原文)から作り直す(F20a・F20b)
 // 使い方: node scripts/sync-plugin.mjs        写しを作り直す
 //         node scripts/sync-plugin.mjs --check 写しが元と同じかだけを確かめる(違えば終了コード 1)
 // プラグインは入れたときに別の場所(Claude Code のキャッシュ)へ写されるので、道具が使う src/mask/ も plugin/ の中に置く。
@@ -20,6 +20,8 @@ export const PLUGIN_COPIES = [
   // F20b: 点検の Skill の条番号の確かめに使う、項・号の切り出しの部品と、取得した法令の原文
   ['src/quote-check.mjs', 'plugin/skills/construction-check/scripts/lib/quote-check.mjs'],
   ['data/sources/index.json', 'plugin/skills/construction-check/reference/sources/index.json'],
+  // F26a: 仕様書から規則表を作る Skill の照合(check-quotes.mjs と同じ部品)
+  ['src/quote-check.mjs', 'plugin/skills/spec-to-rules/scripts/lib/quote-check.mjs'],
   ...['kensetsu-3', 'kensetsu-24_8', 'kensetsu-26', 'rei-2', 'rei-7_4', 'rei-27', 'nyukei-15', 'kisoku-14_2']
     .map((id) => [`data/sources/law-${id}.txt`, `plugin/skills/construction-check/reference/sources/law-${id}.txt`]),
 ];

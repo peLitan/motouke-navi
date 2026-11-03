@@ -198,6 +198,11 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
   - `reference/sources/`: 取得した法令の原文と取得日の一覧(`data/sources/` の写し)
   - `scripts/check-articles.mjs`: 点検の結果(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる。`node plugin/skills/construction-check/scripts/check-articles.mjs <指摘のファイル>` で、条番号ごとに「ある」「無い」(取得していない条・無い項や号)「確かめられない」(「法第○条」「同条」のように法令名が無い)を出し、1つでも「ある」以外があれば終了コード 1。項・号の切り出しは `src/quote-check.mjs` の写し(`lib/quote-check.mjs`)を使う
 
+- `skills/spec-to-rules/`: 発注者の仕様書の文から規則表の行を作る Skill(F26a)
+  - `SKILL.md`(500 行以内): 利用者が渡した仕様書の文(公開資料なので置き換えない。`raw/` には置かない)から、段取りの行(`data/schedule.json` と同じ形)と施工計画書の記載項目の行(`data/plan-items.json` と同じ形)を、原文の抜き書きつきで作る手順。原文から決められない欄は値を「判断できない」にして理由を書く。原文に無い行は作らない
+  - `scripts/check-rows.mjs`: 作った行を原文と照らす。`node plugin/skills/spec-to-rules/scripts/check-rows.mjs <仕様書のファイル> <行の JSON> [--out <残った行のファイル>]` で、行ごとに「残す」「外す」(理由つき)と「判断できない」の欄を出し、1行でも外したら終了コード 1。照らし方は `scripts/check-quotes.mjs` と同じ(`src/quote-check.mjs` の写しを使い、空白の違いだけ許す)で、さらに抜き書きが行の節(1-1-1-6 など)の中にあるか、記載項目の名前と番号が抜き書きと合うか、`when` の数字が抜き書きに、`what`・`to` の数字が同じ節にあるかを見る。`--list <節の番号> <仕様書のファイル>` は、節の中の「（1）○○」の列挙を記載項目の行の候補として出す
+  - 確かめたこと: 取り込んだ国の共通仕様書(令和8年3月)の 1-1-1-6 の文で、`--list` が今の記載項目の表の16行(番号・名前・抜き書き)を再現し、段取りの表の行はすべて照合で外れない(単体の試験 `tests/unit/spec-to-rules.test.mjs`)。機械で確かめるのは抜き書きの位置と、番号・名前・数字の形だけで、行の中身(いつ・誰に)が原文の意味に合っているかは確かめない。記載項目の別名(`aliases`)とページは原文に無いので作らない。県・市の仕様書ではまだ試していない
+
 - `agents/refuter.md`: 反証の係(F20c)。Skill で書いた指摘の「候補」を1件ずつ崩しにかかり、「残る」「崩れた」「確かめられない」で返す。持たせた道具は `masked-files` の `read_masked` だけで、Read・Grep・Glob・Bash・書き込み・Web は持たない。書類は置き換えた後の中身だけを読み、条の原文は呼び出した側が渡した抜き書きだけを根拠にする。プラグインの係で無視される項目(`hooks`・`mcpServers`・`permissionMode`・`initialPrompt`)は書かず、`raw/` を止める守りは `hooks/hooks.json` に置いている
 
 試し方: `claude --plugin-dir ./plugin` で Claude Code を開く(そのセッションだけ読み込まれ、設定には何も書かれない)。プラグインを直したら `/reload-plugins` で読み込み直す。形の確かめには `claude plugin validate ./plugin` が使える

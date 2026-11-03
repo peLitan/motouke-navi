@@ -65,7 +65,7 @@
 - コマンド(`cat` など)での読み取りは、Linux・WSL で Claude Code の sandbox が有効なときは止まります。Windows(ネイティブ)では sandbox が使えないので止まりません。フックで止めきれない操作もあります
 
 ## Claude Code のプラグイン(plugin/)
-上の守り(フック)と道具を、作業フォルダに写さずに使えるようにしたプラグインです。建設の書類を点検する Skill(`skills/construction-check/`)と、指摘の候補を崩しにかかる反証の係(`agents/refuter.md`)が入っています。`claude --plugin-dir ./plugin` で、そのセッションだけ読み込めます。
+上の守り(フック)と道具を、作業フォルダに写さずに使えるようにしたプラグインです。建設の書類を点検する Skill(`skills/construction-check/`)、発注者の仕様書の文から段取りと施工計画書の記載項目の行を作って原文と機械で照らす Skill(`skills/spec-to-rules/`。[説明](docs/manual.md#claude-code-のプラグインplugin))と、指摘の候補を崩しにかかる反証の係(`agents/refuter.md`)が入っています。`claude --plugin-dir ./plugin` で、そのセッションだけ読み込めます。
 - プラグインは `permissions.deny` と sandbox の設定を配れません。コマンドでの読み取りを sandbox で止めるには、`integration/claude-code/.claude/settings.json` を作業フォルダに置いてください
 - Skill が根拠にできるのは取得した8つの条だけです。条番号の確かめは、その条・項・号が取得した原文にあるかだけを見ます
 - 部品・試した記録・限界の全部は [docs/manual.md の「Claude Code のプラグイン」](docs/manual.md#claude-code-のプラグインplugin)

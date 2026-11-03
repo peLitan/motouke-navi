@@ -1,6 +1,6 @@
 {
   "name": "motouke-navi-guard",
   "version": "0.1.0",
-  "description": "raw/ の生のファイルを Claude Code の道具で読む操作をフックで止め(グロブ・再帰の検索・書いたスクリプトの実行なども見るが、別名・タスクの実行・MCP の道具などは止めきれない。止めきれない操作は README に挙げる)、置き換えた後の中身だけを返す手元の MCP の道具 masked-files と、建設の書類を点検する Skill(construction-check)、指摘を崩しにかかる反証の係(refuter)を配る(Motouke Navi)。外部と通信しない。",
+  "description": "raw/ の生のファイルを Claude Code の道具で読む操作をフックで止め(グロブ・再帰の検索・書いたスクリプトの実行なども見るが、別名・タスクの実行・MCP の道具などは止めきれない。止めきれない操作は README に挙げる)、置き換えた後の中身だけを返す手元の MCP の道具 masked-files と、建設の書類を点検する Skill(construction-check)、発注者の仕様書の文から規則表の行を作り原文と照らす Skill(spec-to-rules)、指摘を崩しにかかる反証の係(refuter)を配る(Motouke Navi)。外部と通信しない。",
   "license": "Apache-2.0"
 }
