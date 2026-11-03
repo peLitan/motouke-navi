@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kMNSyk0hYk6Zj+EYBEwefqZW4jQ65CQkq2ZtnHoGc4g='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>施工体制の確認の候補</title>
+<title>初めての元請けの確認ツール(仮)</title>
 <style>
   /* 文字(F14d): 本文は16px以上・行間1.7・端末の標準の書体。文字と地の色のコントラストは 4.5:1 以上(単体の試験で計算して確かめる) */
   html { font-size: 100%; }
@@ -37,7 +37,7 @@
   #mask-map td, #mask-map th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
-  .lead { margin: 0.5rem 0 1rem; }
+  .lead { margin: 0.5rem 0 0; }
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
   .start { border: 2px solid #1d4ed8; background: #eff6ff; padding: 0.75rem 1rem; margin: 1rem 0; }
   .start h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
@@ -60,8 +60,18 @@
   .ans-unknown, .ans-unanswered { font-weight: bold; text-decoration: underline; }
   .provisional { border-left: 4px solid #6b7280; padding: 0.1rem 0 0.1rem 0.75rem; color: #1f2937; }
   .unknown-check { display: inline-flex; align-items: center; min-height: 2.75rem; margin-left: 0.5rem; }
-  .scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 0 1.5rem; }
-  .scope ul { margin-top: 0; }
+  /* 最初の1画面(F14g): 法令の2つの一覧は閉じた折りたたみにし、「見ていない」があることは1行で常に見せる */
+  h1 { font-size: 1.75rem; margin: 0.25rem 0 0.5rem; line-height: 1.4; }
+  .disclaimer { margin: 0.5rem 0; }
+  .lead p { margin: 0; }
+  .scope-not-line { margin: 0.5rem 0 0; }
+  details.scope { margin: 0 0 0.5rem; }
+  .scope-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 0 1.5rem; }
+  .scope-cols ul { margin-top: 0; }
+  #bid > h2 { margin: 0.75rem 0 0.5rem; }
+  .start { margin: 0.5rem 0 1rem; }
+  .start p { margin: 0.25rem 0; }
+  #sample-status:empty { margin: 0; }
   .print-only { display: none; }
   .sign-table { border-collapse: collapse; width: 100%; }
   .sign-table th, .sign-table td { border: 1px solid #1f2937; padding: 0.5rem; height: 2.5rem; text-align: left; }
@@ -124,7 +134,7 @@
 </head>
 <body>
 <header>
-<h1>施工体制の確認の候補</h1>
+<h1>初めての元請けの確認ツール(仮)</h1>
 <p class="disclaimer" id="disclaimer">指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</p>
 <div class="lead" id="lead">
 <p><strong>このツールでできること</strong></p>
@@ -134,7 +144,9 @@
 <li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
 </ul>
 </div>
-<div class="scope" id="scope">
+<p class="scope-not-line" id="scope-not-line"><strong>見ていない法令・資料があります</strong>(条例・契約書・特記仕様書・省令など)。別に確かめてください。</p>
+<details class="scope" id="scope"><summary>このツールが見ている法令・資料と、見ていない法令・資料(一覧)</summary>
+<div class="scope-cols">
 <div><p><strong>このツールが見ている法令・資料</strong>(取り込んだ条と節だけ)</p>
 <ul id="scope-seen">
 <li>建設業法 第3条（建設業の許可）</li>
@@ -159,7 +171,7 @@
 <li>取り込んだ条より外の条と、ほかの法令(労働安全衛生法・建築基準法など)</li>
 </ul></div>
 </div>
-<p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
+</details>
 </header>
 <main id="main">
 <section id="bid">
@@ -175,6 +187,7 @@
 <li>3 書類を確かめる</li>
 </ol>
 </div>
+<p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
 <p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
 <p class="form-lead" id="form-lead">※必須の質問には、分からなければ「分からない」を選んでください。「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
