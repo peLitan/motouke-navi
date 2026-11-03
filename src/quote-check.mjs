@@ -55,8 +55,22 @@ export function itemOf(paragraph, n) {
   return lines.slice(start, end).join('\n');
 }
 
-// 1件の抜き書き {id, sourceId, article, paragraph, item, text} を、出典の原文と照らす。
-// paragraph が整数ならその項の中に、さらに item が整数ならその号の中にあることまで確かめる。
+// 号の文から、号の細分(イ・ロ・ハ…)の文を取り出す(F16a)。細分は行の頭が全角の空白1つ・片仮名1字・全角の空白で始まる
+// (「　イ　」。原文のファイルの書き方)。細分のさらに下((１) など)は全角の空白2つで始まるので、その細分に含める。
+// 見つからなければ null
+export function subitemOf(item, kana) {
+  if (typeof kana !== 'string' || !/^[ァ-ヶ]$/.test(kana)) return null;
+  const lines = String(item ?? '').split(/\r?\n/);
+  const head = /^　([ァ-ヶ])　/;
+  const start = lines.findIndex((l) => { const m = l.match(head); return m && m[1] === kana; });
+  if (start < 0) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) if (head.test(lines[i])) { end = i; break; }
+  return lines.slice(start, end).join('\n');
+}
+
+// 1件の抜き書き {id, sourceId, article, paragraph, item, subitem?, text} を、出典の原文と照らす。
+// paragraph が整数ならその項の中に、さらに item が整数ならその号の中に、subitem(片仮名1字)があればその細分の中にあることまで確かめる。
 // 返り値: { ok: true } か { ok: false, reason }
 export function checkQuote(q, sourceTexts) {
   if (!q || typeof q !== 'object') return { ok: false, reason: '抜き書きが無い' };
@@ -71,6 +85,12 @@ export function checkQuote(q, sourceTexts) {
   if (Number.isInteger(q.item)) {
     const it = itemOf(scope, q.item);
     if (it === null || !verifyQuote(q.text, it)) return { ok: false, reason: '第' + q.item + '号の中に無い' };
+    if (q.subitem != null) {
+      const sub = subitemOf(it, q.subitem);
+      if (sub === null || !verifyQuote(q.text, sub)) return { ok: false, reason: '第' + q.item + '号' + q.subitem + 'の中に無い' };
+    }
+  } else if (q.subitem != null) {
+    return { ok: false, reason: '号の細分があるのに号が無い' };
   }
   return { ok: true };
 }

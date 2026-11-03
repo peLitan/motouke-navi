@@ -93,6 +93,19 @@
       "file": "law-nyukei-15.txt"
     },
     {
+      "id": "kisoku-14_2",
+      "kind": "law",
+      "law": "建設業法施行規則",
+      "lawId": "324M50004000014",
+      "article": "14の2",
+      "title": "建設業法施行規則 第14条の2（施工体制台帳の記載事項等）",
+      "url": "https://laws.e-gov.go.jp/law/324M50004000014",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/324M50004000014?response_format=xml",
+      "revisionId": "324M50004000014_20261001_508M60000800082",
+      "fetchedAt": "2026-11-03",
+      "file": "law-kisoku-14_2.txt"
+    },
+    {
       "id": "mlit-kyoka-guideline",
       "kind": "document",
       "title": "建設業許可事務ガイドライン(国土交通省。令和7年2月1日から適用。【その他】2. 法等における「請負代金の額」等の内容について)",

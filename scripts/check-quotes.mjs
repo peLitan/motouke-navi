@@ -17,7 +17,7 @@ for (const s of sources) if (s.file) texts[s.id] = fs.readFileSync(path.join(roo
 let ng = 0;
 for (const q of quotes) {
   const r = checkQuote(q, texts);
-  const where = q.sourceId + (q.article != null ? ` 第${q.article}条` : '') + (q.paragraph ? ` 第${q.paragraph}項` : '') + (q.item ? ` 第${q.item}号` : '') + (q.section ? ` ${q.section}` : '') + (q.page ? ` ${q.page}ページ` : '');
+  const where = q.sourceId + (q.article != null ? ` 第${q.article}条` : '') + (q.paragraph ? ` 第${q.paragraph}項` : '') + (q.item ? ` 第${q.item}号` : '') + (q.subitem ? q.subitem : '') + (q.section ? ` ${q.section}` : '') + (q.page ? ` ${q.page}ページ` : '');
   console.log(`${r.ok ? '一致' : '不一致'}\t${q.id}\t${where}${r.ok ? '' : '\t' + r.reason}`);
   if (!r.ok) ng++;
 }
