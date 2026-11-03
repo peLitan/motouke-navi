@@ -15,6 +15,7 @@
 // 法人格の無い団体・施設の名前の規則(F24a。org-suffix)は業界を問わないので、辞書の文脈の規則の後ろにいつも足す(同じ所なら辞書の規則を取る)。
 
 import { companyPatterns, orgSuffixPatterns } from './rules-company.mjs';
+import { addressPatterns } from './rules-address.mjs';
 
 const DEFAULT_LABELS = {
   person: '人名',
@@ -39,8 +40,9 @@ const CORE_PATTERNS = [
   // 会社名: 「〇〇株式会社」「株式会社〇〇」と、ほかの法人の種類・略し方・囲み文字(F24a。規則は rules-company.mjs、語の一覧は company-types.mjs)。
   // 名前にはひらがなも入れてよいが、文の中のひらがな(「は」「として」など)の所で切る
   ...companyPatterns('company'),
-  // 住所: 「〇〇都道府県 + 〇〇市区町村郡 + 町名 + 番地」
-  { kind: 'address', re: new RegExp(`\\p{Script=Han}{1,3}[都道府県]${STOP}{1,20}?[市区町村郡]${STOP.slice(0, -1)}0-9０-９]{0,20}(?:${DIGIT}+(?:${HYPHEN}${DIGIT}+)*(?:番地|番|号)?)?`, 'gu') },
+  // 住所: 〒・都道府県・市区町村・町名・番地・建物名・部屋番号(F24b。規則は rules-address.mjs)。都道府県なし・空白区切りも見る。
+  // 番地で終わり、続く会社名・発注者の名前を食わない
+  ...addressPatterns('address'),
 ];
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
