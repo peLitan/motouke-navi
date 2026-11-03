@@ -2,9 +2,11 @@
 // 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
 // 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
 // 足した語だけを「辞書を書き出す」で辞書のファイルにし、「辞書を読み込む」で読み込める(F19a)。こちらも元の名前が入っている。
+// 業界(建設・医療(例))を切り替えられる(F19b)。
 import { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } from '../mask/core.mjs';
 import { downloadText } from './download.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
+import { MEDICAL_DICT } from '../mask/dict-medical.mjs';
 import { esc, scrollTable } from './view.mjs';
 import { extractText } from '../mask/extract.mjs';
 import { PERSON_RULES } from '../mask/rules-person.mjs';
@@ -16,7 +18,12 @@ let masker = null;
 const decisions = new Map();
 // 最後に置き換えた結果(後の欄を選びに合わせて描き直すため)
 let last = null;
-const getMasker = () => (masker ||= createMasker({ dictionaries: [CONSTRUCTION_DICT] }));
+// 業界(語尾・役職の表)の切り替え(F19b)。医療は「例」の表で、漏れの率は測っていない
+export const INDUSTRIES = { construction: CONSTRUCTION_DICT, medical: MEDICAL_DICT };
+let industry = 'construction';
+export const currentIndustry = () => industry;
+export const INDUSTRY_SWITCH_NOTICE = '業界を切り替えると、今の対応表は消えます(足した語は残します)。あとで戻す文があるときは、先に「対応表を書き出す」で保存してください。';
+const getMasker = () => (masker ||= createMasker({ dictionaries: [INDUSTRIES[industry]] }));
 
 const setText = (doc, id, text) => { const el = doc.getElementById(id); if (el) el.textContent = text; };
 const valueOf = (doc, id) => { const el = doc.getElementById(id); return el ? String(el.value ?? '') : ''; };
@@ -139,6 +146,40 @@ export function runMask(doc) {
   if (mapEl) mapEl.innerHTML = renderMap(r.map);
   if (amounts === 'band') notes.push('金額の「境目」の形は、戻しても元の金額には戻りません。');
   setText(doc, 'mask-status', notes.join(' '));
+}
+
+// 業界を切り替える(F19b)。足した語は新しい辞書に移し、対応表・選び・前後の欄は消す。
+// 対応表があるときは確かめ、やめたら選びを元に戻す
+export function setIndustry(doc, value, win) {
+  const sel = doc.getElementById('mask-industry');
+  if (!Object.hasOwn(INDUSTRIES, value)) {
+    if (sel) sel.value = industry;
+    setText(doc, 'mask-industry-status', '知らない業界です: ' + String(value));
+    return false;
+  }
+  if (value === industry) return true;
+  const old = masker;
+  if (old && old.entries().length && win && typeof win.confirm === 'function' && !win.confirm(INDUSTRY_SWITCH_NOTICE + '\n切り替えますか。')) {
+    if (sel) sel.value = industry;
+    setText(doc, 'mask-industry-status', '切り替えをやめました。');
+    return false;
+  }
+  const terms = old ? old.terms() : [];
+  industry = value;
+  masker = null;
+  const m = getMasker();
+  for (const t of terms) m.addTerm(t.word, t.kind);
+  decisions.clear();
+  last = null;
+  renderDecisions(doc);
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status']) setText(doc, id, '');
+  const mapEl = doc.getElementById('mask-map');
+  if (mapEl) mapEl.innerHTML = '';
+  if (sel) sel.value = industry;
+  setText(doc, 'mask-industry-status', '業界を「' + INDUSTRIES[industry].name + '」にしました。'
+    + (industry === 'medical' ? 'これは例の表で、医療の書類での漏れの率は測っていません。' : '')
+    + (terms.length ? '足した語 ' + terms.length + ' 件はそのまま使います。' : '') + 'もう一度「置き換える」を押してください。');
+  return true;
 }
 
 export function runUnmask(doc) {
@@ -271,6 +312,8 @@ export function startMask(doc) {
     const btn = doc.getElementById(id);
     if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); f(); });
   };
+  const ind = doc.getElementById('mask-industry');
+  if (ind) ind.addEventListener('change', () => setIndustry(doc, String(ind.value ?? ''), doc.defaultView));
   on('mask-run', () => runMask(doc));
   on('unmask-run', () => runUnmask(doc));
   on('dict-add', () => addDictWord(doc));

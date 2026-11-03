@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L1U2xF5nuburSa3I5ruoEUTSJvy1/0iqWgDSKUQp3fQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cK9gEvYxsEN4Ib/wLKgVeNTDxnA5Vl8Yz3iOQAqB8mE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -353,6 +353,13 @@
 <p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
 <p class="note" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
 <p class="note" id="mask-limits">限界(架空の書類での測定): 敬称・役職・欄名の隣の語を人名の候補として、工事・工区・作業所・現場などで終わる語を現場名の候補として置き換えます。辞書作りに使っていない初めて見る書類4件では、辞書に語を足さない場合の漏れの率は 58.2% でした(人名・現場名を辞書に足すと 29.6%)。会社名は24語中22語が、足しても残りました。規則を作るときに見た見本の書類では 6.7% でしたが、この数字は当てになりません。人名・現場名は「辞書に足す」で足し、後の欄を必ず目で確かめてください。詳しくは docs/mask-rate.md。</p>
+<div class="row"><label for="mask-industry">業界(語尾・役職の表)</label>
+<select id="mask-industry" name="mask-industry">
+<option value="construction" selected>建設</option>
+<option value="medical">医療(例)</option>
+</select></div>
+<p class="note" id="mask-industry-note">「医療(例)」は、病院・医院・クリニック・診療所・薬局などで終わる語を施設名の候補として、医師・看護師などの後ろの語を人名の候補として置き換える「例」の表です。医療の書類での漏れの率は測っていません(上の限界の数字は建設の書類のものです)。医療では建設業の許可番号・共同企業体の形は使いません。切り替えても足した語は残りますが、対応表は消えます。</p>
+<p id="mask-industry-status" aria-live="polite"></p>
 <div class="row"><label for="dict-word">辞書に足す語</label>
 <input type="text" id="dict-word" name="dict-word" placeholder="例 甲野 一郎">
 <label for="dict-kind">種類</label>
@@ -3625,7 +3632,7 @@ return { SITE_RULES, siteSuffixPatterns };
 __m["src/mask/suffix-construction.mjs"] = (function () {
 // 現場名の語尾の表(F17b): 建設の書類で、現場名(工事の名前・作業所の名前)の終わりに付く語。
 // 規則そのもの(src/mask/rules-site.mjs)は分野の語を持たない。業界を替えるときは、このファイルと同じ形(suffixes・labels・genericWords)の表を作って渡す。
-// 例: 医療なら suffixes に 病院・医院・クリニック・診療所・薬局 などを置く(F19。まだ用意していない)。
+// 例: 医療の表は src/mask/suffix-medical.mjs(F19b。「例」で、漏れの率は測っていない)。
 
 // 語尾。共同企業体の名前(「〇〇JV」「〇〇共同企業体」)は、辞書の形(src/mask/dict-construction.mjs)で会社名として先に置き換わるので、
 // ここで JV に当たっても会社名の方が取られる(どちらでも置き換わる)
@@ -3721,14 +3728,99 @@ const CONSTRUCTION_DICT = {
 
 return { CONSTRUCTION_PERSON_TITLES, CONSTRUCTION_PERSON_LABELS, CONSTRUCTION_STOP_WORDS, CONSTRUCTION_DICT };
 })();
+__m["src/mask/suffix-medical.mjs"] = (function () {
+// 施設名の語尾の表(医療。F19b の「例」): 医療の書類で、病院・診療所・薬局などの名前の終わりに付く語。
+// 規則そのもの(src/mask/rules-site.mjs)は分野の語を持たない。この表は建設の表(src/mask/suffix-construction.mjs)と同じ形(suffixes・labels・genericWords)。
+// これは「例」として用意した表で、医療の書類での置き換えの漏れの率は測っていない(README の「文の置き換え」に書いた)。
+// 語は医療機関の種類の一般の呼び名だけで、実在の施設の名前は入れていない。
+
+// 語尾(長い語尾から試すので、並びの順は問わない)
+const MEDICAL_SITE_SUFFIXES = [
+  '病院', '医院', 'クリニック', '診療所', '薬局', '歯科医院', '歯科', '整骨院', '接骨院', '鍼灸院', '治療院',
+  '訪問看護ステーション', '看護ステーション', '介護老人保健施設', '老人保健施設', '医療センター', '健診センター', '検診センター',
+];
+
+// 名前の前にくっつくことのある欄名(「医療機関名甲野病院」のように区切りが無いとき、欄名は置き換えない)
+const MEDICAL_SITE_LABELS = [
+  '医療機関名称', '医療機関名', '病院名', '診療所名', '薬局名', '施設名称', '施設名', '事業所名', '紹介先', '紹介元', '受診先', '入院先', '転院先',
+];
+
+// 名前の部分から除く一般の語。これを除いて2字より短く残る語は施設名にしない(「総合病院」「大学病院」「調剤薬局」「当院」など)
+const MEDICAL_GENERIC_WORDS = [
+  // 医療機関の種類・設置の形を言う語
+  '総合', '大学', '附属', '付属', '公立', '市立', '県立', '国立', '私立', '町立', '村立', '都立', '府立', '道立', '区立', '組合立',
+  '地域', '医療', '支援', '中核', '基幹', '拠点', '救急', '救命', '急性期', '回復期', '慢性期', '療養', '精神科', '一般', '特定', '機能',
+  '調剤', '保険', '在宅', '訪問', '介護', '老人', '保健', '看護', '健診', '検診', '動物', 'かかりつけ', '専門', '協力', '連携', '紹介',
+  // 診療科の名前
+  '内科', '外科', '小児科', '小児', '産婦人科', '産科', '婦人科', '眼科', '耳鼻咽喉科', '耳鼻科', '皮膚科', '泌尿器科', '整形外科', '整形',
+  '脳神経外科', '脳神経', '心療内科', '精神', '神経', '循環器', '消化器', '呼吸器', '形成外科', '麻酔科', '放射線科', 'リハビリテーション',
+  'リハビリ', '歯科', '矯正', '口腔', '美容',
+  // 関わり方・指し方を言う語
+  '当', '本', '同', '各', '他', '前', '元', '新', '旧', '上記', '下記', '前記', '該当', '当該', '近隣', '近所', '最寄り', '最寄', '近く',
+  '病院', '医院', '診療所', '薬局', '施設', '国', '県', '市', '町', '村', '都', '府', '区', '北', '南', '東', '西', '中央',
+];
+
+const MEDICAL_SITE_TABLE = {
+  suffixes: MEDICAL_SITE_SUFFIXES,
+  labels: MEDICAL_SITE_LABELS,
+  genericWords: MEDICAL_GENERIC_WORDS,
+};
+
+return { MEDICAL_SITE_SUFFIXES, MEDICAL_SITE_LABELS, MEDICAL_GENERIC_WORDS, MEDICAL_SITE_TABLE };
+})();
+__m["src/mask/dict-medical.mjs"] = (function () {
+// 置き換えの部品(src/mask/core.mjs)に渡す、医療の辞書(F19b の「例」)。建設の辞書(src/mask/dict-construction.mjs)と同じ形。
+// 画面の「業界」で「医療(例)」を選んだときに使う。医療の書類での置き換えの漏れの率は測っていない。
+// 建設の許可番号・共同企業体の形は持たない。施設名の語尾の表は src/mask/suffix-medical.mjs から渡す。
+// 種類の key は建設の辞書と同じ(辞書のファイルをどちらの業界でも読み込めるように)。site の表示名だけ「施設名」にする。
+
+const { personContextPatterns } = __m["src/mask/rules-person.mjs"];
+const { siteSuffixPatterns } = __m["src/mask/rules-site.mjs"];
+const { MEDICAL_SITE_TABLE } = __m["src/mask/suffix-medical.mjs"];
+
+// 医療の書類で人名の前に来る役職・欄名
+const MEDICAL_PERSON_TITLES = [
+  '主治医', '担当医', '執刀医', '紹介医', '医師', '歯科医師', '副院長', '看護部長', '看護師長', '師長', '主任看護師', '看護師', '准看護師',
+  '保健師', '助産師', '薬剤師', '管理薬剤師', '理学療法士', '作業療法士', '言語聴覚士', '臨床検査技師', '診療放射線技師', '管理栄養士',
+  '医療ソーシャルワーカー', 'ケアマネジャー', '介護支援専門員', '事務長',
+];
+const MEDICAL_PERSON_LABELS = ['患者氏名', '患者名', '医師名', '担当医師', '主治医名', '紹介医師', '処方医', '受診者', '被保険者氏名'];
+// 役職・欄名の隣に来るが人名ではない語
+const MEDICAL_STOP_WORDS = [
+  '外来', '入院', '退院', '病棟', '当直', '夜勤', '日勤', '在宅', '内科', '外科', '小児科', '眼科', '歯科', '整形外科', '皮膚科', '精神科',
+  '常勤', '非常勤', '専門', '指導', '研修', '紹介', '診察', '処方', '検査', '患者',
+];
+
+const MEDICAL_DICT = {
+  name: '医療(例)',
+  labels: {
+    license: '許可番号',
+    site: '施設名',
+  },
+  terms: [],
+  patterns: [],
+  contextPatterns: [
+    ...personContextPatterns({
+      titles: MEDICAL_PERSON_TITLES,
+      labels: MEDICAL_PERSON_LABELS,
+      stopWords: MEDICAL_STOP_WORDS,
+    }),
+    ...siteSuffixPatterns(MEDICAL_SITE_TABLE),
+  ],
+};
+
+return { MEDICAL_PERSON_TITLES, MEDICAL_PERSON_LABELS, MEDICAL_STOP_WORDS, MEDICAL_DICT };
+})();
 __m["src/ui/mask-app.mjs"] = (function () {
 // 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
 // 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
 // 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
 // 足した語だけを「辞書を書き出す」で辞書のファイルにし、「辞書を読み込む」で読み込める(F19a)。こちらも元の名前が入っている。
+// 業界(建設・医療(例))を切り替えられる(F19b)。
 const { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } = __m["src/mask/core.mjs"];
 const { downloadText } = __m["src/ui/download.mjs"];
 const { CONSTRUCTION_DICT } = __m["src/mask/dict-construction.mjs"];
+const { MEDICAL_DICT } = __m["src/mask/dict-medical.mjs"];
 const { esc, scrollTable } = __m["src/ui/view.mjs"];
 const { extractText } = __m["src/mask/extract.mjs"];
 const { PERSON_RULES } = __m["src/mask/rules-person.mjs"];
@@ -3740,7 +3832,12 @@ let masker = null;
 const decisions = new Map();
 // 最後に置き換えた結果(後の欄を選びに合わせて描き直すため)
 let last = null;
-const getMasker = () => (masker ||= createMasker({ dictionaries: [CONSTRUCTION_DICT] }));
+// 業界(語尾・役職の表)の切り替え(F19b)。医療は「例」の表で、漏れの率は測っていない
+const INDUSTRIES = { construction: CONSTRUCTION_DICT, medical: MEDICAL_DICT };
+let industry = 'construction';
+const currentIndustry = () => industry;
+const INDUSTRY_SWITCH_NOTICE = '業界を切り替えると、今の対応表は消えます(足した語は残します)。あとで戻す文があるときは、先に「対応表を書き出す」で保存してください。';
+const getMasker = () => (masker ||= createMasker({ dictionaries: [INDUSTRIES[industry]] }));
 
 const setText = (doc, id, text) => { const el = doc.getElementById(id); if (el) el.textContent = text; };
 const valueOf = (doc, id) => { const el = doc.getElementById(id); return el ? String(el.value ?? '') : ''; };
@@ -3863,6 +3960,40 @@ function runMask(doc) {
   if (mapEl) mapEl.innerHTML = renderMap(r.map);
   if (amounts === 'band') notes.push('金額の「境目」の形は、戻しても元の金額には戻りません。');
   setText(doc, 'mask-status', notes.join(' '));
+}
+
+// 業界を切り替える(F19b)。足した語は新しい辞書に移し、対応表・選び・前後の欄は消す。
+// 対応表があるときは確かめ、やめたら選びを元に戻す
+function setIndustry(doc, value, win) {
+  const sel = doc.getElementById('mask-industry');
+  if (!Object.hasOwn(INDUSTRIES, value)) {
+    if (sel) sel.value = industry;
+    setText(doc, 'mask-industry-status', '知らない業界です: ' + String(value));
+    return false;
+  }
+  if (value === industry) return true;
+  const old = masker;
+  if (old && old.entries().length && win && typeof win.confirm === 'function' && !win.confirm(INDUSTRY_SWITCH_NOTICE + '\n切り替えますか。')) {
+    if (sel) sel.value = industry;
+    setText(doc, 'mask-industry-status', '切り替えをやめました。');
+    return false;
+  }
+  const terms = old ? old.terms() : [];
+  industry = value;
+  masker = null;
+  const m = getMasker();
+  for (const t of terms) m.addTerm(t.word, t.kind);
+  decisions.clear();
+  last = null;
+  renderDecisions(doc);
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status']) setText(doc, id, '');
+  const mapEl = doc.getElementById('mask-map');
+  if (mapEl) mapEl.innerHTML = '';
+  if (sel) sel.value = industry;
+  setText(doc, 'mask-industry-status', '業界を「' + INDUSTRIES[industry].name + '」にしました。'
+    + (industry === 'medical' ? 'これは例の表で、医療の書類での漏れの率は測っていません。' : '')
+    + (terms.length ? '足した語 ' + terms.length + ' 件はそのまま使います。' : '') + 'もう一度「置き換える」を押してください。');
+  return true;
 }
 
 function runUnmask(doc) {
@@ -3995,6 +4126,8 @@ function startMask(doc) {
     const btn = doc.getElementById(id);
     if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); f(); });
   };
+  const ind = doc.getElementById('mask-industry');
+  if (ind) ind.addEventListener('change', () => setIndustry(doc, String(ind.value ?? ''), doc.defaultView));
   on('mask-run', () => runMask(doc));
   on('unmask-run', () => runUnmask(doc));
   on('dict-add', () => addDictWord(doc));
@@ -4041,7 +4174,7 @@ function startMask(doc) {
   }
 }
 
-return { parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, maskedText, decideMask, runMask, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, startMask };
+return { INDUSTRIES, currentIndustry, INDUSTRY_SWITCH_NOTICE, parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, maskedText, decideMask, runMask, setIndustry, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, startMask };
 })();
 __m["src/ui/ai-app.mjs"] = (function () {
 // 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。
