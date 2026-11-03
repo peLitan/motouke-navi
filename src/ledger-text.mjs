@@ -227,11 +227,13 @@ export function parseLedgerText(text) {
 // parseLedgerText と違い、点検に使わない欄も捨てない。値の読み替え(金額・日付)はしない。
 // 返り値: { top: [{ key, value, line }], sections: [{ kind, title, tier, rows, subs: [{ name, title, tier, orderer, rows }] }] }
 //   top は最初の節の前の「工事名: …」のような行。tier は tierOf の値(下請けの見出しに「(一次: 会社名)」があれば 2 以上)
+//   下請けの節でない節の中の「### 監理技術者補佐」のような小見出しの下の行には group(小見出しの文)を付ける(F29a)
 export function ledgerRows(text) {
   const top = [];
   const sections = [];
   let sec = null;
   let sub = null;
+  let group = '';
   const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
   lines.forEach((line, i) => {
     const lineNo = i + 1;
@@ -241,7 +243,9 @@ export function ledgerRows(text) {
       if (level === 2) {
         const kind = sectionKind(h[2]);
         sec = { kind, title: clean(h[2]), tier: kind === 'subs' ? tierOf(h[2]) : null, rows: [], subs: [] };
-        sections.push(sec); sub = null;
+        sections.push(sec); sub = null; group = '';
+      } else if (level === 3 && sec && sec.kind !== 'subs') {
+        group = clean(h[2]);
       } else if (level === 3 && sec && sec.kind === 'subs') {
         let name = stripNumber(h[2]);
         let tier = sec.tier;
@@ -263,7 +267,7 @@ export function ledgerRows(text) {
     const key = cells[0].replace(/\s+/g, ' ');
     const value = cells.slice(1).join('|').trim();
     if (key === '項目' && /内容/.test(value)) return;
-    (sub ?? sec).rows.push({ key, value, line: lineNo });
+    (sub ?? sec).rows.push({ key, value, line: lineNo, ...(group && !sub ? { group } : {}) });
   });
   return { top, sections };
 }

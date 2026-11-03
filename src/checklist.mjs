@@ -30,14 +30,47 @@ export function whereOf(it) {
 }
 
 const isBlank = (v) => String(v ?? '').replace(/[\s　]/g, '') === '';
+// 「なし」「無し」「該当なし」「−」のように、無いことを書いた値(F29a)。後ろのかっこ書きは見ない
+const NONE_RE = /^(?:なし|無し|無|該当なし|非該当|未取得|許可なし|無許可|[-－ー―‐—−]+)(?:[(（].*[)）])?$/;
+export const isNone = (v) => NONE_RE.test(String(v ?? '').replace(/[\s　]/g, ''));
+
+// 「健康保険 / 厚生年金 / 雇用保険」のように1つの行に欄をまとめたとき、値も「/」で分けてあれば、欄ごとの値を位置で取る(F29a)
+// 返り値: { value } か、欄の数と値の数が合わなければ { mismatch: true }。まとめていない行・値に「/」が無い行は null(行の値をそのまま使う)
+const SPLIT_RE = /\s*[\/／]\s*/;
+function splitCell(row, re) {
+  const keys = row.key.split(SPLIT_RE);
+  if (keys.length < 2) return null;
+  const idx = keys.findIndex((k) => re.test(k));
+  if (idx < 0 || !SPLIT_RE.test(row.value)) return null;
+  const values = row.value.split(SPLIT_RE);
+  if (values.length !== keys.length) return { mismatch: true };
+  return { value: values[idx] };
+}
+
+// 下請けでない節の「### 監理技術者補佐」「### 専門技術者」の下の「氏名」「資格」「専任・非専任」の行は、
+// 監理技術者・主任技術者の欄と取り違えないよう、欄名の前に小見出しの語を付けて扱う(F29a)
+const GROUP_RE = /監理技術者補佐|補佐|専門技術者|技術上の管理/;
+function withGroup(rows) {
+  return rows.map((r) => {
+    const g = r.group && r.group.match(GROUP_RE);
+    return g && !GROUP_RE.test(r.key) ? { ...r, key: g[0] + ' ' + r.key } : r;
+  });
+}
 
 // 欄の一覧から、事項の欄ごとに見つけた行を探す。見つけた順の最初の行を使う
+// p.not に当たる欄名は使わない(例: 監理技術者の「専任」に、監理技術者補佐の「専任」の行を使わない)
 function matchParts(it, rows, heading) {
   return it.parts.map((p) => {
     if (p.readable === false) return { label: p.label, state: 'unread', value: '' };
     const re = new RegExp(p.re);
-    const row = rows.find((r) => re.test(r.key));
-    if (row) return { label: p.label, state: isBlank(row.value) ? 'blank' : 'found', value: row.value, key: row.key, line: row.line };
+    const not = p.not ? new RegExp(p.not) : null;
+    const row = rows.find((r) => re.test(r.key) && !(not && not.test(r.key)));
+    if (row) {
+      const sp = splitCell(row, re);
+      if (sp && sp.mismatch) return { label: p.label, state: 'mismatch', value: row.value, key: row.key, line: row.line };
+      const v = sp ? sp.value : row.value;
+      return { label: p.label, state: isBlank(v) ? 'blank' : 'found', value: v, key: row.key, line: row.line, ...(sp ? { split: true } : {}) };
+    }
     if (p.heading && !isBlank(heading)) return { label: p.label, state: 'found', value: heading, key: '見出し' };
     return { label: p.label, state: 'missing', value: '' };
   });
@@ -48,6 +81,7 @@ function conditionOf(it, rows, tier) {
   if (!it.condition) return null;
   if (it.condition === 'license') {
     const lic = rows.find((r) => /許可番号/.test(r.key));
+    if (lic && isNone(lic.value)) return 'none'; // 「なし」は許可が無いと書いたもので、建設業者とは決めない(F29a)
     return lic && !isBlank(lic.value) ? 'met' : 'unknown';
   }
   if (it.condition === 'tier1') return tier === 1 ? 'met' : 'unknown';
@@ -64,15 +98,24 @@ function judge(it, parts, cond, extraReason) {
   const blank = parts.filter((p) => p.state === 'blank');
   const missing = parts.filter((p) => p.state === 'missing');
   const unread = parts.filter((p) => p.state === 'unread');
+  const mismatch = parts.filter((p) => p.state === 'mismatch');
   const reasons = [];
   let status;
-  if (blank.length && (cond === null || cond === 'met')) {
+  // 「置くとき」の事項で、氏名の欄に「なし」と書いてあり、ほかの欄が無いとき(置いていないと書いたもの)は値
+  const absent = it.noneMeansAbsent && parts[0].state === 'found' && isNone(parts[0].value)
+    && parts.slice(1).every((p) => p.state === 'missing' || (p.state === 'found' && isNone(p.value)));
+  if (absent) {
+    status = 'value';
+    reasons.push('「' + parts[0].value + '」と書いてあり、置いていないと読みました(書いてあるまま。中身が正しいかはこのツールは見ていません)');
+  } else if (blank.length && (cond === null || cond === 'met')) {
     status = 'empty';
     reasons.push('欄はあるが値が空: ' + blank.map((p) => p.label + '(' + p.key + (p.line ? '・' + p.line + '行目' : '') + ')').join('、'));
     if (cond === 'met') reasons.push(CONDITION_TEXT[it.condition] + 'で、台帳から当てはまると読みました(' + (it.condition === 'license' ? '許可番号の欄に値がある' : '一次の下請け') + ')');
-  } else if (blank.length || missing.length || unread.length) {
+  } else if (blank.length || missing.length || unread.length || mismatch.length) {
     status = 'unknown';
-    if (blank.length) reasons.push('欄はあるが値が空: ' + blank.map((p) => p.label).join('、') + '。' + CONDITION_TEXT[it.condition] + 'で、当てはまるかを台帳から決められません');
+    if (cond === 'none') reasons.push('許可番号の欄が「なし」と書いてあるので、下請負人を建設業者とは決めません(建設業者のときの事項なので、当てはまるかを台帳から決められません)');
+    if (mismatch.length) reasons.push('1つの行にまとめた欄の数と、「/」で分けた値の数が合わないので、どの値がどの欄のものか決められません: ' + mismatch.map((p) => p.label + '(' + p.key + (p.line ? '・' + p.line + '行目' : '') + ')').join('、'));
+    if (blank.length) reasons.push('欄はあるが値が空: ' + blank.map((p) => p.label).join('、') + '。' + CONDITION_TEXT[it.condition ?? 'unknown'] + 'で、当てはまるかを台帳から決められません');
     if (missing.length) reasons.push('台帳に欄が見つかりません: ' + missing.map((p) => p.label).join('、') + '(別の名前の欄や、別紙・作業員名簿に書いてあるかもしれません)');
     if (unread.length) reasons.push('このツールでは読まない事柄: ' + unread.map((p) => p.label).join('、'));
     if (cond === 'unknown' && !blank.length && missing.length) reasons.push(CONDITION_TEXT[it.condition] + 'です');
@@ -92,8 +135,8 @@ function rowOf(it, entity, parts, cond, extraReason) {
   // 1つの欄(「健康保険 / 厚生年金 / 雇用保険」のような行)に当たった欄はまとめて1回だけ出す
   const shown = [];
   for (const p of parts) {
-    const text = ({ found: p.value, blank: '(空)', missing: '(欄が見つからない)', unread: '(読まない)' })[p.state];
-    const same = p.line && shown.find((x) => x.line === p.line);
+    const text = ({ found: p.value, blank: '(空)', missing: '(欄が見つからない)', unread: '(読まない)', mismatch: p.value + '(欄と値の数が合わない)' })[p.state];
+    const same = p.line && shown.find((x) => x.line === p.line && x.text === text);
     if (same) same.labels.push(p.label); else shown.push({ line: p.line, labels: [p.label], text });
   }
   const value = shown.map((x) => x.labels.join('・') + ': ' + x.text).join(' / ');
@@ -117,7 +160,7 @@ const PRIME_LABEL = '作成建設業者(元請)と、その請け負った工事
 // 返り値: { rows, counts: { value, empty, unknown }, notes }
 export function checkChecklistText(text) {
   const { top, sections } = ledgerRows(text);
-  const primeRows = [...top, ...sections.filter((s) => s.kind !== 'subs' && s.kind !== 'other').flatMap((s) => s.rows)];
+  const primeRows = withGroup([...top, ...sections.filter((s) => s.kind !== 'subs' && s.kind !== 'other').flatMap((s) => s.rows)]);
   const subs = sections.filter((s) => s.kind === 'subs').flatMap((s) => s.subs);
   const rows = [];
   for (const it of CHECKLIST_ITEMS.filter((x) => x.scope === 'prime')) {
