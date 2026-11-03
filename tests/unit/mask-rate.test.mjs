@@ -10,7 +10,8 @@ import { parseCsv, parseGold, scoreCase, scoreAll, toMarkdown } from '../../src/
 const proj = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 const DOCS = {
-  'P/台帳.md': '元請: 甲野建設株式会社(電話 03-0000-0000)\n現場代理人: 乙山 二郎\n現場: こころみ台工区\n',
+  // 人名は敬称・役職・欄名の隣に置かない(F17a の文脈規則で見つかると、辞書に足さない場合の漏れの見本にならないため)
+  'P/台帳.md': '元請: 甲野建設株式会社(電話 03-0000-0000)\n確認: 乙山 二郎が行う\n現場: こころみ台工区\n',
 };
 const GOLD_CSV = [
   'file,text,kind',

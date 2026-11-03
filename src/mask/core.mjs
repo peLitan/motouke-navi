@@ -4,7 +4,9 @@
 // 利用者が求めたときだけ、exportMap で対応表を文字列(JSON)にし、importMap で読み込む(F11d)。その文字列には元の名前が入っている。
 //
 // 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
-// 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形。重なったら優先の高いほう、同じなら長いほうを取る。
+// 辞書は文脈の規則(contextPatterns: [{ kind, rule, re, accept? }])も持てる(F17a)。まわりの語から見つけた確信の弱い語で、
+//   accept(語) が false の語は取らない。見つけた語は対応表の行に rule(規則の id)を付ける。同じ文の中の同じ語は、文脈が無くても同じ記号にする。
+// 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形 > 文脈の規則。重なったら優先の高いほう、同じなら長いほうを取る。
 
 const DEFAULT_LABELS = {
   person: '人名',
@@ -129,11 +131,13 @@ export function createMasker({ dictionaries = [] } = {}) {
   const labels = { ...DEFAULT_LABELS };
   const dictTerms = [];
   const dictPatterns = [];
+  const contextPatterns = [];
   for (const d of dictionaries) {
     if (!d) continue;
     Object.assign(labels, d.labels || {});
     for (const t of d.terms || []) dictTerms.push({ kind: t.kind, re: termRegExp(t.word) });
     for (const p of d.patterns || []) dictPatterns.push({ kind: p.kind, re: withGlobal(p.re) });
+    for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept });
   }
   const userTerms = []; // { word, kind, re }
   const byOriginal = new Map(); // 元の語(空白を除いた形)→ 対応表の1行
@@ -162,10 +166,11 @@ export function createMasker({ dictionaries = [] } = {}) {
   // 元の語に記号を割り当てる。同じ語にはいつも同じ記号(空白の有無だけの違いは同じ語とみなし、戻すときは最初に出た書き方にする)。
   // 文の中に既にある文字列と同じ記号は使わない
   const keyOf = (s) => s.replace(/[\s\u3000]+/g, '');
-  function tokenFor(original, kind, text) {
+  function tokenFor(original, kind, text, rule) {
     const hit = byOriginal.get(keyOf(original));
     if (hit) {
       if (!hit.variants.includes(original)) hit.variants.push(original);
+      if (!rule) delete hit.rule; // 辞書や形でも見つかった語は、確信の弱い語にしない
       return hit;
     }
     let token;
@@ -174,28 +179,42 @@ export function createMasker({ dictionaries = [] } = {}) {
       token = `〔${labelOf(kind)}${counters[kind]}〕`;
     } while (byToken.has(token) || text.includes(token));
     const entry = { token, original, kind, label: labelOf(kind), variants: [original] };
+    if (rule) entry.rule = rule;
     byOriginal.set(keyOf(original), entry);
     byToken.set(token, entry);
     return entry;
   }
 
   function findSpans(text) {
-    const groups = [userTerms, dictTerms, dictPatterns, CORE_PATTERNS];
+    const groups = [userTerms, dictTerms, dictPatterns, CORE_PATTERNS, contextPatterns];
     const cands = [];
     groups.forEach((list, priority) => {
-      for (const { kind, re } of list) {
+      for (const { kind, re, rule, accept } of list) {
         const r = new RegExp(re.source, re.flags);
         for (const m of text.matchAll(r)) {
           if (!m[0]) continue;
-          cands.push({ start: m.index, end: m.index + m[0].length, kind, priority });
+          if (accept && !accept(m[0])) continue;
+          cands.push({ start: m.index, end: m.index + m[0].length, kind, priority, rule });
         }
       }
     });
+    const overlaps = (c, list) => list.some((x) => c.start < x.end && x.start < c.end);
     cands.sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start) || a.start - b.start);
     const chosen = [];
     for (const c of cands) {
-      if (chosen.some((x) => c.start < x.end && x.start < c.end)) continue;
+      if (overlaps(c, chosen)) continue;
       chosen.push(c);
+    }
+    // 文脈で見つけた語は、同じ文の中のほかの場所(文脈の無い所)でも同じ語として置き換える
+    const seen = new Set();
+    for (const c of chosen.filter((x) => x.rule)) {
+      const word = text.slice(c.start, c.end);
+      if (seen.has(keyOf(word))) continue;
+      seen.add(keyOf(word));
+      for (const m of text.matchAll(termRegExp(word))) {
+        const more = { start: m.index, end: m.index + m[0].length, kind: c.kind, rule: c.rule };
+        if (!overlaps(more, chosen)) chosen.push(more);
+      }
     }
     return chosen.sort((a, b) => a.start - b.start);
   }
@@ -209,7 +228,7 @@ export function createMasker({ dictionaries = [] } = {}) {
     const used = [];
     for (const s of spans) {
       const original = src.slice(s.start, s.end);
-      const entry = tokenFor(original, s.kind, src);
+      const entry = tokenFor(original, s.kind, src, s.rule);
       out += src.slice(pos, s.start) + entry.token;
       pos = s.end;
       if (!used.includes(entry)) used.push(entry);
