@@ -44,6 +44,9 @@ export const CONSTRUCTION_DICT = {
       titles: CONSTRUCTION_PERSON_TITLES,
       labels: CONSTRUCTION_PERSON_LABELS,
       stopWords: CONSTRUCTION_STOP_WORDS,
+      // 名前に直に付く建設の役職(「乙川工事長」)と、役職に付いても人名にしない建設の部署の語(「工事部長」「土木課長」)(F27b)
+      attachedTitles: ['職長', '監督', '工事長', '工事主任'],
+      orgWords: ['工事', '建築', '土木', '施工', '工務', '舗装', '電気工事', '安全衛生'],
     }),
     ...siteSuffixPatterns(CONSTRUCTION_SITE_TABLE),
   ],
