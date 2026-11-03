@@ -13,6 +13,7 @@ import { PERSON_RULES } from '../mask/rules-person.mjs';
 import { SITE_RULES } from '../mask/rules-site.mjs';
 import { COMPANY_RULES } from '../mask/rules-company.mjs';
 import { checkDecoys, decoyMessage } from '../mask/decoy.mjs';
+import { findResiduals, residualMessage } from '../mask/residual.mjs';
 
 let masker = null;
 // 確信の弱い語(規則だけで見つけた語)の選び(F17c)。記号 → 'replace'(置き換える)か 'keep'(残す)。無ければ未確認。
@@ -116,6 +117,20 @@ function renderDecisions(doc) {
     warn.textContent = n ? UNCHECKED_NOTICE + '(' + n + ' 件)。上の「確かめてほしい語」で「置き換える」か「残す」を選んでから、後の欄の文を外へ出してください。' : '';
     warn.hidden = !n;
   }
+  updateResidual(doc);
+}
+
+// 「元に戻す」の前に、対応表の元の語が後の欄に残っていないかを探し直す(F28b)。
+// 後の欄(今の選びに合わせた、外へ貼る文)を、対応表のすべての語(この画面で前に置き換えた語・読み込んだ対応表を含む)で探す。
+// 「残す」を選んだ語は、わざと残したので数えない。結果は置き換えのたび・選びを変えるたび・「元に戻す」を押すたびに出し直す
+let lastResidual = null;
+export const lastResidualCheck = () => lastResidual;
+function updateResidual(doc) {
+  if (!last) { lastResidual = null; setText(doc, 'mask-residual', ''); return null; }
+  const keep = weakEntries(last.map).filter((e) => stateOf(e.token) === 'keep').map((e) => e.token);
+  lastResidual = findResiduals(maskedText(), getMasker().entries(), { skipTokens: keep });
+  setText(doc, 'mask-residual', residualMessage(lastResidual));
+  return lastResidual;
 }
 
 // 後の欄の、今の選びに合わせた文(外へ貼る文)
@@ -185,7 +200,7 @@ export function setIndustry(doc, value, win) {
   decisions.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   if (sel) sel.value = industry;
@@ -196,6 +211,7 @@ export function setIndustry(doc, value, win) {
 }
 
 export function runUnmask(doc) {
+  updateResidual(doc);
   setText(doc, 'unmask-output', getMasker().unmask(valueOf(doc, 'unmask-input')));
 }
 
@@ -218,7 +234,7 @@ export function resetMask(doc) {
   decisions.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'map-status', 'dict-file-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual', 'map-status', 'dict-file-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
