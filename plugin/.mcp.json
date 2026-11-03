@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "masked-files": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs"],
+      "env": {
+        "MASK_TOOL_DIR": "${CLAUDE_PLUGIN_ROOT}",
+        "MASK_MAP": "${MASK_MAP:-}"
+      }
+    }
+  }
+}

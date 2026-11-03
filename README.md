@@ -192,6 +192,29 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - 置き換えの漏れは0になりません(上の「文の置き換え」)。返ってきた中身に元の名前が残っていないか、目で確かめてください
 - 試験(`tests/acceptance/claude-code.test.mjs`)は、フックの判断と道具の返事を関数として確かめたものです。Claude Code の版が変わるとフックの入力の形が変わることがあります
 
+## Claude Code のプラグイン(plugin/)
+上の「Claude Code に組み込む」の守り(フック)と道具(`masked-files`)を、作業フォルダに写さずに使えるよう、Claude Code のプラグインの形にまとめたものです。置き場は `plugin/` です。
+
+- `.claude-plugin/plugin.json`: プラグインの名前(`motouke-navi-guard`)などの宣言。`.claude-plugin/` にはこのファイルだけを置き、ほかの部品はプラグインの直下に置く
+- `hooks/hooks.json`: PreToolUse(Read・Grep・Glob・Bash・PowerShell・Edit・Write・NotebookEdit)と UserPromptSubmit で `${CLAUDE_PLUGIN_ROOT}/scripts/guard-raw.mjs` を動かす。`raw/` を指すと終了コード 2 で止め、理由を標準エラーに出す
+- `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える
+- `scripts/guard-raw.mjs`・`mcp/masked-files.mjs`・`src/mask/`: `integration/claude-code/` と `src/mask/` の写し。プラグインは入れたときに別の場所へ写されるので、置き換えの部品も中に置いている。元を直したら `node scripts/sync-plugin.mjs` で写しを作り直す(写しが元と同じことは `tests/unit/plugin-structure.test.mjs` で確かめる)
+
+試し方: `claude --plugin-dir ./plugin` で Claude Code を開く(そのセッションだけ読み込まれ、設定には何も書かれない)。プラグインを直したら `/reload-plugins` で読み込み直す。形の確かめには `claude plugin validate ./plugin` が使える
+
+限界(必ず読んでください):
+- プラグインは権限の決まり(`permissions.deny`)と sandbox の設定を配れません(プラグインの settings で効くのは `agent` と `subagentStatusLine` だけ)。権限の守り(`permissions.deny`)は利用者のプロジェクトの settings に置く必要があります。プラグインはフックの守りだけを配ります。`cat` などのコマンドでの読み取りを sandbox で止めるには、上の「Claude Code に組み込む」の `.claude/settings.json` を作業フォルダに置いてください
+- 道具の作業フォルダ(`raw/` を探す所)は、道具が起動したときのフォルダ(または環境変数 `MASK_ROOT`)です。`.mcp.json` で `${CLAUDE_PROJECT_DIR}` が展開されるかは確かめられなかったので使っていません。プラグインの道具が、どのフォルダで起動されるかも確かめられませんでした
+- フックの限界は上の「Claude Code に組み込む」と同じです(コマンドは文字列で `raw/` を探すだけ、など)
+- 試験(`tests/unit/plugin-structure.test.mjs`)は、ファイルの形と、フックのコマンドが指すファイルの判断の関数、プラグインを別の場所に写したときの道具の返事を、関数として確かめたものです(フックを別のプロセスとして動かした確かめはしていません)。実際に Claude Code にプラグインとして読み込ませた確かめは、まだしていません(人が行う予定)
+
+確かめた公式のページ(Claude Code の文書。取得日 2026-11-03。作る係の sandbox からは開けなかったので、統括の係が sandbox の外で開いて要点を渡した。題名は受け取っていないので URL の末尾の名前で示す):
+- plugins/manifest-reference https://code.claude.com/docs/en/plugins/manifest-reference.md (plugin.json の置き場と必須の項目、`${CLAUDE_PLUGIN_ROOT}` などの変数)
+- plugins/create https://code.claude.com/docs/en/plugins/create.md (部品の置き場、`--plugin-dir`)
+- plugins/components https://code.claude.com/docs/en/plugins/components.md (hooks.json の形、プラグインの係で無視される項目、プラグインの settings で効く項目)
+- hooks https://code.claude.com/docs/en/hooks.md (終了コード 2 で止める、UserPromptSubmit は matcher を使わない)
+- sub-agents https://code.claude.com/docs/en/sub-agents.md (プラグインの係で無視される項目: `permissionMode`・`hooks`・`mcpServers`・`initialPrompt`)
+
 ## Claude Code での作り方
 この作品は、Claude Code(Claude のコーディング用のエージェント)が、1つずつの機能を短いセッションで作り、人は決めることがあるときだけ答える形で作りました。開発の仕組み(自走キット)は開始前に用意し、主催者の案内に従ってリポジトリの外に置いています(キットのファイルはこのリポジトリに入れていません)。仕組みの働きは次のとおりです。
 
@@ -253,6 +276,16 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 | API and data retention | https://platform.claude.com/docs/en/manage-claude/api-and-data-retention | 2026-11-02 |
 | How long do you store my organization's data? | https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data | 2026-11-02 |
 | Is my data used for model training? | https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training | 2026-11-02 |
+
+### Claude Code の公式ページ(プラグインの形)
+「Claude Code のプラグイン」の根拠。原文は写していない(URL だけ)。取得は統括の係が sandbox の外で行った。ページの題名は渡された抜き書きに無かったので、URL の末尾の名前で示す。
+| ページ | URL | 取得日 |
+|---|---|---|
+| plugins/manifest-reference | https://code.claude.com/docs/en/plugins/manifest-reference.md | 2026-11-03 |
+| plugins/create | https://code.claude.com/docs/en/plugins/create.md | 2026-11-03 |
+| plugins/components | https://code.claude.com/docs/en/plugins/components.md | 2026-11-03 |
+| hooks | https://code.claude.com/docs/en/hooks.md | 2026-11-03 |
+| sub-agents | https://code.claude.com/docs/en/sub-agents.md | 2026-11-03 |
 
 ## 限界
 - 出すのは指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください

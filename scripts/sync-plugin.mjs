@@ -1,0 +1,48 @@
+// plugin/ の中の写しを、元のファイル(F13 の integration/claude-code/ と src/mask/)から作り直す(F20a)
+// 使い方: node scripts/sync-plugin.mjs        写しを作り直す
+//         node scripts/sync-plugin.mjs --check 写しが元と同じかだけを確かめる(違えば終了コード 1)
+// プラグインは入れたときに別の場所(Claude Code のキャッシュ)へ写されるので、道具が使う src/mask/ も plugin/ の中に置く。
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// [元, 写し](リポジトリの直下からのパス)
+export const PLUGIN_COPIES = [
+  ['integration/claude-code/hooks/guard-raw.mjs', 'plugin/scripts/guard-raw.mjs'],
+  ['integration/claude-code/mcp/masked-files.mjs', 'plugin/mcp/masked-files.mjs'],
+  ['src/mask/core.mjs', 'plugin/src/mask/core.mjs'],
+  ['src/mask/dict-construction.mjs', 'plugin/src/mask/dict-construction.mjs'],
+  ['src/mask/rules-person.mjs', 'plugin/src/mask/rules-person.mjs'],
+  ['src/mask/rules-site.mjs', 'plugin/src/mask/rules-site.mjs'],
+  ['src/mask/suffix-construction.mjs', 'plugin/src/mask/suffix-construction.mjs'],
+];
+
+// 元と違う写し(無いものを含む)の一覧を返す
+export function staleCopies(root = ROOT) {
+  return PLUGIN_COPIES.filter(([src, dst]) => {
+    const d = path.join(root, dst);
+    if (!fs.existsSync(d)) return true;
+    return !fs.readFileSync(path.join(root, src)).equals(fs.readFileSync(d));
+  }).map(([, dst]) => dst);
+}
+
+export function syncCopies(root = ROOT) {
+  for (const [src, dst] of PLUGIN_COPIES) {
+    fs.mkdirSync(path.dirname(path.join(root, dst)), { recursive: true });
+    fs.copyFileSync(path.join(root, src), path.join(root, dst));
+  }
+}
+
+const isMain = Boolean(process.argv[1]) && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  if (process.argv.includes('--check')) {
+    const s = staleCopies();
+    if (s.length) { console.error('元と違う写し: ' + s.join(', ')); process.exit(1); }
+    console.log('plugin の写しは元と同じ(' + PLUGIN_COPIES.length + ' ファイル)');
+  } else {
+    syncCopies();
+    console.log('plugin の写しを作り直した(' + PLUGIN_COPIES.length + ' ファイル)');
+  }
+}
