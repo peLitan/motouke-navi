@@ -14,6 +14,10 @@
 //           または空白の無い漢字の並び 2〜5字(前後に漢字が続かないもの)
 // 置き換えすぎを減らすため、次の語は人名にしない: 役職・欄名そのもの、止める語(未定・同上・専任 など)、
 //   名前に付かない字で終わる語(者・課・部・所・欄・書・号 など)
+// F27c: さらに次の語も人名にしない: 表の見出しの語(年齢・性別・続柄・職種 など)、様式の語(押印・検印・自署・不在・記載省略・自動 など)、
+//   様式の語尾で終わる語(〜予定・〜省略 など)、部署・仕事の語(設計・品質 など)、職業の名前(職人・監督 など。「大工さん」)。
+//   分野の職業(大工・左官 など)は、辞書のファイルから occupations で足す。
+//   表の見出しの行(縦線かタブで区切った行で、ほかの欄がすべて欄名・役職・見出しの語のもの)では、役職・欄名・並びの規則を当てない
 
 const HAN = '\\p{Script=Han}々〆ヶ';
 const KANA = '\\p{Script=Katakana}ー';
@@ -49,6 +53,21 @@ export const GENERIC_STOP_WORDS = [
   '得意', '両親', '家族', '一同', '先方', '貴社', '御社', '弊社', '当社', '貴殿', '皆々', '各位', '先生', '本社', '支社', '支店', '営業所',
   '代表', '総務', '経理', '人事', '営業', '技術', '事務', '一級', '二級', '資格', '名称', '氏名', '電話', '住所', '所在地', '番号',
 ];
+// 表の見出しに出る語(F27c)。人名にせず、見出しの行を見分けるのにも使う
+export const GENERIC_HEADER_WORDS = [
+  '年齢', '性別', '続柄', '職種', '職業', '生年月日', '年月日', '血液型', '国籍', '所属', '役職', '備考', '摘要', '区分', '種別', '内容', '期間',
+  '日付', '金額', '数量', '単位', '単価', '経験年数', '免許', '学歴', '職歴', '電話番号', '入社日', '入場日', '印', '印鑑', '署名', '押印', '捺印',
+];
+// 様式に書く語(人名の欄に名前の代わりに書かれる語。F27c)
+export const GENERIC_FORM_WORDS = [
+  '押印', '検印', '認印', '自署', '署名', '捺印', '記名', '記名押印', '不在', '欠席', '出席', '休暇', '休み', '省略', '記載省略', '自動', '手動',
+  '自動入力', '空白', '該当なし', '該当無し', '対象外', '未選任', '未配置', '調整中', '手配中', '募集中', '後日', '追って', '別記',
+];
+// この語尾で終わる語は人名にしない(「選任予定」「記載省略」。F27c)
+export const GENERIC_STOP_SUFFIXES = ['予定', '省略', '不要', '未定', '済み', '待ち', '入力', '記入'];
+// 職業の名前(「職人さん」「監督さん」。F27c)。分野の職業は辞書のファイルから occupations で足す
+export const GENERIC_OCCUPATIONS = ['職人', '監督', '親方', '業者', '店員', '運転手', '管理人', '大家', '先生', '師匠', '警備'];
+
 // 名前に直に付けて呼ぶ役職(「乙川所長」「丙田部長」)。括弧の中なら役職の全部を使う
 export const ATTACHED_TITLES = [
   '社長', '副社長', '会長', '専務', '常務', '理事長', '本部長', '部長', '次長', '課長', '係長', '主任', '主査', '所長', '支店長', '店長',
@@ -76,29 +95,59 @@ export const PERSON_RULES = [
 ];
 
 // 文脈規則の形を作る。titles・labels・stopWords は分野の辞書から足す語(一般の語に足す)
-export function personContextPatterns({ titles = [], labels = [], stopWords = [], honorifics = HONORIFICS, attachedTitles = [], orgWords = [] } = {}) {
+export function personContextPatterns({
+  titles = [], labels = [], stopWords = [], honorifics = HONORIFICS, attachedTitles = [], orgWords = [], headerWords = [], occupations = [],
+} = {}) {
   const allTitles = [...GENERIC_TITLES, ...titles];
   const allLabels = [...GENERIC_LABELS, ...labels];
-  const stops = new Set([...GENERIC_STOP_WORDS, ...stopWords]);
+  const orgs = new Set([...ORG_WORDS, ...orgWords]);
+  const headers = new Set([...GENERIC_HEADER_WORDS, ...headerWords]);
+  const occs = [...new Set([...GENERIC_OCCUPATIONS, ...occupations])];
+  // 止める語: 一般の止める語・分野の止める語・見出しの語・様式の語・部署の語・職業の名前
+  const stops = new Set([...GENERIC_STOP_WORDS, ...stopWords, ...headers, ...GENERIC_FORM_WORDS, ...orgs, ...occs]);
   const context = [...allTitles, ...allLabels];
   const compact = (s) => s.replace(/[\s　]+/g, '');
-  // 人名として受け入れるか: 役職・欄名・止める語でない、それらで始まらない、人名に付かない字で終わらない
-  const accept = (word) => {
+  // 人名として受け入れるか: 役職・欄名・止める語でない、それらで始まらない、人名に付かない字・様式の語尾で終わらない、
+  // 部署の語・止める語に職業の名前が付いた語(「現場監督」)でない
+  const acceptWord = (word) => {
     const w = compact(word);
     if (w.length < 2) return false;
     if (stops.has(w)) return false;
     if (NON_NAME_ENDINGS.includes(w[w.length - 1])) return false;
+    if (GENERIC_STOP_SUFFIXES.some((x) => w.endsWith(x))) return false;
     for (const part of String(word).trim().split(/[\s　]+/)) {
       if (stops.has(part) || context.includes(part)) return false;
     }
     if (context.some((c) => w.startsWith(c) || w.endsWith(c))) return false;
+    for (const o of occs) if (w.endsWith(o) && stops.has(w.slice(0, -o.length))) return false;
     return true;
   };
-  const orgs = new Set([...ORG_WORDS, ...orgWords]);
+  // 見出しの語か(欄名・役職・見出しの語のどれかそのもの)。職業・様式の語・部署の語は中身の行の値にもなるので数えない
+  //   (「| 氏名 | 甲斐 一郎 | 職種 | 型枠工 |」を見出しの行にしない)
+  const headerish = (cell) => {
+    const c = compact(cell);
+    return c !== '' && (headers.has(c) || context.includes(c));
+  };
+  // 表の見出しの行か: 位置を含む行が縦線かタブで区切られ、その語の欄のほかの欄が2つ以上あり、すべて見出しの語であるもの
+  //   (「| 氏名 | 年齢 | 職種 |」)。名前が入る行(「| 担当者 | 甲野 | 所属 | 工務部 |」)は、見出しの語でない欄があるので当たらない
+  const inHeaderRow = (word, index, text) => {
+    if (typeof text !== 'string' || typeof index !== 'number') return false;
+    const ls = text.lastIndexOf('\n', index - 1) + 1;
+    const le = text.indexOf('\n', index);
+    const line = text.slice(ls, le < 0 ? text.length : le);
+    const sep = /[|｜]/.test(line) ? /[|｜]/ : line.includes('\t') ? /\t/ : null;
+    if (!sep) return false;
+    const cells = line.split(sep).map((c) => c.trim()).filter((c) => c !== '');
+    const self = compact(word);
+    const others = cells.filter((c) => compact(c) !== self);
+    if (others.length < 2 || others.length === cells.length) return false;
+    return others.every(headerish);
+  };
+  const accept = (word, index, text) => acceptWord(word) && !inHeaderRow(word, index, text);
   const allAttached = [...ATTACHED_TITLES, ...attachedTitles];
   // 役職の前の名前: 上の決まりに加え、部署・場所の語でない、役職の一部(「支店長」の「支」)で終わらない
   const acceptBeforeTitle = (word) => {
-    if (!accept(word)) return false;
+    if (!acceptWord(word)) return false;
     const parts = String(word).trim().split(/[\s　]+/);
     if (parts.some((p) => orgs.has(p))) return false;
     const w = compact(word);
@@ -113,7 +162,8 @@ export function personContextPatterns({ titles = [], labels = [], stopWords = []
       rule: 'honorific',
       // 前に漢字・カタカナが続かない名前 + (空白)+ 敬称。敬称の後ろに漢字が続くもの(「氏名」など)は除く
       re: new RegExp(`(?<![${HAN}${KANA}A-Za-z0-9])${NAME_BEFORE_HONORIFIC}(?=${SP}?(?:${alt(honorifics)})(?![${HAN}]))`, 'gu'),
-      accept,
+      // 敬称の規則は欄名の規則ではないので、表の見出しの行でも当てる
+      accept: acceptWord,
     },
     { kind: 'person', rule: 'title', re: new RegExp(`(?<=(?:${alt(allTitles)})${SEP})${NAME}`, 'gu'), accept },
     { kind: 'person', rule: 'label', re: new RegExp(`(?<=(?:${alt(allLabels)})${SEP})${NAME}`, 'gu'), accept },
@@ -133,7 +183,7 @@ export function personContextPatterns({ titles = [], labels = [], stopWords = []
       kind: 'person',
       rule: 'list',
       re: new RegExp(`(?<=${head}(?:${NAME}${LIST_SEP})+)${NAME}`, 'gu'),
-      accept: (word) => accept(word) && !honorifics.some((h) => compact(word).endsWith(h)),
+      accept: (word, index, text) => accept(word, index, text) && !honorifics.some((h) => compact(word).endsWith(h)),
     },
   ];
 }

@@ -6,7 +6,7 @@
 //
 // 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
 // 辞書は文脈の規則(contextPatterns: [{ kind, rule, re, accept? }])も持てる(F17a)。まわりの語から見つけた確信の弱い語で、
-//   accept(語) が false の語は取らない。見つけた語は対応表の行に rule(規則の id)を付ける。同じ文の中の同じ語は、文脈が無くても同じ記号にする。
+//   accept(語, 位置, 文) が false の語は取らない(位置と文は、表の見出しの行かを見るために使う。F27c)。見つけた語は対応表の行に rule(規則の id)を付ける。同じ文の中の同じ語は、文脈が無くても同じ記号にする。
 // 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形 > 文脈の規則。重なったら優先の高いほう、同じなら長いほうを取る。
 
 const DEFAULT_LABELS = {
@@ -240,7 +240,7 @@ export function createMasker({ dictionaries = [] } = {}) {
         const r = new RegExp(re.source, re.flags);
         for (const m of text.matchAll(r)) {
           if (!m[0]) continue;
-          if (accept && !accept(m[0])) continue;
+          if (accept && !accept(m[0], m.index, text)) continue;
           cands.push({ start: m.index, end: m.index + m[0].length, kind, priority, rule });
         }
       }
