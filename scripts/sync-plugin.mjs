@@ -22,6 +22,8 @@ export const PLUGIN_COPIES = [
   ['src/mask/company-types.mjs', 'plugin/src/mask/company-types.mjs'],
   // F24b: 住所の規則(core.mjs が読む)
   ['src/mask/rules-address.mjs', 'plugin/src/mask/rules-address.mjs'],
+  // F28a: 見本の語を混ぜて見落としを測る部品(masked-files.mjs が読む)
+  ['src/mask/decoy.mjs', 'plugin/src/mask/decoy.mjs'],
   // F20b: 点検の Skill の条番号の確かめに使う、項・号の切り出しの部品と、取得した法令の原文
   ['src/quote-check.mjs', 'plugin/skills/construction-check/scripts/lib/quote-check.mjs'],
   ['data/sources/index.json', 'plugin/skills/construction-check/reference/sources/index.json'],

@@ -333,6 +333,9 @@ export function createMasker({ dictionaries = [] } = {}) {
     return src.replace(new RegExp(tokens.join('|'), 'gu'), (t) => byToken.get(t).original);
   }
 
+  // 置き換える所(始まり・終わり・種類)だけを返す。対応表・記号の番号は変えない(F28a の見本の確かめに使う)
+  const spans = (text) => findSpans(String(text ?? '')).map(({ start, end, kind }) => ({ start, end, kind }));
+
   const entries = () => [...byOriginal.values()].map((e) => ({ ...e, variants: [...e.variants] }));
 
   // 対応表と足した語を消す
@@ -398,5 +401,5 @@ export function createMasker({ dictionaries = [] } = {}) {
     return res;
   }
 
-  return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, exportDict, importDict, labelOf, labels: () => ({ ...labels }) };
+  return { mask, unmask, spans, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, exportDict, importDict, labelOf, labels: () => ({ ...labels }) };
 }

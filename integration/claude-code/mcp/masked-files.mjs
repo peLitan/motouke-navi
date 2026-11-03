@@ -3,6 +3,7 @@
 //
 // 道具:
 //   read_masked { path }  raw/ の中の文のファイルを読み、人名・会社名・メール・電話・住所・許可番号などを〔会社名1〕のような記号に置き換えて返す。
+//                         2つ目の文に、架空の見本の語を混ぜて全部置き換わったかを確かめた結果を付ける(F28a。見本は中身に入れない)。
 //                         返すのは置き換えた後の中身だけ。対応表(元の語)は返さない。raw/ の外のパスは断る。
 //   list_masked { dir? }  raw/ の中のファイルの名前(作業フォルダからのパス)だけを返す。中身は返さない。raw/ の外は返さない。
 //                         ファイルの名前は置き換えない(read_masked に渡すため)。名前に人名・会社名が入っていれば、そのまま返る。
@@ -23,6 +24,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOL_DIR = process.env.MASK_TOOL_DIR || path.resolve(HERE, '..', '..', '..');
 const { createMasker } = await import(pathToFileURL(path.join(TOOL_DIR, 'src', 'mask', 'core.mjs')).href);
 const { CONSTRUCTION_DICT } = await import(pathToFileURL(path.join(TOOL_DIR, 'src', 'mask', 'dict-construction.mjs')).href);
+const { checkDecoys, decoyMessage } = await import(pathToFileURL(path.join(TOOL_DIR, 'src', 'mask', 'decoy.mjs')).href);
 
 export const SERVER_INFO = { name: 'masked-files', version: '0.1.0' };
 export const PROTOCOL_VERSION = '2025-06-18';
@@ -32,7 +34,7 @@ const MAX_BYTES = 1024 * 1024;
 export const TOOLS = [
   {
     name: 'read_masked',
-    description: 'raw/ の中の文のファイルを読み、人名・会社名・メール・電話・住所・許可番号などを〔会社名1〕のような記号に置き換えた後の中身だけを返す。元の語と対応表は返さない。raw/ の外は読めない。',
+    description: 'raw/ の中の文のファイルを読み、人名・会社名・メール・電話・住所・許可番号などを〔会社名1〕のような記号に置き換えた後の中身だけを返す。元の語と対応表は返さない。raw/ の外は読めない。2つ目の文は、見えない所で混ぜた架空の見本の語(書類の中身ではない)が全部置き換わったかの確かめの結果。',
     inputSchema: {
       type: 'object',
       properties: { path: { type: 'string', description: '作業フォルダからのパス(例 raw/台帳.txt)' } },
@@ -145,12 +147,19 @@ function makeMasker(mapPath) {
   return m;
 }
 
-export function readMasked(root, rel, { mapPath = process.env.MASK_MAP } = {}) {
+// 置き換えた中身と、見本の語の確かめ(F28a)の結果を返す。見本は置き換えた中身にも対応表にも入らない
+export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, rand } = {}) {
   const file = resolveRawFile(root, rel);
   const text = fs.readFileSync(file, 'utf8');
   if (text.includes('\u0000')) throw new ToolError('文のファイルではないようです。');
-  const { masked } = makeMasker(mapPath).mask(text);
-  return masked;
+  const m = makeMasker(mapPath);
+  const { masked } = m.mask(text);
+  const check = checkDecoys(m, text, rand ? { rand } : {});
+  return { masked, check };
+}
+
+export function readMasked(root, rel, opts = {}) {
+  return readMaskedWithCheck(root, rel, opts).masked;
 }
 
 const ok = (id, result) => ({ jsonrpc: '2.0', id, result });
@@ -181,8 +190,9 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
         if (name === 'list_masked') {
           return ok(id, { content: [{ type: 'text', text: formatList(listRawFiles(root, params?.arguments?.dir)) }], isError: false });
         }
-        const masked = readMasked(root, params?.arguments?.path, mapPath === undefined ? {} : { mapPath });
-        return ok(id, { content: [{ type: 'text', text: masked }], isError: false });
+        const { masked, check } = readMaskedWithCheck(root, params?.arguments?.path, mapPath === undefined ? {} : { mapPath });
+        // 1つ目は置き換えた中身(今までどおり)、2つ目は見本の語の確かめの結果(F28a)
+        return ok(id, { content: [{ type: 'text', text: masked }, { type: 'text', text: decoyMessage(check) }], isError: false });
       } catch (e) {
         const message = e instanceof ToolError ? e.message : '読めませんでした。';
         return ok(id, { content: [{ type: 'text', text: message }], isError: true });

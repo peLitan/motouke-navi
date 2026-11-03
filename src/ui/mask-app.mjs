@@ -12,6 +12,7 @@ import { extractText } from '../mask/extract.mjs';
 import { PERSON_RULES } from '../mask/rules-person.mjs';
 import { SITE_RULES } from '../mask/rules-site.mjs';
 import { COMPANY_RULES } from '../mask/rules-company.mjs';
+import { checkDecoys, decoyMessage } from '../mask/decoy.mjs';
 
 let masker = null;
 // 確信の弱い語(規則だけで見つけた語)の選び(F17c)。記号 → 'replace'(置き換える)か 'keep'(残す)。無ければ未確認。
@@ -147,7 +148,18 @@ export function runMask(doc) {
   if (mapEl) mapEl.innerHTML = renderMap(r.map);
   if (amounts === 'band') notes.push('金額の「境目」の形は、戻しても元の金額には戻りません。');
   setText(doc, 'mask-status', notes.join(' '));
+  // 見本の語を混ぜて見落としを測る(F28a)。見本は後の欄・対応表・記号の番号に入らない(m.spans だけを使う)
+  const check = checkDecoys(m, text, decoyRand ? { rand: decoyRand } : {});
+  lastDecoy = check;
+  setText(doc, 'mask-decoy', decoyMessage(check));
 }
+
+// 見本の確かめの、最後の結果(試験で見る)。見本の語は架空
+let lastDecoy = null;
+export const lastDecoyCheck = () => lastDecoy;
+// 見本の型を選ぶ乱数(試験で決まった値にする。ふだんは Math.random)
+let decoyRand = null;
+export function setDecoyRandom(fn) { decoyRand = typeof fn === 'function' ? fn : null; }
 
 // 業界を切り替える(F19b)。足した語は新しい辞書に移し、対応表・選び・前後の欄は消す。
 // 対応表があるときは確かめ、やめたら選びを元に戻す
@@ -173,7 +185,7 @@ export function setIndustry(doc, value, win) {
   decisions.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   if (sel) sel.value = industry;
@@ -206,7 +218,7 @@ export function resetMask(doc) {
   decisions.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status', 'dict-file-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'map-status', 'dict-file-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
