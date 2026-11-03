@@ -213,6 +213,11 @@ export function createMasker({ dictionaries = [] } = {}) {
       seen.add(keyOf(word));
       for (const m of text.matchAll(termRegExp(word))) {
         const more = { start: m.index, end: m.index + m[0].length, kind: c.kind, rule: c.rule };
+        // 重なるのが、この語の中に収まる文脈の語だけなら(「中央病院」が「みほん台 中央病院」の中にあるなど)、長い方に置き換える
+        const hit = chosen.filter((x) => more.start < x.end && x.start < more.end);
+        if (hit.length && hit.every((x) => x.rule && x.start >= more.start && x.end <= more.end && x !== c)) {
+          for (const x of hit) chosen.splice(chosen.indexOf(x), 1);
+        }
         if (!overlaps(more, chosen)) chosen.push(more);
       }
     }

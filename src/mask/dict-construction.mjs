@@ -2,8 +2,11 @@
 // 部品は分野の語を持たないので、建設業の許可番号の形や共同企業体の名前の形はここに置く。
 // 語(terms)は空にしておく。人名・現場名は案件ごとに違うので、画面の「辞書に足す」で足す。
 // 人名の文脈規則(F17a)は src/mask/rules-person.mjs にあり、建設の役職・欄名だけをここから足す。
+// 現場名の語尾の規則(F17b)は src/mask/rules-site.mjs にあり、語尾の表は src/mask/suffix-construction.mjs から渡す(業界ごとに差し替える)。
 
 import { personContextPatterns } from './rules-person.mjs';
+import { siteSuffixPatterns } from './rules-site.mjs';
+import { CONSTRUCTION_SITE_TABLE } from './suffix-construction.mjs';
 
 const DIGIT = '[0-9０-９]';
 const HYPHEN = '[-−‐‑–ー－]';
@@ -36,9 +39,12 @@ export const CONSTRUCTION_DICT = {
       re: /[\p{Script=Han}\p{Script=Katakana}ー・A-Za-z0-9]{1,30}?(?:特定建設工事共同企業体|経常建設共同企業体|共同企業体|ＪＶ|JV)/gu,
     },
   ],
-  contextPatterns: personContextPatterns({
-    titles: CONSTRUCTION_PERSON_TITLES,
-    labels: CONSTRUCTION_PERSON_LABELS,
-    stopWords: CONSTRUCTION_STOP_WORDS,
-  }),
+  contextPatterns: [
+    ...personContextPatterns({
+      titles: CONSTRUCTION_PERSON_TITLES,
+      labels: CONSTRUCTION_PERSON_LABELS,
+      stopWords: CONSTRUCTION_STOP_WORDS,
+    }),
+    ...siteSuffixPatterns(CONSTRUCTION_SITE_TABLE),
+  ],
 };
