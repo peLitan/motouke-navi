@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-+tyX8RyFuc8Doxb9dTVfGYn0kDSa7th9qY8DfC7FVWE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sw5Zm6OGrQFl7pluxVWXfLM0h61SXgmOZ5PvfbPWVFU='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -3087,6 +3087,9 @@ __m["src/mask/core.mjs"] = (function () {
 // 辞書は文脈の規則(contextPatterns: [{ kind, rule, re, accept? }])も持てる(F17a)。まわりの語から見つけた確信の弱い語で、
 //   accept(語, 位置, 文) が false の語は取らない(位置と文は、表の見出しの行かを見るために使う。F27c)。見つけた語は対応表の行に rule(規則の id)を付ける。同じ文の中の同じ語は、文脈が無くても同じ記号にする。
 // 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形 > 文脈の規則。重なったら優先の高いほう、同じなら長いほうを取る。
+// ただし、足した語・辞書の語が、形で見つけた長い語(メール・会社名・住所・電話など)の中に収まるときは、長い方を取る(F27d。
+//   「林」を足しても「小林商事株式会社」は会社名として、「a」を足してもメールはメールとして置き換える)。
+// 英数字で始まる・終わる語は、英数字の途中では当てない(「a」が「data」の中に当たらない)。
 
 const DEFAULT_LABELS = {
   person: '人名',
@@ -3121,9 +3124,22 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // 語を、空白の違い(半角・全角・無し)を許して探す形にする
 function termRegExp(word) {
-  const parts = String(word).trim().split(/[\s　]+/).filter(Boolean).map(escapeRe);
-  return new RegExp(parts.join('[\\s\\u3000]*'), 'gu');
+  const w = String(word).trim();
+  const parts = w.split(/[\s　]+/).filter(Boolean).map(escapeRe);
+  const head = /^[A-Za-z0-9]/.test(w) ? '(?<![A-Za-z0-9])' : '';
+  const tail = /[A-Za-z0-9]$/.test(w) ? '(?![A-Za-z0-9])' : '';
+  return new RegExp(head + parts.join('[\\s\\u3000]*') + tail, 'gu');
 }
+
+// 1字の語の注意(F27d)。1字の語は長い語の一部にも当たるので、足すときに画面へ出す。問題がなければ空の文字列
+function shortTermWarning(word) {
+  const w = String(word ?? '').replace(/[\s\u3000]+/g, '');
+  if ([...w].length !== 1) return '';
+  return '「' + w + '」は1字の語です。ほかの語の一部も置き換わります(例: 「' + w + '」を足すと「小' + w + '」「' + w + '田」のような名前や語の中の「' + w + '」も置き換わります。会社名・メール・住所・電話の形の中は、長い方をまとめて置き換えます)。人名なら姓と名を続けて足すと確かです。';
+}
+
+// ファイルの頭の BOM(U+FEFF)を外す(F27d。メモ帳などで保存した辞書・対応表のファイルを読めるようにする)
+const stripBom = (t) => String(t ?? '').replace(/^\uFEFF/, '');
 
 const withGlobal = (re) => (re.flags.includes('g') ? new RegExp(re.source, re.flags) : new RegExp(re.source, re.flags + 'g'));
 
@@ -3174,7 +3190,7 @@ const isText = (v) => typeof v === 'string' && v.trim() !== '';
 function parseMapFile(text) {
   let data;
   try {
-    data = JSON.parse(String(text ?? ''));
+    data = JSON.parse(stripBom(text));
   } catch {
     throw new Error('対応表のファイルとして読めません(JSON の形になっていません)。書き出した対応表のファイルを選んでください。');
   }
@@ -3218,7 +3234,7 @@ const DICT_MAX_WORD = 200;
 function parseDictFile(text, kinds) {
   let data;
   try {
-    data = JSON.parse(String(text ?? ''));
+    data = JSON.parse(stripBom(text));
   } catch {
     throw new Error('辞書のファイルとして読めません(JSON の形になっていません)。書き出した辞書のファイルを選んでください。');
   }
@@ -3277,9 +3293,11 @@ function createMasker({ dictionaries = [] } = {}) {
     const k = String(kind ?? '').trim() || 'other';
     if (!w) throw new Error('語が空です');
     const old = userTerms.find((t) => t.word === w);
-    if (old) { old.kind = k; return { word: w, kind: k }; }
+    const warning = shortTermWarning(w);
+    const res = warning ? { word: w, kind: k, warning } : { word: w, kind: k };
+    if (old) { old.kind = k; return res; }
     userTerms.push({ word: w, kind: k, re: termRegExp(w) });
-    return { word: w, kind: k };
+    return res;
   }
 
   function removeTerm(word) {
@@ -3325,6 +3343,12 @@ function createMasker({ dictionaries = [] } = {}) {
       }
     });
     const overlaps = (c, list) => list.some((x) => c.start < x.end && x.start < c.end);
+    // 足した語・辞書の語(priority 0・1)が、形で見つけた長い語(priority 2・3)の中に収まるなら、語の方を外す(F27d)
+    const shapes = cands.filter((x) => x.priority === 2 || x.priority === 3);
+    const inShape = (c) => shapes.some((x) => x.start <= c.start && c.end <= x.end && (x.end - x.start) > (c.end - c.start));
+    for (let i = cands.length - 1; i >= 0; i--) {
+      if (cands[i].priority <= 1 && inShape(cands[i])) cands.splice(i, 1);
+    }
     cands.sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start) || a.start - b.start);
     const chosen = [];
     for (const c of cands) {
@@ -3431,18 +3455,21 @@ function createMasker({ dictionaries = [] } = {}) {
     const words = parseDictFile(text, Object.keys(labels));
     let added = 0;
     let changed = 0;
+    const short = [];
     for (const t of words) {
       const old = userTerms.find((u) => u.word === t.word);
       if (!old) added += 1; else if (old.kind !== t.kind) changed += 1;
-      addTerm(t.word, t.kind);
+      if (addTerm(t.word, t.kind).warning) short.push(t.word);
     }
-    return { read: words.length, added, changed, total: userTerms.length };
+    const res = { read: words.length, added, changed, total: userTerms.length };
+    if (short.length) res.short = short; // 1字の語があるときだけ付ける
+    return res;
   }
 
   return { mask, unmask, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, exportDict, importDict, labelOf, labels: () => ({ ...labels }) };
 }
 
-return { parseAmount, formatYen, bandLabel, MAP_FORMAT, MAP_VERSION, MAP_NOTICE, parseMapFile, DICT_FORMAT, DICT_VERSION, DICT_NOTICE, parseDictFile, createMasker };
+return { shortTermWarning, parseAmount, formatYen, bandLabel, MAP_FORMAT, MAP_VERSION, MAP_NOTICE, parseMapFile, DICT_FORMAT, DICT_VERSION, DICT_NOTICE, parseDictFile, createMasker };
 })();
 __m["src/ui/download.mjs"] = (function () {
 // 画面の書き出し(F05e・F11d が使う)
@@ -4119,8 +4146,9 @@ function addDictWord(doc) {
   const kind = valueOf(doc, 'dict-kind') || 'other';
   if (!word) { setText(doc, 'dict-status', '足す語を入れてください。'); return; }
   const m = getMasker();
-  m.addTerm(word, kind);
-  setText(doc, 'dict-status', '「' + word + '」を' + m.labelOf(kind) + 'として足しました。もう一度「置き換える」を押すと使います。');
+  const added = m.addTerm(word, kind);
+  setText(doc, 'dict-status', '「' + word + '」を' + m.labelOf(kind) + 'として足しました。もう一度「置き換える」を押すと使います。'
+    + (added.warning ? ' 注意: ' + added.warning : ''));
   const w = doc.getElementById('dict-word');
   if (w) w.value = '';
   const list = doc.getElementById('dict-list');
@@ -4210,7 +4238,8 @@ function importDictFile(doc, text) {
     const n = m.importDict(text);
     const list = doc.getElementById('dict-list');
     if (list) list.innerHTML = renderTerms(m.terms());
-    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。');
+    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。'
+      + (n.short && n.short.length ? ' 注意: 1字の語が ' + n.short.length + ' 件あります。1字の語はほかの語の一部も置き換わります(会社名・メール・住所・電話の形の中は、長い方をまとめて置き換えます)。' : ''));
     return true;
   } catch (e) {
     setText(doc, 'dict-file-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の辞書はそのままです。');

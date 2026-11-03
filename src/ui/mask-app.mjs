@@ -191,8 +191,9 @@ export function addDictWord(doc) {
   const kind = valueOf(doc, 'dict-kind') || 'other';
   if (!word) { setText(doc, 'dict-status', '足す語を入れてください。'); return; }
   const m = getMasker();
-  m.addTerm(word, kind);
-  setText(doc, 'dict-status', '「' + word + '」を' + m.labelOf(kind) + 'として足しました。もう一度「置き換える」を押すと使います。');
+  const added = m.addTerm(word, kind);
+  setText(doc, 'dict-status', '「' + word + '」を' + m.labelOf(kind) + 'として足しました。もう一度「置き換える」を押すと使います。'
+    + (added.warning ? ' 注意: ' + added.warning : ''));
   const w = doc.getElementById('dict-word');
   if (w) w.value = '';
   const list = doc.getElementById('dict-list');
@@ -282,7 +283,8 @@ export function importDictFile(doc, text) {
     const n = m.importDict(text);
     const list = doc.getElementById('dict-list');
     if (list) list.innerHTML = renderTerms(m.terms());
-    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。');
+    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。'
+      + (n.short && n.short.length ? ' 注意: 1字の語が ' + n.short.length + ' 件あります。1字の語はほかの語の一部も置き換わります(会社名・メール・住所・電話の形の中は、長い方をまとめて置き換えます)。' : ''));
     return true;
   } catch (e) {
     setText(doc, 'dict-file-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の辞書はそのままです。');
