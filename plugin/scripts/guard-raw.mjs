@@ -288,7 +288,7 @@ function pathCandidates(name, args) {
 }
 
 const HUMAN = '人が中身を確かめて、必要なら自分の端末で実行してください。';
-const REASON_TOOL = 'raw/ の生のファイルは読めません(個人情報が入っているため)。置き換えた後の中身は MCP の道具 masked-files の read_masked で読んでください。';
+const REASON_TOOL = 'raw/ の生のファイルは読めません(個人情報が入っているため)。置き換えた後の中身は MCP の道具 masked-files の read_masked で読んでください(ファイルの名前の一覧は list_masked で見られます)。';
 
 const block = (reason) => ({ block: true, reason });
 const pass = () => ({ block: false });
