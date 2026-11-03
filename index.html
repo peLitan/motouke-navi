@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-yfbPN+Ms6KvqXo/DtS20OIbYnQpsyAJWGB+3VgmWG84='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-40EFFW4+MwVpqfRzQbpvVPLktgOyt5P/7DIraVp392I='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -265,7 +265,11 @@
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
-<p>国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
+<div class="row no-print"><label for="rules-load">段取りの表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
+<input type="file" id="rules-load" name="rules-load" accept=".json,application/json">
+<button type="button" id="rules-clear" hidden>国の直轄の例に戻す</button></div>
+<p id="rules-status" aria-live="polite"></p>
+<p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 <div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
@@ -335,8 +339,8 @@
 </section>
 <section id="plan-check">
 <h2>3. 施工計画書の目次の点検</h2>
-<p>施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
-<p class="schedule-notice note">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
+<p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
+<p class="schedule-notice note" id="plan-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
 <div class="row"><button type="button" id="plan-run">目次を点検する</button>
@@ -1477,18 +1481,19 @@ function renderSchedule(rows = [], detail = {}) {
   const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
   const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
+  const docLabel = esc(detail.docLabel ?? '共通仕様書');
   // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
   const tables = phases.map((ph) => {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
     return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
-      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
+      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(' + docLabel + 'の箇所)</th></tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
         + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
         + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
         + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
       + '</tbody></table>')
-      + '<details class="basis schedule-basis"><summary>根拠: 共通仕様書の原文(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
+      + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? '読み込んだ表の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
       + '</ul></details>';
   }).join('');
@@ -1503,7 +1508,7 @@ function renderSchedule(rows = [], detail = {}) {
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
   return lead + notes + body + skipped
-    + '<p class="human">国の直轄の例です。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
+    + '<p class="human">' + (detail.custom ? '読み込んだ表の行です' : '国の直轄の例です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
 // 施工計画書の目次の点検(F07)。抜けの候補を、根拠(共通仕様書の箇所・ページ・原文)つきで出す
@@ -1558,7 +1563,7 @@ function renderPlanResult(out = {}) {
     ? '<h3>記載項目の抜けの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
       + (c.message ? '<p>' + esc(c.message) + '</p>' : '')
       + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + '(' + esc(versionText(c.basis)) + ')' + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
-    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、国の直轄の土木の共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
+    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、' + esc(out.scope ?? '国の直轄の土木の共通仕様書 1-1-1-6') + ' の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
   const foundHtml = found.length
     ? '<details class="found"><summary>目次で見つけた記載項目(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
     : '';
@@ -2930,7 +2935,7 @@ function planRows(out = {}) {
   return [PLAN_COLUMNS.slice(), ...(out.candidates ?? []).map((c) => [
     c.item, '抜けの候補', c.message ?? '',
     c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
-    'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : ''),
+    c.basis.page ? 'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : '') : '',
     c.basis.quote, c.basis.fetchedAt ?? '', c.basis.version || NO_VERSION,
   ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', '', ''])];
 }
@@ -2959,6 +2964,71 @@ function checklistRows(out = {}, checked = new Set(), notice) {
 return { COLUMNS, bidRows, bidCheckRows, taichoRows, amountBasisRows, stage1Rows, checkRows, SCHEDULE_COLUMNS, scheduleRows, PLAN_COLUMNS, planRows, toCsv, CHECKLIST_COLUMNS, checklistRows };
 })();
 __m["data/schedule.json"] = {"note":"段取りの規則表(国の直轄の土木工事の例。段は start=着手まで・work=施工中・completion=完成・引き渡し。段に分けたのはこのツールの整理で、原文は段で分けていない)。1行 = 共通仕様書の1つの決まり。quote は data/sources の原文(土木工事共通仕様書(案)令和8年3月)に一字一句そのまま入っている文(空白の違いだけ許す)。when・what・to は quote を言い換えたもので、quote に無い期日や相手を足さない。condition は入力の値と同じときだけ行を出す(入力が分からないときは「確かめる」の注意を付けて出す)。threshold は金額の境目を quote の「○万円以上」から pattern で読む(コードに金額を書き込まない)。照合は src/schedule.mjs の checkScheduleRules","doc":"土木工事共通仕様書(案)令和8年3月","sourceId":"mlit-doboku-spec-r8","rules":[{"id":"start-corins","phase":"start","when":"契約後、土曜日・日曜日・祝日等を除き10日以内","what":"コリンズ(工事実績情報システム)に受注時の工事実績情報を登録する(先に「登録のための確認のお願い」をコリンズから監督職員にメール送信し、確認を受ける)","to":"監督職員(確認)・登録機関(登録)","section":"1-1-1-7","title":"コリンズ(CORINS)への登録","threshold":{"field":"contractAmount","pattern":"工事請負代金額が(\\d+)万円以上","label":"工事請負代金額"},"quote":"受注者は、受注時または変更時において工事請負代金額が500万円以上の工事について、工事実績情報システム（コリンズ）に基づき、受注・変更・完成・訂正時に工事実績情報として作成した「登録のための確認のお願い」をコリンズから監督職員にメール送信し、監督職員の確認を受けたうえ、受注時は契約後、土曜日、日曜日、祝日等を除き10日以内に","note":"登録の対象は工事請負代金額500万円以上(単価契約の場合は契約総額)の全ての工事です。期限は契約から数えるので、着手より後になることもあります"},{"id":"start-design-check","phase":"start","when":"施工前","what":"設計図書を照査し(契約書第18条第1項第1号〜第5号)、当たる事実があれば、確認できる資料(現地地形図・設計図との対比図など)を出して確認を求める","to":"監督職員","section":"1-1-1-3","title":"設計図書の照査等","quote":"受注者は、施工前及び施工途中において、自らの負担により契約書第18条第1項第1号から第5号に係る設計図書の照査を行い、該当する事実がある場合は、監督職員にその事実が確認できる資料を提出し、確認を求めなければならない。","note":"照査は施工途中も続けます(施工中の段取り)。監督職員から更に詳しい説明や資料の追加を求められたら従います。照査の範囲を超える資料の作成は、契約書第19条により監督職員の指示によります"},{"id":"start-subcontract-terms","phase":"start","when":"下請負に付する場合","what":"下請負の要件をすべて満たすか確かめる((1)受注者が総合的に企画・指導・調整する、(2)下請負者が地方整備局の工事指名競争参加資格者なら指名停止期間中でない、(3)下請負者に施工能力がある)。下請契約は、労務費・保険料などを反映した適正な代金と工期で結ぶ","to":"下請負者(契約の相手)","section":"1-1-1-12","title":"工事の下請負","condition":{"hasSubcontract":true},"quote":"受注者は、下請負に付する場合には、以下の各号に掲げる要件をすべて満たさなければならない。","note":"原文の(2)は「国土交通省○○地方整備局」と所の名が空けてあります。どの地方整備局かは契約の書類で確かめてください"},{"id":"start-taicho","phase":"start","when":"下請契約を締結したとき","what":"施工体制台帳を作成し、工事現場に備える(原則として電子データで作成する)","to":"工事現場に備える(相手は無し)","section":"1-1-1-13","title":"施工体制台帳","condition":{"hasSubcontract":true},"quote":"受注者は、工事を施工するために下請契約を締結した場合、国土交通省令及び「施工体制台帳の作成等について（通知）」（令和4年12月28日　国不建第466～467号）に従って記載した施工体制台帳を作成し、工事現場に備える","note":"時期は「下請契約を締結したとき」で、原文に期限はありません。記載の中身は国土交通省令と「施工体制台帳の作成等について(通知)」によります(このツールは中身を取得していません)"},{"id":"start-taicho-copy","phase":"start","when":"下請契約を締結したとき(原文に提出の期限は無い)","what":"施工体制台帳の写しを提出する","to":"監督職員","section":"1-1-1-13","title":"施工体制台帳","condition":{"hasSubcontract":true,"ictMeasure":false},"quote":"発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、その写しを監督職員に提出しなければならない。","note":"発注者が情報通信技術で確認できる措置(国土交通省令で定めるもの)を講じている場合は、写しの提出は要りません"},{"id":"start-taikeizu","phase":"start","when":"下請契約を締結したとき","what":"施工体系図(各下請負者の施工の分担関係)を作成し、工事関係者が見やすい場所と公衆が見やすい場所に掲げる","to":"工事関係者・公衆(掲示)","section":"1-1-1-13","title":"施工体制台帳(2.施工体系図)","condition":{"hasSubcontract":true},"quote":"各下請負者の施工の分担関係を表示した施工体系図を作成し、公共工事の入札及び契約の適正化の促進に関する法律に従って、工事関係者が見やすい場所及び公衆が見やすい場所に掲げる","note":"時期は「下請契約を締結したとき」で、原文に期限はありません。記載の中身は国土交通省令と「施工体制台帳の作成等について(通知)」によります(このツールは中身を取得していません)"},{"id":"start-taikeizu-copy","phase":"start","when":"下請契約を締結したとき(原文に提出の期限は無い)","what":"施工体系図の写しを提出する","to":"監督職員","section":"1-1-1-13","title":"施工体制台帳(2.施工体系図)","condition":{"hasSubcontract":true,"ictMeasure":false},"quote":"工事関係者が見やすい場所及び公衆が見やすい場所に掲げるとともに、発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、その写しを監督職員に提出しなければならない。","note":"発注者が情報通信技術で確認できる措置(国土交通省令で定めるもの)を講じている場合は、写しの提出は要りません"},{"id":"start-plan","phase":"start","when":"工事着手前(または施工方法が確定した時期)","what":"施工計画書(工事目的物を完成するために必要な手順や工法等)を提出する","to":"監督職員","section":"1-1-1-6","title":"施工計画書","quote":"受注者は、工事着手前または施工方法が確定した時期に工事目的物を完成するために必要な手順や工法等についての施工計画書を監督職員に提出しなければならない。","note":"記載する事項(工事概要・計画工程表・現場組織表など)は 1-1-1-6 の(1)〜(16)にあります。維持工事等の簡易な工事では、監督職員の承諾を得て記載の一部を省略できます"},{"id":"start-commence","phase":"start","when":"特記仕様書に定めた工事着手の期日まで(定めがある場合)","what":"特記仕様書で工事着手の期日を確かめ、その期日までに着手する","to":"相手は無し(特記仕様書で期日を確かめる)","section":"1-1-1-11","title":"工事着手","quote":"受注者は、特記仕様書に工事に着手すべき期日について定めがある場合には、その期日までに工事着手しなければならない。","note":"着手の期日は特記仕様書の中身で、共通仕様書からは決まりません。この行が着手までの段取りの区切りです"},{"id":"work-survey","phase":"work","when":"工事着手後直ちに","what":"測量を実施し、測量標(仮BM)・工事用多角点の設置と用地境界・中心線・縦断・横断などを確かめる。設計図書の数値と差があれば、測量結果を速やかに出して指示を受ける。測量結果は監督職員に提出する","to":"監督職員","section":"1-1-1-42","title":"工事測量","quote":"受注者は、工事着手後直ちに測量を実施し、測量標（仮BM）、工事用多角点の設置及び用地境界、中心線、縦断、横断等を確認しなければならない。測量結果が設計図書に示されている数値と差異を生じた場合は監督職員に測量結果を速やかに提出し指示を受けなければならない。なお、測量標（仮BM）及び多角点を設置するための基準となる点の選定は、監督職員の指示を受けなければならない。また受注者は、測量結果を監督職員に提出しなければならない。","note":"測量標(仮BM)と多角点を置く基準の点の選定は、監督職員の指示を受けます(1-1-1-42 の1)。仮水準点・引照点などの設置と確認(2)、工事用測量標を移設しないこと(4)、既存杭の保全(5)も同じ条にあります"},{"id":"work-design-check","phase":"work","when":"施工途中","what":"設計図書の照査を続け(契約書第18条第1項第1号〜第5号)、当たる事実があれば、確認できる資料を出して確認を求める","to":"監督職員","section":"1-1-1-3","title":"設計図書の照査等","quote":"受注者は、施工前及び施工途中において、自らの負担により契約書第18条第1項第1号から第5号に係る設計図書の照査を行い、該当する事実がある場合は、監督職員にその事実が確認できる資料を提出し、確認を求めなければならない。","note":"着手までの行と同じ決まりです。原文は「施工前及び施工途中」と書いています。照査の範囲を超える資料の作成は、契約書第19条により監督職員の指示によります"},{"id":"work-report","phase":"work","when":"契約書第11条の規定による(共通仕様書に時期の定めは無い。契約書で確かめる)","what":"工事履行報告書を提出する","to":"監督職員","section":"1-1-1-28","title":"履行報告","quote":"受注者は、契約書第11条の規定に基づき、工事履行報告書を監督職員に提出しなければならない。","note":"報告の時期と中身は契約書第11条によります(このツールは契約書を取得していません)"},{"id":"work-accident","phase":"work","when":"工事の施工中に事故が発生したとき(直ちに)","what":"監督職員に連絡する。建設工事事故データベースシステムの登録対象の事故なら、監督職員が指示する期日までに工事事故報告書を出し、システムに登録する","to":"監督職員(連絡・報告書)・建設工事事故データベースシステム(登録)","section":"1-1-1-34","title":"事故報告書","quote":"受注者は、工事の施工中に事故が発生した場合には、直ちに監督職員に連絡する。また、建設工事事故データベースシステムの登録対象となる工事事故の場合、監督職員が指示する期日までに、工事事故報告書を提出し、建設工事事故データベースシステムに、工事事故に関する情報を登録する。","note":"事故が起きたときだけの行です。登録対象かどうかは共通仕様書からは決まりません。監督職員に確かめてください"},{"id":"done-drawing","phase":"completion","when":"原文に時期の定めは無い(設計図書に従う)","what":"工事完成図を作成する(各種ブロック製作工など、監督職員の承諾を得て省略できるものがある)","to":"相手は無し(省略するときは監督職員の承諾を得る)","section":"1-1-1-23","title":"工事完成図","quote":"受注者は、設計図書に従って工事完成図を作成しなければならない。","note":"作り方・出し方は設計図書で確かめてください。段に置いたのはこのツールの整理です(原文は段で分けていません)"},{"id":"done-supplied","phase":"completion","when":"工事完成時(完成前に工事工程上、支給材料の精算ができる場合はその時点)","what":"支給品精算書(土木工事の場合)を提出する","to":"監督職員を通じて発注者","section":"1-1-1-20","title":"支給材料及び貸与品","condition":{"hasSuppliedMaterial":true},"quote":"受注者は、工事完成時（完成前に工事工程上、支給材料の精算が可能な場合は、その時点。）に、土木工事にあっては支給品精算書を、港湾工事及び空港工事にあっては支給材料精算書を、監督職員を通じて発注者に提出しなければならない。","note":"港湾工事・空港工事では支給材料精算書です"},{"id":"done-surplus","phase":"completion","when":"原文に時期の定めは無い。完成検査の前に済んでいるか確かめる","what":"設計図書に定められた現場発生品を、設計図書または監督職員の指示する場所で監督職員に引き渡し、現場発生品調書を作って提出する","to":"監督職員(引き渡し)・監督職員を通じて発注者(調書)","section":"1-1-1-21","title":"工事現場発生品","condition":{"hasDesignatedSurplus":true},"quote":"受注者は、設計図書に定められた現場発生品について、設計図書または監督職員の指示する場所で監督職員に引き渡すとともに、あわせて現場発生品調書を作成し、監督職員を通じて発注者に提出しなければならない。","note":"これは現場発生品の引き渡しです。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によります(このツールは契約書を取得していません)。設計図書に無いものでも、監督職員が引き渡しを指示したものは同じように引き渡します(1-1-1-21 の2)。段に置いたのはこのツールの整理です(原文は段で分けていません)"},{"id":"done-cleanup","phase":"completion","when":"工事の全部または一部の完成に際して","what":"受注者の機器・余剰資材・残骸・仮設物を片付けて撤去し、現場を清掃して整然とした状態にする(設計図書で存置するとしたものを除く)","to":"相手は無し(工事検査に要る足場・はしご等は監督職員の指示に従って残す)","section":"1-1-1-33","title":"後片付け","quote":"受注者は、工事の全部または一部の完成に際して、一切の受注者の機器、余剰資材、残骸及び各種の仮設物を片付けかつ撤去し、現場及び工事にかかる部分を清掃し、かつ整然とした状態にするものとする。","note":"工事検査に要る足場・はしご等は、検査が終わった後に撤去します"},{"id":"done-requirements","phase":"completion","when":"工事完成通知書を提出する際","what":"完成検査の要件をすべて満たしているか確かめる((1)設計図書(追加・変更指示を含む)のすべての工事が完成、(2)監督職員の請求した改造(契約書第17条第1項)が完了、(3)設計図書で義務付けられた工事記録写真・出来形管理資料・工事関係図等の整備が完了、(4)契約変更が要る工事は最終変更契約を締結済み)","to":"相手は無し(提出の前に受注者が確かめる)","section":"1-1-1-24","title":"工事完成検査(2.工事完成検査の要件)","quote":"受注者は、工事完成通知書を監督職員に提出する際には、以下の各号に掲げる要件をすべて満たさなくてはならない。"},{"id":"done-notice","phase":"completion","when":"契約書第32条の規定による(共通仕様書に時期の定めは無い。契約書で確かめる)","what":"工事完成通知書を提出する","to":"監督職員を通じて発注者","section":"1-1-1-24","title":"工事完成検査(1.工事完成通知書の提出)","quote":"受注者は、契約書第32条の規定に基づき、工事完成通知書を監督職員を通じて発注者に提出しなければならない。","note":"通知の時期と、その後の検査・引き渡しの手続は契約書第32条によります(このツールは契約書を取得していません)"},{"id":"done-inspection","phase":"completion","when":"発注者が監督職員を通じて通知する検査日","what":"工事完成検査に臨場する(工事目的物を契約図書と対比して、出来形・工事管理の書類・記録・写真・週休二日の履行状況が検査される)","to":"検査職員・監督職員","section":"1-1-1-24","title":"工事完成検査(4.検査内容)","quote":"検査職員は、監督職員及び受注者の臨場の上、工事目的物を対象として契約図書と対比し、以下の各号に掲げる検査を行うものとする。","note":"検査日は、発注者が監督職員を通じて先に通知します(1-1-1-24 の3)。検査職員は、修補が要ると認めたとき、期限を定めて修補の指示ができます(同じく5)。修補の指示の日から完了の確認の日までは、契約書第32条第2項の期間に含めません(同じく6)。この検査には第3編 3-1-1-4 第3項の規定を準用します(同じく7。このツールは第3編を取得していません)"},{"id":"done-corins","phase":"completion","when":"工事完成後、土曜日・日曜日・祝日等を除き10日以内","what":"コリンズに完成時の工事実績情報を登録する(先に「登録のための確認のお願い」をコリンズから監督職員にメール送信し、確認を受ける)","to":"監督職員(確認)・登録機関(登録)","section":"1-1-1-7","title":"コリンズ(CORINS)への登録","threshold":{"field":"contractAmount","pattern":"工事請負代金額が(\\d+)万円以上","label":"工事請負代金額"},"quote":"受注者は、受注時または変更時において工事請負代金額が500万円以上の工事について、工事実績情報システム（コリンズ）に基づき、受注・変更・完成・訂正時に工事実績情報として作成した「登録のための確認のお願い」をコリンズから監督職員にメール送信し、監督職員の確認を受けたうえ、受注時は契約後、土曜日、日曜日、祝日等を除き10日以内に、登録内容の変更時は変更があった日から土曜日、日曜日、祝日等を除き10日以内に、完成時は工事完成後、土曜日、日曜日、祝日等を除き10日以内に","note":"変更時と工事完成時の間が10日(土曜日・日曜日・祝日等を除く)に満たないときは、変更時の登録申請を省略できます"}]};
+__m["src/rules-load.mjs"] = (function () {
+// 画面の「段取りの表を読み込む」(F26b)。Skill spec-to-rules が作った行のファイル(照合で残った行)を読み、形を確かめる。
+// 画面の中で原文とは照らさない(原文はファイルに入っていない)。読んだ表はメモリだけに持ち、保存しない。
+const RULES_MAX_BYTES = 1024 * 1024;
+const UNDETERMINED = '判断できない';
+const PHASES = ['start', 'work', 'completion', UNDETERMINED];
+
+const text = (v) => (typeof v === 'string' && v.trim() ? v : null);
+
+// 1行の形の誤りを返す(無ければ null)。ファイルの中身の文は理由に入れない
+function rowProblem(row) {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return '行の形ではありません';
+  if (row.kind !== 'plan-item' && row.kind !== 'schedule') return '種類(kind)が plan-item でも schedule でもありません';
+  const need = row.kind === 'schedule' ? ['when', 'what', 'to', 'section', 'quote'] : ['label', 'section', 'quote'];
+  for (const k of need) if (!text(row[k])) return k + ' がありません';
+  if (row.kind === 'schedule' && !PHASES.includes(row.phase)) return '段(phase)が start・work・completion・判断できない のどれでもありません';
+  const why = row.undetermined && typeof row.undetermined === 'object' ? row.undetermined : {};
+  for (const [k, v] of Object.entries(row)) {
+    if (v === UNDETERMINED && !text(why[k])) return k + ' が「判断できない」なのに理由(undetermined.' + k + ')がありません';
+  }
+  return null;
+}
+
+// text: ファイルの中身。返り値: { source, schedule, planItems, count }。読めないときは理由つきの Error を投げる
+function parseRulesFile(fileText) {
+  let data;
+  try {
+    data = JSON.parse(String(fileText ?? ''));
+  } catch {
+    throw new Error('JSON のファイルとして読めません');
+  }
+  if (!data || typeof data !== 'object' || !Array.isArray(data.rows)) throw new Error('行の一覧(rows)がありません。spec-to-rules の check-rows.mjs --out で書いたファイルを選んでください');
+  if (data.rows.length === 0) throw new Error('行が1つもありません');
+  const s = data.source;
+  if (!s || typeof s !== 'object') throw new Error('出典(source)がありません。出典の分からない表は読み込みません');
+  for (const [k, label] of [['publisher', '発注者'], ['title', '題名'], ['edition', '版']]) {
+    if (!text(s[k])) throw new Error('出典の' + label + '(source.' + k + ')がありません');
+  }
+  const ids = new Set();
+  data.rows.forEach((row, i) => {
+    const p = rowProblem(row);
+    if (p) throw new Error((i + 1) + '行目: ' + p);
+    if (row.kind !== 'schedule' || row.id == null) return;
+    if (ids.has(row.id)) throw new Error((i + 1) + '行目: id が重なっています');
+    ids.add(row.id);
+  });
+  return {
+    source: { publisher: s.publisher, title: s.title, edition: s.edition, url: text(s.url) ?? '', fetchedAt: text(s.fetchedAt) ?? '' },
+    schedule: data.rows.filter((r) => r.kind === 'schedule'),
+    planItems: data.rows.filter((r) => r.kind === 'plan-item'),
+    count: data.rows.length,
+  };
+}
+
+const tableName = (table) => table.source.publisher + '「' + table.source.title + '」';
+
+// 画面の注記の文。残った行の数はファイルの行の数(照合で外した行は --out に入らない)
+function tableNotice(table) {
+  const s = table.source;
+  return 'この表はツールの外で原文と照合済み(残った行 ' + table.count + '行)。画面では原文と照らしていません(ファイルが照合を通ったものかも、画面では確かめられません)。'
+    + '出典: 発注者 ' + s.publisher + '・題名 ' + s.title + '・版 ' + s.edition + (s.url ? '・' + s.url : '');
+}
+
+return { RULES_MAX_BYTES, UNDETERMINED, parseRulesFile, tableName, tableNotice };
+})();
 __m["src/schedule.mjs"] = (function () {
 // 段取りの一覧(F06a: 着手まで、F06b: 施工中から完成・引き渡しまで。国の直轄の土木工事の例)。
 // data/schedule.json の規則表の行を、入力の条件に当てはめて「いつ・何を・誰に・根拠(共通仕様書の箇所と原文)」の行にする。
@@ -2967,6 +3037,7 @@ __m["src/schedule.mjs"] = (function () {
 const scheduleData = __m["data/schedule.json"];
 const sourcesData = __m["data/sources/index.json"];
 const { sourceVersion } = __m["src/source-version.mjs"];
+const { tableName, UNDETERMINED } = __m["src/rules-load.mjs"];
 
 const FIELD_LABEL = {
   hasSubcontract: '下請契約があるか',
@@ -3029,8 +3100,36 @@ function apply(rule, input) {
   return { show: true, checks };
 }
 
-// 段取りの行と、出さなかった行の理由を返す
-function buildScheduleDetail(input = {}) {
+// 読み込んだ表(F26b)の行。条件の欄が無いので入力は当てはめず、どの行も「確かめる」にする(「行う」と言い切らない)
+function loadedDetail(input, table) {
+  const name = tableName(table);
+  const skipped = [];
+  if (input.direct === false) {
+    return { rows: [], skipped: table.schedule.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes: ['読み込んだ表は発注者の仕様書の受注者(元請け)の行です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください'], docLabel: '読み込んだ表', custom: true };
+  }
+  const notes = ['読み込んだ表の行です: ' + name + '(' + table.source.edition + ' の版)。金額や下請の有無などの条件は当てはめていないので、要らない行も出ます'];
+  if (input.orderer === 'private') notes.push('民間工事です。読み込んだ表は発注者の仕様書の行なので、この工事の契約書で確かめてください');
+  const order = ['start', 'work', 'completion', UNDETERMINED];
+  const rows = [...table.schedule].sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase)).map((r) => ({
+    id: r.id ?? '',
+    phase: r.phase,
+    when: r.when,
+    what: r.what,
+    to: r.to,
+    status: 'needs_check',
+    checks: Object.entries(r.undetermined ?? {}).map(([, why]) => '判断できない: ' + why),
+    note: r.note ?? '',
+    basis: {
+      doc: name, title: name, section: r.section, sectionTitle: r.title ?? '', quote: r.quote,
+      url: table.source.url, fetchedAt: table.source.fetchedAt, version: sourceVersion({ edition: table.source.edition }),
+    },
+  }));
+  return { rows, skipped, notes, docLabel: '読み込んだ表', custom: true };
+}
+
+// 段取りの行と、出さなかった行の理由を返す。table は読み込んだ表(無ければ国の直轄の例)。段取りの行が無い表は国の例のまま
+function buildScheduleDetail(input = {}, table = null) {
+  if (table?.schedule?.length) return loadedDetail(input, table);
   const rows = [];
   const skipped = [];
   const notes = [];
@@ -3096,6 +3195,7 @@ __m["src/plan-check.mjs"] = (function () {
 const planData = __m["data/plan-items.json"];
 const sourcesData = __m["data/sources/index.json"];
 const { sourceVersion } = __m["src/source-version.mjs"];
+const { tableName } = __m["src/rules-load.mjs"];
 
 const source = sourcesData.sources.find((s) => s.id === planData.sourceId);
 if (!source) throw new Error('施工計画書の記載項目: 出典が無い: ' + planData.sourceId);
@@ -3132,6 +3232,13 @@ function basisOf(it) {
   };
 }
 
+function loadedBasis(it, table) {
+  return {
+    doc: tableName(table), section: it.section, sectionTitle: '', quote: it.quote,
+    url: table.source.url, fetchedAt: table.source.fetchedAt, version: sourceVersion({ edition: table.source.edition }),
+  };
+}
+
 const PLAN_ITEMS = planData.items;
 
 // 1-1-1-6 は国の直轄の土木工事の共通仕様書の条。建築一式工事の施工計画書には対応する記載項目が無い(critic の指摘4)
@@ -3139,12 +3246,21 @@ const KENCHIKU_UNDECIDABLE = '建築一式工事なので、国の直轄の土�
 
 // text: 施工計画書の目次の文(1行に1つの見出し)
 // opts.workType: 'kenchiku-ikkatsu'(建築一式)|'other'|未指定。建築一式なら照合せず「判断できない」を返す
+// opts.table: 読み込んだ表(F26b)。記載項目の行があれば、国の直轄の例の代わりにその行と比べる
 // 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], undecidable: [{message}], notes: [文] }
 const OTHER_NOTE = '(16)は受け皿の項目なので、見出しが無くても抜けとは限らない。監督職員が求めた項目があれば書く';
 
 function checkPlanToc(text, opts = {}) {
   const lines = String(text ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
   if (lines.length === 0) throw new Error('目次が空です');
+  const table = opts.table?.planItems?.length ? opts.table : null;
+  if (opts.workType === 'kenchiku-ikkatsu' && table) {
+    return {
+      candidates: [], found: [], extra: [], scope: tableName(table),
+      undecidable: [{ message: '建築一式工事なので、読み込んだ表(' + tableName(table) + ')の記載項目が当てはまるかを決められません。特記仕様書で確かめてください' }],
+      notes: ['工事の種類が「建築一式工事」なので、目次を読み込んだ表と比べていません'],
+    };
+  }
   if (opts.workType === 'kenchiku-ikkatsu') {
     return {
       candidates: [], found: [], extra: [],
@@ -3156,7 +3272,7 @@ function checkPlanToc(text, opts = {}) {
   const used = new Set();
   const found = [];
   const candidates = [];
-  for (const it of planData.items) {
+  for (const it of table ? table.planItems : planData.items) {
     const label = normalizeLine(it.label);
     const aliases = (it.aliases ?? []).map(normalizeLine);
     let hit = heads.findIndex((h) => h.head.includes(label));
@@ -3172,13 +3288,16 @@ function checkPlanToc(text, opts = {}) {
       candidates.push({
         item: it.label,
         no: it.no,
-        message: '国の直轄の土木の共通仕様書 ' + planData.section + ' では(' + it.no + ')「' + it.label + '」が記載事項です。目次にその見出しが見当たりません。別の見出しの中に書いてあるか、本文と発注者の仕様書で確かめてください',
-        basis: basisOf(it),
+        message: (table ? tableName(table) + ' ' + it.section : '国の直轄の土木の共通仕様書 ' + planData.section) + ' では(' + it.no + ')「' + it.label + '」が記載事項です。目次にその見出しが見当たりません。別の見出しの中に書いてあるか、本文と発注者の仕様書で確かめてください',
+        basis: table ? loadedBasis(it, table) : basisOf(it),
       });
     }
   }
   const extra = heads.filter((h, i) => !used.has(i) && !TITLE_RE.test(h.head)).map((h) => h.line);
-  const notes = [
+  const notes = table ? [
+    '目次の見出しの言葉だけで比べています。本文に書いてあるか、書いた中身が足りているかは見ていません',
+    '読み込んだ表の行です: ' + tableName(table) + '(' + table.source.edition + ' の版)。言い換えの語を持たないので、書き方が違う見出しは抜けの候補に出ます',
+  ] : [
     '目次の見出しの言葉だけで比べています。本文に書いてあるか、書いた中身が足りているかは見ていません',
     '共通仕様書 ' + planData.section + ' には「維持工事等簡易な工事においては監督職員の承諾を得て記載内容の一部を省略することができる」とあり、監督職員が補足を求めた項目は追記します。省略の承諾や追記の求めがあるかは、人が確かめてください',
     '国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書の記載事項で置き換えてください',
@@ -3186,7 +3305,7 @@ function checkPlanToc(text, opts = {}) {
   // (16)その他は受け皿の項目。照合はするが、見出しが無いことは抜けとは限らないと注意に出す(exceptions の回答 B)
   if (candidates.some((c) => c.no === 16 && c.item === 'その他')) notes.push(OTHER_NOTE);
   if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の項目名と違う言葉で見つけたものです。その見出しが記載事項に当たるかを確かめてください');
-  return { candidates, found, extra, undecidable: [], notes };
+  return { candidates, found, extra, undecidable: [], notes, ...(table ? { scope: tableName(table) } : {}) };
 }
 
 return { normalizeLine, tocHeading, PLAN_ITEMS, KENCHIKU_UNDECIDABLE, OTHER_NOTE, checkPlanToc };
@@ -5296,6 +5415,7 @@ const { judgeTaicho } = __m["src/taicho.mjs"];
 const { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, toCsv } = __m["src/export.mjs"];
 const { buildScheduleDetail } = __m["src/schedule.mjs"];
 const { checkPlanToc } = __m["src/plan-check.mjs"];
+const { parseRulesFile, tableNotice, RULES_MAX_BYTES } = __m["src/rules-load.mjs"];
 const { SAMPLE } = __m["src/sample.mjs"];
 const { startMask } = __m["src/ui/mask-app.mjs"];
 const { startAi } = __m["src/ui/ai-app.mjs"];
@@ -5371,6 +5491,9 @@ function runBid(doc) {
 
 // 段取りの一覧(F06a): 同じ条件から、着手までの段取りを出す(入札前の確認とは別に動かし、片方が止まっても片方は出す)
 let lastSchedule = null;
+let lastScheduleInput = null;
+// 読み込んだ表(F26b)。メモリだけに持ち、ページを閉じれば消える
+let rulesTable = null;
 function setScheduleStatus(doc, text) {
   const el = doc.getElementById('schedule-status');
   if (el) el.textContent = text;
@@ -5378,17 +5501,78 @@ function setScheduleStatus(doc, text) {
 function runSchedule(doc, input, errors = []) {
   const out = doc.getElementById('schedule-result');
   lastSchedule = null;
+  lastScheduleInput = null;
   setScheduleStatus(doc, '');
   if (!out) return;
   if (!input) { out.innerHTML = renderErrors(errors); return; }
   try {
-    const detail = buildScheduleDetail(input);
+    const detail = buildScheduleDetail(input, rulesTable);
     out.innerHTML = renderSchedule(detail.rows, detail);
     lastSchedule = detail.rows;
+    lastScheduleInput = input;
     summary.scheduleCount = detail.rows.length;
   } catch (e) {
     out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
+}
+
+const NATIONAL_NOTICE = {
+  'schedule-notice': '国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください',
+  'plan-notice': '国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください',
+};
+const RULES_SIDES = [
+  ['schedule-notice', 'schedule-about', 'schedule'],
+  ['plan-notice', 'plan-about', 'planItems'],
+];
+// 表が変わったら、前の表で出した結果を残さない(注記と結果が食い違わないように)
+function applyRulesTable(doc) {
+  for (const [noticeId, aboutId, key] of RULES_SIDES) {
+    const custom = Boolean(rulesTable?.[key].length);
+    const notice = doc.getElementById(noticeId);
+    if (notice) notice.textContent = custom ? tableNotice(rulesTable) : NATIONAL_NOTICE[noticeId];
+    const about = doc.getElementById(aboutId);
+    if (about) about.hidden = custom;
+  }
+  const clear = doc.getElementById('rules-clear');
+  if (clear) clear.hidden = !rulesTable;
+  if (lastSchedule && lastScheduleInput) {
+    runSchedule(doc, lastScheduleInput);
+    if (summaryShown) updateSummary(doc);
+  } else {
+    const out = doc.getElementById('schedule-result');
+    if (out) out.innerHTML = '<p>条件を入れて「確認する」を押してください。</p>';
+  }
+  if (doc.getElementById('plan-input')?.value.trim()) runPlanCheck(doc);
+  else {
+    const out = doc.getElementById('plan-result');
+    if (out) out.innerHTML = '<p>目次を貼って「目次を点検する」を押してください。</p>';
+  }
+}
+function setRulesStatus(doc, text) {
+  const el = doc.getElementById('rules-status');
+  if (el) el.textContent = text;
+}
+// 壊れたファイルは理由を出して拒み、今の表はそのままにする
+function loadRulesFile(doc, text) {
+  let table;
+  try {
+    table = parseRulesFile(text);
+  } catch (e) {
+    setRulesStatus(doc, '読み込めませんでした: ' + e.message + '。今の表はそのままです。');
+    return false;
+  }
+  rulesTable = table;
+  applyRulesTable(doc);
+  const missing = [table.schedule.length ? '' : '段取り', table.planItems.length ? '' : '施工計画書の記載項目'].filter(Boolean);
+  setRulesStatus(doc, '読み込みました(段取り ' + table.schedule.length + '行・記載項目 ' + table.planItems.length + '行)。'
+    + (missing.length ? missing.join('と') + 'の行が無いので、そちらは国の直轄の例のままです。' : '')
+    + 'ブラウザには保存しません。ページを閉じると消えます。');
+  return true;
+}
+function clearRulesTable(doc) {
+  rulesTable = null;
+  applyRulesTable(doc);
+  setRulesStatus(doc, '国の直轄の例に戻しました。');
 }
 
 function exportScheduleCsv(doc) {
@@ -5583,7 +5767,7 @@ function runPlanCheck(doc) {
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本で試す」を押してください。']); return; }
   try {
     const form = readBidForm(collect(doc));
-    const out = checkPlanToc(text, { workType: form.workType ?? undefined });
+    const out = checkPlanToc(text, { workType: form.workType ?? undefined, table: rulesTable });
     if (!form.workType) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
@@ -5646,6 +5830,15 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (t && t.classList && t.classList.contains('checklist-check')) setChecklistChecked(doc, t.getAttribute('data-row-id'), t.checked === true);
     });
     on('schedule-csv-btn', () => exportScheduleCsv(doc));
+    on('rules-clear', () => clearRulesTable(doc));
+    const rulesFile = doc.getElementById('rules-load');
+    if (rulesFile) rulesFile.addEventListener('change', async () => {
+      const f = rulesFile.files && rulesFile.files[0];
+      if (!f) return;
+      if (f.size > RULES_MAX_BYTES) setRulesStatus(doc, '読み込めませんでした: 表のファイルとしては大きすぎます(1MB まで)。今の表はそのままです。');
+      else loadRulesFile(doc, await f.text());
+      rulesFile.value = '';
+    });
     on('plan-run', () => runPlanCheck(doc));
     on('plan-csv-btn', () => exportPlanCsv(doc));
     // 目次を変えたら、前の点検の結果は書き出さない
@@ -5699,7 +5892,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { runBid, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, startApp };
+return { runBid, loadRulesFile, clearRulesTable, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

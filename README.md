@@ -97,6 +97,7 @@
 | 国土交通省「土木工事共通仕様書(案)令和8年3月」(第1編 第1章 第1節の14の条の文だけを写した) | https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html | 2026-11-02 |
 | 国土交通省「施工体制台帳(作成例)」(Excel の様式を手を加えずに同梱) | https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx | 2026-11-02 |
 | 国土交通省「施工体制台帳等のチェックリスト」(題名・URL・取得日だけを画面に出す。写していない) | https://www.mlit.go.jp/totikensangyo/const/content/001389105.docx | 2026-11-03 |
+| 和歌山県「土木請負工事必携(令和7年11月)」第1編 第1章 1-1-1-6〜12(見本の行 `data/specs/wakayama_r0711_rows.json` の抜き書きと言い換え。和歌山県ホームページ公開情報利用規約 https://www.pref.wakayama.lg.jp/prefg/000200/opendata/hpopendatakiyaku.html 、CC BY 4.0 と互換) | https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html | 2026-11-04 |
 | Anthropic「API and data retention」 | https://platform.claude.com/docs/en/manage-claude/api-and-data-retention | 2026-11-02 |
 | Anthropic「How long do you store my organization's data?」 | https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data | 2026-11-02 |
 | Anthropic「Is my data used for model training?」 | https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training | 2026-11-02 |
@@ -109,6 +110,7 @@
 
 ## 限界
 - 出すのは指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください
+- 発注者の仕様書から Skill `spec-to-rules` で作った行のファイルは、画面の「段取りの表を読み込む」で国の例の代わりに使えます(通信も保存もしません。画面では原文と照らしません)
 - 段取りと施工計画書の記載項目は、国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書・契約書で置き換えてください
 - 規則表にあるのは、取得した条と国交省の資料の箇所だけです。契約約款・自治体の要綱は取り込んでいません。施行規則は第14条の2 だけを、台帳の記載事項の表に使っています
 - 法令は改正されます。取得日より後の改正は入っていません。使う前に e-Gov で原文を確かめてください。根拠の抜き書きの近く(画面・印刷・CSV の「版」の列)に、取得日と版(法令は「2025年12月12日施行の改正までの条文」のように e-Gov の版の施行日、国交省の資料は「令和8年3月 の版」のように資料の版の表示)を出します

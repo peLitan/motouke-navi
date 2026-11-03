@@ -211,18 +211,19 @@ export function renderSchedule(rows = [], detail = {}) {
   const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
   const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
+  const docLabel = esc(detail.docLabel ?? '共通仕様書');
   // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
   const tables = phases.map((ph) => {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
     return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
-      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(共通仕様書の箇所)</th></tr></thead><tbody>'
+      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(' + docLabel + 'の箇所)</th></tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
         + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
         + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
         + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
       + '</tbody></table>')
-      + '<details class="basis schedule-basis"><summary>根拠: 共通仕様書の原文(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
+      + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? '読み込んだ表の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
       + '</ul></details>';
   }).join('');
@@ -237,7 +238,7 @@ export function renderSchedule(rows = [], detail = {}) {
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
   return lead + notes + body + skipped
-    + '<p class="human">国の直轄の例です。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
+    + '<p class="human">' + (detail.custom ? '読み込んだ表の行です' : '国の直轄の例です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
 // 施工計画書の目次の点検(F07)。抜けの候補を、根拠(共通仕様書の箇所・ページ・原文)つきで出す
@@ -292,7 +293,7 @@ export function renderPlanResult(out = {}) {
     ? '<h3>記載項目の抜けの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
       + (c.message ? '<p>' + esc(c.message) + '</p>' : '')
       + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + '(' + esc(versionText(c.basis)) + ')' + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
-    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、国の直轄の土木の共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
+    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、' + esc(out.scope ?? '国の直轄の土木の共通仕様書 1-1-1-6') + ' の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
   const foundHtml = found.length
     ? '<details class="found"><summary>目次で見つけた記載項目(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
     : '';

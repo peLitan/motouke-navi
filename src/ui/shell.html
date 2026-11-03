@@ -253,7 +253,11 @@
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
-<p>国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
+<div class="row no-print"><label for="rules-load">段取りの表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
+<input type="file" id="rules-load" name="rules-load" accept=".json,application/json">
+<button type="button" id="rules-clear" hidden>国の直轄の例に戻す</button></div>
+<p id="rules-status" aria-live="polite"></p>
+<p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 <div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
@@ -323,8 +327,8 @@
 </section>
 <section id="plan-check">
 <h2>3. 施工計画書の目次の点検</h2>
-<p>施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
-<p class="schedule-notice note">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
+<p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
+<p class="schedule-notice note" id="plan-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
 <div class="row"><button type="button" id="plan-run">目次を点検する</button>

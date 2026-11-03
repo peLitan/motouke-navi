@@ -9,7 +9,8 @@
 //   node check-rows.mjs --list <節の番号> <仕様書の文のファイル>
 //     節の中の「（1）○○」の形の列挙を、施工計画書の記載項目の行の候補(JSON)として出す(機械で拾うだけ。中身の判断はしない)
 //
-// 行のファイルの形: { "rows": [ 行, ... ] }
+// 行のファイルの形: { "source": 出典, "rows": [ 行, ... ] }
+//   出典: { "publisher": 発注者, "title": 題名, "edition": 版, "url": URL, "fetchedAt": 取得日 }。--out にそのまま写す(作品の画面の読み込みは出典が要る)
 //   施工計画書の記載項目の行: { "kind": "plan-item", "section": "1-1-1-6", "no": 1, "label": "工事概要", "quote": "（1）工事概要" }
 //   段取りの行: { "kind": "schedule", "id": "...", "phase": "start|work|completion", "when": "...", "what": "...", "to": "...",
 //                 "section": "1-1-1-6", "title": "...", "quote": "...", "note": "..." }
@@ -149,6 +150,6 @@ if (isMain) {
   for (const d of r.dropped) console.log('外す\t' + rowName(d.row) + '\t' + d.reasons.join(' / '));
   for (const u of r.undetermined) console.log('判断できない欄\t' + rowName(u.row) + '\t' + u.fields.map((f) => f + ': ' + u.row.undetermined[f]).join(' / '));
   console.log(`行 ${r.kept.length + r.dropped.length} のうち 残す ${r.kept.length}・外す ${r.dropped.length}(判断できない欄のある行 ${r.undetermined.length})`);
-  if (out) fs.writeFileSync(out, JSON.stringify({ rows: r.kept }, null, 2) + '\n');
+  if (out) fs.writeFileSync(out, JSON.stringify({ ...(data.source ? { source: data.source } : {}), rows: r.kept }, null, 2) + '\n');
   process.exit(r.dropped.length ? 1 : 0);
 }

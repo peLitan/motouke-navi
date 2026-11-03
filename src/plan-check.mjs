@@ -5,6 +5,7 @@
 import planData from '../data/plan-items.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { sourceVersion } from './source-version.mjs';
+import { tableName } from './rules-load.mjs';
 
 const source = sourcesData.sources.find((s) => s.id === planData.sourceId);
 if (!source) throw new Error('施工計画書の記載項目: 出典が無い: ' + planData.sourceId);
@@ -41,6 +42,13 @@ function basisOf(it) {
   };
 }
 
+function loadedBasis(it, table) {
+  return {
+    doc: tableName(table), section: it.section, sectionTitle: '', quote: it.quote,
+    url: table.source.url, fetchedAt: table.source.fetchedAt, version: sourceVersion({ edition: table.source.edition }),
+  };
+}
+
 export const PLAN_ITEMS = planData.items;
 
 // 1-1-1-6 は国の直轄の土木工事の共通仕様書の条。建築一式工事の施工計画書には対応する記載項目が無い(critic の指摘4)
@@ -48,12 +56,21 @@ export const KENCHIKU_UNDECIDABLE = '建築一式工事なので、国の直轄�
 
 // text: 施工計画書の目次の文(1行に1つの見出し)
 // opts.workType: 'kenchiku-ikkatsu'(建築一式)|'other'|未指定。建築一式なら照合せず「判断できない」を返す
+// opts.table: 読み込んだ表(F26b)。記載項目の行があれば、国の直轄の例の代わりにその行と比べる
 // 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], undecidable: [{message}], notes: [文] }
 export const OTHER_NOTE = '(16)は受け皿の項目なので、見出しが無くても抜けとは限らない。監督職員が求めた項目があれば書く';
 
 export function checkPlanToc(text, opts = {}) {
   const lines = String(text ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
   if (lines.length === 0) throw new Error('目次が空です');
+  const table = opts.table?.planItems?.length ? opts.table : null;
+  if (opts.workType === 'kenchiku-ikkatsu' && table) {
+    return {
+      candidates: [], found: [], extra: [], scope: tableName(table),
+      undecidable: [{ message: '建築一式工事なので、読み込んだ表(' + tableName(table) + ')の記載項目が当てはまるかを決められません。特記仕様書で確かめてください' }],
+      notes: ['工事の種類が「建築一式工事」なので、目次を読み込んだ表と比べていません'],
+    };
+  }
   if (opts.workType === 'kenchiku-ikkatsu') {
     return {
       candidates: [], found: [], extra: [],
@@ -65,7 +82,7 @@ export function checkPlanToc(text, opts = {}) {
   const used = new Set();
   const found = [];
   const candidates = [];
-  for (const it of planData.items) {
+  for (const it of table ? table.planItems : planData.items) {
     const label = normalizeLine(it.label);
     const aliases = (it.aliases ?? []).map(normalizeLine);
     let hit = heads.findIndex((h) => h.head.includes(label));
@@ -81,13 +98,16 @@ export function checkPlanToc(text, opts = {}) {
       candidates.push({
         item: it.label,
         no: it.no,
-        message: '国の直轄の土木の共通仕様書 ' + planData.section + ' では(' + it.no + ')「' + it.label + '」が記載事項です。目次にその見出しが見当たりません。別の見出しの中に書いてあるか、本文と発注者の仕様書で確かめてください',
-        basis: basisOf(it),
+        message: (table ? tableName(table) + ' ' + it.section : '国の直轄の土木の共通仕様書 ' + planData.section) + ' では(' + it.no + ')「' + it.label + '」が記載事項です。目次にその見出しが見当たりません。別の見出しの中に書いてあるか、本文と発注者の仕様書で確かめてください',
+        basis: table ? loadedBasis(it, table) : basisOf(it),
       });
     }
   }
   const extra = heads.filter((h, i) => !used.has(i) && !TITLE_RE.test(h.head)).map((h) => h.line);
-  const notes = [
+  const notes = table ? [
+    '目次の見出しの言葉だけで比べています。本文に書いてあるか、書いた中身が足りているかは見ていません',
+    '読み込んだ表の行です: ' + tableName(table) + '(' + table.source.edition + ' の版)。言い換えの語を持たないので、書き方が違う見出しは抜けの候補に出ます',
+  ] : [
     '目次の見出しの言葉だけで比べています。本文に書いてあるか、書いた中身が足りているかは見ていません',
     '共通仕様書 ' + planData.section + ' には「維持工事等簡易な工事においては監督職員の承諾を得て記載内容の一部を省略することができる」とあり、監督職員が補足を求めた項目は追記します。省略の承諾や追記の求めがあるかは、人が確かめてください',
     '国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書の記載事項で置き換えてください',
@@ -95,5 +115,5 @@ export function checkPlanToc(text, opts = {}) {
   // (16)その他は受け皿の項目。照合はするが、見出しが無いことは抜けとは限らないと注意に出す(exceptions の回答 B)
   if (candidates.some((c) => c.no === 16 && c.item === 'その他')) notes.push(OTHER_NOTE);
   if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の項目名と違う言葉で見つけたものです。その見出しが記載事項に当たるかを確かめてください');
-  return { candidates, found, extra, undecidable: [], notes };
+  return { candidates, found, extra, undecidable: [], notes, ...(table ? { scope: tableName(table) } : {}) };
 }

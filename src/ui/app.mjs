@@ -13,6 +13,7 @@ import { judgeTaicho } from '../taicho.mjs';
 import { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, toCsv } from '../export.mjs';
 import { buildScheduleDetail } from '../schedule.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
+import { parseRulesFile, tableNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
 import { startAi } from './ai-app.mjs';
@@ -88,6 +89,9 @@ export function runBid(doc) {
 
 // 段取りの一覧(F06a): 同じ条件から、着手までの段取りを出す(入札前の確認とは別に動かし、片方が止まっても片方は出す)
 let lastSchedule = null;
+let lastScheduleInput = null;
+// 読み込んだ表(F26b)。メモリだけに持ち、ページを閉じれば消える
+let rulesTable = null;
 function setScheduleStatus(doc, text) {
   const el = doc.getElementById('schedule-status');
   if (el) el.textContent = text;
@@ -95,17 +99,78 @@ function setScheduleStatus(doc, text) {
 function runSchedule(doc, input, errors = []) {
   const out = doc.getElementById('schedule-result');
   lastSchedule = null;
+  lastScheduleInput = null;
   setScheduleStatus(doc, '');
   if (!out) return;
   if (!input) { out.innerHTML = renderErrors(errors); return; }
   try {
-    const detail = buildScheduleDetail(input);
+    const detail = buildScheduleDetail(input, rulesTable);
     out.innerHTML = renderSchedule(detail.rows, detail);
     lastSchedule = detail.rows;
+    lastScheduleInput = input;
     summary.scheduleCount = detail.rows.length;
   } catch (e) {
     out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
+}
+
+const NATIONAL_NOTICE = {
+  'schedule-notice': '国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください',
+  'plan-notice': '国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください',
+};
+const RULES_SIDES = [
+  ['schedule-notice', 'schedule-about', 'schedule'],
+  ['plan-notice', 'plan-about', 'planItems'],
+];
+// 表が変わったら、前の表で出した結果を残さない(注記と結果が食い違わないように)
+function applyRulesTable(doc) {
+  for (const [noticeId, aboutId, key] of RULES_SIDES) {
+    const custom = Boolean(rulesTable?.[key].length);
+    const notice = doc.getElementById(noticeId);
+    if (notice) notice.textContent = custom ? tableNotice(rulesTable) : NATIONAL_NOTICE[noticeId];
+    const about = doc.getElementById(aboutId);
+    if (about) about.hidden = custom;
+  }
+  const clear = doc.getElementById('rules-clear');
+  if (clear) clear.hidden = !rulesTable;
+  if (lastSchedule && lastScheduleInput) {
+    runSchedule(doc, lastScheduleInput);
+    if (summaryShown) updateSummary(doc);
+  } else {
+    const out = doc.getElementById('schedule-result');
+    if (out) out.innerHTML = '<p>条件を入れて「確認する」を押してください。</p>';
+  }
+  if (doc.getElementById('plan-input')?.value.trim()) runPlanCheck(doc);
+  else {
+    const out = doc.getElementById('plan-result');
+    if (out) out.innerHTML = '<p>目次を貼って「目次を点検する」を押してください。</p>';
+  }
+}
+function setRulesStatus(doc, text) {
+  const el = doc.getElementById('rules-status');
+  if (el) el.textContent = text;
+}
+// 壊れたファイルは理由を出して拒み、今の表はそのままにする
+export function loadRulesFile(doc, text) {
+  let table;
+  try {
+    table = parseRulesFile(text);
+  } catch (e) {
+    setRulesStatus(doc, '読み込めませんでした: ' + e.message + '。今の表はそのままです。');
+    return false;
+  }
+  rulesTable = table;
+  applyRulesTable(doc);
+  const missing = [table.schedule.length ? '' : '段取り', table.planItems.length ? '' : '施工計画書の記載項目'].filter(Boolean);
+  setRulesStatus(doc, '読み込みました(段取り ' + table.schedule.length + '行・記載項目 ' + table.planItems.length + '行)。'
+    + (missing.length ? missing.join('と') + 'の行が無いので、そちらは国の直轄の例のままです。' : '')
+    + 'ブラウザには保存しません。ページを閉じると消えます。');
+  return true;
+}
+export function clearRulesTable(doc) {
+  rulesTable = null;
+  applyRulesTable(doc);
+  setRulesStatus(doc, '国の直轄の例に戻しました。');
 }
 
 export function exportScheduleCsv(doc) {
@@ -300,7 +365,7 @@ export function runPlanCheck(doc) {
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本で試す」を押してください。']); return; }
   try {
     const form = readBidForm(collect(doc));
-    const out = checkPlanToc(text, { workType: form.workType ?? undefined });
+    const out = checkPlanToc(text, { workType: form.workType ?? undefined, table: rulesTable });
     if (!form.workType) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
@@ -363,6 +428,15 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (t && t.classList && t.classList.contains('checklist-check')) setChecklistChecked(doc, t.getAttribute('data-row-id'), t.checked === true);
     });
     on('schedule-csv-btn', () => exportScheduleCsv(doc));
+    on('rules-clear', () => clearRulesTable(doc));
+    const rulesFile = doc.getElementById('rules-load');
+    if (rulesFile) rulesFile.addEventListener('change', async () => {
+      const f = rulesFile.files && rulesFile.files[0];
+      if (!f) return;
+      if (f.size > RULES_MAX_BYTES) setRulesStatus(doc, '読み込めませんでした: 表のファイルとしては大きすぎます(1MB まで)。今の表はそのままです。');
+      else loadRulesFile(doc, await f.text());
+      rulesFile.value = '';
+    });
     on('plan-run', () => runPlanCheck(doc));
     on('plan-csv-btn', () => exportPlanCsv(doc));
     // 目次を変えたら、前の点検の結果は書き出さない

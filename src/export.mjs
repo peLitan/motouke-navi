@@ -95,7 +95,7 @@ export function planRows(out = {}) {
   return [PLAN_COLUMNS.slice(), ...(out.candidates ?? []).map((c) => [
     c.item, '抜けの候補', c.message ?? '',
     c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
-    'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : ''),
+    c.basis.page ? 'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : '') : '',
     c.basis.quote, c.basis.fetchedAt ?? '', c.basis.version || NO_VERSION,
   ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', '', ''])];
 }
