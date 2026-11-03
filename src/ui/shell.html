@@ -35,6 +35,14 @@
   .mask-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
   #mask-map table { border-collapse: collapse; }
   #mask-map td, #mask-map th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
+  /* 確信の弱い語(F17c): 後の欄で印を付ける。未確認は太い下線と枠、選んだ後は薄い地 */
+  mark.mask-weak { color: #111827; background: #fde68a; padding: 0 0.1em; }
+  mark.mask-unchecked { outline: 2px solid #92400e; text-decoration: underline; text-decoration-thickness: 2px; }
+  mark.mask-replace { color: #111827; background: #e5e7eb; }
+  mark.mask-keep { color: #111827; background: #dbeafe; }
+  #mask-review td, #mask-review th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
+  #mask-review button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
+  #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
   .lead { margin: 0.5rem 0 0; }
@@ -369,8 +377,10 @@
 <div><h3>前</h3><pre id="mask-before"></pre></div>
 <div><h3>後</h3><pre id="mask-after"></pre></div>
 </div>
+<div id="mask-review"></div>
 <h3>対応表</h3>
 <div id="mask-map"></div>
+<p class="note" id="mask-unchecked" role="status" hidden></p>
 <h3>元に戻す</h3>
 <div class="row"><label for="unmask-input">戻ってきた文(記号を含む文)</label><br>
 <textarea id="unmask-input" name="unmask-input" rows="6" cols="80"></textarea></div>

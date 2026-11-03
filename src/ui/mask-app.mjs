@@ -6,8 +6,15 @@ import { downloadText } from './download.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
 import { esc, scrollTable } from './view.mjs';
 import { extractText } from '../mask/extract.mjs';
+import { PERSON_RULES } from '../mask/rules-person.mjs';
+import { SITE_RULES } from '../mask/rules-site.mjs';
 
 let masker = null;
+// 確信の弱い語(規則だけで見つけた語)の選び(F17c)。記号 → 'replace'(置き換える)か 'keep'(残す)。無ければ未確認。
+// この画面のメモリの中だけに持つ(ブラウザに保存しない)。同じ語は同じ記号になるので、置き換え直しても選びは残る
+const decisions = new Map();
+// 最後に置き換えた結果(後の欄を選びに合わせて描き直すため)
+let last = null;
 const getMasker = () => (masker ||= createMasker({ dictionaries: [CONSTRUCTION_DICT] }));
 
 const setText = (doc, id, text) => { const el = doc.getElementById(id); if (el) el.textContent = text; };
@@ -36,6 +43,85 @@ export function renderTerms(terms) {
   return '<ul>' + terms.map((t) => '<li>' + esc(t.word) + '(' + esc(t.label) + ')</li>').join('') + '</ul>';
 }
 
+const RULE_NAMES = Object.fromEntries([...PERSON_RULES, ...SITE_RULES].map((r) => [r.id, r.name]));
+export const ruleName = (id) => RULE_NAMES[id] || '文脈の規則';
+export const UNCHECKED_NOTICE = '未確認の語があります';
+const STATE_LABEL = { replace: '置き換える', keep: '残す' };
+export const stateOf = (token) => decisions.get(token) || 'unchecked';
+const stateLabel = (s) => STATE_LABEL[s] || '未確認';
+
+// 対応表の行のうち、規則だけで見つけた語(rule の付いた行)
+export const weakEntries = (map) => (map || []).filter((e) => e.rule);
+
+// 後の文を、選びに合わせて作る。「残す」を選んだ語は記号を元の語に戻す。
+// html は確信の弱い語を <mark> で強調したもの、text は同じ中身の文字だけのもの(外へ貼る文)
+export function renderAfter(masked, map, state = stateOf) {
+  const weak = weakEntries(map);
+  const src = String(masked ?? '');
+  if (!weak.length) return { html: esc(src), text: src };
+  const byToken = new Map(weak.map((e) => [e.token, e]));
+  const re = new RegExp([...byToken.keys()].sort((a, b) => b.length - a.length).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'gu');
+  let html = '';
+  let text = '';
+  let pos = 0;
+  for (const m of src.matchAll(re)) {
+    const e = byToken.get(m[0]);
+    const s = state(e.token);
+    const shown = s === 'keep' ? e.original : e.token;
+    html += esc(src.slice(pos, m.index)) + '<mark class="mask-weak mask-' + s + '" title="' + esc(ruleName(e.rule) + 'で見つけた語・' + stateLabel(s)) + '">' + esc(shown) + '</mark>';
+    text += src.slice(pos, m.index) + shown;
+    pos = m.index + m[0].length;
+  }
+  html += esc(src.slice(pos));
+  text += src.slice(pos);
+  return { html, text };
+}
+
+// 確信の弱い語を1件ずつ選ぶ表。選ぶまでは「未確認」
+export function renderReview(map, state = stateOf) {
+  const weak = weakEntries(map);
+  if (!weak.length) return '';
+  const n = weak.filter((e) => state(e.token) === 'unchecked').length;
+  const rows = weak.map((e) => {
+    const s = state(e.token);
+    const btn = (v) => '<button type="button" data-mask-decide="' + v + '" data-token="' + esc(e.token) + '" aria-pressed="' + (s === v) + '">' + STATE_LABEL[v] + '</button>';
+    return '<tr class="mask-' + s + '"><td>' + esc(e.token) + '</td><td>' + esc(e.label) + '</td><td>' + esc(e.original) + '</td><td>' + esc(ruleName(e.rule))
+      + '</td><td>' + stateLabel(s) + '</td><td>' + btn('replace') + ' ' + btn('keep') + '</td></tr>';
+  });
+  return '<h3>確かめてほしい語(規則だけで見つけた語)</h3>'
+    + '<p class="note">辞書に無く、まわりの語(敬称・役職・欄名・語尾など)だけから見つけた語です。名前でない語を置き換えていることがあります。後の欄で印の付いた語を見て、1件ずつ「置き換える」か「残す」を選んでください。「残す」を選んだ語は、後の欄で元の語に戻します。選ぶまでは「未確認」です(全 ' + weak.length + ' 件・未確認 ' + n + ' 件)。</p>'
+    + scrollTable('確かめてほしい語', '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th><th>見つけ方</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
+}
+
+// 後の欄・選ぶ表・「未確認の語があります」を、今の選びで描き直す
+function renderDecisions(doc) {
+  const map = last ? last.map : [];
+  const after = doc.getElementById('mask-after');
+  if (after && last) after.innerHTML = renderAfter(last.masked, map).html;
+  const rv = doc.getElementById('mask-review');
+  if (rv) rv.innerHTML = renderReview(map);
+  const n = weakEntries(map).filter((e) => stateOf(e.token) === 'unchecked').length;
+  const warn = doc.getElementById('mask-unchecked');
+  if (warn) {
+    warn.textContent = n ? UNCHECKED_NOTICE + '(' + n + ' 件)。上の「確かめてほしい語」で「置き換える」か「残す」を選んでから、後の欄の文を外へ出してください。' : '';
+    warn.hidden = !n;
+  }
+}
+
+// 後の欄の、今の選びに合わせた文(外へ貼る文)
+export function maskedText() {
+  return last ? renderAfter(last.masked, last.map).text : '';
+}
+
+// 確信の弱い語の1件を「置き換える」か「残す」にする(F17c)
+export function decideMask(doc, token, value) {
+  if (!last || !weakEntries(last.map).some((e) => e.token === token)) return false;
+  if (value !== 'replace' && value !== 'keep') return false;
+  decisions.set(token, value);
+  renderDecisions(doc);
+  return true;
+}
+
 export function runMask(doc) {
   const m = getMasker();
   const text = valueOf(doc, 'mask-input');
@@ -46,7 +132,8 @@ export function runMask(doc) {
   if (amounts === 'band' && !nums.length) notes.push('境目が無いので、金額はすべて「〔金額〕」にしました。');
   const r = m.mask(text, { amounts, thresholds: nums });
   setText(doc, 'mask-before', text);
-  setText(doc, 'mask-after', r.masked);
+  last = { masked: r.masked, map: r.map };
+  renderDecisions(doc);
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = renderMap(r.map);
   if (amounts === 'band') notes.push('金額の「境目」の形は、戻しても元の金額には戻りません。');
@@ -72,6 +159,9 @@ export function addDictWord(doc) {
 
 export function resetMask(doc) {
   getMasker().reset();
+  decisions.clear();
+  last = null;
+  renderDecisions(doc);
   for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'map-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
@@ -108,6 +198,10 @@ export function importMaskMap(doc, text) {
   const m = getMasker();
   try {
     const n = m.importMap(text);
+    decisions.clear();
+    last = null;
+    setText(doc, 'mask-after', '');
+    renderDecisions(doc);
     const mapEl = doc.getElementById('mask-map');
     if (mapEl) mapEl.innerHTML = renderMap(m.entries());
     const list = doc.getElementById('dict-list');
@@ -147,6 +241,16 @@ export function startMask(doc) {
   on('dict-add', () => addDictWord(doc));
   on('mask-reset', () => resetMask(doc));
   on('map-export', () => exportMaskMap(doc, doc.defaultView));
+  // 選ぶ表のボタンは描き直すたびに作り直すので、表の枠で受ける
+  const rv = doc.getElementById('mask-review');
+  if (rv) {
+    rv.addEventListener('click', (ev) => {
+      const b = ev && ev.target && typeof ev.target.closest === 'function' ? ev.target.closest('button[data-mask-decide]') : null;
+      if (!b) return;
+      if (ev.preventDefault) ev.preventDefault();
+      decideMask(doc, b.getAttribute('data-token'), b.getAttribute('data-mask-decide'));
+    });
+  }
   const src = doc.getElementById('mask-file');
   if (src) {
     src.addEventListener('change', async () => {
