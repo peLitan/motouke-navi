@@ -11,6 +11,10 @@
 // ただし、足した語・辞書の語が、形で見つけた長い語(メール・会社名・住所・電話など)の中に収まるときは、長い方を取る(F27d。
 //   「林」を足しても「小林商事株式会社」は会社名として、「a」を足してもメールはメールとして置き換える)。
 // 英数字で始まる・終わる語は、英数字の途中では当てない(「a」が「data」の中に当たらない)。
+// 形・規則は trim(語, 位置, 文) を持てる(F24a)。見つけた語のうち置き換える所 [始まり, 終わり](語の中の位置)を返し、null なら取らない。
+// 法人格の無い団体・施設の名前の規則(F24a。org-suffix)は業界を問わないので、辞書の文脈の規則の後ろにいつも足す(同じ所なら辞書の規則を取る)。
+
+import { companyPatterns, orgSuffixPatterns } from './rules-company.mjs';
 
 const DEFAULT_LABELS = {
   person: '人名',
@@ -22,8 +26,6 @@ const DEFAULT_LABELS = {
   other: '語',
 };
 
-const NAME_CHARS = '[\\p{Script=Han}\\p{Script=Katakana}ー々〆ヶA-Za-z0-9＆&・]';
-const CORP = '(?:株式会社|有限会社|合同会社|合資会社|合名会社|一般社団法人|一般財団法人|[((](?:株|有)[))])';
 const DIGIT = '[0-9０-９]';
 const HYPHEN = '[-−‐‑–ー－]';
 const STOP = '[^\\s、。,，.()()「」『』\\[\\]【】:：;；]';
@@ -34,9 +36,9 @@ const CORE_PATTERNS = [
   { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{1,4}${HYPHEN}${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
   { kind: 'phone', re: new RegExp(`[((][0０]${DIGIT}{1,4}[))]\\s*${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
   { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{9,10}(?![0-9０-９])`, 'gu') },
-  // 会社名: 「〇〇株式会社」「株式会社〇〇」。名前は漢字・カタカナ・英数字だけとし、ひらがな(「は」「として」など)の手前・後ろで切る
-  { kind: 'company', re: new RegExp(`${NAME_CHARS}{1,20}${CORP}`, 'gu') },
-  { kind: 'company', re: new RegExp(`${CORP}${NAME_CHARS}{1,20}`, 'gu') },
+  // 会社名: 「〇〇株式会社」「株式会社〇〇」と、ほかの法人の種類・略し方・囲み文字(F24a。規則は rules-company.mjs、語の一覧は company-types.mjs)。
+  // 名前にはひらがなも入れてよいが、文の中のひらがな(「は」「として」など)の所で切る
+  ...companyPatterns('company'),
   // 住所: 「〇〇都道府県 + 〇〇市区町村郡 + 町名 + 番地」
   { kind: 'address', re: new RegExp(`\\p{Script=Han}{1,3}[都道府県]${STOP}{1,20}?[市区町村郡]${STOP.slice(0, -1)}0-9０-９]{0,20}(?:${DIGIT}+(?:${HYPHEN}${DIGIT}+)*(?:番地|番|号)?)?`, 'gu') },
 ];
@@ -200,8 +202,9 @@ export function createMasker({ dictionaries = [] } = {}) {
     Object.assign(labels, d.labels || {});
     for (const t of d.terms || []) dictTerms.push({ kind: t.kind, re: termRegExp(t.word) });
     for (const p of d.patterns || []) dictPatterns.push({ kind: p.kind, re: withGlobal(p.re) });
-    for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept });
+    for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept, trim: p.trim });
   }
+  for (const p of orgSuffixPatterns()) contextPatterns.push(p);
   const userTerms = []; // { word, kind, re }
   const byOriginal = new Map(); // 元の語(空白を除いた形)→ 対応表の1行
   const byToken = new Map(); // 記号 → 対応表の1行
@@ -254,12 +257,18 @@ export function createMasker({ dictionaries = [] } = {}) {
     const groups = [userTerms, dictTerms, dictPatterns, CORE_PATTERNS, contextPatterns];
     const cands = [];
     groups.forEach((list, priority) => {
-      for (const { kind, re, rule, accept } of list) {
+      for (const { kind, re, rule, accept, trim } of list) {
         const r = new RegExp(re.source, re.flags);
         for (const m of text.matchAll(r)) {
           if (!m[0]) continue;
           if (accept && !accept(m[0], m.index, text)) continue;
-          cands.push({ start: m.index, end: m.index + m[0].length, kind, priority, rule });
+          let [a, b] = [0, m[0].length];
+          if (trim) {
+            const t = trim(m[0], m.index, text);
+            if (!t || t[1] <= t[0]) continue;
+            [a, b] = t;
+          }
+          cands.push({ start: m.index + a, end: m.index + b, kind, priority, rule });
         }
       }
     });

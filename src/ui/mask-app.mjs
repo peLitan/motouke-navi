@@ -11,6 +11,7 @@ import { esc, scrollTable } from './view.mjs';
 import { extractText } from '../mask/extract.mjs';
 import { PERSON_RULES } from '../mask/rules-person.mjs';
 import { SITE_RULES } from '../mask/rules-site.mjs';
+import { COMPANY_RULES } from '../mask/rules-company.mjs';
 
 let masker = null;
 // 確信の弱い語(規則だけで見つけた語)の選び(F17c)。記号 → 'replace'(置き換える)か 'keep'(残す)。無ければ未確認。
@@ -51,7 +52,7 @@ export function renderTerms(terms) {
   return '<ul>' + terms.map((t) => '<li>' + esc(t.word) + '(' + esc(t.label) + ')</li>').join('') + '</ul>';
 }
 
-const RULE_NAMES = Object.fromEntries([...PERSON_RULES, ...SITE_RULES].map((r) => [r.id, r.name]));
+const RULE_NAMES = Object.fromEntries([...PERSON_RULES, ...SITE_RULES, ...COMPANY_RULES].map((r) => [r.id, r.name]));
 export const ruleName = (id) => RULE_NAMES[id] || '文脈の規則';
 export const UNCHECKED_NOTICE = '未確認の語があります';
 const STATE_LABEL = { replace: '置き換える', keep: '残す' };

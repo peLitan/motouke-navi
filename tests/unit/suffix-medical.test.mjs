@@ -94,7 +94,9 @@ test('画面: 業界を切り替えると医療の表で置き換え、足した
   addDictWord(doc);
   doc.els['mask-input'].value = '甲野記念病院の庚野先生';
   runMask(doc);
-  assert.ok(doc.els['mask-after'].textContent.includes('甲野記念病院'), '建設では病院を置き換えない');
+  // F24a: 法人格の無い施設の語尾(病院など)は業界を問わない規則で置き換える。建設の表では〔会社名〕、医療の表では〔施設名〕になる
+  const before = doc.els['mask-after'].textContent;
+  assert.ok(!before.includes('甲野記念病院') && before.includes('〔会社名1〕') && !before.includes('〔施設名'), before);
   assert.ok(setIndustry(doc, 'medical', win));
   assert.equal(currentIndustry(), 'medical');
   assert.equal(doc.confirmed.split('\n')[0], INDUSTRY_SWITCH_NOTICE);

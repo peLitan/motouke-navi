@@ -17,6 +17,9 @@ export const PLUGIN_COPIES = [
   ['src/mask/rules-person.mjs', 'plugin/src/mask/rules-person.mjs'],
   ['src/mask/rules-site.mjs', 'plugin/src/mask/rules-site.mjs'],
   ['src/mask/suffix-construction.mjs', 'plugin/src/mask/suffix-construction.mjs'],
+  // F24a: 会社・団体の名前の規則と語の一覧(core.mjs が読む)
+  ['src/mask/rules-company.mjs', 'plugin/src/mask/rules-company.mjs'],
+  ['src/mask/company-types.mjs', 'plugin/src/mask/company-types.mjs'],
   // F20b: 点検の Skill の条番号の確かめに使う、項・号の切り出しの部品と、取得した法令の原文
   ['src/quote-check.mjs', 'plugin/skills/construction-check/scripts/lib/quote-check.mjs'],
   ['data/sources/index.json', 'plugin/skills/construction-check/reference/sources/index.json'],

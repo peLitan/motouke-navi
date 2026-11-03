@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-a0/eGXOTzwigB9J2+XzAOUFejCKcPtRHNeS50BIuKMY='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-0nJxKPt9SaGVipreQamPMf7lAPEW/pK+bBIVdUsZmfc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -3076,6 +3076,302 @@ const SAMPLE = {
 
 return { SAMPLE };
 })();
+__m["src/mask/company-types.mjs"] = (function () {
+// 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
+// 語を足すときは、このファイルの一覧に足す(規則のファイルは直さない)。出典の無い語は「慣用」の一覧に分けて置く。
+
+// ---- 法人の種類(法人格) ----
+// 出典: 国税庁 法人番号公表サイト「法人種別」 https://www.houjin-bangou.nta.go.jp/documents/k-resource-dl-ver4.pdf
+//       法務局「商業・法人登記の申請書様式」 https://houmukyoku.moj.go.jp/homu/COMMERCE_11-1.html
+// 「医療法人社団」「医療法人財団」は医療法人の名前の書き方(社団・財団)。「NPO法人」は特定非営利活動法人の通称。「協同組合」は事業協同組合などの名前に付く形
+const CORPORATE_TYPES = [
+  '株式会社', '有限会社', '合名会社', '合資会社', '合同会社',
+  '一般社団法人', '一般財団法人', '公益社団法人', '公益財団法人',
+  '特定非営利活動法人', 'NPO法人', 'ＮＰＯ法人',
+  '医療法人社団', '医療法人財団', '医療法人', '社会医療法人', '社会福祉法人', '学校法人', '宗教法人',
+  '独立行政法人', '地方独立行政法人', '国立大学法人', '公立大学法人',
+  '事業協同組合', '農業協同組合', '生活協同組合', '協同組合', '農事組合法人', '管理組合法人',
+  '有限責任事業組合', '投資事業有限責任組合',
+  '弁護士法人', '税理士法人', '司法書士法人', '行政書士法人', '社会保険労務士法人', '監査法人', '特許業務法人', '土地家屋調査士法人',
+  '相互会社', '更生保護法人',
+];
+
+// ---- 法人の種類の略し方(慣用。公式の一覧は無い) ----
+// 括弧(半角・全角)の中に書く。「(株)」「（一社）」など
+const CORPORATE_ABBREVIATIONS = ['株', '有', '合', '医', '福', '学', '宗', '一社', '一財', '公社', '公財', '特非', '独'];
+
+// ---- 囲み文字 ----
+// 出典: Unicode「Enclosed CJK Letters and Months」 https://www.unicode.org/Public/18.0.0/charts/PDF/U3200.pdf
+//       「CJK Compatibility」(㍿ U+337F) https://www.unicode.org/charts/PDF/U3300.pdf
+// 囲み文字は NFKC で正規化すると「(株)」「株」「株式会社」などになる。ここでは字の一覧を手で書かず、
+// U+3200〜U+33FF の字を NFKC にして、下の字(括弧を外した形)か CORPORATE_TYPES の語になる字を拾う(rules-company.mjs)。
+// 「㈹」(代表)は法人の種類ではないので入れない
+const ENCLOSED_CORPORATE_CHARS = ['株', '有', '社', '名', '特', '財', '学', '監', '企', '資', '協', '医', '宗', '労'];
+
+// ---- 法令で名前が決まっている施設 ----
+// 学校教育法 第1条 https://laws.e-gov.go.jp/law/322AC0000000026
+// 医療法 第1条の5 https://laws.e-gov.go.jp/law/323AC0000000205
+// 老人福祉法 第5条の3 https://laws.e-gov.go.jp/law/338AC0000000133
+// 介護保険法 第8条 https://laws.e-gov.go.jp/law/409AC0000000123
+const FACILITY_SUFFIXES_LAW = [
+  '幼稚園', '小学校', '中学校', '義務教育学校', '高等学校', '中等教育学校', '特別支援学校', '大学', '高等専門学校',
+  '病院', '診療所',
+  '老人デイサービスセンター', '養護老人ホーム', '特別養護老人ホーム', '軽費老人ホーム', '老人福祉センター',
+  '介護老人保健施設', '介護医療院',
+];
+
+// ---- 慣用の語尾(法令の定義は無い) ----
+// 法人格の無い会社・団体・役所の名前の終わりに付く語
+const ORG_SUFFIXES_CUSTOM = [
+  '組', '建設', '工務店', '商店', '商会', '製作所', '工業', '興業', '産業',
+  '事務所', '設計事務所', '法律事務所', '会計事務所',
+  'クリニック', '医院', '歯科', '薬局', '訪問看護ステーション',
+  '協会', '連合会', '組合',
+  '役場', '市役所', '区役所', '町役場', '村役場', '県庁',
+  '自治会', '町内会',
+];
+
+// ---- 名前の部分から除く一般の語(置き換えすぎを減らす) ----
+// 語尾の前の名前から、これらの語と数・「第」を除いて2字より短く残る語は、団体・施設の名前にしない
+// (「県立高等学校」「現場事務所」「建設産業」「第一小学校」「本組合」は置き換えない)。業界を問わず文に出る語だけを入れる
+const ORG_GENERIC_WORDS = [
+  // 設置の形・種類
+  '国立', '公立', '私立', '県立', '市立', '町立', '村立', '都立', '府立', '道立', '区立', '組合立', '総合', '大学', '短期', '附属', '付属',
+  '地域', '一般', '専門', '特定', '共同', '協同', '民間', '公共', '公益', '関係', '関連', '業界', '全国', '日本',
+  // 指し方
+  '当', '本', '同', '各', '全', '他', '前', '元', '新', '旧', '貴', '弊', '御', '上記', '下記', '前記', '後記', '該当', '当該', '所属', '最寄り', '最寄',
+  '近隣', '近く', '地元', '自社', '他社', '自', '某',
+  // 場所・役所の区分
+  '国', '県', '市', '町', '村', '都', '府', '区', '郡', '北', '南', '東', '西', '中央',
+  // 事務所・組合などの前に来る、名前ではない語
+  '現場', '本社', '本店', '支店', '支社', '営業所', '出張所', '工場', '設計', '建築', '法律', '会計', '税理士', '弁護士', '司法書士', '行政書士',
+  '労働', '事業', '管理', '健康保険', '保険', '共済', '取組', '仕', '番', '労務', '班', '作業', '施工', '下請', '元請', '協力',
+  // 産業・工業・建設の前に来る、名前ではない語
+  '建設', '土木', '住宅', '道路', '公共事業', '農業', '林業', '漁業', '水産', '製造', '観光', '情報', '通信', '自動車', '化学', '重', '軽',
+  '機械', '電気', '電子', '食品', '繊維', '鉄鋼', '第一次', '第二次', '第三次', '地場', '基幹', '先端', '新規', '中小', '大手', '小規模',
+  '大規模', '国内', '海外', '工事', '整備', '開発', '再開発',
+  // 医療・介護の前に来る、名前ではない語
+  '医療', '歯科', '調剤', '保健', '介護', '老人', '福祉', '小児', '内科', '外科', '眼科', '皮膚科', '整形外科', '在宅', '訪問', '看護',
+];
+
+// 法人格の前に名前があるとき、その名前を欄名として扱う語(「代表者 株式会社甲野」の「代表者」を会社名にしない)
+const COMPANY_LABEL_WORDS = [
+  '会社名', '商号', '名称', '社名', '法人名', '団体名', '事業者名', '施設名', '学校名', '氏名', '宛先', '宛名', '所属', '勤務先', '取引先',
+  '発注者', '受注者', '請負者', '注文者', '元請', '下請', '代表者', '申請者', '届出者', '提出者', '事業者', '相手方', '委託先', '契約先', '甲', '乙',
+];
+
+// 法人格のあとに空白を挟んで来ても、会社の名前ではない語(「甲野建設株式会社 代表取締役」の「代表取締役」)
+const COMPANY_ROLE_WORDS = [
+  '代表取締役', '代表社員', '代表理事', '代表者', '代表', '取締役', '理事長', '理事', '社長', '会長', '専務', '常務', '支店長', '所長',
+  '御中', '殿', '様', '支店', '支社', '営業所', '本社', '本店', '工場', '事業所', '出張所', '担当', '担当者', '印',
+];
+
+return { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, ORG_GENERIC_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS };
+})();
+__m["src/mask/rules-company.mjs"] = (function () {
+// 会社・団体の名前の規則(F24a)。業界を問わない。語の一覧は src/mask/company-types.mjs(出典つき)から読む。
+// 置き換えの部品(core.mjs)が使う。規則は3つ:
+//   company-before: 名前 +(空白)+ 法人格。例「さくら建設株式会社」「甲野建設 株式会社」「甲野建設㈱」「甲野建設(株)」
+//   company-after:  法人格 +(空白)+ 名前。例「株式会社さくら」「社会福祉法人 みほん会」「㈲甲野」
+//   org-suffix:     法人格の無い団体・施設の名前(名前 + 語尾)。例「甲野工務店」「ひまわり幼稚園」「みほん町役場」。確信の弱い語として扱う
+// 名前の部分には、漢字・カタカナ・英数字のほかにひらがなも入れてよい。ただし、文の中のひらがな(「は」「として」「した」など)の所で切る:
+//   法人格の前の名前は、漢字・カタカナのすぐ後ろの「は・が・を・に・で・と・の・へ・も・や」などより前を捨てる(「当社はさくら建設株式会社」→「さくら建設株式会社」)
+//   法人格の後ろの名前は、ひらがなが続かない所の「は・が・の・と・として」などから後ろを捨てる(「株式会社さくらは」→「株式会社さくら」)
+// 法人格と名前のあいだの空白は1字(半角・全角)まで許す。空白を挟むときは、どちらの側の名前かを次のように決める:
+//   「名前 空白 法人格」は、法人格のすぐ後ろに名前の字が続かないときだけ取る。前の名前が欄名(「代表者」「会社名」など)なら取らない
+//   「法人格 空白 名前」は、法人格のすぐ前に名前の字が無いとき、または前の語が欄名のときだけ取る。後ろの語が役職など(「代表取締役」「御中」)なら取らない
+//   括弧の略し方(「(有)」など)は、様式の「有・無」の欄と紛れるので、空白を挟む形では取らない
+
+const { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, ORG_GENERIC_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS } = __m["src/mask/company-types.mjs"];
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const alt = (words) => [...new Set(words)].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
+
+// 名前の字(ひらがなを除く)と、ひらがな
+const SOLID = '\\p{Script=Han}\\p{Script=Katakana}ー々〆ヶA-Za-z0-9Ａ-Ｚａ-ｚ０-９＆&・';
+const HIRA = '\\p{Script=Hiragana}';
+const NAME = `[${SOLID}${HIRA}]`;
+const SP = '[ \\u3000]';
+const isHira = (c) => !!c && /\p{Script=Hiragana}/u.test(c);
+const isSolid = (c) => !!c && new RegExp(`[${SOLID}]`, 'u').test(c);
+const isNameChar = (c) => isHira(c) || isSolid(c);
+
+// 囲み文字: U+3200〜U+33FF の字を NFKC で正規化し、法人の種類の字(括弧を外した形)か法人の種類の語になる字を拾う
+function enclosedCorporateChars() {
+  const out = [];
+  for (let cp = 0x3200; cp <= 0x33ff; cp++) {
+    const c = String.fromCodePoint(cp);
+    const n = c.normalize('NFKC');
+    if (n === c) continue;
+    const inner = n.replace(/^\((.+)\)$/u, '$1');
+    if (ENCLOSED_CORPORATE_CHARS.includes(inner) || CORPORATE_TYPES.includes(n)) out.push(c);
+  }
+  return out;
+}
+const ENCLOSED_CHARS = enclosedCorporateChars();
+
+const PAREN_ABBR = `[(（]${SP}?(?:${alt(CORPORATE_ABBREVIATIONS)})${SP}?[)）]`;
+const PAREN_ABBR_RE = new RegExp(`^${PAREN_ABBR}$`, 'u');
+const CORP = `(?:${alt(CORPORATE_TYPES)}|${PAREN_ABBR}|[${ENCLOSED_CHARS.join('')}])`;
+
+// 文の中のひらがなの切れ目(長い順に試す)
+const BREAKS = [
+  'における', 'について', 'において', 'として', 'による', 'にある', 'である', 'となる', 'された', 'される', 'させる', 'している',
+  'できる', 'でした', 'です', 'した', 'する', 'して', 'され', 'から', 'まで', 'より', 'など', 'では', 'には', 'とは', 'との', 'への', 'ない', 'れる', 'った',
+  'は', 'が', 'を', 'に', 'で', 'と', 'の', 'へ', 'も', 'や',
+].sort((a, b) => b.length - a.length);
+// 名前の頭に来ても名前ではないひらがなの語
+const FUNC_HEAD = ['これ', 'それ', 'あれ', 'この', 'その', 'あの', 'どの', 'ここ', 'そこ', 'また', 'および', 'または', 'ならびに', 'もしくは',
+  'かつ', 'ほか', 'すべて', 'ある', 'いる', 'なる', 'する', 'した', 'できる'].sort((a, b) => b.length - a.length);
+
+const breakAt = (s, i) => BREAKS.find((b) => s.startsWith(b, i)) || '';
+
+// 法人格の前の名前の頭を切る。返すのは名前の中で残す所の始まり(残らなければ -1)
+function trimHead(name) {
+  let cut = 0;
+  for (let i = 0; i < name.length; i++) {
+    const b = breakAt(name, i);
+    if (!b) continue;
+    const before = name[i - 1];
+    const after = name[i + b.length];
+    if (i === 0 ? (after !== undefined && !isHira(after)) : isSolid(before)) cut = Math.max(cut, i + b.length);
+  }
+  let s = name.slice(cut);
+  for (let changed = true; changed;) {
+    changed = false;
+    const f = FUNC_HEAD.find((w) => s.startsWith(w) && s.length > w.length);
+    if (f) {
+      let k = f.length;
+      k += breakAt(s, k).length;
+      if (k < s.length) { cut += k; s = s.slice(k); changed = true; }
+    }
+  }
+  if (!s || FUNC_HEAD.includes(s)) return -1;
+  return cut;
+}
+
+// 法人格の後ろの名前の終わりを切る。返すのは名前の中で残す長さ(0 なら残らない)
+// 名前の終わりの1字のひらがな(「株式会社やまと」の「と」)は、前が漢字・カタカナのときだけ切る(「株式会社甲野と」)。
+// ひらがなの後ろの「と・の・に・で」は名前の中によく出るので切らない(「株式会社ふもと野ロジ」「株式会社ひのき」)。
+// そのため「株式会社さくらと契約」は「と契約」まで置き換える(漏らすより置き換えすぎの方にする)
+const INNER_OK = ['と', 'の', 'に', 'で'];
+function trimTail(name) {
+  for (let i = 0; i < name.length; i++) {
+    const b = breakAt(name, i);
+    if (!b) continue;
+    const after = name[i + b.length];
+    const prevHira = i > 0 && isHira(name[i - 1]);
+    if (prevHira && INNER_OK.includes(b)) continue;
+    if (after === undefined) {
+      if (i > 0 && (b.length > 1 || isSolid(name[i - 1]))) return i;
+    } else if (!isHira(after)) return i;
+  }
+  return name.length;
+}
+
+// 名前から一般の語・数・「第」などを除いて残る字の数
+const FILLER = /[0-9０-９A-Za-zＡ-Ｚａ-ｚ・\s　()（）]|令和|平成|年度|第|号/gu;
+const GENERIC = [...new Set([...ORG_GENERIC_WORDS, '等', '及び', '又は', '以外', '以下', '各種'])].sort((a, b) => b.length - a.length);
+function restLength(name) {
+  let s = name.replace(FILLER, '');
+  for (const g of GENERIC) s = s.split(g).join('');
+  return s.length;
+}
+
+const LABEL_END = new RegExp(`(?:${alt(COMPANY_LABEL_WORDS)})$`, 'u');
+const ROLE_HEAD = new RegExp(`^(?:${alt(COMPANY_ROLE_WORDS)})`, 'u');
+
+// 前の語(空白の前の、名前の字の並び)を返す
+function wordBefore(text, end) {
+  let i = end;
+  while (i > 0 && isNameChar(text[i - 1])) i--;
+  return text.slice(i, end);
+}
+
+const COMPANY_RULES = [
+  { id: 'company-before', name: '名前 + 法人格', example: 'さくら建設株式会社・甲野建設 株式会社・甲野建設㈱' },
+  { id: 'company-after', name: '法人格 + 名前', example: '株式会社さくら・社会福祉法人 みほん会' },
+  { id: 'org-suffix', name: '法人格の無い団体・施設の語尾', example: '甲野工務店・ひまわり幼稚園・みほん町役場' },
+];
+
+// 会社名の形(法人格のあるもの)。core.mjs の形として使う
+function companyPatterns(kind = 'company') {
+  const before = {
+    kind,
+    re: new RegExp(`(${NAME}{1,30}?)(${SP}?)(${CORP})`, 'gu'),
+    trim(word, index, text) {
+      const m = word.match(new RegExp(`^(${NAME}{1,30}?)(${SP}?)(${CORP})$`, 'u'));
+      if (!m) return null;
+      const [, name, sp, corp] = m;
+      const h = trimHead(name);
+      if (h < 0) return null;
+      const kept = name.slice(h);
+      if (restLength(kept) < 1) return null;
+      if ([...kept].length === 1 && isHira(kept)) return null;
+      // 名前がひらがなの切れ目(「は」「として」など)で終わり、法人格のすぐ後ろに名前が続くときは、後ろの名前の方を取る
+      // (「下請けは株式会社乙川土工」。「やまと株式会社」のように後ろに名前が無ければ取る)
+      const endBreak = BREAKS.find((b) => kept.endsWith(b) && kept.length > b.length);
+      if (endBreak && (endBreak.length > 1 || isNameChar(text[index + word.length]))) return null;
+      if (sp) {
+        if (PAREN_ABBR_RE.test(corp)) return null;
+        if (isNameChar(text[index + word.length])) return null;
+        if (LABEL_END.test(kept)) return null;
+      }
+      return [h, word.length];
+    },
+  };
+  const after = {
+    kind,
+    re: new RegExp(`(${CORP})(${SP}?)(${NAME}{1,30})`, 'gu'),
+    trim(word, index, text) {
+      const m = word.match(new RegExp(`^(${CORP})(${SP}?)(${NAME}{1,30})$`, 'u'));
+      if (!m) return null;
+      const [, corp, sp, name] = m;
+      const len = trimTail(name);
+      const kept = name.slice(0, len);
+      if (!kept || restLength(kept) < 1) return null;
+      if ([...kept].length === 1 && isHira(kept)) return null;
+      if (sp) {
+        if (PAREN_ABBR_RE.test(corp)) return null;
+        if (ROLE_HEAD.test(kept)) return null;
+        const prev = text[index - 1];
+        if (isNameChar(prev)) return null;
+        if (prev === ' ' || prev === '　') {
+          const w = wordBefore(text, index - 1);
+          if (w && !LABEL_END.test(w)) return null;
+        }
+      }
+      return [0, corp.length + sp.length + len];
+    },
+  };
+  return [before, after];
+}
+
+// 法人格の無い団体・施設の名前の規則(文脈の規則として、確信の弱い語にする)
+function orgSuffixPatterns({ kind = 'company', suffixes = [...FACILITY_SUFFIXES_LAW, ...ORG_SUFFIXES_CUSTOM], minRest = 2 } = {}) {
+  const suffixAlt = alt(suffixes);
+  const re = new RegExp(`${NAME}{1,30}?(?:${suffixAlt})(?![\\p{Script=Han}\\p{Script=Katakana}ー々])`, 'gu');
+  const suffixEnd = new RegExp(`(?:${suffixAlt})$`, 'u');
+  return [{
+    kind,
+    rule: 'org-suffix',
+    re,
+    trim(word) {
+      const sfx = word.match(suffixEnd)[0];
+      const name = word.slice(0, word.length - sfx.length);
+      const h = trimHead(name);
+      if (h < 0) return null;
+      const kept = name.slice(h);
+      // ひらがなは名前の頭だけ(「ひまわり幼稚園」「みほん市役所」)。漢字のあとのひらがな(「新たな建設」)は名前にしない
+      if (!new RegExp(`^${'[\\p{Script=Hiragana}]'}*[${SOLID}]*$`, 'u').test(kept)) return null;
+      if (restLength(kept) < minRest) return null;
+      return [h, word.length];
+    },
+  }];
+}
+
+return { enclosedCorporateChars, ENCLOSED_CHARS, CORP, trimHead, trimTail, restLength, COMPANY_RULES, companyPatterns, orgSuffixPatterns };
+})();
 __m["src/mask/core.mjs"] = (function () {
 // 置き換えの部品(F11a): 文の中の人名・会社名・場所の名前・住所・電話・メールなどを記号に置き換え、対応表を持ち、戻ってきた文を元に戻す。
 // この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
@@ -3090,6 +3386,10 @@ __m["src/mask/core.mjs"] = (function () {
 // ただし、足した語・辞書の語が、形で見つけた長い語(メール・会社名・住所・電話など)の中に収まるときは、長い方を取る(F27d。
 //   「林」を足しても「小林商事株式会社」は会社名として、「a」を足してもメールはメールとして置き換える)。
 // 英数字で始まる・終わる語は、英数字の途中では当てない(「a」が「data」の中に当たらない)。
+// 形・規則は trim(語, 位置, 文) を持てる(F24a)。見つけた語のうち置き換える所 [始まり, 終わり](語の中の位置)を返し、null なら取らない。
+// 法人格の無い団体・施設の名前の規則(F24a。org-suffix)は業界を問わないので、辞書の文脈の規則の後ろにいつも足す(同じ所なら辞書の規則を取る)。
+
+const { companyPatterns, orgSuffixPatterns } = __m["src/mask/rules-company.mjs"];
 
 const DEFAULT_LABELS = {
   person: '人名',
@@ -3101,8 +3401,6 @@ const DEFAULT_LABELS = {
   other: '語',
 };
 
-const NAME_CHARS = '[\\p{Script=Han}\\p{Script=Katakana}ー々〆ヶA-Za-z0-9＆&・]';
-const CORP = '(?:株式会社|有限会社|合同会社|合資会社|合名会社|一般社団法人|一般財団法人|[((](?:株|有)[))])';
 const DIGIT = '[0-9０-９]';
 const HYPHEN = '[-−‐‑–ー－]';
 const STOP = '[^\\s、。,，.()()「」『』\\[\\]【】:：;；]';
@@ -3113,9 +3411,9 @@ const CORE_PATTERNS = [
   { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{1,4}${HYPHEN}${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
   { kind: 'phone', re: new RegExp(`[((][0０]${DIGIT}{1,4}[))]\\s*${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
   { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{9,10}(?![0-9０-９])`, 'gu') },
-  // 会社名: 「〇〇株式会社」「株式会社〇〇」。名前は漢字・カタカナ・英数字だけとし、ひらがな(「は」「として」など)の手前・後ろで切る
-  { kind: 'company', re: new RegExp(`${NAME_CHARS}{1,20}${CORP}`, 'gu') },
-  { kind: 'company', re: new RegExp(`${CORP}${NAME_CHARS}{1,20}`, 'gu') },
+  // 会社名: 「〇〇株式会社」「株式会社〇〇」と、ほかの法人の種類・略し方・囲み文字(F24a。規則は rules-company.mjs、語の一覧は company-types.mjs)。
+  // 名前にはひらがなも入れてよいが、文の中のひらがな(「は」「として」など)の所で切る
+  ...companyPatterns('company'),
   // 住所: 「〇〇都道府県 + 〇〇市区町村郡 + 町名 + 番地」
   { kind: 'address', re: new RegExp(`\\p{Script=Han}{1,3}[都道府県]${STOP}{1,20}?[市区町村郡]${STOP.slice(0, -1)}0-9０-９]{0,20}(?:${DIGIT}+(?:${HYPHEN}${DIGIT}+)*(?:番地|番|号)?)?`, 'gu') },
 ];
@@ -3279,8 +3577,9 @@ function createMasker({ dictionaries = [] } = {}) {
     Object.assign(labels, d.labels || {});
     for (const t of d.terms || []) dictTerms.push({ kind: t.kind, re: termRegExp(t.word) });
     for (const p of d.patterns || []) dictPatterns.push({ kind: p.kind, re: withGlobal(p.re) });
-    for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept });
+    for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept, trim: p.trim });
   }
+  for (const p of orgSuffixPatterns()) contextPatterns.push(p);
   const userTerms = []; // { word, kind, re }
   const byOriginal = new Map(); // 元の語(空白を除いた形)→ 対応表の1行
   const byToken = new Map(); // 記号 → 対応表の1行
@@ -3333,12 +3632,18 @@ function createMasker({ dictionaries = [] } = {}) {
     const groups = [userTerms, dictTerms, dictPatterns, CORE_PATTERNS, contextPatterns];
     const cands = [];
     groups.forEach((list, priority) => {
-      for (const { kind, re, rule, accept } of list) {
+      for (const { kind, re, rule, accept, trim } of list) {
         const r = new RegExp(re.source, re.flags);
         for (const m of text.matchAll(r)) {
           if (!m[0]) continue;
           if (accept && !accept(m[0], m.index, text)) continue;
-          cands.push({ start: m.index, end: m.index + m[0].length, kind, priority, rule });
+          let [a, b] = [0, m[0].length];
+          if (trim) {
+            const t = trim(m[0], m.index, text);
+            if (!t || t[1] <= t[0]) continue;
+            [a, b] = t;
+          }
+          cands.push({ start: m.index + a, end: m.index + b, kind, priority, rule });
         }
       }
     });
@@ -3966,6 +4271,7 @@ const { esc, scrollTable } = __m["src/ui/view.mjs"];
 const { extractText } = __m["src/mask/extract.mjs"];
 const { PERSON_RULES } = __m["src/mask/rules-person.mjs"];
 const { SITE_RULES } = __m["src/mask/rules-site.mjs"];
+const { COMPANY_RULES } = __m["src/mask/rules-company.mjs"];
 
 let masker = null;
 // 確信の弱い語(規則だけで見つけた語)の選び(F17c)。記号 → 'replace'(置き換える)か 'keep'(残す)。無ければ未確認。
@@ -4006,7 +4312,7 @@ function renderTerms(terms) {
   return '<ul>' + terms.map((t) => '<li>' + esc(t.word) + '(' + esc(t.label) + ')</li>').join('') + '</ul>';
 }
 
-const RULE_NAMES = Object.fromEntries([...PERSON_RULES, ...SITE_RULES].map((r) => [r.id, r.name]));
+const RULE_NAMES = Object.fromEntries([...PERSON_RULES, ...SITE_RULES, ...COMPANY_RULES].map((r) => [r.id, r.name]));
 const ruleName = (id) => RULE_NAMES[id] || '文脈の規則';
 const UNCHECKED_NOTICE = '未確認の語があります';
 const STATE_LABEL = { replace: '置き換える', keep: '残す' };
