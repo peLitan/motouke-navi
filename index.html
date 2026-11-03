@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-8s+cTviFtbtvCQlElUHTiKRRs3hcueuDbwbW5/A+l2A='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-6tAJEO/0itruCRRddti0B8adMbQztbucQOzs64Nfec4='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>初めての元請けの確認ツール(仮)</title>
@@ -1183,7 +1183,52 @@ function parseLedgerText(text) {
   return { project, prime, subcontractors, warnings };
 }
 
-return { parseAmount, parseDate, parsePeriod, licenseTypeOf, parseDedicated, parseLedgerText };
+// 台帳の文の表の行を、節と下請けごとに書いてあるまま集める(F16b の記載事項の点検で使う)。
+// parseLedgerText と違い、点検に使わない欄も捨てない。値の読み替え(金額・日付)はしない。
+// 返り値: { top: [{ key, value, line }], sections: [{ kind, title, tier, rows, subs: [{ name, title, tier, orderer, rows }] }] }
+//   top は最初の節の前の「工事名: …」のような行。tier は tierOf の値(下請けの見出しに「(一次: 会社名)」があれば 2 以上)
+function ledgerRows(text) {
+  const top = [];
+  const sections = [];
+  let sec = null;
+  let sub = null;
+  const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
+  lines.forEach((line, i) => {
+    const lineNo = i + 1;
+    const h = line.match(/^\s*(#{1,6})\s+(.*)$/);
+    if (h) {
+      const level = h[1].length;
+      if (level === 2) {
+        const kind = sectionKind(h[2]);
+        sec = { kind, title: clean(h[2]), tier: kind === 'subs' ? tierOf(h[2]) : null, rows: [], subs: [] };
+        sections.push(sec); sub = null;
+      } else if (level === 3 && sec && sec.kind === 'subs') {
+        let name = stripNumber(h[2]);
+        let tier = sec.tier;
+        let orderer = '';
+        const pm = name.match(PARENT_RE);
+        if (pm) { orderer = clean(pm[1]); name = clean(name.slice(0, pm.index)); if (tier === null || tier === 'mixed' || tier < 2) tier = 2; }
+        sub = { name, title: clean(h[2]), tier, orderer, rows: [] };
+        sec.subs.push(sub);
+      }
+      return;
+    }
+    if (!sec) {
+      const m = line.match(/^\s*([^:：|#]{1,20}?)\s*[:：]\s*(.*)$/);
+      if (m) top.push({ key: clean(m[1]), value: clean(m[2]), line: lineNo });
+      return;
+    }
+    const cells = tableCells(line);
+    if (cells === null || cells.length < 2) return;
+    const key = cells[0].replace(/\s+/g, ' ');
+    const value = cells.slice(1).join('|').trim();
+    if (key === '項目' && /内容/.test(value)) return;
+    (sub ?? sec).rows.push({ key, value, line: lineNo });
+  });
+  return { top, sections };
+}
+
+return { parseAmount, parseDate, parsePeriod, licenseTypeOf, tableCells, sectionKind, tierOf, PARENT_RE, parseDedicated, stripNumber, parseLedgerText, ledgerRows };
 })();
 __m["src/mask/extract.mjs"] = (function () {
 // 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。

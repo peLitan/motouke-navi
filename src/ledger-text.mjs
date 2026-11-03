@@ -58,7 +58,7 @@ export function licenseTypeOf(num) {
 }
 
 // 表の1行「| a | b |」→ [a, b]。表の行でなければ null
-function tableCells(line) {
+export function tableCells(line) {
   const t = line.trim();
   if (!t.startsWith('|')) return null;
   const cells = t.replace(/^\|/, '').replace(/\|$/, '').split('|').map(clean);
@@ -67,7 +67,7 @@ function tableCells(line) {
 }
 
 // 見出し「## 1. 作成建設業者(元請)」の種類
-function sectionKind(title) {
+export function sectionKind(title) {
   if (/下請/.test(title)) return 'subs';
   if (/技術者/.test(title)) return 'primeEngineer';
   if (/発注者/.test(title)) return 'project';
@@ -77,7 +77,7 @@ function sectionKind(title) {
 
 // 下請けの節の見出しから次数を読む。「二次」「三次」など(漢数字・数字)なら 2 以上、「一次」なら 1、書いていなければ null
 // 「下請負人(一次・二次)」のように違う次数が2つ以上あれば、節の全員の次数は決められないので 'mixed'
-function tierOf(title) {
+export function tierOf(title) {
   const tiers = [...clean(title).matchAll(/([一二三四五六七八九]|[1-9１-９])次/g)].map((m) => {
     const d = '一二三四五六七八九'.indexOf(m[1]);
     return d >= 0 ? d + 1 : Number(m[1].replace(/[１-９]/, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
@@ -86,7 +86,7 @@ function tierOf(title) {
   return new Set(tiers).size > 1 ? 'mixed' : tiers[0];
 }
 // 「5-1. 子安防水有限会社(一次: 壬生内装株式会社)」の、注文者を書いたかっこ →「一次: 壬生内装株式会社」。無ければ null
-const PARENT_RE = /[(（]\s*((?:[一二三四五六七八九1-9１-９]次|注文者|上位|元方)\s*[:：]\s*[^)）]+)[)）]\s*$/;
+export const PARENT_RE = /[(（]\s*((?:[一二三四五六七八九1-9１-９]次|注文者|上位|元方)\s*[:：]\s*[^)）]+)[)）]\s*$/;
 
 const emptyEngineer = () => ({ role: null, name: '', qualification: '', dedicated: null });
 
@@ -99,7 +99,7 @@ export function parseDedicated(raw) {
   return { value: null, error: '「専任・非専任」の欄を読めません(「専任」か「非専任」と書いてください): ' + clean(raw) };
 }
 // 「4-1. 架空二土木株式会社」→「架空二土木株式会社」
-const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
+export const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
 
 // 技術者の行(「監理技術者 氏名」「主任技術者 氏名」「資格」)を入れる。入れたら true
 // 「監理技術者補佐」(第26条第3項ただし書 第2号の補佐する者)の行は、監理技術者の欄に入れず eng.assistant に分けて入れる
@@ -221,4 +221,49 @@ export function parseLedgerText(text) {
   if (!prime.licenseType && prime.licenseNumber) warnings.push('元請けの許可番号から許可の種類(特定・一般)を読めませんでした(「(特-06)」「(般-06)」の形で書いてください)');
   if (!prime.name && subcontractors.length === 0) warnings.push('元請けの節(## 作成建設業者(元請))も下請負人の節も見つかりませんでした。台帳の書き方を確かめてください');
   return { project, prime, subcontractors, warnings };
+}
+
+// 台帳の文の表の行を、節と下請けごとに書いてあるまま集める(F16b の記載事項の点検で使う)。
+// parseLedgerText と違い、点検に使わない欄も捨てない。値の読み替え(金額・日付)はしない。
+// 返り値: { top: [{ key, value, line }], sections: [{ kind, title, tier, rows, subs: [{ name, title, tier, orderer, rows }] }] }
+//   top は最初の節の前の「工事名: …」のような行。tier は tierOf の値(下請けの見出しに「(一次: 会社名)」があれば 2 以上)
+export function ledgerRows(text) {
+  const top = [];
+  const sections = [];
+  let sec = null;
+  let sub = null;
+  const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
+  lines.forEach((line, i) => {
+    const lineNo = i + 1;
+    const h = line.match(/^\s*(#{1,6})\s+(.*)$/);
+    if (h) {
+      const level = h[1].length;
+      if (level === 2) {
+        const kind = sectionKind(h[2]);
+        sec = { kind, title: clean(h[2]), tier: kind === 'subs' ? tierOf(h[2]) : null, rows: [], subs: [] };
+        sections.push(sec); sub = null;
+      } else if (level === 3 && sec && sec.kind === 'subs') {
+        let name = stripNumber(h[2]);
+        let tier = sec.tier;
+        let orderer = '';
+        const pm = name.match(PARENT_RE);
+        if (pm) { orderer = clean(pm[1]); name = clean(name.slice(0, pm.index)); if (tier === null || tier === 'mixed' || tier < 2) tier = 2; }
+        sub = { name, title: clean(h[2]), tier, orderer, rows: [] };
+        sec.subs.push(sub);
+      }
+      return;
+    }
+    if (!sec) {
+      const m = line.match(/^\s*([^:：|#]{1,20}?)\s*[:：]\s*(.*)$/);
+      if (m) top.push({ key: clean(m[1]), value: clean(m[2]), line: lineNo });
+      return;
+    }
+    const cells = tableCells(line);
+    if (cells === null || cells.length < 2) return;
+    const key = cells[0].replace(/\s+/g, ' ');
+    const value = cells.slice(1).join('|').trim();
+    if (key === '項目' && /内容/.test(value)) return;
+    (sub ?? sec).rows.push({ key, value, line: lineNo });
+  });
+  return { top, sections };
 }
