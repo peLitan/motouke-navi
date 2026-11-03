@@ -2,7 +2,7 @@
 
 想定している場面: 下請けが中心だった小さな建設会社が、初めて自治体の工事を元請けで取った。元請けとしての決まりは建設業法などの法令と発注者の仕様書に分かれていて、社内に読める人がいない。手がかりになる国の作成例は、国の直轄工事のものだけ(想定の人物で、実在の人・会社・工事の話ではありません。テーマ #2「本来、誰にでも届くべきものを。」)。
 
-この道具は、その場面で法令と国の共通仕様書のどこを読めばよいかを、原文の抜き書きつきで示します。自治体の仕様書は取り込んでいないので、発注者の仕様書との照らし合わせは担当者が行います。
+この道具は、その場面で法令と国の共通仕様書のどこを読めばよいかを、原文の抜き書きつきで示します。自治体の仕様書は既定の規則表に入れていないので、発注者の仕様書との照らし合わせは担当者が行います。
 
 工事の条件から、入札前の確認・施工体制台帳の要否・受注後の段取り(着手から完成・引き渡しまで)・書類の点検の候補を、法令と国の仕様書の原文の抜き書きつきで出す道具です。
 
@@ -82,6 +82,7 @@
 - 受け入れテスト 21 ファイル・110 件がすべて通る(`node --test tests/acceptance/*.test.mjs`)。単体の試験は `tests/unit/`
 - 規則表の抜き書き 99 件が原文にある(`node scripts/quote-rate.mjs`)
 - 仕込みの評価: 架空の書類3件(`fixtures/`)の仕込み 11 件のうち見つけた 5・見落とし 6・言い過ぎ 0。半分より多くを見落としています(`docs/評価.md`)。仕込み表と置き換えの正解の表はリポジトリに入れていません
+- 県の仕様書で試した結果: 和歌山県の仕様書の7つの節で Skill `spec-to-rules` が作った行 31 のうち、照合で残った 31・外した 0・判断できない欄のある行 7。機械が確かめたのは抜き書きが原文のその節にあることと形だけで、意味の正しさは人が確かめます。試したのは1件だけです(`docs/評価.md` の [6](docs/評価.md#6-県の仕様書で試した結果f26c))
 - プラグインの評価のケース(`plugin/evals/`): 2ケース × あり・なし × 3回を走らせ、見落としに差は出ませんでした。根拠の正しさの数え方はプラグインの側に有利で、回数も少ないので良し悪しは言い切れません。走らせ方と限界は [docs/manual.md の「評価」](docs/manual.md#評価)
 
 ## データと出典
@@ -97,7 +98,7 @@
 | 国土交通省「土木工事共通仕様書(案)令和8年3月」(第1編 第1章 第1節の14の条の文だけを写した) | https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html | 2026-11-02 |
 | 国土交通省「施工体制台帳(作成例)」(Excel の様式を手を加えずに同梱) | https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx | 2026-11-02 |
 | 国土交通省「施工体制台帳等のチェックリスト」(題名・URL・取得日だけを画面に出す。写していない) | https://www.mlit.go.jp/totikensangyo/const/content/001389105.docx | 2026-11-03 |
-| 和歌山県「土木請負工事必携(令和7年11月)」第1編 第1章 1-1-1-6〜12(見本の行 `data/specs/wakayama_r0711_rows.json` の抜き書きと言い換え。和歌山県ホームページ公開情報利用規約 https://www.pref.wakayama.lg.jp/prefg/000200/opendata/hpopendatakiyaku.html 、CC BY 4.0 と互換) | https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html | 2026-11-04 |
+| 和歌山県「土木請負工事必携(令和7年11月)」第1編 第1章 1-1-1-6〜12(試した文 `fixtures/specs/wakayama_r0711_1-1-1-6_12.txt` と、見本の行 `data/specs/wakayama_r0711_rows.json` の抜き書きと言い換え。和歌山県ホームページ公開情報利用規約 https://www.pref.wakayama.lg.jp/prefg/000200/opendata/hpopendatakiyaku.html 、CC BY 4.0 と互換) | https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html | 2026-11-04 |
 | Anthropic「API and data retention」 | https://platform.claude.com/docs/en/manage-claude/api-and-data-retention | 2026-11-02 |
 | Anthropic「How long do you store my organization's data?」 | https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data | 2026-11-02 |
 | Anthropic「Is my data used for model training?」 | https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training | 2026-11-02 |
