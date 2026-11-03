@@ -99,14 +99,21 @@ export function scopeHtml() {
   return `<ul id="scope-seen">\n${sources.map((s) => `<li>${escHtml(s.title)}</li>`).join('\n')}\n</ul>`;
 }
 
+// 台帳の記載事項の表の上の参考(F16c): 国交省のチェックリストの題名・URL・取得日だけ(data/checklist.json の reference)。文は写さない
+export function checklistReferenceHtml() {
+  const { reference: r } = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'checklist.json'), 'utf8'));
+  return escHtml('参考: ' + r.publisher + '「' + r.title + '」(' + r.url + '。掲載ページ「' + r.pageTitle + '」' + r.page + '。取得日 ' + r.fetchedAt + ')。このツールはチェックリストの文を写しておらず、表の事項は施行規則 第14条の2 の原文から作っています');
+}
+
 export function buildHtml() {
   const shell = fs.readFileSync(SHELL, 'utf8');
-  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}']) {
+  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}', '{{CHECKLIST_REFERENCE}}']) {
     if (!shell.includes(key)) throw new Error('shell.html に ' + key + ' の場所が無い');
   }
   const withBody = shell
     .replace('{{SOURCES}}', () => sourcesHtml())
     .replace('{{SCOPE}}', () => scopeHtml())
+    .replace('{{CHECKLIST_REFERENCE}}', () => checklistReferenceHtml())
     .replace('{{SCRIPT}}', () => `<script>\n${bundle()}</script>`);
   return withBody.replace('{{CSP}}', () => makeCsp(withBody));
 }

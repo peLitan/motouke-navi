@@ -1,6 +1,7 @@
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
 // 結果の文字はすべてエスケープする(規則表や入力の文字がそのまま HTML にならないように)。
 import { readDirect } from './form.mjs';
+import { CHECKLIST_REFERENCE, CHECKLIST_LAW } from '../checklist.mjs';
 import { displayStatus, itemConditions, contactsFor, openItems, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
@@ -237,6 +238,45 @@ export function renderSchedule(rows = [], detail = {}) {
 }
 
 // 施工計画書の目次の点検(F07)。抜けの候補を、根拠(共通仕様書の箇所・ページ・原文)つきで出す
+// 台帳の記載事項の表(F16c): 施行規則 第14条の2 第1項の事項ごとに 値/空/判断できない と「確認した」の欄を出す。
+// 「確認した」は人が確かめた印で、合否ではない。チェックは画面のメモリ(app.mjs の Set)にだけ持ち、ブラウザに保存しない
+export const CHECKLIST_NOTICE = 'チェックはこのツールの判定ではありません。確認した人と日付は印刷の版に書いてください';
+export const CHECKLIST_SCOPE = 'この表は「記載事項に空がある」「台帳から判断できない」までを出します。台帳が法令に合っているか(適法か)は判定しません';
+export const CHECKLIST_STATUS_CLASS = { value: 'cl-value', empty: 'cl-empty', unknown: 'cl-unknown' };
+// チェックの欄の id(行の id の記号を _ にする)
+export const checklistBoxId = (rowId) => 'cl-' + String(rowId ?? '').replace(/[^\w-]/g, '_');
+// 国交省のチェックリスト(参考): 題名・URL・取得日だけ。文は写さない
+export function checklistReferenceText(ref = CHECKLIST_REFERENCE) {
+  return '参考: ' + ref.publisher + '「' + ref.title + '」(' + ref.url + '。掲載ページ「' + ref.pageTitle + '」' + ref.page + '。取得日 ' + ref.fetchedAt + ')。このツールはチェックリストの文を写しておらず、表の事項は施行規則 第14条の2 の原文から作っています';
+}
+export function renderChecklist(out = {}, checked = new Set()) {
+  const rows = out.rows ?? [];
+  const c = out.counts ?? { value: 0, empty: 0, unknown: 0 };
+  const head = '<p class="checklist-notice"><strong>' + esc(CHECKLIST_NOTICE) + '</strong></p>'
+    + '<p class="note">' + esc(CHECKLIST_SCOPE) + '</p>'
+    + '<p class="checklist-counts">記載事項 ' + rows.length + '行: 値 ' + c.value + '・空 ' + c.empty + '・判断できない ' + c.unknown + '(確認した ' + rows.filter((r) => checked.has(r.id)).length + '行)</p>';
+  if (!rows.length) return head + '<p>表にする事項がありません。</p>';
+  const body = rows.map((r) => {
+    const id = checklistBoxId(r.id);
+    const on = checked.has(r.id);
+    return '<tr class="' + (CHECKLIST_STATUS_CLASS[r.status] ?? '') + '" data-row-id="' + esc(r.id) + '">'
+      + '<td class="cl-check"><input type="checkbox" class="checklist-check" id="' + esc(id) + '" data-row-id="' + esc(r.id) + '"' + (on ? ' checked' : '')
+      + ' aria-label="' + esc(r.entity + ' ' + r.label + ' を確認した') + '"> <label for="' + esc(id) + '" class="cl-mark">' + (on ? '確認した' : '未確認') + '</label></td>'
+      + '<td>' + esc(r.entity) + '</td><td>' + esc(r.label) + '</td><td class="cl-status">' + esc(r.statusLabel) + '</td>'
+      + '<td>' + esc(r.value) + '</td><td>' + esc(r.reason) + '</td><td>' + esc(r.basis?.where ?? '') + '</td></tr>';
+  }).join('');
+  const inner = '<caption>施工体制台帳の記載事項(建設業法施行規則 第14条の2 第1項)</caption><thead><tr>'
+    + ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所'].map((h) => '<th scope="col">' + h + '</th>').join('')
+    + '</tr></thead><tbody>' + body + '</tbody>';
+  // 根拠の原文は表の外に、事項ごとに1回だけ(表の中に折りたたみを入れない。F14c)
+  const seen = new Map();
+  for (const r of rows) if (r.basis && !seen.has(r.basis.quoteId)) seen.set(r.basis.quoteId, r.basis);
+  const quotes = '<details class="basis checklist-basis"><summary>根拠: 建設業法施行規則 第14条の2 第1項の原文(' + seen.size + '件)</summary><p>取得日 ' + esc(CHECKLIST_LAW.fetchedAt) + '(e-Gov 法令 API。版 ' + esc(CHECKLIST_LAW.revisionId) + ')</p><ul>'
+    + [...seen.values()].map((b) => '<li><strong>' + esc(b.where) + '</strong><blockquote>' + esc(b.quote) + '</blockquote></li>').join('') + '</ul></details>';
+  const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
+  return head + notes + scrollTable('施工体制台帳の記載事項の表', '<table class="checklist-table">' + inner + '</table>') + quotes;
+}
+
 export function renderPlanResult(out = {}) {
   const cands = out.candidates ?? [];
   const found = out.found ?? [];

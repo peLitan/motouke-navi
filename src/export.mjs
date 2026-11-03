@@ -1,6 +1,8 @@
 // 結果の書き出し(F05e)。判定の結果を「行の配列」にし、CSV の文字列にする。
 // DOM には触らない。画面(src/ui/app.mjs)が、この文字列を Blob にしてダウンロードさせる(通信はしない)。
 // のちの段の結果も、同じ列(COLUMNS)の行を作る関数を足せば、同じ toCsv で書き出せる。
+import { CHECKLIST_NOTICE, CHECKLIST_SCOPE, checklistReferenceText } from './ui/view.mjs';
+import { CHECKLIST_LAW } from './checklist.mjs';
 import { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE } from './ui/view.mjs';
 
 // すべての結果で共通の列
@@ -105,4 +107,14 @@ function cell(v) {
 // 行の配列 → CSV の文字列(先頭に BOM、行の区切りは CRLF。Excel で文字化けしないように)
 export function toCsv(rows) {
   return '﻿' + rows.map((r) => r.map(cell).join(',') + '\r\n').join('');
+}
+
+// 台帳の記載事項の表(F16c)の行。「確認した」の有無を最初の列に出す(人が確かめた印で、合否ではない)
+export const CHECKLIST_COLUMNS = ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所', '根拠の原文(抜き書き)', '取得日'];
+export function checklistRows(out = {}, checked = new Set(), notice) {
+  return [
+    CHECKLIST_COLUMNS.slice(),
+    ...(out.rows ?? []).map((r) => [checked.has(r.id) ? '確認した' : '', r.entity, r.label, r.statusLabel, r.value ?? '', r.reason ?? '', r.basis?.where ?? '', r.basis?.quote ?? '', CHECKLIST_LAW.fetchedAt]),
+    ['注意', '', '', '', '', [CHECKLIST_NOTICE, CHECKLIST_SCOPE, ...(out.notes ?? []), checklistReferenceText(), notice].filter(Boolean).join('\n'), '', '', ''],
+  ];
 }

@@ -20,6 +20,9 @@ const POINT_ZEN = ['', '（１）', '（２）', '（３）', '（４）', '（�
 const quoteById = new Map(quotesData.quotes.map((q) => [q.id, q]));
 
 export const CHECKLIST_ITEMS = checklistData.items;
+// 国交省のチェックリスト(参考。題名・URL・取得日だけ。文は写さない)と、根拠の原文の取得日・版(F16c)
+export const CHECKLIST_REFERENCE = checklistData.reference;
+export const CHECKLIST_LAW = checklistData.law;
 
 // 「第14条の2 第1項 第二号 ホ」のような根拠の場所
 export function whereOf(it) {

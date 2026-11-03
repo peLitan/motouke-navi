@@ -2,13 +2,14 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems } from './view.mjs';
+import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems, renderChecklist } from './view.mjs';
+import { checkChecklistText } from '../checklist.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
-import { stage1Rows, checkRows, scheduleRows, planRows, toCsv } from '../export.mjs';
+import { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, toCsv } from '../export.mjs';
 import { buildScheduleDetail } from '../schedule.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
 import { SAMPLE } from '../sample.mjs';
@@ -165,7 +166,13 @@ export function runLedgerCheck(doc) {
   summary.check = null;
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本で試す」を押してください。']); return; }
+  if (text.trim() === '') {
+    outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本で試す」を押してください。']);
+    lastChecklist = null; checklistText = null; checklistChecked.clear();
+    const cl = doc.getElementById('checklist-result');
+    if (cl) cl.innerHTML = '<p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p>';
+    return;
+  }
   try {
     const ledger = parseLedgerText(text);
     const warnings = ledger.warnings.slice();
@@ -189,7 +196,57 @@ export function runLedgerCheck(doc) {
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました(抜き書きの誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
+  runChecklist(doc, text);
   updateSummary(doc);
+}
+
+// 台帳の記載事項の表(F16c): 台帳の文から施行規則 第14条の2 の事項ごとの表を出す(点検の候補とは別に動かし、片方が止まっても片方は出す)。
+// 「確認した」のチェックはこの Set にだけ持つ(ブラウザに保存しない。ページを閉じれば消える)。
+// 同じ台帳の文で出し直したときはチェックを残し、台帳の文が変わったら消す(別の下請けの行に印が移らないように)
+let lastChecklist = null;
+let checklistText = null;
+let checklistStale = false; // 表を出したあとに台帳の文を変えたか(変えたら書き出さない)
+const checklistChecked = new Set();
+function setChecklistStatus(doc, text) {
+  const el = doc.getElementById('checklist-status');
+  if (el) el.textContent = text;
+}
+export function checklistState() {
+  return { out: lastChecklist, checked: new Set(checklistChecked) };
+}
+function drawChecklist(doc) {
+  const el = doc.getElementById('checklist-result');
+  if (el && lastChecklist) el.innerHTML = renderChecklist(lastChecklist, checklistChecked);
+}
+export function runChecklist(doc, text) {
+  const el = doc.getElementById('checklist-result');
+  if (!el) return;
+  setChecklistStatus(doc, '');
+  if (text !== checklistText) checklistChecked.clear();
+  lastChecklist = null;
+  checklistText = null;
+  checklistStale = false;
+  try {
+    lastChecklist = checkChecklistText(text);
+    checklistText = text;
+    for (const id of [...checklistChecked]) if (!lastChecklist.rows.some((r) => r.id === id)) checklistChecked.delete(id);
+    drawChecklist(doc);
+  } catch (e) {
+    el.innerHTML = renderErrors(['記載事項の表を作る途中で止まりました: ' + String(e && e.message ? e.message : e)]);
+  }
+}
+export function setChecklistChecked(doc, rowId, on) {
+  if (!lastChecklist || !lastChecklist.rows.some((r) => r.id === rowId)) return;
+  if (on) checklistChecked.add(rowId); else checklistChecked.delete(rowId);
+  drawChecklist(doc);
+  const box = typeof doc.querySelector === 'function' ? doc.querySelector('input.checklist-check[data-row-id="' + String(rowId).replace(/"/g, '') + '"]') : null;
+  if (box && typeof box.focus === 'function') box.focus();
+}
+export function exportChecklistCsv(doc) {
+  if (!lastChecklist) { setChecklistStatus(doc, '先に「台帳を点検する」を押して記載事項の表を出してください。'); return; }
+  if (checklistStale) { setChecklistStatus(doc, '台帳の文が変わりました。もう一度「台帳を点検する」を押してから書き出してください(同じ文に戻せばチェックは残ります)。'); return; }
+  downloadText(doc, toCsv(checklistRows(lastChecklist, checklistChecked, NOTICE)), '台帳の記載事項_' + today() + '.csv', 'text/csv;charset=utf-8');
+  setChecklistStatus(doc, 'CSV をこの PC に保存しました(「確認した」の列にチェックの有無が入っています。Excel で開けます。外へは送っていません)。');
 }
 
 export function exportCheckCsv(doc) {
@@ -292,6 +349,13 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('csv-btn', () => exportCsv(doc));
     on('ledger-run', () => runLedgerCheck(doc));
     on('check-csv-btn', () => exportCheckCsv(doc));
+    on('checklist-csv-btn', () => exportChecklistCsv(doc));
+    // 記載事項の表の「確認した」(表は描き直すので、枠で受ける)
+    const clEl = doc.getElementById('checklist-result');
+    if (clEl) clEl.addEventListener('change', (ev) => {
+      const t = ev && ev.target;
+      if (t && t.classList && t.classList.contains('checklist-check')) setChecklistChecked(doc, t.getAttribute('data-row-id'), t.checked === true);
+    });
     on('schedule-csv-btn', () => exportScheduleCsv(doc));
     on('plan-run', () => runPlanCheck(doc));
     on('plan-csv-btn', () => exportPlanCsv(doc));
@@ -306,7 +370,10 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     for (const id of ['ledger-input', ...BID_FORM_IDS]) {
       const el = doc.getElementById(id);
       if (!el) continue;
-      const changed = () => { if (lastCheck) { lastCheck = null; setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。'); } };
+      const changed = () => {
+        if (lastCheck) { lastCheck = null; setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。'); }
+        if (id === 'ledger-input' && lastChecklist && !checklistStale) { checklistStale = true; setChecklistStatus(doc, '台帳の文が変わりました。もう一度「台帳を点検する」を押してから書き出してください(同じ文に戻せばチェックは残ります)。'); }
+      };
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
     }

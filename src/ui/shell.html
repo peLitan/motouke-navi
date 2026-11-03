@@ -110,6 +110,12 @@
   .table-scroll { max-width: 100%; overflow-x: auto; margin: 0.25rem 0 0.75rem; }
   .table-scroll:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
   .table-scroll table.schedule { min-width: 36rem; }
+  /* 台帳の記載事項の表(F16c): 「空」は太字で目立たせる(色だけに頼らない)。「確認した」の欄は押しやすく、印刷でも文字で残る */
+  .table-scroll table.checklist-table { min-width: 48rem; }
+  .checklist-table .cl-check { white-space: nowrap; }
+  .checklist-table .cl-check label { display: inline-block; min-height: 44px; line-height: 44px; }
+  .checklist-table tr.cl-empty .cl-status { font-weight: 700; }
+  .checklist-notice { font-weight: 700; }
   @media (max-width: 40rem) {
     body { padding: 0.75rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
@@ -156,7 +162,7 @@
 <li>工事の契約書・請負契約約款</li>
 <li>発注者の特記仕様書・現場説明書・質問回答書</li>
 <li>自治体・民間の発注者の共通仕様書・要領(段取りは国の直轄の例)</li>
-<li>国土交通省令(建設業法施行規則など。発注者が確認できる措置の中身など。施行規則 第14条の2(台帳の記載事項)は原文を取り込みましたが、結果にはまだ使っていません)</li>
+<li>国土交通省令(建設業法施行規則など。発注者が確認できる措置の中身など。施行規則 第14条の2 第1項(台帳の記載事項)は取り込み、台帳の記載事項の表に使っています。第2項〜第4項は見ていません)</li>
 <li>取り込んだ条より外の条と、ほかの法令(労働安全衛生法・建築基準法など)</li>
 </ul></div>
 </div>
@@ -297,6 +303,14 @@
 <button type="button" id="check-csv-btn">点検の結果を CSV に書き出す</button></div>
 <p id="check-status" aria-live="polite"></p>
 <div id="check-result" class="result" aria-live="polite"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
+<div id="checklist-section">
+<h3>台帳の記載事項の表(建設業法施行規則 第14条の2 第1項)</h3>
+<p>「台帳を点検する」を押すと、上の候補とは別に、第14条の2 第1項の記載事項ごとに、台帳に見つかった値か「空」か「判断できない」かを表で出します。台帳の値は書いてあるまま出し、推測で埋めません。各行の「確認した」は、台帳や別紙を見て人が確かめた印です。チェックはこの画面の中だけに持ち、ブラウザに保存しません(ページを閉じると消えます)。印刷と CSV にはチェックの有無が出ます。</p>
+<p class="note" id="checklist-reference">{{CHECKLIST_REFERENCE}}</p>
+<div class="row"><button type="button" id="checklist-csv-btn">記載事項の表を CSV に書き出す</button></div>
+<p id="checklist-status" aria-live="polite"></p>
+<div id="checklist-result" class="result"><p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p></div>
+</div>
 </section>
 <section id="plan-check">
 <h2>3. 施工計画書の目次の点検</h2>

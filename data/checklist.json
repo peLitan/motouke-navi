@@ -1,5 +1,7 @@
 {
   "note": "建設業法施行規則 第14条の2 第1項の記載事項を、台帳の欄と照らすための表(F16b)。quoteId は data/quotes.json の抜き書き。parts は1つの事項に入っている欄ごとの、台帳の欄名に当てる形(正規表現の文字。表の左の欄に当てる)。readable が false の欄は、このツールでは読まない(必ず「判断できない」に回る)。condition は条文の「〜ときは」で、license = 許可番号の欄に値があれば建設業者として当てはまる、tier1 = 一次の下請け(作成建設業者が請け負わせたもの)なら当てはまる、unknown = 台帳からは当てはまるか決めない。値・空・判断できないの出し方は src/checklist.mjs の先頭に書いた。第2項(添付書類)〜第4項はこの表に入れていない",
+  "reference": { "note": "国交省のチェックリストは参考として題名・URL・取得日だけを出し、文は写さない(F16c)。題名とリンク先は掲載ページの HTML のリンクの文のまま", "title": "施工体制台帳等のチェックリスト", "publisher": "国土交通省", "url": "https://www.mlit.go.jp/totikensangyo/const/content/001389105.docx", "page": "https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html", "pageTitle": "施工体制台帳、施工体系図等", "fetchedAt": "2026-11-03" },
+  "law": { "note": "根拠の原文の取得日と版。data/sources/index.json の kisoku-14_2 の行と同じ値にする(試験 ui-checklist で照らす)。画面の bundle は index.json を読まないのでここに写す", "sourceId": "kisoku-14_2", "fetchedAt": "2026-11-03", "revisionId": "324M50004000014_20261001_508M60000800082" },
   "items": [
     { "id": "1-i", "quoteId": "q-kisoku-14_2-1-1-i", "scope": "prime", "item": 1, "subitem": "イ", "label": "許可を受けて営む建設業の種類",
       "parts": [ { "label": "許可を受けた建設業", "re": "許可を受けた建設業|建設業の種類|許可業種" } ] },
