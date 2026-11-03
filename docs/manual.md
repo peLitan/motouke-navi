@@ -336,7 +336,7 @@ Claude Code のプラグイン(上の「Claude Code のプラグイン」)を入
 
 `node scripts/fetch-sources.mjs` で e-Gov 法令 API(v2)から取得し、本則の条だけを `data/sources/` に保存した。一覧と取得日は `data/sources/index.json`。
 
-取得に使った API: `https://laws.e-gov.go.jp/api/2/law_data/<法令ID>?response_format=xml`。どの改正の版かは index.json の `revisionId` にある。施行規則 第14条の2 は、ほかの条の取得日と版を変えないように `node scripts/fetch-sources.mjs --law kisoku` で、その法令だけを取得した(版 324M50004000014_20261001_508M60000800082)。抜き書きは第1項(記載事項)の柱書き・号・号の細分(イ・ロ…)・その下の (１)〜(６) ごとに `data/quotes.json` に入れ、`subitem`(号の細分)まで原文と照らす。第2項(添付書類)・第3項・第4項(電磁的記録)は原文に入っているが、抜き書きにしていない。法令は改正されるので、使う前に e-Gov で原文を確かめ直すこと。
+取得に使った API: `https://laws.e-gov.go.jp/api/2/law_data/<法令ID>?response_format=xml`。どの改正の版かは index.json の `revisionId` にある(法令ID_施行日_改正の法令番号)。画面・印刷・CSV では、根拠の抜き書きの近くに「取得日 2026-11-02・版 2025年12月12日施行の改正までの条文(e-Gov の版 …)」のように出す(`src/source-version.mjs`。施行日は revisionId の真ん中の8桁から作る)。国交省の資料は index.json の `edition`(資料の題名にある版の表示「令和8年3月」「令和7年2月1日から適用」を写した値)を「… の版」と出し、無いときは「版の表示なし」と出す。CSV は「取得日」の隣に「版」の列がある。施行規則 第14条の2 は、ほかの条の取得日と版を変えないように `node scripts/fetch-sources.mjs --law kisoku` で、その法令だけを取得した(版 324M50004000014_20261001_508M60000800082)。抜き書きは第1項(記載事項)の柱書き・号・号の細分(イ・ロ…)・その下の (１)〜(６) ごとに `data/quotes.json` に入れ、`subitem`(号の細分)まで原文と照らす。第2項(添付書類)・第3項・第4項(電磁的記録)は原文に入っているが、抜き書きにしていない。法令は改正されるので、使う前に e-Gov で原文を確かめ直すこと。
 
 ### 国土交通省の資料
 - 「建設業許可事務ガイドライン」(国土交通省、令和7年2月1日から適用) https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf (取得日 2026-11-02)。消費税の扱いの根拠として、44ページの【その他】「２．法等における「請負代金の額」等の内容について」の見出しと本文だけを、PDF の文字のまま `data/sources/mlit-kyoka-guideline-sonota-2.txt` に写した。全文は再配布しない。

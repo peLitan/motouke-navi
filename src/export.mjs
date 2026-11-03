@@ -3,19 +3,21 @@
 // のちの段の結果も、同じ列(COLUMNS)の行を作る関数を足せば、同じ toCsv で書き出せる。
 import { CHECKLIST_NOTICE, CHECKLIST_SCOPE, checklistReferenceText } from './ui/view.mjs';
 import { CHECKLIST_LAW } from './checklist.mjs';
+import { sourceVersion, NO_VERSION } from './source-version.mjs';
 import { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE } from './ui/view.mjs';
 
 // すべての結果で共通の列
-export const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '例外・読み方の注意'];
+export const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '版(何年何月時点の条文・資料か)', '例外・読み方の注意'];
 
 const uniq = (xs) => [...new Set(xs)];
 
-// 根拠(basis の配列)を、列「根拠の条」「根拠の原文」「取得日」の3つの欄にする。1つの欄の中は改行で区切る
+// 根拠(basis の配列)を、列「根拠の条」「根拠の原文」「取得日」「版」の4つの欄にする。1つの欄の中は改行で区切る(F28d で版を足した)
 function basisCells(list = []) {
   return [
     uniq(list.map(basisLabel)).join('\n'),
     list.map((b) => '【' + basisLabel(b) + '】' + (b.quote ?? '')).join('\n'),
     uniq(list.map((b) => b.fetchedAt).filter(Boolean)).join('\n'),
+    uniq(list.map((b) => b.version || NO_VERSION)).join('\n'),
   ];
 }
 
@@ -78,24 +80,24 @@ export function checkRows(out, notice) {
 }
 
 // 段取りの一覧(F06a)の行。段取りは「いつ・何を・誰に」が要なので、共通の列とは別の列にする(見出しの行 + 1行ずつ)
-export const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', '根拠の箇所', '根拠の原文(抜き書き)', '取得日', '注意'];
+export const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', '根拠の箇所', '根拠の原文(抜き書き)', '取得日', '版', '注意'];
 export function scheduleRows(rows = []) {
   return [SCHEDULE_COLUMNS.slice(), ...rows.map((r) => [
     SCHEDULE_PHASE[r.phase] ?? r.phase, r.when, r.what, r.to, SCHEDULE_STATUS[r.status] ?? r.status ?? '',
-    r.basis.doc + ' ' + r.basis.section + (r.basis.sectionTitle ? ' ' + r.basis.sectionTitle : ''), r.basis.quote, r.basis.fetchedAt,
+    r.basis.doc + ' ' + r.basis.section + (r.basis.sectionTitle ? ' ' + r.basis.sectionTitle : ''), r.basis.quote, r.basis.fetchedAt, r.basis.version || NO_VERSION,
     [r.note, ...(r.checks ?? [])].filter(Boolean).join('\n'),
   ])];
 }
 
 // 施工計画書の目次の点検(F07)の行。見出しの行 + 抜けの候補1件ごとに1行
-export const PLAN_COLUMNS = ['項目', '状態', '説明', '根拠の箇所', 'ページ', '根拠の原文(抜き書き)', '取得日'];
+export const PLAN_COLUMNS = ['項目', '状態', '説明', '根拠の箇所', 'ページ', '根拠の原文(抜き書き)', '取得日', '版'];
 export function planRows(out = {}) {
   return [PLAN_COLUMNS.slice(), ...(out.candidates ?? []).map((c) => [
     c.item, '抜けの候補', c.message ?? '',
     c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
     'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : ''),
-    c.basis.quote, c.basis.fetchedAt ?? '',
-  ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', ''])];
+    c.basis.quote, c.basis.fetchedAt ?? '', c.basis.version || NO_VERSION,
+  ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', '', ''])];
 }
 
 // 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする
@@ -110,11 +112,11 @@ export function toCsv(rows) {
 }
 
 // 台帳の記載事項の表(F16c)の行。「確認した」の有無を最初の列に出す(人が確かめた印で、合否ではない)
-export const CHECKLIST_COLUMNS = ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所', '根拠の原文(抜き書き)', '取得日'];
+export const CHECKLIST_COLUMNS = ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所', '根拠の原文(抜き書き)', '取得日', '版'];
 export function checklistRows(out = {}, checked = new Set(), notice) {
   return [
     CHECKLIST_COLUMNS.slice(),
-    ...(out.rows ?? []).map((r) => [checked.has(r.id) ? '確認した' : '', r.entity, r.label, r.statusLabel, r.value ?? '', r.reason ?? '', r.basis?.where ?? '', r.basis?.quote ?? '', CHECKLIST_LAW.fetchedAt]),
-    ['注意', '', '', '', '', [CHECKLIST_NOTICE, CHECKLIST_SCOPE, ...(out.notes ?? []), checklistReferenceText(), notice].filter(Boolean).join('\n'), '', '', ''],
+    ...(out.rows ?? []).map((r) => [checked.has(r.id) ? '確認した' : '', r.entity, r.label, r.statusLabel, r.value ?? '', r.reason ?? '', r.basis?.where ?? '', r.basis?.quote ?? '', CHECKLIST_LAW.fetchedAt, sourceVersion(CHECKLIST_LAW)]),
+    ['注意', '', '', '', '', [CHECKLIST_NOTICE, CHECKLIST_SCOPE, ...(out.notes ?? []), checklistReferenceText(), notice].filter(Boolean).join('\n'), '', '', '', ''],
   ];
 }

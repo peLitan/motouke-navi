@@ -4,6 +4,7 @@
 // 目次の見出しの言葉だけで比べる。本文に書いてあるかは見ない(候補であって、抜けの断定ではない)。
 import planData from '../data/plan-items.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
+import { sourceVersion } from './source-version.mjs';
 
 const source = sourcesData.sources.find((s) => s.id === planData.sourceId);
 if (!source) throw new Error('施工計画書の記載項目: 出典が無い: ' + planData.sourceId);
@@ -36,6 +37,7 @@ function basisOf(it) {
     sourceId: planData.sourceId,
     url: source.pdfUrl ?? source.url,
     fetchedAt: source.fetchedAt,
+    version: sourceVersion(source),
   };
 }
 

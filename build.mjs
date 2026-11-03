@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { sourceVersion } from './src/source-version.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SHELL = path.join(ROOT, 'src', 'ui', 'shell.html');
@@ -88,7 +89,7 @@ export function sourcesHtml() {
   const { sources } = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'sources', 'index.json'), 'utf8'));
   const items = sources.map((s) => {
     const name = s.kind === 'law' ? s.title : s.title + '(' + (s.publisher ?? '') + ')';
-    return `<li>${escHtml(name)} — 取得日 ${escHtml(s.fetchedAt)}${s.revisionId ? '(e-Gov の版 ' + escHtml(s.revisionId) + ')' : ''}<br>${escHtml(s.url)}</li>`;
+    return `<li>${escHtml(name)} — 取得日 ${escHtml(s.fetchedAt)}・版 ${escHtml(sourceVersion(s))}<br>${escHtml(s.url)}</li>`;
   });
   return `<ul>\n${items.join('\n')}\n</ul>\n<p>法令は改正されることがあります。取得日から時間がたって古くなったら、判定の前に e-Gov 法令検索や国土交通省の資料の原文を確かめ直してください。この画面は取得日の時点の原文の抜き書きで判定しています。</p>`;
 }

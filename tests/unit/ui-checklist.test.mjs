@@ -69,7 +69,7 @@ test('CSV の列: 最初の列が「確認した」で、チェックの有無�
   const checked = new Set([out.rows[0].id, out.rows[3].id]);
   const rows = checklistRows(out, checked, '指摘の候補です');
   assert.deepEqual(rows[0], CHECKLIST_COLUMNS);
-  assert.deepEqual(CHECKLIST_COLUMNS, ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所', '根拠の原文(抜き書き)', '取得日']);
+  assert.deepEqual(CHECKLIST_COLUMNS, ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所', '根拠の原文(抜き書き)', '取得日', '版']);
   const body = rows.slice(1, -1);
   assert.equal(body.length, out.rows.length);
   body.forEach((r, i) => {

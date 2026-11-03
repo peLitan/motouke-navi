@@ -4,6 +4,7 @@
 import rulesData from '../data/rules.json' with { type: 'json' };
 import quotesData from '../data/quotes.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
+import { sourceVersion } from './source-version.mjs';
 
 // 条件の1つの欄の比べ方。値がそのままなら同じであること。
 // 値がオブジェクトなら比べ方の指定: gte(以上)・lt(未満)は数、in(どれか)・notIn(どれでもない)は値の並び。
@@ -76,6 +77,7 @@ export function resolveQuoteIds(list, quotes, sources, label) {
       section: q.section ?? s.section,
       page: q.page ?? s.page,
       fetchedAt: s.fetchedAt,
+      version: sourceVersion(s),
     };
   });
 }

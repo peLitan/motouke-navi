@@ -4,6 +4,7 @@
 // 入力が分からない条件は、推測で決めずに「確かめる」の注意を付けて行を出す。
 import scheduleData from '../data/schedule.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
+import { sourceVersion } from './source-version.mjs';
 
 const FIELD_LABEL = {
   hasSubcontract: '下請契約があるか',
@@ -43,6 +44,7 @@ function basisOf(rule) {
     quote: rule.quote,
     url: s.url,
     fetchedAt: s.fetchedAt,
+    version: sourceVersion(s),
   };
 }
 

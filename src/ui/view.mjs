@@ -2,6 +2,7 @@
 // 結果の文字はすべてエスケープする(規則表や入力の文字がそのまま HTML にならないように)。
 import { readDirect } from './form.mjs';
 import { CHECKLIST_REFERENCE, CHECKLIST_LAW } from '../checklist.mjs';
+import { sourceVersion, versionText } from '../source-version.mjs';
 import { displayStatus, itemConditions, contactsFor, openItems, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
@@ -28,7 +29,7 @@ function basisList(list = []) {
   if (!list.length) return '<p class="basis-none">根拠: 無し</p>';
   // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
   return '<details class="basis"><summary>根拠: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
-    + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
+    + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
     + '</ul></details>';
 }
 
@@ -220,7 +221,7 @@ export function renderSchedule(rows = [], detail = {}) {
         + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
       + '</tbody></table>')
       + '<details class="basis schedule-basis"><summary>根拠: 共通仕様書の原文(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
-      + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、取得日 ' + esc(b.fetchedAt) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
+      + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
       + '</ul></details>';
   }).join('');
   // 結論(何件あるか・段ごとの件数)は閉じずに出し、表は「受注後の段取り(○件)」の折りたたみに入れる
@@ -271,7 +272,7 @@ export function renderChecklist(out = {}, checked = new Set()) {
   // 根拠の原文は表の外に、事項ごとに1回だけ(表の中に折りたたみを入れない。F14c)
   const seen = new Map();
   for (const r of rows) if (r.basis && !seen.has(r.basis.quoteId)) seen.set(r.basis.quoteId, r.basis);
-  const quotes = '<details class="basis checklist-basis"><summary>根拠: 建設業法施行規則 第14条の2 第1項の原文(' + seen.size + '件)</summary><p>取得日 ' + esc(CHECKLIST_LAW.fetchedAt) + '(e-Gov 法令 API。版 ' + esc(CHECKLIST_LAW.revisionId) + ')</p><ul>'
+  const quotes = '<details class="basis checklist-basis"><summary>根拠: 建設業法施行規則 第14条の2 第1項の原文(' + seen.size + '件)</summary><p>' + esc(versionText({ fetchedAt: CHECKLIST_LAW.fetchedAt, version: sourceVersion(CHECKLIST_LAW) })) + '(e-Gov 法令 API)</p><ul>'
     + [...seen.values()].map((b) => '<li><strong>' + esc(b.where) + '</strong><blockquote>' + esc(b.quote) + '</blockquote></li>').join('') + '</ul></details>';
   const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   return head + notes + scrollTable('施工体制台帳の記載事項の表', '<table class="checklist-table">' + inner + '</table>') + quotes;
@@ -288,7 +289,7 @@ export function renderPlanResult(out = {}) {
     : cands.length
     ? '<h3>記載項目の抜けの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
       + (c.message ? '<p>' + esc(c.message) + '</p>' : '')
-      + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + (c.basis.fetchedAt ? '(取得日 ' + esc(c.basis.fetchedAt) + ')' : '') + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
+      + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + '(' + esc(versionText(c.basis)) + ')' + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
     : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、国の直轄の土木の共通仕様書 1-1-1-6 の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
   const foundHtml = found.length
     ? '<details class="found"><summary>目次で見つけた記載項目(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
