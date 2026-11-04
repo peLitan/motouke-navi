@@ -226,6 +226,49 @@ Anthropic の公式ページ(2026-11-02 に確認)によると、API に送っ�
 - How long do you store my organization's data? https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data
 - Is my data used for model training? https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training
 
+## Claude で点検(画面なしの Claude Code)
+Claude Code を画面なしで動かす入口です。`scripts/claude-headless.mjs` が `claude -p --plugin-dir plugin` を動かし、下の「Claude Code のプラグイン」の Skill `construction-check` と反証の係 `refuter` で書類を点検します。API の鍵ではなく、Claude Code のログインで動きます。
+
+実際に走らせた記録はまだありません。別の担当が走らせて、ここに足します。
+
+1. Claude Code を入れて、`claude auth login` でログインする
+2. 空の作業フォルダを作り、点検する書類を `raw/` に置く(作業フォルダはこのリポジトリの `plugin/` の外にする。重ねると止まります)
+3. `node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]` を動かす
+4. 答えは標準出力に出ます。呼んだ道具・Skill・係の数え上げと注意は標準エラーに出ます。`read_masked` や `refuter` を呼ばなかったとき、道具が断られたとき、途中で止まったときは「注意:」と出ます
+
+- `--doc` を省くと、`raw/` の書類すべてを点検します
+- `--log` を省くと、記録は作業フォルダの `headless-logs/<日時>.jsonl` に残ります。記録は `--output-format stream-json` の出力そのままです。同じ名前のファイルがあれば止まり、上書きしません。`raw/` の中には置けません
+- `--max-budget-usd` の既定は 3 です。1回の点検にかかる額は測っていません
+
+### 絞っていること
+- 鍵: `ANTHROPIC_API_KEY`・`ANTHROPIC_AUTH_TOKEN` を外してから `claude` を動かします。端末に鍵が入っていても送られません。記録の `apiKeySource` が `none` でなければ注意を出します
+- 道具: `--permission-mode dontAsk` で、`--allowedTools` に挙げた物のほかは断ります。挙げたのは、Skill `construction-check`、`read_masked`・`list_masked`、係 `refuter`、Skill のフォルダの読み取り、`check-articles.mjs` の実行、作業フォルダの `tmp/` の読み書きです
+- 二重の守り: `--disallowedTools` で `raw/` の直接の読み書きと Web を断ります。プラグインは権限の決まりを配れませんが、この入口ではコマンドの指定で渡せます。プラグインのフックも同時に働きます
+- 保存: `--no-session-persistence` で Claude Code のセッションを保存しません。残るのは上の記録だけです
+
+### API の版との違い
+| | API の版(`tools/claude-check.mjs`) | 画面なしの版(`scripts/claude-headless.mjs`) |
+|---|---|---|
+| 認証 | 環境変数の API の鍵 | Claude Code のログイン |
+| 渡す書類 | 人が置き換えた後のファイル | `raw/` の書類を、道具 `read_masked` がその場で置き換えて渡す |
+| 送る前の確かめ | 漏れの検査のあと、送る中身を全部見せ、人が「送る」と打つ | 無い。`read_masked` の返事はそのまま Claude に渡る |
+| 点検の中身 | 1回の問い合わせ。道具は使わない | Skill の手順。取得した条の原文を読み、条番号をスクリプトで確かめ、反証の係が見直す |
+| 結果 | 「AI の候補」の JSON。画面の「AI の候補を読み込む」で読める | Markdown の文と記録。画面では読み込めない |
+| 残る記録 | `--out` の結果のファイル | どの道具・どの係を呼んだかが分かる記録 |
+
+実際の書類に使うなら、送る中身を人が見られる API の版の方が慎重です。画面なしの版は、人の確かめが無いので、まず架空の書類で試してください。
+
+### 確かめたことと限界
+- 確かめたこと(2026-11-04、Claude Code 2.1.317): 通信を止め、ログインもしていない環境で、架空の書類を置いて1回動かしました。Claude はここで「Not logged in」と答えて終わり、モデルは呼んでいません。その記録の最初の行で、指定がすべて受け付けられ、`permissionMode` が `dontAsk`、`apiKeySource` が `none`、MCP の接続、`list_masked`・`read_masked` の道具の名前、Skill と係の名前を見ました
+- 確かめていないこと: 許可の決まりの書き方が実際に当たるか、点検が最後まで通るか。足りない許可があれば「断られた道具」の注意に出ます
+- 道具の一覧では係を呼ぶ道具が `Task` の名前で出るので、許可には `Agent(...)` と `Task(...)` の両方を挙げています
+- `--allowedTools`・`--disallowedTools`・`--permission-mode dontAsk`・`--max-budget-usd` は、`claude --help` の説明と上の確かめによります。公式のページ https://code.claude.com/docs/en/headless は作る係の環境から開けなかったので、ページとは照らしていません。`--max-budget-usd` の説明は API の呼び出しの額で、ログインのプランで上限として効くかは確かめていません
+- ログインのプランでの書類の扱いが、上の「API に送った内容の扱い」と同じとは限りません。使う前に Claude Code の公式の文書と、利用しているプランの規約で確かめてください
+- 記録には、置き換えた後の書類の中身が入ります。置き換えの漏れは0になりません。書類のファイル名は置き換えないので、そのまま Claude と記録に渡ります。記録は外へ渡さないでください
+- 記号の元の名前の対応表を使うときは、端末の環境変数 `MASK_MAP`・`MASK_DICT` がそのまま道具へ渡ります
+- 画面なしでは聞き返しに答えられないので、頼む文で「聞き返さず、判断できないと書いて進める」よう頼んでいます。止まらないことの保証ではありません
+- プラグインのフォルダのパスに空白があると、`check-articles.mjs` の許可が当たらないおそれがあります。Windows では試していません
+
 ## Claude Code に組み込む
 Claude Code で書類を点検するときに、`raw/` に置いた生のファイル(元の名前が入ったもの)を Claude Code の道具で読む操作の多くを止め、置き換えた後の中身だけを渡すための設定と道具です。置き場は `integration/claude-code/` で、自分の作業フォルダに中身を写して使います。
 
