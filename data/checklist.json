@@ -6,7 +6,7 @@
     { "id": "1-i", "quoteId": "q-kisoku-14_2-1-1-i", "scope": "prime", "item": 1, "subitem": "イ", "label": "許可を受けて営む建設業の種類",
       "parts": [ { "label": "許可を受けた建設業", "re": "許可を受けた建設業|建設業の種類|許可業種" } ] },
     { "id": "1-ro", "quoteId": "q-kisoku-14_2-1-1-ro", "scope": "prime", "item": 1, "subitem": "ロ", "label": "健康保険等の加入状況",
-      "parts": [ { "label": "健康保険", "re": "健康保険" }, { "label": "厚生年金保険", "re": "厚生年金" }, { "label": "雇用保険", "re": "雇用保険" } ] },
+      "parts": [ { "label": "健康保険", "re": "健康保険", "not": "作業員|従事|労働者|技能者" }, { "label": "厚生年金保険", "re": "厚生年金", "not": "作業員|従事|労働者|技能者" }, { "label": "雇用保険", "re": "雇用保険", "not": "作業員|従事|労働者|技能者" } ] },
 
     { "id": "2-i", "quoteId": "q-kisoku-14_2-1-2-i", "scope": "prime", "item": 2, "subitem": "イ", "label": "建設工事の名称・内容・工期",
       "parts": [ { "label": "工事の名称", "re": "^工事(名|名称|件名)" }, { "label": "工事の内容", "re": "工事(の)?内容|工事概要" }, { "label": "工期", "re": "^工期" } ] },
@@ -43,7 +43,7 @@
     { "id": "3-ro", "quoteId": "q-kisoku-14_2-1-3-ro", "scope": "sub", "item": 3, "subitem": "ロ", "label": "許可番号と許可を受けた建設業の種類(建設業者のとき)", "condition": "license",
       "parts": [ { "label": "許可番号", "re": "許可番号" }, { "label": "許可を受けた建設業", "re": "許可を受けた建設業|建設業の種類|許可業種" } ] },
     { "id": "3-ha", "quoteId": "q-kisoku-14_2-1-3-ha", "scope": "sub", "item": 3, "subitem": "ハ", "label": "健康保険等の加入状況",
-      "parts": [ { "label": "健康保険", "re": "健康保険" }, { "label": "厚生年金保険", "re": "厚生年金" }, { "label": "雇用保険", "re": "雇用保険" } ] },
+      "parts": [ { "label": "健康保険", "re": "健康保険", "not": "作業員|従事|労働者|技能者" }, { "label": "厚生年金保険", "re": "厚生年金", "not": "作業員|従事|労働者|技能者" }, { "label": "雇用保険", "re": "雇用保険", "not": "作業員|従事|労働者|技能者" } ] },
 
     { "id": "4-i", "quoteId": "q-kisoku-14_2-1-4-i", "scope": "sub", "item": 4, "subitem": "イ", "label": "下請けの工事の名称・内容・工期",
       "parts": [ { "label": "工事の名称", "re": "^工事(名|名称|件名)" }, { "label": "工事の内容", "overlap": "work", "re": "工事(の)?内容|工事概要" }, { "label": "工期", "overlap": "period", "re": "^工期" } ] },

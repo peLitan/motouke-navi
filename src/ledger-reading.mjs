@@ -27,6 +27,15 @@ export function qualificationUnclear(value) {
   return !NAMED_QUALIFICATION.some((re) => re.test(s));
 }
 
+// 許可番号の欄の値が許可番号の形か(F31e)。知事か大臣の許可で、般か特があり、「第…号」があるときだけ true。
+// 番号を伏せた「第xxxx号」も形として読む。番号があっても「更新申請中」「不要」などが添えてあれば、今も許可があるかは語の形から決めない
+const LICENSE_RE = /(?:知事|大臣)の?(?:許可)?[(\[〔【]?(?:一般|特定|般|特)[^第]{0,8}第[0-9xX〇○一二三四五六七八九十百千]+号/;
+const LICENSE_DOUBT_RE = /申請|予定|不要|取得中|未取得|手続|失効|取消|取り消|なし|無し|該当せず|非該当/;
+export function licenseShaped(value) {
+  const s = String(value ?? '').normalize('NFKC').replace(/\s+/g, '');
+  return LICENSE_RE.test(s) && !LICENSE_DOUBT_RE.test(s);
+}
+
 // 発注者の名前から公共・民間を読む。読めないときは null(個人・公社・独立行政法人・組合などは決めない)
 const PRIVATE_RE = /株式会社|有限会社|合同会社|合名会社|合資会社|\(株\)|\(有\)|医療法人|社会福祉法人|学校法人|宗教法人|一般社団法人|一般財団法人|公益社団法人|公益財団法人|特定非営利活動法人|NPO法人|管理組合/;
 const PUBLIC_NOT_RE = /公社|公団|機構|組合|独立行政法人|大学法人/;

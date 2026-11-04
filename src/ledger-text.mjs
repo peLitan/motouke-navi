@@ -101,6 +101,16 @@ export function parseDedicated(raw) {
 // 「4-1. 架空二土木株式会社」→「架空二土木株式会社」
 export const stripNumber = (t) => clean(t).replace(/^[\d０-９]+(?:[-‐－.．][\d０-９]+)*[.．、)）]?\s*/, '');
 
+// 技術者の行の持ち主(F31e): 「監理技術者補佐 | 甲野」の次の「資格」のように欄名に持ち主が無い行は、すぐ上の行の持ち主のものとして読む。
+// 補佐・専門技術者の行の値を、監理技術者・主任技術者の欄に入れないため。current は今の持ち主(無ければ '')
+export const OTHER_ROLE_RE = /補佐|専門技術者|技術上の管理/;
+export function nextRole(current, key) {
+  const m = key.match(OTHER_ROLE_RE);
+  if (m) return m[0];
+  return /(?:監理|主任)技術者/.test(key) ? '' : current;
+}
+export const isBareEngineerKey = (key) => /^(?:氏名|名前|資格|専任|非専任)/.test(key);
+
 // 技術者の行(「監理技術者 氏名」「主任技術者 氏名」「資格」)を入れる。入れたら true
 // 「監理技術者補佐」(第26条第3項ただし書 第2号の補佐する者)の行は、監理技術者の欄に入れず eng.assistant に分けて入れる
 function putEngineer(eng, key, value, warn, asAssistant = false) {
@@ -139,6 +149,7 @@ export function parseLedgerText(text) {
   let sub = null;
   let sectionTier = null;
   let assistantSection = false; // 「## 監理技術者補佐」のような節の中
+  let engineerRole = ''; // 表の中で今読んでいる技術者の行の持ち主(nextRole)
 
   const amountInto = (obj, key, raw, where) => {
     const r = parseAmount(raw);
@@ -151,12 +162,21 @@ export function parseLedgerText(text) {
     if (r.error) warnings.push(where + ': ' + r.error);
   };
 
+  // 技術者の行を入れる。持ち主が補佐なら補佐の欄へ、専門技術者なら入れない(false を返し、点検に使っていないと注意する)
+  const engineerRow = (eng, key, value, where, inAssistant = false) => {
+    const warn = (m) => warnings.push(where + ': ' + m);
+    engineerRole = nextRole(engineerRole, key);
+    if (inAssistant || !engineerRole || !(OTHER_ROLE_RE.test(key) || isBareEngineerKey(key))) return putEngineer(eng, key, value, warn, inAssistant);
+    return /補佐/.test(engineerRole) ? putEngineer(eng, key, value, warn, true) : false;
+  };
+
   const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
   lines.forEach((line, i) => {
     const lineNo = i + 1;
     const h = line.match(/^\s*(#{1,6})\s+(.*)$/);
     if (h) {
       const level = h[1].length;
+      engineerRole = (h[2].match(OTHER_ROLE_RE) ?? [''])[0];
       if (level === 2) {
         kind = sectionKind(h[2]); sub = null; sectionTier = kind === 'subs' ? tierOf(h[2]) : null;
         assistantSection = kind === 'primeEngineer' && /補佐/.test(h[2]);
@@ -205,7 +225,7 @@ export function parseLedgerText(text) {
       else if (/請負代金/.test(key)) amountInto(project, 'contractAmount', value, where);
       else unknown();
     } else if (kind === 'primeEngineer') {
-      if (!putEngineer(prime.engineer, key, value, (m) => warnings.push(where + ': ' + m), assistantSection)) unknown();
+      if (!engineerRow(prime.engineer, key, value, where, assistantSection)) unknown();
     } else if (kind === 'subs') {
       if (!sub) { warnings.push(where + ': 下請けの見出し(### 会社名)の前の行なので読みませんでした'); return; }
       if (/商号|名称/.test(key)) sub.name = value;
@@ -213,7 +233,7 @@ export function parseLedgerText(text) {
       else if (/工事(の)?内容/.test(key)) sub.work = value;
       else if (/工期/.test(key)) periodInto(sub, value, where);
       else if (/請負代金/.test(key)) amountInto(sub, 'amount', value, where);
-      else if (!putEngineer(sub.engineer, key, value, (m) => warnings.push(where + ': ' + m))) unknown();
+      else if (!engineerRow(sub.engineer, key, value, where)) unknown();
     } else {
       warnings.push(where + ': どの節(元請・発注者との契約・技術者・下請負人)の行か分からないので読みませんでした');
     }

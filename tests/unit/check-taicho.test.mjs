@@ -38,6 +38,7 @@ test('工事の種類が分からず境目を決められないときは「判�
 test('名称が空の下請けは何件目かで指し、技術者の資格の空も候補にする', () => {
   const a = base(); a.prime.licenseType = 'tokutei'; a.prime.engineer.role = 'kanri';
   a.subcontractors[1].name = ''; a.subcontractors[0].engineer.qualification = '';
+  a.subcontractors[0].licenseNumber = '架空県知事 許可(般-05)第00002号'; // 許可番号の形のときだけ建設業者として技術者の抜けの候補にする(F31e)
   const out = checkTaicho(a);
   assert.ok(out.candidates.some((c) => c.target === '下請け 2件目(名称が空)' && c.field === 'name'));
   assert.ok(out.candidates.some((c) => c.target === '架空乙' && c.field === 'engineer.qualification'));

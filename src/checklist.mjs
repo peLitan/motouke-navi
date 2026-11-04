@@ -4,15 +4,15 @@
 // 出し方(推測で埋めない。「台帳が不適法」とは出さない):
 // - 値: 事項に当たる欄が見つかり、値が書いてある(書いてあるまま出す。「なし」も値。中身が正しいかは見ない)
 // - 空: 事項に当たる欄が見つかり、値が空。条文に「〜ときは」があるものは、台帳から当てはまると分かるときだけ空にする
-//       (下請負人の許可番号に値があれば建設業者、一次の下請けなら作成建設業者が請け負わせたもの、として扱う)
+//       (下請負人の許可番号の欄が許可番号の形なら建設業者、一次の下請けなら作成建設業者が請け負わせたもの、として扱う)
 // - 判断できない: 欄が見つからない(別の名前や別紙・作業員名簿に書いてあるかもしれない)、当てはまるか台帳から決まらない
 //       「〜ときは」の事項の欄が空、資格の欄に値があってもどの資格の区分か決められない(F29b)、このツールでは読まない事柄(法第19条の2の通知事項など)がある、Excel からは読まない欄
 // 欄が見つからないことを「空」とは言わない(見出しの違いで書いてある事項を「無い」と言い過ぎないため)。
 // 1つの事項に欄が2つ以上あるとき(名称・内容・工期など)は、空の欄が1つでもあれば空、なければ見つからない欄が1つでもあれば判断できない。
 import checklistData from '../data/checklist.json' with { type: 'json' };
 import quotesData from '../data/quotes.json' with { type: 'json' };
-import { ledgerRows } from './ledger-text.mjs';
-import { qualificationUnclear } from './ledger-reading.mjs';
+import { ledgerRows, OTHER_ROLE_RE, nextRole, isBareEngineerKey } from './ledger-text.mjs';
+import { qualificationUnclear, licenseShaped } from './ledger-reading.mjs';
 
 export const STATUS_LABEL = { value: '値', empty: '空', unknown: '判断できない' };
 const ITEM_KANJI = ['', '一', '二', '三', '四'];
@@ -37,24 +37,32 @@ export const isNone = (v) => NONE_RE.test(String(v ?? '').replace(/[\s　]/g, ''
 
 // 「健康保険 / 厚生年金 / 雇用保険」のように1つの行に欄をまとめたとき、値も「/」で分けてあれば、欄ごとの値を位置で取る(F29a)
 // 返り値: { value } か、欄の数と値の数が合わなければ { mismatch: true }。まとめていない行・値に「/」が無い行は null(行の値をそのまま使う)
+// 保険の欄は「・」「、」で区切ったまとめ方も分ける(F31e)。かっこの中の区切り(「加入(協会けんぽ・本店)」)では分けない。
+// 住所・名称などの値は「・」「、」を含むことがあるので、ほかの欄は「/」だけで分ける
 const SPLIT_RE = /\s*[\/／]\s*/;
+const LIST_RE = /\s*[\/／・、,，]\s*(?![^(（]*[)）])/;
+const INSURANCE_RE = /健康保険|厚生年金|雇用保険/;
 function splitCell(row, re) {
-  const keys = row.key.split(SPLIT_RE);
+  const sep = INSURANCE_RE.test(row.key) ? LIST_RE : SPLIT_RE;
+  const keys = row.key.split(sep);
   if (keys.length < 2) return null;
   const idx = keys.findIndex((k) => re.test(k));
-  if (idx < 0 || !SPLIT_RE.test(row.value)) return null;
-  const values = row.value.split(SPLIT_RE);
+  const values = row.value.split(sep);
+  if (idx < 0 || values.length < 2) return null;
   if (values.length !== keys.length) return { mismatch: true };
   return { value: values[idx] };
 }
 
 // 下請けでない節の「### 監理技術者補佐」「### 専門技術者」の下の「氏名」「資格」「専任・非専任」の行は、
 // 監理技術者・主任技術者の欄と取り違えないよう、欄名の前に小見出しの語を付けて扱う(F29a)
-const GROUP_RE = /監理技術者補佐|補佐|専門技術者|技術上の管理/;
+// 表の中で「監理技術者補佐 | 甲野」の次に「資格」「専任・非専任」が続くときも同じに扱う(F31e)
 function withGroup(rows) {
+  let role = '';
   return rows.map((r) => {
-    const g = r.group && r.group.match(GROUP_RE);
-    return g && !GROUP_RE.test(r.key) ? { ...r, key: g[0] + ' ' + r.key } : r;
+    const g = r.group && r.group.match(OTHER_ROLE_RE);
+    if (g) return OTHER_ROLE_RE.test(r.key) ? r : { ...r, key: g[0] + ' ' + r.key };
+    role = nextRole(role, r.key);
+    return role && isBareEngineerKey(r.key) ? { ...r, key: role + ' ' + r.key } : r;
   });
 }
 
@@ -84,8 +92,9 @@ function conditionOf(it, rows, tier) {
   if (!it.condition) return null;
   if (it.condition === 'license') {
     const lic = rows.find((r) => /許可番号/.test(r.key));
-    if (lic && isNone(lic.value)) return 'none'; // 「なし」は許可が無いと書いたもので、建設業者とは決めない(F29a)
-    return lic && !isBlank(lic.value) ? 'met' : 'unknown';
+    if (!lic || isBlank(lic.value)) return 'unknown';
+    // 「なし」「申請中」「不要」などは許可番号ではないので、建設業者とは決めない(F29a・F31e)
+    return licenseShaped(lic.value) ? 'met' : 'none';
   }
   if (it.condition === 'tier1') return tier === 1 ? 'met' : 'unknown';
   return 'unknown';
@@ -97,9 +106,12 @@ const CONDITION_TEXT = {
   unknown: '条文に「〜ときは」がある事項',
 };
 
-const metText = (it) => CONDITION_TEXT[it.condition] + 'で、台帳から当てはまると読みました(' + (it.condition === 'license' ? '許可番号の欄に値がある' : '一次の下請け') + ')';
+const metText = (it) => CONDITION_TEXT[it.condition] + 'で、台帳から当てはまると読みました(' + (it.condition === 'license' ? '許可番号の欄に値がある(許可番号の形)' : '一次の下請け') + ')';
 
-function judge(it, parts, cond, extraReason) {
+// license の条件で、許可番号の欄の値が許可番号の形でないときの理由
+const notLicenseText = (value) => '許可番号の欄が「' + value + '」と書いてあり、許可番号の形(知事・大臣の許可、般・特、第…号)と読めないので、下請負人を建設業者とは決めません(建設業者のときの事項なので、当てはまるかを台帳から決められません)';
+
+function judge(it, parts, cond, extraReason, licenseValue) {
   const blank = parts.filter((p) => p.state === 'blank');
   const missing = parts.filter((p) => p.state === 'missing');
   const unread = parts.filter((p) => p.state === 'unread');
@@ -119,7 +131,7 @@ function judge(it, parts, cond, extraReason) {
     if (cond === 'met') reasons.push(metText(it));
   } else if (blank.length || missing.length || unread.length || mismatch.length || unclear.length) {
     status = 'unknown';
-    if (cond === 'none') reasons.push('許可番号の欄が「なし」と書いてあるので、下請負人を建設業者とは決めません(建設業者のときの事項なので、当てはまるかを台帳から決められません)');
+    if (cond === 'none') reasons.push(notLicenseText(licenseValue));
     if (mismatch.length) reasons.push('1つの行にまとめた欄の数と、「/」で分けた値の数が合わないので、どの値がどの欄のものか決められません: ' + mismatch.map((p) => p.label + '(' + p.key + (p.line ? '・' + p.line + '行目' : '') + ')').join('、'));
     if (unclear.length) reasons.push('資格の欄に値はありますが、どの資格の区分(法第7条第2号イ・ロ・ハ)かを台帳から決められません: ' + unclear.map((p) => p.label + '「' + p.value + '」').join('、'));
     if (blank.length) reasons.push('欄はあるが値が空: ' + blank.map((p) => p.label).join('、') + '。' + CONDITION_TEXT[it.condition ?? 'unknown'] + 'で、当てはまるかを台帳から決められません');
@@ -136,9 +148,9 @@ function judge(it, parts, cond, extraReason) {
   return { status, reasons };
 }
 
-function rowOf(it, entity, parts, cond, extraReason) {
+function rowOf(it, entity, parts, cond, extraReason, licenseValue) {
   const q = quoteById.get(it.quoteId);
-  const { status, reasons } = judge(it, parts, cond, extraReason);
+  const { status, reasons } = judge(it, parts, cond, extraReason, licenseValue);
   // 1つの欄(「健康保険 / 厚生年金 / 雇用保険」のような行)に当たった欄はまとめて1回だけ出す
   const shown = [];
   for (const p of parts) {
@@ -169,7 +181,7 @@ const PRIME_LABEL = '作成建設業者(元請)と、その請け負った工事
 // 返り値: { rows, counts: { value, empty, unknown }, notes }
 export function checkChecklistText(text) {
   const { top, sections } = ledgerRows(text);
-  const primeRows = withGroup([...top, ...sections.filter((s) => s.kind !== 'subs' && s.kind !== 'other').flatMap((s) => s.rows)]);
+  const primeRows = [...top, ...sections.filter((s) => s.kind !== 'subs' && s.kind !== 'other').flatMap((s) => withGroup(s.rows))];
   const subs = sections.filter((s) => s.kind === 'subs').flatMap((s) => s.subs);
   const rows = [];
   for (const it of CHECKLIST_ITEMS.filter((x) => x.scope === 'prime')) {
@@ -186,8 +198,10 @@ export function checkChecklistText(text) {
     // 次数が見出しに無い(null)・2つ以上で決まらない('mixed')ときは、一次と決めない(第四号トは 判断できない になる)
     const tierText = typeof s.tier === 'number' ? (KANSUJI[s.tier] ?? String(s.tier)) + '次' : (s.tier === 'mixed' ? '次数が決まらない' : '次数が見出しに無い');
     const entity = { label: '下請負人 ' + s.name + '(' + tierText + ')', key: 'sub' + (i + 1), subIndex: i };
+    const ownRows = withGroup(s.rows);
+    const licenseValue = ownRows.find((r) => /許可番号/.test(r.key))?.value;
     for (const it of CHECKLIST_ITEMS.filter((x) => x.scope === 'sub')) {
-      rows.push(rowOf(it, entity, matchParts(it, s.rows, s.name), conditionOf(it, s.rows, s.tier)));
+      rows.push(rowOf(it, entity, matchParts(it, ownRows, s.name), conditionOf(it, ownRows, s.tier), '', licenseValue));
     }
   });
   return { rows, counts: countOf(rows), notes };

@@ -13,6 +13,7 @@ import quotesData from '../data/quotes.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { resolveQuoteIds } from './taicho.mjs';
 import { licenseThreshold, dedicatedThreshold } from './bid-check.mjs';
+import { licenseShaped } from './ledger-reading.mjs';
 import { ordererConflict } from './ledger-reading.mjs';
 
 const basisOf = (...ids) => resolveQuoteIds(ids.map((quoteId) => ({ quoteId })), quotesData.quotes, sourcesData.sources, '台帳の点検');
@@ -40,16 +41,21 @@ function checkSubFields(s, i, out) {
 }
 
 // 技術者の抜け(建設業法 第26条第1項: 建設業者は請け負った工事に主任技術者を置く)
+// 下請けの許可番号の欄に値があっても許可番号の形でなければ、建設業者とは決めず「判断できない」に出す(F31e)
 function checkEngineer(owner, target, out, who) {
   const e = owner?.engineer;
   const b = basisOf('q-kensetsu-26-1');
+  const lic = who === '下請け' ? owner?.licenseNumber : '';
+  const notLicense = !blank(lic) && !licenseShaped(lic);
+  const put = (field, message) => {
+    if (!notLicense) out.candidates.push({ kind: 'missing', target, field, message, basis: b });
+    else out.undecidable.push({ target, field, message: message + '。ただし許可番号の欄が「' + lic + '」で許可番号の形と読めず、建設業者とは決められないので、技術者が要るかを判断できません', basis: b });
+  };
   if (!e || blank(e.name)) {
-    out.candidates.push({ kind: 'missing', target, field: 'engineer', message: `${who}の技術者(主任技術者・監理技術者)の氏名が空です`, basis: b });
+    put('engineer', `${who}の技術者(主任技術者・監理技術者)の氏名が空です`);
     return;
   }
-  if (blank(e.qualification)) {
-    out.candidates.push({ kind: 'missing', target, field: 'engineer.qualification', message: `${who}の技術者の資格の欄が空です(第7条第2号イ・ロ・ハのどれに当たるかを書く)`, basis: b });
-  }
+  if (blank(e.qualification)) put('engineer.qualification', `${who}の技術者の資格の欄が空です(第7条第2号イ・ロ・ハのどれに当たるかを書く)`);
 }
 
 // 下請けの総額と、元請けの技術者・許可の種類の食い違い

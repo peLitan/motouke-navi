@@ -43,7 +43,10 @@ test('A-1: 下請けの許可番号が「なし」で主任技術者の欄が空
   assert.equal(find(r2, '架空工業', '4-ho').status, 'empty');
   // 「なし」のほかの書き方
   for (const v of ['なし', '無し', '該当なし', '－', '-', 'なし(軽微な工事のみ)', ' な し ']) assert.ok(isNone(v), v);
-  for (const v of ['架空県知事 許可(般-05)第00002号', '', '申請中']) assert.ok(!isNone(v), v);
+  for (const v of ['架空県知事 許可(般-05)第00002号', '']) assert.ok(!isNone(v), v);
+  // 「申請中」は「なし」ではないが許可番号でもないので、建設業者とは決めず「判断できない」(F31e)
+  const r3 = checkChecklistText(ledger({ engineerRows: KANRI, subRows: ['| 許可番号 | 申請中 |', '| 主任技術者 氏名 | |'] }));
+  assert.equal(find(r3, '架空工業', '4-ho').status, 'unknown');
 });
 
 test('A-2: 「健康保険 / 厚生年金 / 雇用保険 | 加入 / / 加入」は欄ごとに分けて、厚生年金を「空」にする', () => {
