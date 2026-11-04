@@ -1,4 +1,4 @@
-// F14g: 最初の1画面(幅1280・高さ900)に、題・断り書き・できること3行・「見本で試す」のボタン・段階の表示が入る。
+// F14g: 最初の1画面(幅1280・高さ900)に、題・断り書き・できることの1行・「見本で試す」のボタン・段階の表示が入る。
 // 法令の2つの一覧は題の分かる閉じた details にし、「見ていない法令・資料」があることは details の外の1行で常に見せる。
 // この環境にはブラウザが無いので、高さは実測ではなく見積もる: 画面が出す HTML の文と CSS の値から、各ブロックの行数×行の高さ+余白を
 // 多めに数える(和文は1字1em、英数字も0.6emとし、行末の禁則の分として1行あたり1字ぶん幅を減らし、上下の余白は重ねずに足す)
@@ -66,16 +66,15 @@ function estimate() {
   const disc = text(body.match(/<p class="disclaimer" id="disclaimer">([\s\S]*?)<\/p>/)[1]);
   add('断り書き', block(disc, REM, LH, W - 2 * REM - 6) + 0.75 * REM * 2 + 6 + marginTB('.disclaimer'));
 
-  // できること(見出しの1行と3つの箇条)
+  // できること(1行と、閉じた details の見出し。3つの箇条は畳んだ: F37b)
   const lead = body.match(/<div class="lead" id="lead">([\s\S]*?)<\/div>/)[1];
-  let h = marginTB('.lead') + block(text(lead.match(/<p>([\s\S]*?)<\/p>/)[1]), REM, LH, W) + marginTB('.lead ul');
-  for (const m of lead.matchAll(/<li>([\s\S]*?)<\/li>/g)) h += block(text(m[1]), REM, LH, W - 1.5 * REM);
-  add('できること3行', h);
+  const summaryH = (s) => Math.max(px(cssValue('details > summary', 'padding').split(/\s+/)[0]) * 2 + block(s, REM, LH, W - REM), 2.75 * REM);
+  add('できることの1行と見出し', marginTB('.lead') + block(text(lead.match(/<p>([\s\S]*?)<\/p>/)[1]), REM, LH, W) + summaryH(text(lead.match(/<summary>([\s\S]*?)<\/summary>/)[1])));
 
   // 見ていない法令・資料の1行と、閉じた details の見出し
   add('見ていない法令の1行', block(text(body.match(/<p class="scope-not-line" id="scope-not-line">([\s\S]*?)<\/p>/)[1]), REM, LH, W) + marginTB('.scope-not-line'));
   const sum = text(body.match(/<details class="scope" id="scope"><summary>([\s\S]*?)<\/summary>/)[1]);
-  add('法令の一覧の見出し(閉じた details)', Math.max(px(cssValue('details > summary', 'padding').split(/\s+/)[0]) * 2 + block(sum, REM, LH, W - REM), 2.75 * REM) + marginTB('details.scope'));
+  add('法令の一覧の見出し(閉じた details)', summaryH(sum) + marginTB('details.scope'));
 
   // header と入口の枠の間にほかのブロックがあれば、ここで落とす(見積もりから漏らさない)
   const between = body.slice(body.indexOf('</details>', body.indexOf('id="scope"')), body.indexOf('<div class="start no-print" id="start">'));
@@ -84,7 +83,7 @@ function estimate() {
   // 入口の枠(枠 2px・内側 0.75rem 1rem): 見出しと、同じ大きさの3択と、段階の表示
   const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="entry-back"'));
   const inner = W - 2 * REM - 4;
-  h = marginTB('.start') + 0.75 * REM * 2 + 4;
+  let h = marginTB('.start') + 0.75 * REM * 2 + 4;
   h += block(text(start.match(/<h2>([\s\S]*?)<\/h2>/)[1]), px(cssValue('.start h2', 'font-size')), LH, inner) + marginTB('.start h2');
   // 3択は横に3つ並ぶ(間は 0.75rem)。一番高いボタンの高さが列の高さ
   const btns = [...start.matchAll(/<button type="button" id="(?:sample-load|entry-bid|entry-awarded)"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => m[1]);

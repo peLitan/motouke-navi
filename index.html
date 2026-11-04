@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-VRADHRlCF3CqbB/tkkvCA8uIAwj/46xGcEr/bcocugc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-h9jxa3BXFHlasnBfZ40Oi7S/Znb2E83GOVigGsr2JgE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -117,6 +117,11 @@
   details.schedule-table > summary { font-weight: bold; font-size: 1.1rem; }
   .schedule-lead { margin: 0.25rem 0 0.5rem; }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
+  .other-tools > summary h2 { display: inline; margin: 0; }
+  .other-tools-sub { display: block; }
+  /* 説明の折りたたみ(F37b): 押す物の隣は1行にし、2行目からはここへ。文字は本文と同じ大きさのまま */
+  details.fold { margin: 0.1rem 0; }
+  details.fold > summary { color: #1e3a8a; }
   /* 狭い画面(F14e): 幅320〜400px でもページ全体は横に動かない。入力欄は枠の幅まで、表は枠(.table-scroll)の中だけで横に動く。
      ボタン・入力欄・折りたたみの見出しは指で押せる高さ(44px = 2.75rem)にする */
   *, *::before, *::after { box-sizing: border-box; }
@@ -152,6 +157,9 @@
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
     details.basis > summary { color: inherit; }
+    /* 印刷では折りたたみを開くので、「説明」などの見出しは紙に出さない */
+    details.fold > summary { display: none; }
+    .other-tools { margin: 0; border: none; padding: 0; }
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
     .print-only { display: block; }
@@ -164,12 +172,14 @@
 <h1>Motouke Navi(はじめての元請けの確認ツール)</h1>
 <p class="disclaimer" id="disclaimer">指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</p>
 <div class="lead" id="lead">
-<p><strong>このツールでできること</strong></p>
+<p>工事の条件から要るものと段取りを、台帳・目次から抜けの候補を、根拠の条つきで出します。</p>
+<details id="can-do-more"><summary>このツールでできること</summary>
 <ul id="can-do">
 <li>工事の条件から、受注したら要るもの(許可・技術者・施工体制台帳など)と受注後の段取りを、根拠の条つきで出す</li>
 <li>施工体制台帳を貼ると、抜け・食い違いの候補を根拠の条つきで出す</li>
 <li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
 </ul>
+</details>
 </div>
 <p class="scope-not-line" id="scope-not-line"><strong>見ていない法令・資料があります</strong>(条例・契約書・特記仕様書・省令など)。別に確かめてください。</p>
 <details class="scope" id="scope"><summary>このツールが見ている法令・資料と、見ていない法令・資料(一覧)</summary>
@@ -222,9 +232,12 @@
 <section id="panel-1" hidden>
 <section id="bid">
 <h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
-<p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
+<p>案件の条件を入れて「確認する」を押すと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
-<p class="form-lead" id="form-lead">※必須の質問には、分からなければ「分からない」を選んでください。「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
+<p class="form-lead" id="form-lead">分からなければ「分からない」を選べます。</p>
+<details class="fold" id="form-lead-more"><summary>選び方の詳しい説明</summary>
+<p>「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
+</details>
 <div class="row"><label for="orderer">発注者<span class="req req-must">※必須</span></label>
 <select id="orderer" name="orderer" aria-describedby="orderer-hint">
 <option value="">選んでください</option>
@@ -232,13 +245,13 @@
 <option value="private">民間</option>
 <option value="unknown">分からない</option>
 </select>
-<p id="orderer-hint" class="hint">工事を注文した人(元請けに注文した人)の区分です。下請けで請け負うときも、元の発注者で選びます。</p></div>
+<details class="fold hint-fold"><summary aria-label="発注者の説明">説明</summary><p id="orderer-hint" class="hint">工事を注文した人(元請けに注文した人)の区分です。下請けで請け負うときも、元の発注者で選びます。</p></details></div>
 <fieldset class="row radio-group" aria-describedby="direct-hint"><legend>元請けか下請けか<span class="req req-must">※必須</span></legend>
 <div><input type="radio" id="direct-unset" name="role" value="" checked><label for="direct-unset">選んでください(まだ選んでいない)</label></div>
 <div><input type="radio" id="direct" name="role" value="prime"><label for="direct">元請け(発注者から直接請け負う)</label></div>
 <div><input type="radio" id="direct-sub" name="role" value="sub"><label for="direct-sub">下請け(元請けなどから請け負う)</label></div>
 <div><input type="radio" id="direct-unknown" name="role" value="unknown"><label for="direct-unknown">分からない</label></div>
-<p id="direct-hint" class="hint">発注者から直接請け負うなら「元請け」、元請けやほかの下請けから請け負うなら「下請け」です。選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p>
+<details class="fold hint-fold"><summary aria-label="元請けか下請けかの説明">説明</summary><p id="direct-hint" class="hint">発注者から直接請け負うなら「元請け」、元請けやほかの下請けから請け負うなら「下請け」です。選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p></details>
 </fieldset>
 <div class="row"><label for="work-type">工事の種類<span class="req req-must">※必須</span></label>
 <select id="work-type" name="work-type" aria-describedby="work-type-hint">
@@ -247,15 +260,15 @@
 <option value="other">それ以外の工事</option>
 <option value="unknown">分からない</option>
 </select>
-<p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上で「下請け」を選んだ)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></div>
+<details class="fold hint-fold"><summary aria-label="工事の種類の説明">説明</summary><p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上で「下請け」を選んだ)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></details></div>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-hint">
 <span class="unknown-check"><input type="checkbox" id="contract-amount-unknown" name="contract-amount-unknown"><label for="contract-amount-unknown">分からない</label></span>
-<p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。</p></div>
+<details class="fold hint-fold"><summary aria-label="請負代金の見込みの説明">説明</summary><p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。</p></details></div>
 <div class="row"><label for="subcontract-total">下請けの総額(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000" aria-describedby="subcontract-total-hint">
 <span class="unknown-check"><input type="checkbox" id="subcontract-total-unknown" name="subcontract-total-unknown"><label for="subcontract-total-unknown">分からない</label></span>
-<p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。</p></div>
+<details class="fold hint-fold"><summary aria-label="下請けの総額の説明">説明</summary><p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。</p></details></div>
 <div class="row"><label for="license">元請けの許可の種類(この工事の業種)<span class="req req-must">※必須</span></label>
 <select id="license" name="license" aria-describedby="license-hint">
 <option value="">選んでください</option>
@@ -263,7 +276,7 @@
 <option value="ippan">一般建設業</option>
 <option value="unknown">分からない</option>
 </select>
-<p id="license-hint" class="hint">この工事の業種で持っている許可が、特定建設業か一般建設業かを選びます(許可は業種ごとに分かれます)。</p></div>
+<details class="fold hint-fold"><summary aria-label="元請けの許可の種類の説明">説明</summary><p id="license-hint" class="hint">この工事の業種で持っている許可が、特定建設業か一般建設業かを選びます(許可は業種ごとに分かれます)。</p></details></div>
 <div class="row"><label for="engineer-qualification">置ける技術者の資格<span class="req req-must">※必須</span></label>
 <select id="engineer-qualification" name="engineer-qualification" aria-describedby="engineer-qualification-hint">
 <option value="">選んでください</option>
@@ -271,9 +284,9 @@
 <option value="shunin">主任技術者</option>
 <option value="unknown">分からない</option>
 </select>
-<p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></div>
+<details class="fold hint-fold"><summary aria-label="置ける技術者の資格の説明">説明</summary><p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></details></div>
 <div class="row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
-<p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></div>
+<details class="fold hint-fold"><summary aria-label="閲覧できる措置の説明">説明</summary><p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></details></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
 </section>
@@ -295,7 +308,9 @@
 <input type="file" id="rules-load" name="rules-load" accept=".json,application/json">
 <button type="button" id="rules-clear" hidden>国の直轄の例に戻す</button></div>
 <p id="rules-status" aria-live="polite"></p>
+<details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
+</details>
 <div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
@@ -320,8 +335,9 @@
 <section id="panel-3" hidden>
 <section id="ledger-check">
 <h2>2. 施工体制台帳の点検</h2>
-<p>施工体制台帳を、見出しと「| 項目 | 内容 |」の表の形で貼って「台帳を点検する」を押すと、抜け・食い違いの候補を根拠の条つきで出します。発注者(公共・民間)と工事の種類は、上の「1.」の選ぶ欄の値を使います。決められないことは「判断できない」に出します。</p>
+<p>台帳を貼って「台帳を点検する」を押すと、抜け・食い違いの候補を根拠の条つきで出します。</p>
 <details class="no-print"><summary>台帳の書き方</summary>
+<p>見出しと「| 項目 | 内容 |」の表の形で貼ります。発注者(公共・民間)と工事の種類は、段階の「1 条件を入れる」で選んだ値を使います。決められないことは「判断できない」に出します。</p>
 <pre>工事名: (工事の名前)
 ## 1. 作成建設業者(元請)
 | 項目 | 内容 |
@@ -347,22 +363,29 @@
 </details>
 <div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
 <input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+<details class="fold"><summary>Excel で読める欄</summary>
 <p class="note" id="ledger-file-note">ファイルはこの PC の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
+</details>
 <p id="ledger-file-status" aria-live="polite"></p>
 <div id="ledger-unreadable" class="result" aria-live="polite"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
 <textarea id="ledger-input" name="ledger-input" rows="12" cols="80"></textarea></div>
 <div class="row"><label for="taikeizu-input">施工体系図の文(任意)</label><br>
 <textarea id="taikeizu-input" name="taikeizu-input" rows="8" cols="80" placeholder="例&#10;発注者: (発注者の名前)&#10;[元請] (会社名)&#10;[一次] (下請けの会社名)&#10;  主任技術者: (氏名)"></textarea></div>
+<details class="fold"><summary>施工体系図を貼ると何を見るか</summary>
 <p class="note" id="taikeizu-note">貼ると、台帳と下請負人の一覧・下請けの技術者の氏名・発注者の名前を突き合わせます。下の「施工計画書の目次」の欄に「発注者: …」の行があれば、発注者の名前もあわせて比べます。どちらも空なら台帳だけを点検します。</p>
+</details>
 <div class="row"><button type="button" id="ledger-run">台帳を点検する</button>
 <button type="button" id="check-csv-btn">点検の結果を CSV に書き出す</button></div>
 <p id="check-status" aria-live="polite"></p>
 <div id="check-result" class="result" aria-live="polite"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
 <div id="checklist-section">
 <h3>台帳の記載事項の表(建設業法施行規則 第14条の2 第1項)</h3>
+<p>「台帳を点検する」を押すと、記載事項ごとに、台帳の値か「空」か「判断できない」かを表で出します。</p>
+<details class="fold"><summary>この表の見方と「確認した」の印</summary>
 <p>「台帳を点検する」を押すと、上の候補とは別に、第14条の2 第1項の記載事項ごとに、台帳に見つかった値か「空」か「判断できない」かを表で出します。台帳の値は書いてあるまま出し、推測で埋めません。各行の「確認した」は、台帳や別紙を見て人が確かめた印です。チェックはこの画面の中だけに持ち、ブラウザに保存しません(ページを閉じると消えます)。印刷と CSV にはチェックの有無が出ます。</p>
 <p class="note" id="checklist-reference">参考: 国土交通省「施工体制台帳等のチェックリスト」(https://www.mlit.go.jp/totikensangyo/const/content/001389105.docx。掲載ページ「施工体制台帳、施工体系図等」https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html。取得日 2026-11-03)。このツールはチェックリストの文を写しておらず、表の事項は施行規則 第14条の2 の原文から作っています</p>
+</details>
 <div class="row"><button type="button" id="checklist-csv-btn">記載事項の表を CSV に書き出す</button></div>
 <p id="checklist-status" aria-live="polite"></p>
 <div id="checklist-result" class="result"><p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p></div>
@@ -370,7 +393,10 @@
 </section>
 <section id="plan-check">
 <h2>3. 施工計画書の目次の点検</h2>
-<p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。上の欄の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
+<p>目次を貼って「目次を点検する」を押すと、記載事項のうち見当たらない項目を抜けの候補として出します。</p>
+<details class="fold" id="plan-about-fold"><summary>点検のしかたと範囲</summary>
+<p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。段階の「1 条件を入れる」の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
+</details>
 <p class="schedule-notice note" id="plan-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
@@ -380,21 +406,25 @@
 <div id="plan-result" class="result" aria-live="polite"><p>目次を貼って「目次を点検する」を押してください。</p></div>
 </section>
 </section>
-<div class="other-tools no-print" id="other-tools">
-<h2>ここからは別の道具</h2>
-<p>A・B は、上の 1.〜3.(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
-</div>
+<details class="other-tools" id="other-tools">
+<summary class="no-print"><h2>ここからは別の道具</h2><span class="other-tools-sub">A 文の置き換え・B AI の候補の読み込み</span></summary>
+<p class="no-print">A・B は、上の 1.〜3.(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
 <section id="mask" class="no-print">
 <h2>A. 文の置き換え(外のサービスに貼る前に)</h2>
-<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
+<p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。</p>
 <p class="note" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
+<details class="fold"><summary>使い方と限界</summary>
+<p>置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
 <p class="note" id="mask-limits">限界(架空の書類での測定): 敬称・役職・欄名の隣の語を人名の候補として、工事・工区・作業所・現場などで終わる語を現場名の候補として置き換えます。辞書作りに使っていない初めて見る書類4件では、辞書に語を足さない場合の漏れの率は 37.8% でした(人名・現場名を辞書に足すと 14.3%)。会社名は24語中11語が、足しても残りました。規則を作るときに見た見本の書類では 4.2% でしたが、この数字は当てになりません。人名・現場名は「辞書に足す」で足し、後の欄を必ず目で確かめてください。詳しくは docs/mask-rate.md。</p>
+</details>
 <div class="row"><label for="mask-industry">業界(語尾・役職の表)</label>
 <select id="mask-industry" name="mask-industry">
 <option value="construction" selected>建設</option>
 <option value="medical">医療(例)</option>
 </select></div>
+<details class="fold"><summary>「医療(例)」について</summary>
 <p class="note" id="mask-industry-note">「医療(例)」は、病院・医院・クリニック・診療所・薬局などで終わる語を施設名の候補として、医師・看護師などの後ろの語を人名の候補として置き換える「例」の表です。医療の書類での漏れの率は測っていません(上の限界の数字は建設の書類のものです)。医療では建設業の許可番号・共同企業体の形は使いません。切り替えても足した語は残りますが、対応表は消えます。</p>
+</details>
 <p id="mask-industry-status" aria-live="polite"></p>
 <div class="row"><label for="dict-word">辞書に足す語</label>
 <input type="text" id="dict-word" name="dict-word" placeholder="例 甲野 一郎">
@@ -419,7 +449,9 @@
 <p id="dict-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
 <input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+<details class="fold"><summary>読めるファイルと読めないもの</summary>
 <p class="note" id="mask-file-note">ファイルはこの PC の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
+</details>
 <p id="mask-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-input">置き換える文</label><br>
 <textarea id="mask-input" name="mask-input" rows="8" cols="80"></textarea></div>
@@ -459,13 +491,17 @@
 </section>
 <section id="ai-check">
 <h2>B. Claude で点検した結果(AI の候補)</h2>
-<p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。書き出した結果のファイルをここで読み込むと、下の欄に出します。</p>
+<p>手元のプログラムが書き出した結果のファイルを読み込むと、AI の候補を下の欄に出します。</p>
 <p class="note" id="ai-note">ここに出るのは AI の候補です。上の「1.」〜「3.」の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
+<details class="fold"><summary>結果のファイルの作り方</summary>
+<p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。</p>
+</details>
 <div class="row"><label for="ai-load">AI の候補を読み込む</label>
 <input type="file" id="ai-load" name="ai-load" accept=".json,application/json"></div>
 <p id="ai-status" aria-live="polite"></p>
 <div id="ai-result" class="result" aria-live="polite"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
 </section>
+</details>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
 <div id="sources-dates">
@@ -6567,6 +6603,9 @@ function applyRulesTable(doc) {
     if (notice) notice.textContent = custom ? tableNotice(rulesTable) : NATIONAL_NOTICE[noticeId];
     const about = doc.getElementById(aboutId);
     if (about) about.hidden = custom;
+    // 説明の折りたたみ(F37b)は中身が隠れると空になるので、見出しごと隠す
+    const fold = about?.closest?.('details');
+    if (fold) fold.hidden = custom;
   }
   const clear = doc.getElementById('rules-clear');
   if (clear) clear.hidden = !rulesTable;

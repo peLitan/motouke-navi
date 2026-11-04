@@ -176,6 +176,9 @@ function applyRulesTable(doc) {
     if (notice) notice.textContent = custom ? tableNotice(rulesTable) : NATIONAL_NOTICE[noticeId];
     const about = doc.getElementById(aboutId);
     if (about) about.hidden = custom;
+    // 説明の折りたたみ(F37b)は中身が隠れると空になるので、見出しごと隠す
+    const fold = about?.closest?.('details');
+    if (fold) fold.hidden = custom;
   }
   const clear = doc.getElementById('rules-clear');
   if (clear) clear.hidden = !rulesTable;
