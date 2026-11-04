@@ -40,8 +40,8 @@
   mark.mask-unchecked { outline: 2px solid #92400e; text-decoration: underline; text-decoration-thickness: 2px; }
   mark.mask-replace { color: #111827; background: #e5e7eb; }
   mark.mask-keep { color: #111827; background: #dbeafe; }
-  #mask-review td, #mask-review th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
-  #mask-review button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
+  #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
+  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
   #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
@@ -399,6 +399,8 @@
 <div><h3>後</h3><pre id="mask-after"></pre></div>
 </div>
 <div id="mask-review"></div>
+<div id="mask-candidates"></div>
+<p id="mask-candidate-status" aria-live="polite"></p>
 <h3>対応表</h3>
 <div id="mask-map"></div>
 <p class="note" id="mask-unchecked" role="status" hidden></p>

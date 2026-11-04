@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PRoGAIj1HFAmCQTRUHFalS0VrVft4NKk0ZCQdcU+NGQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ytBMYHDu5s/c+xhAtRdn+gU+2WIXYzL4iY39CllXG34='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -40,8 +40,8 @@
   mark.mask-unchecked { outline: 2px solid #92400e; text-decoration: underline; text-decoration-thickness: 2px; }
   mark.mask-replace { color: #111827; background: #e5e7eb; }
   mark.mask-keep { color: #111827; background: #dbeafe; }
-  #mask-review td, #mask-review th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
-  #mask-review button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
+  #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
+  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
   #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
@@ -411,6 +411,8 @@
 <div><h3>後</h3><pre id="mask-after"></pre></div>
 </div>
 <div id="mask-review"></div>
+<div id="mask-candidates"></div>
+<p id="mask-candidate-status" aria-live="polite"></p>
 <h3>対応表</h3>
 <div id="mask-map"></div>
 <p class="note" id="mask-unchecked" role="status" hidden></p>
@@ -3900,7 +3902,31 @@ const COMPANY_ROLE_WORDS = [
   '御中', '殿', '様', '支店', '支社', '営業所', '本社', '本店', '工場', '事業所', '出張所', '担当', '担当者', '印',
 ];
 
-return { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, AMBIGUOUS_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, FACILITY_HEAD_WORDS, FACILITY_HEAD_TAIL_WORDS, FACILITY_HEAD_TAIL_CHARS, FACILITY_OPERATOR_TYPES, FACILITY_OPERATOR_ABBREVIATIONS, FACILITY_SHORT_SUFFIXES, FACILITY_SHORT_NON_NAMES, ORG_GENERIC_WORDS, ORG_SUFFIX_GENERIC_WORDS, PREFECTURE_NAMES_KEN, CORP_TAIL_SENTENCE_WORDS, CORP_TAIL_SYSTEM_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS };
+// ---- 辞書に足す候補(F36b)。慣用の語で、法令の定義は無い。使う所は src/mask/company-candidates.mjs ----
+// 候補は自動で置き換えないので、語尾の一覧は置き換えの一覧(ORG_SUFFIXES_CUSTOM)より広くしてよい。ただし文の中に普通に出る語尾は入れない
+// 会社・団体の名前が値になる欄の名前(業界を問わない語)
+const CANDIDATE_FIELD_LABELS = [
+  '商号', '商号又は名称', '商号・名称', '名称又は商号', '名称・商号', '会社名', '会社名称', '社名', '法人名', '団体名', '企業名', '事業者名', '事業所名', '業者名',
+  '取引先', '取引先名', '委託先', '委託先名', '契約先', '契約相手方', '勤務先', '所属会社', '所属会社名', '受託者', '受託事業者',
+];
+// 置き換えの法人格の一覧に無い、法人の種類に近い語(前の法人の種類の旧い書き方など)。名前の前にも後ろにも付く
+const NEAR_CORPORATE_TYPES = ['社団法人', '財団法人', '企業組合', '協業組合', '国立研究開発法人'];
+// 括弧の略し方のうち、置き換えの一覧に無いもの(「(同)」は合同会社、「(資)」は合資会社)。「人数(同)」のように同上の意味でも出るが、候補は選べるので出す
+const NEAR_CORPORATE_ABBREVIATIONS = ['同', '資'];
+// 会社・団体の名前の終わりに付く、慣用の語尾(業界を問わない語)
+const CANDIDATE_SUFFIXES = [
+  '商事', '物産', '通商', '運輸', '運送', '不動産', '地所', '電機', '電鉄', '工機', '精機', '鉄工', '鉄工所', '工業所', '木材', '化成',
+  'ホールディングス', 'コーポレーション', 'カンパニー', 'コンサルタント', 'コンサルタンツ', 'コンサルティング', 'エンジニアリング', 'ソリューションズ', 'システムズ', 'リース',
+  '公社', '事業団', '振興会',
+];
+// 欄の値に来ても名前ではない語(空欄の印・指し方・表の見出しの語)
+const CANDIDATE_VALUE_STOP_WORDS = [
+  'なし', '無し', '無', '有', 'あり', '有り', '空欄', '未定', '未記入', '未記載', '記載なし', '該当なし', '該当無し', '不明', '同上', '別紙', '別途', '別添', 'その他', '上記', '下記', '当社', '自社',
+  '一覧', '一覧表', '名簿', '住所', '所在地', '本店所在地', '電話', '電話番号', '代表者', '代表者名', '代表者氏名', '担当者', '氏名', '項目', '内容', '備考', '番号', '金額', '合計', '小計', '総計', '日付', '契約日',
+  '工事', '工事名', '工事内容', '工種', '次数', '許可番号', '区分', '種別', '種類', '役割', '業種', '名称', '会社', '業者',
+];
+
+return { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, AMBIGUOUS_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, FACILITY_HEAD_WORDS, FACILITY_HEAD_TAIL_WORDS, FACILITY_HEAD_TAIL_CHARS, FACILITY_OPERATOR_TYPES, FACILITY_OPERATOR_ABBREVIATIONS, FACILITY_SHORT_SUFFIXES, FACILITY_SHORT_NON_NAMES, ORG_GENERIC_WORDS, ORG_SUFFIX_GENERIC_WORDS, PREFECTURE_NAMES_KEN, CORP_TAIL_SENTENCE_WORDS, CORP_TAIL_SYSTEM_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS, CANDIDATE_FIELD_LABELS, NEAR_CORPORATE_TYPES, NEAR_CORPORATE_ABBREVIATIONS, CANDIDATE_SUFFIXES, CANDIDATE_VALUE_STOP_WORDS };
 })();
 __m["src/mask/rules-company.mjs"] = (function () {
 // 会社・団体の名前の規則(F24a)。業界を問わない。語の一覧は src/mask/company-types.mjs(出典つき)から読む。
@@ -4221,7 +4247,7 @@ function facilityPatterns(kind = 'company') {
   return [head, after];
 }
 
-return { enclosedCorporateChars, ENCLOSED_CHARS, CORP, trimHead, trimTail, restLength, COMPANY_RULES, companyPatterns, FACILITY_RULES, orgSuffixPatterns, facilityPatterns };
+return { enclosedCorporateChars, ENCLOSED_CHARS, CORP, trimHead, trimTail, restLength, orgRestLength, isCorpTailWord, COMPANY_RULES, companyPatterns, FACILITY_RULES, orgSuffixPatterns, facilityPatterns };
 })();
 __m["src/mask/rules-address.mjs"] = (function () {
 // 住所の規則(F24b)。業界を問わない。置き換えの部品(core.mjs)が形として使う。
@@ -5225,8 +5251,19 @@ const CONSTRUCTION_PERSON_LABELS = ['技術者氏名', '代理人氏名', '作�
 // 建設の書類で役職・欄名の隣に来るが人名ではない語
 const CONSTRUCTION_STOP_WORDS = ['施主', '発注者', '元請', '下請', '一次', '二次', '三次', '土木', '建築', '舗装', '工事', '施工', '監理', '主任', '一式'];
 
+// 辞書に足す候補(F36b)の建設の語。会社名が値になる欄の名前と、建設の会社の名前の終わりに付く慣用の語尾。
+// stopWords は語尾の前に来ても名前ではない語(工事の種類の言い方)。候補は自動で置き換えない
+const CONSTRUCTION_CANDIDATES = {
+  labels: ['下請負人', '再下請負人', '下請負人名', '下請', '下請会社', '下請会社名', '下請業者', '下請業者名', '元請負人', '元請', '元請会社', '元請業者', '建設業者', '専門工事業者',
+    '協力会社', '協力会社名', '協力業者', '施工業者', '施工会社', '受注者', '請負者', '請負人', '請負業者', '納入業者', '資材業者', '運搬業者', '処分業者', '収集運搬業者'],
+  suffixes: ['土木', '電設', '建材', '重機', '造園', '板金', '測量', '建工', '技建', '工営', '建鉄', '舗道', '電工', '住建', '塗装', '設備'],
+  stopWords: ['給排水', '衛生', '空調', '電気', '弱電', '強電', '機械', '消防', '防災', '防火', '換気', '昇降機', '給水', '排水', '照明', '屋外', '屋内', '付帯', '附帯', '建築',
+    '外壁', '屋根', '鋼橋', '鉄骨', '橋梁', '防食', '区画線', '仮設', '安全', '通信', '放送', '受変電', 'インターホン', '建機', '重機'],
+};
+
 const CONSTRUCTION_DICT = {
   name: '建設',
+  candidates: CONSTRUCTION_CANDIDATES,
   labels: {
     license: '許可番号',
     site: '現場名',
@@ -5263,7 +5300,7 @@ const CONSTRUCTION_DICT = {
   ],
 };
 
-return { CONSTRUCTION_PERSON_TITLES, CONSTRUCTION_PERSON_LABELS, CONSTRUCTION_STOP_WORDS, CONSTRUCTION_DICT };
+return { CONSTRUCTION_PERSON_TITLES, CONSTRUCTION_PERSON_LABELS, CONSTRUCTION_STOP_WORDS, CONSTRUCTION_CANDIDATES, CONSTRUCTION_DICT };
 })();
 __m["src/mask/suffix-medical.mjs"] = (function () {
 // 施設名の語尾の表(医療。F19b の「例」): 医療の書類で、病院・診療所・薬局などの名前の終わりに付く語。
@@ -5614,12 +5651,217 @@ function residualMessage(r) {
 
 return { normalizeWithMap, findResiduals, residualMessage };
 })();
+__m["src/mask/company-candidates.mjs"] = (function () {
+// 辞書に足す候補(F36b): 置き換えで見つからなかった語のうち、会社・団体の名前らしい語を探して、利用者に見せる。
+// ここは探すだけで、置き換えない(文も対応表も変えない)。足すかどうかは画面で利用者が1つずつ選ぶ(src/ui/mask-app.mjs)。
+// 探す所は2つ:
+//   欄の値(field): 「商号」「会社名」「下請負人」などの欄の値。表(| 区切り・タブ区切り)の、横に値が並ぶ形と、見出しの行の下に値が並ぶ形。
+//     表でない行は「欄名: 値」と、行の頭の「欄名 値」を見る
+//   名前の形(shape): 法人の種類に近い語(社団法人・(同)・Co., Ltd. など)や、慣用の語尾(土木・電設・商事など)で終わる語
+// 語の一覧は company-types.mjs(業界を問わない語)と、辞書の candidates(業界の語)から読む。外部と通信しない・何も保存しない。
+
+const { CANDIDATE_FIELD_LABELS, CANDIDATE_SUFFIXES, CANDIDATE_VALUE_STOP_WORDS, NEAR_CORPORATE_TYPES, NEAR_CORPORATE_ABBREVIATIONS } = __m["src/mask/company-types.mjs"];
+const { trimHead, trimTail, restLength, orgRestLength, isCorpTailWord } = __m["src/mask/rules-company.mjs"];
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const alt = (words) => [...new Set(words)].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
+
+const SOLID = '\\p{Script=Han}\\p{Script=Katakana}ー々〆ヶA-Za-z0-9Ａ-Ｚａ-ｚ０-９＆&・';
+const HIRA = '\\p{Script=Hiragana}';
+const NAME = `[${SOLID}${HIRA}]`;
+const SP = '[ \\u3000]';
+const PLAIN_NAME = new RegExp(`^[${HIRA}]*[${SOLID}]*$`, 'u');
+const LATIN = "[A-Za-z0-9&.'\\- ]";
+
+// 欄の値から外す後ろの語と括弧の添え書き(「甲野土木 御中」「甲野土木(一次)」)
+const VALUE_TAIL = /(?:[ 　]*(?:御中|殿|様)|[ 　]*[((][^()()]*[))])+$/u;
+const SENTENCE_END = /(?:です|ます|ません|する|した|して|される|された|こと|もの|とおり|ください|について)$/u;
+const NUMBER_LIKE = /^(?:令和|平成|昭和|[RHSＲＨＳ])?[元0-9０-９\s　,，.．\-−ー/／:：年月日円%％]+$/u;
+const MARKS_ONLY = /^[-−ー―–—_＿*＊・.…○〇◯●×✕△▲□■☆★?？\s　]+$/u;
+const PLACEHOLDER = /(?:○○|〇〇|◯◯|××|△△|xxxx|XXXX)/u;
+const TABLE_RULE = /^[\s:：\-−ー―–—=]+$/u;
+
+const compact = (s) => s.replace(/[\s　]+/gu, '');
+
+// 表の1行を欄に分ける。| 区切りかタブ区切りでなければ null。欄は { text, start, end }(start・end は行の中の位置)
+function splitCells(line) {
+  const sep = /[|｜]/u.test(line) ? /[|｜]/gu : (line.includes('\t') ? /\t/gu : null);
+  if (!sep) return null;
+  const cells = [];
+  let pos = 0;
+  const push = (a, b) => {
+    const raw = line.slice(a, b);
+    const lead = raw.length - raw.trimStart().length;
+    const text = raw.trim();
+    cells.push({ text, start: a + lead, end: a + lead + text.length });
+  };
+  for (const m of line.matchAll(sep)) { push(pos, m.index); pos = m.index + 1; }
+  push(pos, line.length);
+  if (sep.source.includes('|')) {
+    if (!cells[0].text) cells.shift();
+    if (cells.length && !cells[cells.length - 1].text) cells.pop();
+  }
+  return cells;
+}
+const isRuleRow = (cells) => !!cells && cells.length > 0 && cells.every((c) => TABLE_RULE.test(c.text));
+
+// 文の中の位置 [start, end) のうち、置き換えで見つかった語に重ならない所
+function uncoveredParts(start, end, spans) {
+  const parts = [];
+  let pos = start;
+  for (const s of spans) {
+    if (s.end <= pos) continue;
+    if (s.start >= end) break;
+    if (s.start > pos) parts.push([pos, s.start]);
+    pos = Math.max(pos, s.end);
+  }
+  if (pos < end) parts.push([pos, end]);
+  return parts;
+}
+
+// options: { labels, suffixes, stopWords }(辞書の candidates。業界の語)
+// 返す値: [{ word, source: 'field' | 'shape', basis, count }]。文に出てくる順で、欄の値を先に並べる
+function findCompanyCandidates(text, spans = [], options = {}) {
+  const src = String(text ?? '');
+  const sorted = [...spans].sort((a, b) => a.start - b.start);
+  const labels = [...CANDIDATE_FIELD_LABELS, ...(options.labels || [])];
+  const suffixes = [...CANDIDATE_SUFFIXES, ...(options.suffixes || [])];
+  const stop = options.stopWords || [];
+  const valueStop = new Set([...CANDIDATE_VALUE_STOP_WORDS, ...labels]);
+  const covered = (a, b) => sorted.some((s) => a < s.end && s.start < b);
+  const found = new Map();
+  const add = (word, source, basis) => {
+    const w = word.trim();
+    const key = compact(w);
+    if (found.has(key)) return;
+    found.set(key, { word: w, source, basis, count: Math.max(1, src.split(w).length - 1) });
+  };
+  const stripStop = (name) => stop.reduce((s, w) => s.split(w).join(''), name);
+
+  // ---- 欄の値 ----
+  const LABEL = alt(labels);
+  const labelCell = new RegExp(`^(?:[一二三四1-9１-９]次)?(?:${LABEL})(?:の(?:商号|名称))?(?:名)?(?:[((][^()()]*[))])?$`, 'u');
+  const isLabel = (s) => labelCell.test(compact(s));
+  const isHeaderWord = (s) => isLabel(s) || valueStop.has(compact(s)) || /(?:の日|年月日|番号|金額|代金額|住所|電話|氏名|工事|内容)$/u.test(compact(s));
+
+  function nameValue(raw) {
+    const v = raw.replace(VALUE_TAIL, '').trim();
+    const n = compact(v);
+    if ([...n].length < 2 || [...n].length > 40) return null;
+    if (NUMBER_LIKE.test(v) || MARKS_ONLY.test(v) || PLACEHOLDER.test(v)) return null;
+    if (/[。?？!!「」『』::]/u.test(v) || SENTENCE_END.test(n)) return null;
+    if ((v.match(/[((]/gu) || []).length !== (v.match(/[))]/gu) || []).length) return null;
+    if (valueStop.has(n) || isLabel(v) || n.startsWith('別紙')) return null;
+    if (restLength(n) < 2) return null;
+    return v;
+  }
+  // 値の位置 [a, b) から、見つかっていない所を取り出して候補にする。読点などで並ぶ値は分ける
+  function addValue(a, b, label) {
+    for (const [s, e] of uncoveredParts(a, b, sorted)) {
+      for (const part of src.slice(s, e).split(/[、,，/／]/u)) {
+        const v = nameValue(part);
+        if (v) add(v, 'field', '「' + label + '」の欄');
+      }
+    }
+  }
+
+  const lineStart = new RegExp(`^[ \\t\\u3000]*(?:[-*+・●■◆▪][ \\u3000]*)?(?:[0-9０-９]+[.)．）][ \\u3000]*)?((?:[一二三四1-9１-９]次)?(?:${LABEL}))(?:[((][^()()]*[))])?(?:${SP}*[:：]${SP}*|${SP}+)(\\S.*)$`, 'u');
+  const midColon = new RegExp(`(?<![${SOLID}${HIRA}])((?:[一二三四1-9１-９]次)?(?:${LABEL}))${SP}*[:：]${SP}*([^\\s\\u3000。;；]+)`, 'gu');
+
+  const lines = [];
+  for (let pos = 0, i = 0, rows = src.split('\n'); i < rows.length; pos += rows[i].length + 1, i++) lines.push({ index: pos, text: rows[i].replace(/\r$/u, '') });
+  let columns = null; // 見出しの行で見つけた欄 [{ col, label }]
+  lines.forEach((m, i) => {
+    const line = m.text;
+    const cells = splitCells(line);
+    if (!cells || cells.length < 2) {
+      columns = null;
+      if (!line.trim() || /^\s*#/u.test(line)) return;
+      const hit = line.match(lineStart);
+      if (hit) {
+        const start = line.length - hit[2].length;
+        const tokens = hit[2].trim().split(/[ \u3000]+/u);
+        // 「欄名: 値」は最初の語、「欄名 値」は2語までを値にする(「甲野 土木」)
+        const whole = !/[:：]/u.test(line.slice(0, start)) && tokens.length <= 2;
+        addValue(m.index + start, m.index + start + (whole ? hit[2].trimEnd().length : tokens[0].length), hit[1]);
+        return;
+      }
+      for (const c of line.matchAll(midColon)) {
+        const start = c.index + c[0].length - c[2].length;
+        addValue(m.index + start, m.index + c.index + c[0].length, c[1]);
+      }
+      return;
+    }
+    if (isRuleRow(cells)) return;
+    if (columns) {
+      for (const { col, label } of columns) if (cells[col]) addValue(m.index + cells[col].start, m.index + cells[col].end, label);
+      return;
+    }
+    const hits = cells.map((c, col) => ({ col, label: c.text })).filter((c) => isLabel(c.label));
+    if (!hits.length) return;
+    const next = lines[i + 1] ? splitCells(lines[i + 1].text) : null;
+    const others = cells.filter((c) => !isLabel(c.text));
+    const headerLike = others.filter((c) => isHeaderWord(c.text)).length;
+    if (isRuleRow(next) || (others.length > 0 && headerLike * 2 >= others.length)) { columns = hits; return; }
+    for (const { col, label } of hits) {
+      const v = cells[col + 1];
+      if (v) addValue(m.index + v.start, m.index + v.end, label);
+    }
+  });
+
+  // ---- 名前の形 ----
+  const keepName = (word, basis) => add(word, 'shape', basis);
+  const nearAlt = alt(NEAR_CORPORATE_TYPES);
+  const parenAbbr = `[(（](?:${alt(NEAR_CORPORATE_ABBREVIATIONS)})[)）]`;
+  const nearBefore = new RegExp(`(${NAME}{1,30}?)${SP}?(${nearAlt}|${parenAbbr})`, 'gu');
+  for (const m of src.matchAll(nearBefore)) {
+    const dot = m[1].lastIndexOf('・') + 1;
+    const h0 = trimHead(m[1].slice(dot));
+    if (h0 < 0) continue;
+    const h = dot + h0;
+    const kept = m[1].slice(h);
+    const end = m.index + m[0].length;
+    if (restLength(kept) < 2 || covered(m.index + h, end)) continue;
+    keepName(src.slice(m.index + h, end), '法人の種類に近い語「' + m[2] + '」');
+  }
+  const nearAfter = new RegExp(`(${nearAlt}|${parenAbbr})${SP}?(${NAME}{1,30})`, 'gu');
+  for (const m of src.matchAll(nearAfter)) {
+    const kept = m[2].slice(0, trimTail(m[2].replace(/・+$/u, '')));
+    if (!kept || restLength(kept) < 2 || isCorpTailWord(kept)) continue;
+    const end = m.index + m[0].length - m[2].length + kept.length;
+    if (covered(m.index, end)) continue;
+    keepName(src.slice(m.index, end), '法人の種類に近い語「' + m[1] + '」');
+  }
+  const latin = new RegExp(`[A-Za-z0-9]${LATIN}{1,40}?,?${SP}?(?:Co\\.,?${SP}?Ltd\\.?|Inc\\.?|LLC|Corp\\.?|K\\.K\\.)(?![A-Za-z0-9])`, 'gu');
+  for (const m of src.matchAll(latin)) {
+    if (!covered(m.index, m.index + m[0].length)) keepName(m[0], '英語の会社の書き方');
+  }
+  const suffixRe = new RegExp(`(${NAME}{1,30}?)(${alt(suffixes)})(?![\\p{Script=Han}\\p{Script=Katakana}ー々])`, 'gu');
+  for (const m of src.matchAll(suffixRe)) {
+    // 「給排水・甲野設備」「個人名・公社」のような並びは、最後の中黒の後ろだけを見る
+    const dot = m[1].lastIndexOf('・') + 1;
+    const h0 = trimHead(m[1].slice(dot));
+    if (h0 < 0) continue;
+    const h = dot + h0;
+    const kept = m[1].slice(h);
+    const end = m.index + m[0].length;
+    if (!PLAIN_NAME.test(kept) || orgRestLength(stripStop(kept)) < 2 || covered(m.index + h, end)) continue;
+    keepName(src.slice(m.index + h, end), '語尾「' + m[2] + '」');
+  }
+
+  const all = [...found.values()];
+  return [...all.filter((c) => c.source === 'field'), ...all.filter((c) => c.source !== 'field')];
+}
+
+return { findCompanyCandidates };
+})();
 __m["src/ui/mask-app.mjs"] = (function () {
 // 画面の置き換え(F11a): 貼り付けた文を記号に置き換え、前・後・対応表を並べる。戻ってきた文を元に戻す。辞書に語を足す。
 // 対応表と足した語は、この画面のメモリの中だけに持つ(ページを閉じれば消える)。
 // 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
 // 足した語だけを「辞書を書き出す」で辞書のファイルにし、「辞書を読み込む」で読み込める(F19a)。こちらも元の名前が入っている。
 // 業界(建設・医療(例))を切り替えられる(F19b)。
+// 置き換えで見つからなかった会社・団体の名前らしい語は「辞書に足す候補」として出す(F36b)。候補は自動で置き換えず、利用者が1つずつ選ぶ。
 const { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } = __m["src/mask/core.mjs"];
 const { downloadText } = __m["src/ui/download.mjs"];
 const { CONSTRUCTION_DICT } = __m["src/mask/dict-construction.mjs"];
@@ -5631,6 +5873,7 @@ const { SITE_RULES } = __m["src/mask/rules-site.mjs"];
 const { COMPANY_RULES, FACILITY_RULES } = __m["src/mask/rules-company.mjs"];
 const { checkDecoys, decoyMessage } = __m["src/mask/decoy.mjs"];
 const { findResiduals, residualMessage } = __m["src/mask/residual.mjs"];
+const { findCompanyCandidates } = __m["src/mask/company-candidates.mjs"];
 
 let masker = null;
 // 確信の弱い語(規則だけで見つけた語)の選び(F17c)。記号 → 'replace'(置き換える)か 'keep'(残す)。無ければ未確認。
@@ -5721,6 +5964,49 @@ function renderReview(map, state = stateOf) {
     + scrollTable('確かめてほしい語', '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th><th>見つけ方</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
 }
 
+// 辞書に足す候補(F36b)。「足さない」を選んだ語は、この画面のメモリの中だけに持つ。同じ語が次の置き換えでも出たら、選びを残す
+const skippedCandidates = new Set();
+const candidateKey = (word) => String(word).replace(/[\s\u3000]+/gu, '');
+const CANDIDATE_SHOWN = 50;
+const isCandidateSkipped = (word) => skippedCandidates.has(candidateKey(word));
+
+// 候補の表。選ぶまで語は後の欄に元のまま残るので、そのことを表の前に書く
+function renderCandidates(list, skipped = isCandidateSkipped) {
+  if (!list) return '';
+  if (!list.length) return '<h3>辞書に足す候補</h3><p class="note">会社・団体の名前らしい語で、置き換えていない語は見つかりませんでした。形や欄から探しただけなので、後の欄は目で確かめてください。</p>';
+  const rows = list.slice(0, CANDIDATE_SHOWN).map((c) => {
+    const skip = skipped(c.word);
+    const attr = 'data-word="' + esc(c.word) + '"';
+    return '<tr' + (skip ? ' class="mask-keep"' : '') + '><td>' + esc(c.word) + '</td><td>' + esc(c.basis) + '</td><td>' + c.count + '</td><td>' + (skip ? '足さない' : '未選択')
+      + '</td><td><button type="button" data-candidate="add" ' + attr + '>辞書に足す</button> <button type="button" data-candidate="skip" ' + attr + ' aria-pressed="' + skip + '">足さない</button></td></tr>';
+  });
+  const undecided = list.filter((c) => !skipped(c.word)).length;
+  const more = list.length > CANDIDATE_SHOWN ? ' 表には先頭の ' + CANDIDATE_SHOWN + ' 件を出しています(ほか ' + (list.length - CANDIDATE_SHOWN) + ' 件)。足すと次の候補が出ます。' : '';
+  return '<h3>辞書に足す候補(会社・団体の名前らしい語)</h3>'
+    + '<p class="note">置き換えで見つからなかった語のうち、語尾や欄から会社・団体の名前らしいと見た語です。候補は自動では置き換えません。選ぶまで、この語は後の欄に元のまま残ります。名前の語は「辞書に足す」(会社名として足し、すぐに置き換え直します)、普通の言葉は「足さない」を選んでください(全 ' + list.length + ' 件・未選択 ' + undecided + ' 件)。' + more + '</p>'
+    + scrollTable('辞書に足す候補', '<table><thead><tr><th>語</th><th>見つけた所</th><th>回数</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
+}
+
+// 候補の1件を「辞書に足す」か「足さない」にする(F36b)。足すときだけ辞書に入れて置き換え直す
+function decideCandidate(doc, word, value) {
+  const c = last && last.candidates ? last.candidates.find((x) => x.word === word) : null;
+  if (!c || (value !== 'add' && value !== 'skip')) return false;
+  if (value === 'skip') {
+    skippedCandidates.add(candidateKey(word));
+    renderDecisions(doc);
+    setText(doc, 'mask-candidate-status', '「' + word + '」は足しません。この語は後の欄に元のまま残ります。');
+    return true;
+  }
+  skippedCandidates.delete(candidateKey(word));
+  const m = getMasker();
+  m.addTerm(word, 'company');
+  const list = doc.getElementById('dict-list');
+  if (list) list.innerHTML = renderTerms(m.terms());
+  runMask(doc);
+  setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し、置き換え直しました。');
+  return true;
+}
+
 // 後の欄・選ぶ表・「未確認の語があります」を、今の選びで描き直す
 function renderDecisions(doc) {
   const map = last ? last.map : [];
@@ -5728,6 +6014,8 @@ function renderDecisions(doc) {
   if (after && last) after.innerHTML = renderAfter(last.masked, map).html;
   const rv = doc.getElementById('mask-review');
   if (rv) rv.innerHTML = renderReview(map);
+  const cands = doc.getElementById('mask-candidates');
+  if (cands) cands.innerHTML = last ? renderCandidates(last.candidates) : '';
   const n = weakEntries(map).filter((e) => stateOf(e.token) === 'unchecked').length;
   const warn = doc.getElementById('mask-unchecked');
   if (warn) {
@@ -5774,7 +6062,9 @@ function runMask(doc) {
   if (amounts === 'band' && !nums.length) notes.push('境目が無いので、金額はすべて「〔金額〕」にしました。');
   const r = m.mask(text, { amounts, thresholds: nums });
   setText(doc, 'mask-before', text);
-  last = { masked: r.masked, map: r.map };
+  // 候補は探して見せるだけで、後の欄も対応表も変えない(F36b)
+  last = { masked: r.masked, map: r.map, candidates: findCompanyCandidates(text, m.spans(text), INDUSTRIES[industry].candidates) };
+  setText(doc, 'mask-candidate-status', '');
   renderDecisions(doc);
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = renderMap(r.map);
@@ -5815,9 +6105,10 @@ function setIndustry(doc, value, win) {
   const m = getMasker();
   for (const t of terms) m.addTerm(t.word, t.kind);
   decisions.clear();
+  skippedCandidates.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual', 'mask-candidate-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   if (sel) sel.value = industry;
@@ -5849,9 +6140,10 @@ function addDictWord(doc) {
 function resetMask(doc) {
   getMasker().reset();
   decisions.clear();
+  skippedCandidates.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual', 'map-status', 'dict-file-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual', 'mask-candidate-status', 'map-status', 'dict-file-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
@@ -5888,8 +6180,10 @@ function importMaskMap(doc, text) {
   try {
     const n = m.importMap(text);
     decisions.clear();
+    skippedCandidates.clear();
     last = null;
     setText(doc, 'mask-after', '');
+    setText(doc, 'mask-candidate-status', '');
     renderDecisions(doc);
     const mapEl = doc.getElementById('mask-map');
     if (mapEl) mapEl.innerHTML = renderMap(m.entries());
@@ -5978,6 +6272,15 @@ function startMask(doc) {
       decideMask(doc, b.getAttribute('data-token'), b.getAttribute('data-mask-decide'));
     });
   }
+  const cands = doc.getElementById('mask-candidates');
+  if (cands) {
+    cands.addEventListener('click', (ev) => {
+      const b = ev && ev.target && typeof ev.target.closest === 'function' ? ev.target.closest('button[data-candidate]') : null;
+      if (!b) return;
+      if (ev.preventDefault) ev.preventDefault();
+      decideCandidate(doc, b.getAttribute('data-word'), b.getAttribute('data-candidate'));
+    });
+  }
   const src = doc.getElementById('mask-file');
   if (src) {
     src.addEventListener('change', async () => {
@@ -6008,7 +6311,7 @@ function startMask(doc) {
   }
 }
 
-return { INDUSTRIES, currentIndustry, INDUSTRY_SWITCH_NOTICE, parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, lastResidualCheck, maskedText, decideMask, runMask, lastDecoyCheck, setDecoyRandom, setIndustry, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, startMask };
+return { INDUSTRIES, currentIndustry, INDUSTRY_SWITCH_NOTICE, parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, isCandidateSkipped, renderCandidates, decideCandidate, lastResidualCheck, maskedText, decideMask, runMask, lastDecoyCheck, setDecoyRandom, setIndustry, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, startMask };
 })();
 __m["src/ui/ai-app.mjs"] = (function () {
 // 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。

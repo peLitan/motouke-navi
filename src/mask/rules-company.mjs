@@ -128,13 +128,13 @@ const countRest = (name, words) => {
 };
 export const restLength = (name) => countRest(name, GENERIC);
 // 語尾の規則の名前の残り。「二人組」の「二人」のような人数も名前にしない
-const orgRestLength = (name) => countRest(name.replace(/[一二三四五六七八九十百数何]人/gu, ''), ORG_GENERIC);
+export const orgRestLength = (name) => countRest(name.replace(/[一二三四五六七八九十百数何]人/gu, ''), ORG_GENERIC);
 
 const CORP_WORD = new RegExp(alt(CORPORATE_TYPES), 'gu');
 const CORP_TAIL_SENTENCE = new Set([...CORP_TAIL_SENTENCE_WORDS, ...BREAKS, ...FUNC_HEAD]);
 const CORP_TAIL_SYSTEM = new RegExp(`^(?:${alt(CORP_TAIL_SYSTEM_WORDS)}|法(?:第.*|改正|施行.*)?)$`, 'u');
 // 法人格の後ろに続いても名前ではない語か(文の続き・制度の語・別の法人格だけ)
-const isCorpTailWord = (kept) => CORP_TAIL_SENTENCE.has(kept) || CORP_TAIL_SYSTEM.test(kept) || restLength(kept.replace(CORP_WORD, '')) < 1;
+export const isCorpTailWord = (kept) => CORP_TAIL_SENTENCE.has(kept) || CORP_TAIL_SYSTEM.test(kept) || restLength(kept.replace(CORP_WORD, '')) < 1;
 
 const LABEL_END = new RegExp(`(?:${alt(COMPANY_LABEL_WORDS)})$`, 'u');
 const ROLE_HEAD = new RegExp(`^(?:${alt(COMPANY_ROLE_WORDS)})`, 'u');

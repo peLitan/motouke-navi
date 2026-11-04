@@ -3,6 +3,7 @@
 // 利用者が「対応表を書き出す」を押したときだけ、この PC にファイルとして保存する。そのファイルには元の名前が入っている(F11d)。
 // 足した語だけを「辞書を書き出す」で辞書のファイルにし、「辞書を読み込む」で読み込める(F19a)。こちらも元の名前が入っている。
 // 業界(建設・医療(例))を切り替えられる(F19b)。
+// 置き換えで見つからなかった会社・団体の名前らしい語は「辞書に足す候補」として出す(F36b)。候補は自動で置き換えず、利用者が1つずつ選ぶ。
 import { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } from '../mask/core.mjs';
 import { downloadText } from './download.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
@@ -14,6 +15,7 @@ import { SITE_RULES } from '../mask/rules-site.mjs';
 import { COMPANY_RULES, FACILITY_RULES } from '../mask/rules-company.mjs';
 import { checkDecoys, decoyMessage } from '../mask/decoy.mjs';
 import { findResiduals, residualMessage } from '../mask/residual.mjs';
+import { findCompanyCandidates } from '../mask/company-candidates.mjs';
 
 let masker = null;
 // 確信の弱い語(規則だけで見つけた語)の選び(F17c)。記号 → 'replace'(置き換える)か 'keep'(残す)。無ければ未確認。
@@ -104,6 +106,49 @@ export function renderReview(map, state = stateOf) {
     + scrollTable('確かめてほしい語', '<table><thead><tr><th>記号</th><th>種類</th><th>元の語</th><th>見つけ方</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
 }
 
+// 辞書に足す候補(F36b)。「足さない」を選んだ語は、この画面のメモリの中だけに持つ。同じ語が次の置き換えでも出たら、選びを残す
+const skippedCandidates = new Set();
+const candidateKey = (word) => String(word).replace(/[\s\u3000]+/gu, '');
+const CANDIDATE_SHOWN = 50;
+export const isCandidateSkipped = (word) => skippedCandidates.has(candidateKey(word));
+
+// 候補の表。選ぶまで語は後の欄に元のまま残るので、そのことを表の前に書く
+export function renderCandidates(list, skipped = isCandidateSkipped) {
+  if (!list) return '';
+  if (!list.length) return '<h3>辞書に足す候補</h3><p class="note">会社・団体の名前らしい語で、置き換えていない語は見つかりませんでした。形や欄から探しただけなので、後の欄は目で確かめてください。</p>';
+  const rows = list.slice(0, CANDIDATE_SHOWN).map((c) => {
+    const skip = skipped(c.word);
+    const attr = 'data-word="' + esc(c.word) + '"';
+    return '<tr' + (skip ? ' class="mask-keep"' : '') + '><td>' + esc(c.word) + '</td><td>' + esc(c.basis) + '</td><td>' + c.count + '</td><td>' + (skip ? '足さない' : '未選択')
+      + '</td><td><button type="button" data-candidate="add" ' + attr + '>辞書に足す</button> <button type="button" data-candidate="skip" ' + attr + ' aria-pressed="' + skip + '">足さない</button></td></tr>';
+  });
+  const undecided = list.filter((c) => !skipped(c.word)).length;
+  const more = list.length > CANDIDATE_SHOWN ? ' 表には先頭の ' + CANDIDATE_SHOWN + ' 件を出しています(ほか ' + (list.length - CANDIDATE_SHOWN) + ' 件)。足すと次の候補が出ます。' : '';
+  return '<h3>辞書に足す候補(会社・団体の名前らしい語)</h3>'
+    + '<p class="note">置き換えで見つからなかった語のうち、語尾や欄から会社・団体の名前らしいと見た語です。候補は自動では置き換えません。選ぶまで、この語は後の欄に元のまま残ります。名前の語は「辞書に足す」(会社名として足し、すぐに置き換え直します)、普通の言葉は「足さない」を選んでください(全 ' + list.length + ' 件・未選択 ' + undecided + ' 件)。' + more + '</p>'
+    + scrollTable('辞書に足す候補', '<table><thead><tr><th>語</th><th>見つけた所</th><th>回数</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
+}
+
+// 候補の1件を「辞書に足す」か「足さない」にする(F36b)。足すときだけ辞書に入れて置き換え直す
+export function decideCandidate(doc, word, value) {
+  const c = last && last.candidates ? last.candidates.find((x) => x.word === word) : null;
+  if (!c || (value !== 'add' && value !== 'skip')) return false;
+  if (value === 'skip') {
+    skippedCandidates.add(candidateKey(word));
+    renderDecisions(doc);
+    setText(doc, 'mask-candidate-status', '「' + word + '」は足しません。この語は後の欄に元のまま残ります。');
+    return true;
+  }
+  skippedCandidates.delete(candidateKey(word));
+  const m = getMasker();
+  m.addTerm(word, 'company');
+  const list = doc.getElementById('dict-list');
+  if (list) list.innerHTML = renderTerms(m.terms());
+  runMask(doc);
+  setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し、置き換え直しました。');
+  return true;
+}
+
 // 後の欄・選ぶ表・「未確認の語があります」を、今の選びで描き直す
 function renderDecisions(doc) {
   const map = last ? last.map : [];
@@ -111,6 +156,8 @@ function renderDecisions(doc) {
   if (after && last) after.innerHTML = renderAfter(last.masked, map).html;
   const rv = doc.getElementById('mask-review');
   if (rv) rv.innerHTML = renderReview(map);
+  const cands = doc.getElementById('mask-candidates');
+  if (cands) cands.innerHTML = last ? renderCandidates(last.candidates) : '';
   const n = weakEntries(map).filter((e) => stateOf(e.token) === 'unchecked').length;
   const warn = doc.getElementById('mask-unchecked');
   if (warn) {
@@ -157,7 +204,9 @@ export function runMask(doc) {
   if (amounts === 'band' && !nums.length) notes.push('境目が無いので、金額はすべて「〔金額〕」にしました。');
   const r = m.mask(text, { amounts, thresholds: nums });
   setText(doc, 'mask-before', text);
-  last = { masked: r.masked, map: r.map };
+  // 候補は探して見せるだけで、後の欄も対応表も変えない(F36b)
+  last = { masked: r.masked, map: r.map, candidates: findCompanyCandidates(text, m.spans(text), INDUSTRIES[industry].candidates) };
+  setText(doc, 'mask-candidate-status', '');
   renderDecisions(doc);
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = renderMap(r.map);
@@ -198,9 +247,10 @@ export function setIndustry(doc, value, win) {
   const m = getMasker();
   for (const t of terms) m.addTerm(t.word, t.kind);
   decisions.clear();
+  skippedCandidates.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual', 'mask-candidate-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   if (sel) sel.value = industry;
@@ -232,9 +282,10 @@ export function addDictWord(doc) {
 export function resetMask(doc) {
   getMasker().reset();
   decisions.clear();
+  skippedCandidates.clear();
   last = null;
   renderDecisions(doc);
-  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual', 'map-status', 'dict-file-status']) setText(doc, id, '');
+  for (const id of ['mask-before', 'mask-after', 'unmask-output', 'mask-status', 'mask-decoy', 'mask-residual', 'mask-candidate-status', 'map-status', 'dict-file-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
   const list = doc.getElementById('dict-list');
@@ -271,8 +322,10 @@ export function importMaskMap(doc, text) {
   try {
     const n = m.importMap(text);
     decisions.clear();
+    skippedCandidates.clear();
     last = null;
     setText(doc, 'mask-after', '');
+    setText(doc, 'mask-candidate-status', '');
     renderDecisions(doc);
     const mapEl = doc.getElementById('mask-map');
     if (mapEl) mapEl.innerHTML = renderMap(m.entries());
@@ -359,6 +412,15 @@ export function startMask(doc) {
       if (!b) return;
       if (ev.preventDefault) ev.preventDefault();
       decideMask(doc, b.getAttribute('data-token'), b.getAttribute('data-mask-decide'));
+    });
+  }
+  const cands = doc.getElementById('mask-candidates');
+  if (cands) {
+    cands.addEventListener('click', (ev) => {
+      const b = ev && ev.target && typeof ev.target.closest === 'function' ? ev.target.closest('button[data-candidate]') : null;
+      if (!b) return;
+      if (ev.preventDefault) ev.preventDefault();
+      decideCandidate(doc, b.getAttribute('data-word'), b.getAttribute('data-candidate'));
     });
   }
   const src = doc.getElementById('mask-file');
