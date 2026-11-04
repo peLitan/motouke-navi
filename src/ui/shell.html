@@ -40,6 +40,12 @@
   h3 { font-size: 1.25rem; line-height: 1.4; margin: 1rem 0 0.5rem; }
   h4 { font-size: 1rem; line-height: 1.4; margin: 0.75rem 0 0.25rem; }
   a { color: var(--primary); }
+  /* 焦点(F38b): どの部品でも同じ2重の輪。内の黄は濃い地で、外の黒は白地で見える。outline は焦点のためだけに使う */
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
+  /* ボタンの形(F38b): 既定は副の形。主は下の入口の節で塗る。押せないときは灰色にする */
+  button:hover { background: var(--primary-bg); }
+  button:active { background: var(--primary-bg); border-color: var(--primary-dark); }
+  button:disabled, button:disabled:hover { color: var(--ink-2); background: var(--paper-2); border-color: var(--line); cursor: not-allowed; }
   /* 目立つ枠は2つだけ: 冒頭の必須の断り書き(#disclaimer)と、対応表の警告(#map-warning)。ほかの注意は灰色の左線の注記(.note) */
   .disclaimer { border: 3px solid var(--line-strong); background: var(--paper); color: var(--ink); padding: 0.75rem 1rem; font-weight: bold; }
   .note { border-left: 4px solid var(--line); padding: 0.1rem 0 0.1rem 0.75rem; margin: 0.5rem 0; color: var(--ink-2); }
@@ -53,7 +59,9 @@
   .radio-group legend { font-weight: bold; padding: 0 0.3rem; }
   .radio-group div { margin: 0.2rem 0; display: flex; align-items: center; min-height: 2.75rem; }
   .row label { margin-right: 0.5rem; }
-  .result { border: 1px solid var(--line); padding: 0.5rem 1rem; margin-bottom: 1rem; }
+  .result { border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 1rem; margin-bottom: 1rem; }
+  /* 結果の中のリンクは縦に余白を足し、指で押しやすくする(F38b) */
+  .summary a, .result a { display: inline-block; padding: 0.2rem 0; }
   .human { font-weight: bold; }
   .errors { color: var(--need); }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); }
@@ -68,34 +76,36 @@
   mark.mask-replace { color: var(--ink); background: var(--paper-2); }
   mark.mask-keep { color: var(--ink); background: var(--primary-bg); }
   #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid var(--line); padding: 0.2rem 0.5rem; }
-  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"], .rules-switch button[aria-pressed="true"] { font-weight: bold; outline: 2px solid var(--ink); }
+  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"], .rules-switch button[aria-pressed="true"] { color: var(--ink); background: var(--primary-bg); border: 2px solid var(--primary); font-weight: bold; }
   #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: var(--paper-2); padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
   .lead { margin: 0.5rem 0 0; }
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
-  .start { border: 2px solid var(--primary); background: var(--primary-bg); padding: 0.75rem 1rem; margin: 1rem 0; }
+  .start { border: 2px solid var(--primary); border-radius: 4px; background: var(--primary-bg); padding: 0.75rem 1rem; margin: 1rem 0; }
   .start h2 { margin: 0 0 0.5rem; font-size: 1.25rem; border: none; padding: 0; }
   /* 入口の3択(F37a): 同じ大きさのボタンを1つの枠に並べ、見本だけ色を濃くする */
   .entry-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
-  .entry-button { display: block; width: 100%; margin: 0; font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1rem; min-height: 3rem; color: var(--primary); background: var(--paper); border: 2px solid var(--primary); border-radius: 0.375rem; cursor: pointer; text-align: left; }
+  .entry-button { display: block; width: 100%; margin: 0; font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1rem; min-height: 3rem; color: var(--primary); background: var(--paper); border: 2px solid var(--primary); border-radius: 4px; cursor: pointer; text-align: left; }
   .entry-button:hover { background: var(--primary-bg); }
-  .entry-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
   .entry-button .btn-sub { display: block; font-size: 1rem; font-weight: normal; }
-  .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); }
-  .sample-button:hover { color: var(--paper); background: var(--primary-dark); }
+  /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
+  #bid-run, #ledger-run, #plan-run, #next-step-3, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
+  #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
   .steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0.75rem 0 0; }
   .steps li { display: flex; align-items: center; }
   .steps li + li::before { content: "→"; margin-right: 0.5rem; color: var(--primary); }
   /* 段階の表示(F37a): 入口を選ぶまでは塗らず、押せない形。選んだあとは今いる段だけ塗る */
-  .steps button { margin: 0; padding: 0.2rem 0.75rem; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 1rem; }
+  .steps button { margin: 0; padding: 0.2rem 0.75rem; }
   .steps button:disabled { color: var(--ink-2); background: transparent; border: 1px dashed var(--ink-2); cursor: not-allowed; }
   .steps button[aria-current="step"] { color: var(--paper); background: var(--primary); font-weight: bold; }
-  .steps button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
+  /* 入口に戻る(F38b): 4つ目の段に見えないよう、段の列の下の行に灰色の枠で置く。hidden で隠すので display は決めない */
+  #entry-back { margin: 0.5rem 0 0; color: var(--ink); border-color: var(--line); }
+  #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--line); }
   .sample-banner { border-left: 6px solid var(--primary); background: var(--primary-bg); padding: 0.25rem 1rem; margin: 0.5rem 0; }
   .sample-banner p { margin: 0.25rem 0; }
   /* 結論の印とまとめの枠(F14b)。色だけで区別しない: 記号(● ! ✓)と言葉を必ず添える。文字と地の色のコントラストは 4.5:1 以上 */
-  .badge { display: inline-block; border: 2px solid; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
+  .badge { display: inline-block; border: 2px solid; border-radius: 4px; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; }
   .badge-required { color: var(--need); background: var(--paper); border-color: var(--need-line); }
   .badge-needs_check { color: var(--check); background: var(--paper); border-color: var(--check-line); }
@@ -137,8 +147,7 @@
   .not-yet { color: var(--ink-2); }
   @media (max-width: 30rem) { .summary-row { grid-template-columns: 1fr; } }
   /* 折りたたみ(F14c): 根拠の原文と段取りの表は閉じておく。見出しは中身が分かる言葉にし、押せることが分かる形にする */
-  details > summary { cursor: pointer; padding: 0.55rem 0; }
-  details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
+  details > summary { cursor: pointer; padding: 0.55rem 0; min-height: 2.75rem; }
   details.basis > summary { color: var(--primary); }
   details.schedule-table { margin: 0.5rem 0; }
   details.schedule-table > summary { font-weight: bold; font-size: 1.25rem; }
@@ -157,10 +166,14 @@
      ボタン・入力欄・折りたたみの見出しは指で押せる高さ(44px = 2.75rem)にする */
   *, *::before, *::after { box-sizing: border-box; }
   input, select, textarea { max-width: 100%; }
-  textarea { width: 100%; }
-  input[type="text"], select { min-height: 2.75rem; padding: 0.25rem 0.5rem; }
-  button { min-height: 2.75rem; padding: 0.4rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; }
-  input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
+  textarea { width: 100%; min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  input[type="text"], select { min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  input[type="file"] { min-height: 2.75rem; padding: 0.4rem 0; }
+  button { min-height: 2.75rem; padding: 0.4rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 4px; }
+  input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; accent-color: var(--primary); }
+  /* 四角の印とラベルの行も、押せる高さにする */
+  .check-row { display: flex; align-items: center; min-height: 2.75rem; }
+  .check-row > input { flex: none; }
   .table-scroll { max-width: 100%; overflow-x: auto; margin: 0.25rem 0 0.75rem; }
   .table-scroll:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
   /* 台帳の記載事項の表(F16c): 「空」は太字で目立たせる(色だけに頼らない)。「確認した」の欄は押しやすく、印刷でも文字で残る */
@@ -317,7 +330,7 @@
 <option value="unknown">分からない</option>
 </select>
 <details class="fold hint-fold"><summary aria-label="置ける技術者の資格の説明">説明</summary><p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></details></div>
-<div class="row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
+<div class="row check-row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
 <details class="fold hint-fold"><summary aria-label="閲覧できる措置の説明">説明</summary><p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></details></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
