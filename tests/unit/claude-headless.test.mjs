@@ -51,8 +51,36 @@ test('allowedTools: 点検に要る物だけで、道具まるごとの許可が
   assert.ok(!tools.some((t) => t.includes('evals')));
 });
 
+// F36c: 断られた件は Skill の手順で直す。許す道具を広げて直していないことを、一覧の全部で見る
+test('allowedTools: 許す道具の一覧は決めたとおりで、増えていない', () => {
+  assert.deepEqual(allowedTools('/x/plugin'), [
+    'Skill(motouke-navi-guard:construction-check)',
+    'mcp__plugin_motouke-navi-guard_masked-files__read_masked',
+    'mcp__plugin_motouke-navi-guard_masked-files__list_masked',
+    'Agent(motouke-navi-guard:refuter)',
+    'Task(motouke-navi-guard:refuter)',
+    'Read(//x/plugin/skills/construction-check/**)',
+    'Bash(node /x/plugin/skills/construction-check/scripts/check-articles.mjs *)',
+    'Edit(./tmp/**)',
+    'Read(./tmp/**)',
+  ]);
+});
+
+test('SKILL.md: 条番号の確かめの例は許す形に合う1つの命令で、別の命令をつながないと書いてある', () => {
+  const skill = fs.readFileSync(path.join(PLUGIN_DIR, 'skills', 'construction-check', 'SKILL.md'), 'utf8');
+  const shown = skill.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('node ') && l.includes('check-articles.mjs'));
+  assert.deepEqual(shown, ['node <このスキルのフォルダ>/scripts/check-articles.mjs tmp/指摘.md']);
+  const rule = allowedTools('/x/plugin').find((t) => t.startsWith('Bash('));
+  const prefix = rule.slice('Bash('.length, -'*)'.length);
+  const command = shown[0].replace('<このスキルのフォルダ>', '/x/plugin/skills/construction-check');
+  assert.ok(command.startsWith(prefix), command);
+  assert.doesNotMatch(command, /[;&|\n]/);
+  assert.match(skill, /単独で呼ぶ/);
+  assert.match(skill, /`;` や `&&` で別の命令をつながない/);
+});
+
 test('DISALLOWED_TOOLS: raw/ の直接の読み書きと Web を断る', () => {
-  for (const t of ['Read(./raw/**)', 'Edit(./raw/**)', 'WebFetch', 'WebSearch']) assert.ok(DISALLOWED_TOOLS.includes(t), t);
+  assert.deepEqual(DISALLOWED_TOOLS, ['Read(./raw/**)', 'Edit(./raw/**)', 'WebFetch', 'WebSearch']);
 });
 
 test('buildEnv: 鍵を外し、ログインで動くようにする。元の環境は変えない', () => {

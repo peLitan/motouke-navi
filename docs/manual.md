@@ -246,6 +246,8 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 
 記録(`run.jsonl`)には置き換えた後の書類の中身が入るので、リポジトリには入れていません。
 
+この記録の後、Skill `construction-check` の手順に「`check-articles.mjs` は単独で呼び、別の命令をつながない」と書きました(許す道具と見張りの決まりは変えていません)。走らせ直した結果は別の担当が足します。
+
 1. Claude Code を入れて、`claude auth login` でログインする
 2. 空の作業フォルダを作り、点検する書類を `raw/` に置く(作業フォルダはこのリポジトリの `plugin/` の外にする。重ねると止まります)
 3. `node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]` を動かす
