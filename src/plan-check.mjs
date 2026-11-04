@@ -112,7 +112,7 @@ export function checkPlanToc(text, opts = {}) {
     '共通仕様書 ' + planData.section + ' には「維持工事等簡易な工事においては監督職員の承諾を得て記載内容の一部を省略することができる」とあり、監督職員が補足を求めた項目は追記します。省略の承諾や追記の求めがあるかは、人が確かめてください',
     '国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書の記載事項で置き換えてください',
   ];
-  // (16)その他は受け皿の項目。照合はするが、見出しが無いことは抜けとは限らないと注意に出す(exceptions の回答 B)
+  // (16)その他は受け皿の項目。照合はするが、見出しが無いことは抜けとは限らないと注意に出す(開発中の判断 B)
   if (candidates.some((c) => c.no === 16 && c.item === 'その他')) notes.push(OTHER_NOTE);
   if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の項目名と違う言葉で見つけたものです。その見出しが記載事項に当たるかを確かめてください');
   return { candidates, found, extra, undecidable: [], notes, ...(table ? { scope: tableName(table) } : {}) };

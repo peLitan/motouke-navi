@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-vSoqoXCBGnc8lOO3YWb1nPJx/Rr0JI72l112scO6/8c='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-x1nyov2nmWh0eTkPOfrdhqKvHxmGP/c5jt/C7zAI7bY='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -2005,7 +2005,7 @@ const FIELD_NAME = {
 const LEDGER_XLSX_KEYS = Object.keys(FIELD_NAME);
 const FIELD_NAMES = FIELD_NAME;
 
-// 作成例の様式に請負代金額の欄が無いときの理由(exceptions.md 23:00 の回答 A)
+// 作成例の様式に請負代金額の欄が無いときの理由(2026-11-02 に作る係とは別の進行役が決めた)
 const NO_AMOUNT_IN_SAKUSEIREI = '作成例の様式に請負代金額の欄が無い。契約書面の写しで確かめる';
 
 const normLabel = (s) => String(s ?? '').replace(/[\s［］[\]]/g, '');
@@ -3381,7 +3381,7 @@ const FIELD_LABEL = {
 };
 // 段の並び(この順に行を出す)。段に分けたのはこのツールの整理で、共通仕様書は段で分けていない
 const PHASES = { start: '着手まで', work: '施工中', completion: '完成・引き渡し' };
-// 工事目的物そのものの引き渡しは共通仕様書に無く、契約書による(exceptions の F06b の回答 A)
+// 工事目的物そのものの引き渡しは共通仕様書に無く、契約書による(開発中の判断 A)
 const HANDOVER_NOTE = '工事目的物そのものの引き渡しは、契約書(公共工事標準請負契約約款 第32条)によります。このツールは契約書を取得していないので、引き渡しの手続は一覧に入れていません。「完成・引き渡し」の段の引き渡しの行は、共通仕様書 1-1-1-21 の現場発生品の引き渡しです';
 const PHASE_LABEL = PHASES;
 
@@ -3636,7 +3636,7 @@ function checkPlanToc(text, opts = {}) {
     '共通仕様書 ' + planData.section + ' には「維持工事等簡易な工事においては監督職員の承諾を得て記載内容の一部を省略することができる」とあり、監督職員が補足を求めた項目は追記します。省略の承諾や追記の求めがあるかは、人が確かめてください',
     '国の直轄の土木工事の例です。自治体・民間の工事は、発注者の仕様書の記載事項で置き換えてください',
   ];
-  // (16)その他は受け皿の項目。照合はするが、見出しが無いことは抜けとは限らないと注意に出す(exceptions の回答 B)
+  // (16)その他は受け皿の項目。照合はするが、見出しが無いことは抜けとは限らないと注意に出す(開発中の判断 B)
   if (candidates.some((c) => c.no === 16 && c.item === 'その他')) notes.push(OTHER_NOTE);
   if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の項目名と違う言葉で見つけたものです。その見出しが記載事項に当たるかを確かめてください');
   return { candidates, found, extra, undecidable: [], notes, ...(table ? { scope: tableName(table) } : {}) };
@@ -3898,11 +3898,11 @@ return { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, AMBIGUOUS_ABBREVIATIONS, ENCL
 __m["src/mask/rules-company.mjs"] = (function () {
 // 会社・団体の名前の規則(F24a)。業界を問わない。語の一覧は src/mask/company-types.mjs(出典つき)から読む。
 // 置き換えの部品(core.mjs)が使う。規則は3つ:
-//   company-before: 名前 +(空白)+ 法人格。例「さくら建設株式会社」「甲野建設 株式会社」「甲野建設㈱」「甲野建設(株)」
+//   company-before: 名前 +(空白)+ 法人格。例「みほん建設株式会社」「甲野建設 株式会社」「甲野建設㈱」「甲野建設(株)」
 //   company-after:  法人格 +(空白)+ 名前。例「株式会社さくら」「社会福祉法人 みほん会」「㈲甲野」
 //   org-suffix:     法人格の無い団体・施設の名前(名前 + 語尾)。例「甲野工務店」「ひまわり幼稚園」「みほん町役場」。確信の弱い語として扱う
 // 名前の部分には、漢字・カタカナ・英数字のほかにひらがなも入れてよい。ただし、文の中のひらがな(「は」「として」「した」など)の所で切る:
-//   法人格の前の名前は、漢字・カタカナのすぐ後ろの「は・が・を・に・で・と・の・へ・も・や」などより前を捨てる(「当社はさくら建設株式会社」→「さくら建設株式会社」)
+//   法人格の前の名前は、漢字・カタカナのすぐ後ろの「は・が・を・に・で・と・の・へ・も・や」などより前を捨てる(「当社はみほん建設株式会社」→「みほん建設株式会社」)
 //   法人格の後ろの名前は、ひらがなが続かない所の「は・が・の・と・として」などから後ろを捨てる(「株式会社さくらは」→「株式会社さくら」)
 // 法人格と名前のあいだの空白は1字(半角・全角)まで許す。空白を挟むときは、どちらの側の名前かを次のように決める:
 //   「名前 空白 法人格」は、法人格のすぐ後ろに名前の字が続かないときだけ取る。前の名前が欄名(「代表者」「会社名」など)なら取らない
@@ -4063,7 +4063,7 @@ function abbrAfter(kept, text, index) {
 }
 
 const COMPANY_RULES = [
-  { id: 'company-before', name: '名前 + 法人格', example: 'さくら建設株式会社・甲野建設 株式会社・甲野建設㈱' },
+  { id: 'company-before', name: '名前 + 法人格', example: 'みほん建設株式会社・甲野建設 株式会社・甲野建設㈱' },
   { id: 'company-after', name: '法人格 + 名前', example: '株式会社さくら・社会福祉法人 みほん会' },
   { id: 'org-suffix', name: '法人格の無い団体・施設の語尾', example: '甲野工務店・ひまわり幼稚園・みほん町役場' },
 ];

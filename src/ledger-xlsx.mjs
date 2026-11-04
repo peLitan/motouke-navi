@@ -36,7 +36,7 @@ const FIELD_NAME = {
 export const LEDGER_XLSX_KEYS = Object.keys(FIELD_NAME);
 export const FIELD_NAMES = FIELD_NAME;
 
-// 作成例の様式に請負代金額の欄が無いときの理由(exceptions.md 23:00 の回答 A)
+// 作成例の様式に請負代金額の欄が無いときの理由(2026-11-02 に作る係とは別の進行役が決めた)
 export const NO_AMOUNT_IN_SAKUSEIREI = '作成例の様式に請負代金額の欄が無い。契約書面の写しで確かめる';
 
 const normLabel = (s) => String(s ?? '').replace(/[\s［］[\]]/g, '');
