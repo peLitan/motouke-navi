@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-N47PfgsPjJbM2fMJmrrFU4O/VH53sb+QBfe6B1CUIXM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pCTfC5nPmAGJ5TsciUO0miIZhs8olyUbxlFmgaDCD78='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -107,6 +107,12 @@
   /* 見本の帯(F38c): 白地に主の色の枠。薄い青の地は入口の枠だけにする */
   .sample-banner { border: 1px solid var(--primary); border-left-width: 6px; border-radius: 4px; background: var(--paper); padding: 0.25rem 1rem; margin: 0.5rem 0; }
   .sample-banner p { margin: 0.25rem 0; }
+  /* 知らせ(F38d): 押したあとの文は太字に主の色の左線で見せる。#bid-status の頭の印(✓ か ＊)は文の中に書く。注記と見本の帯の文は太字にしない */
+  p[aria-live]:not(:empty) { border-left: 4px solid var(--primary); padding: 0.25rem 0 0.25rem 0.75rem; margin: 0.5rem 0; font-weight: bold; }
+  .note[aria-live]:not(:empty) { border-left-color: var(--line); font-weight: normal; }
+  .sample-banner p[aria-live]:not(:empty) { border: none; padding: 0; margin: 0.25rem 0; font-weight: normal; }
+  /* 空の状態の文(F38d): 結果と見分ける */
+  .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; border-radius: 4px; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
@@ -176,6 +182,7 @@
   input, select, textarea { max-width: 100%; }
   textarea { width: 100%; min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
   input[type="text"], select { min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  input[type="text"][aria-invalid="true"] { border: 2px solid var(--need); }
   input[type="file"] { min-height: 2.75rem; padding: 0.4rem 0; }
   button { min-height: 2.75rem; padding: 0.4rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 4px; }
   input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; accent-color: var(--primary); }
@@ -363,6 +370,7 @@
 </section>
 <section id="panel-2" hidden>
 <h2>結果</h2>
+<p id="bid-status" class="no-print" aria-live="polite"></p>
 <div id="sample-banner" class="sample-banner no-print" hidden>
 <p id="sample-status" aria-live="polite"></p>
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>
@@ -679,21 +687,26 @@ function readBidForm(values = {}) {
   };
 }
 
+const AMOUNT_FIELDS = [['contract-amount', '請負代金の見込み'], ['subcontract-total', '下請けの総額']];
+const amountError = (values, key) => (flag(values[key + '-unknown']) ? null : parseYen(values[key]).error);
 // 金額の欄の読めない値の一覧(画面に出す)
 function formErrors(values = {}) {
   const out = [];
-  for (const [key, name] of [['contract-amount', '請負代金の見込み'], ['subcontract-total', '下請けの総額']]) {
-    if (flag(values[key + '-unknown'])) continue;
-    const r = parseYen(values[key]);
-    if (r.error) out.push(name + ': ' + r.error);
+  for (const [key, name] of AMOUNT_FIELDS) {
+    const error = amountError(values, key);
+    if (error) out.push(name + ': ' + error);
   }
   return out;
+}
+// 金額の欄ごとの読めるかどうか(aria-invalid を付ける欄を決める)。[欄の id, 読めないなら true] の列
+function amountValidity(values = {}) {
+  return AMOUNT_FIELDS.map(([key]) => [key, Boolean(amountError(values, key))]);
 }
 
 const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];
 const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'contract-amount-unknown', 'subcontract-total-unknown', 'ict-measure'];
 
-return { parseYen, readDirect, readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS };
+return { parseYen, readDirect, readBidForm, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS };
 })();
 __m["data/checklist.json"] = {"note":"建設業法施行規則 第14条の2 第1項の記載事項を、台帳の欄と照らすための表(F16b)。quoteId は data/quotes.json の抜き書き。parts は1つの事項に入っている欄ごとの、台帳の欄名に当てる形(正規表現の文字。表の左の欄に当てる)。readable が false の欄は、このツールでは読まない(必ず「判断できない」に回る)。condition は条文の「〜ときは」で、license = 許可番号の欄に値があれば建設業者として当てはまる、tier1 = 一次の下請け(作成建設業者が請け負わせたもの)なら当てはまる、unknown = 台帳からは当てはまるか決めない。値・空・判断できないの出し方は src/checklist.mjs の先頭に書いた。第2項(添付書類)〜第4項はこの表に入れていない。not に当たる欄名はその欄に使わない(監理技術者補佐・専門技術者の行を監理技術者・主任技術者の欄と取り違えないため)。noneMeansAbsent は「置くとき」の事項で、氏名の欄に「なし」とだけ書いてあれば置いていないと読んで値にする(F29a)。","reference":{"note":"国交省のチェックリストは参考として題名・URL・取得日だけを出し、文は写さない(F16c)。題名とリンク先は掲載ページの HTML のリンクの文のまま","title":"施工体制台帳等のチェックリスト","publisher":"国土交通省","url":"https://www.mlit.go.jp/totikensangyo/const/content/001389105.docx","page":"https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html","pageTitle":"施工体制台帳、施工体系図等","fetchedAt":"2026-11-03"},"law":{"note":"根拠の原文の取得日と版。data/sources/index.json の kisoku-14_2 の行と同じ値にする(試験 ui-checklist で照らす)。画面の bundle は index.json を読まないのでここに写す","sourceId":"kisoku-14_2","fetchedAt":"2026-11-03","revisionId":"324M50004000014_20261001_508M60000800082"},"items":[{"id":"1-i","quoteId":"q-kisoku-14_2-1-1-i","scope":"prime","item":1,"subitem":"イ","label":"許可を受けて営む建設業の種類","parts":[{"label":"許可を受けた建設業","re":"許可を受けた建設業|建設業の種類|許可業種"}]},{"id":"1-ro","quoteId":"q-kisoku-14_2-1-1-ro","scope":"prime","item":1,"subitem":"ロ","label":"健康保険等の加入状況","parts":[{"label":"健康保険","re":"健康保険","not":"作業員|従事|労働者|技能者"},{"label":"厚生年金保険","re":"厚生年金","not":"作業員|従事|労働者|技能者"},{"label":"雇用保険","re":"雇用保険","not":"作業員|従事|労働者|技能者"}]},{"id":"2-i","quoteId":"q-kisoku-14_2-1-2-i","scope":"prime","item":2,"subitem":"イ","label":"建設工事の名称・内容・工期","parts":[{"label":"工事の名称","re":"^工事(名|名称|件名)"},{"label":"工事の内容","re":"工事(の)?内容|工事概要"},{"label":"工期","re":"^工期"}]},{"id":"2-ro","quoteId":"q-kisoku-14_2-1-2-ro","scope":"prime","item":2,"subitem":"ロ","label":"発注者との契約(契約日・発注者・契約した営業所)","parts":[{"label":"契約を結んだ日","re":"契約(日|年月日|締結日)"},{"label":"発注者の商号・名称・氏名","re":"^発注者(名|の(商号|名称|氏名))?$"},{"label":"発注者の住所","re":"^発注者の?(住所|所在地)"},{"label":"契約した営業所の名称","re":"契約営業所|営業所(の)?名称"},{"label":"契約した営業所の所在地","re":"営業所の?所在地"}]},{"id":"2-ha","quoteId":"q-kisoku-14_2-1-2-ha","scope":"prime","item":2,"subitem":"ハ","label":"発注者の監督員(置くとき)","condition":"unknown","parts":[{"label":"監督員の氏名","re":"監督員"},{"label":"法第19条の2第2項の通知事項","readable":false}]},{"id":"2-ni","quoteId":"q-kisoku-14_2-1-2-ni","scope":"prime","item":2,"subitem":"ニ","label":"現場代理人(置くとき)","condition":"unknown","parts":[{"label":"現場代理人の氏名","re":"現場代理人"},{"label":"法第19条の2第1項の通知事項","readable":false}]},{"id":"2-ho","quoteId":"q-kisoku-14_2-1-2-ho","scope":"prime","item":2,"subitem":"ホ","label":"主任技術者・監理技術者(氏名・資格・専任か)","parts":[{"label":"技術者の氏名","overlap":"engineer","re":"^(監理|主任)技術者(\\s*(氏名|名))?$"},{"label":"技術者の資格","qualification":true,"overlap":"engineer.qualification","re":"^資格$|^(監理|主任)技術者\\s*資格"},{"label":"専任か否か","re":"専任","not":"補佐|専門技術者|技術上の管理"}]},{"id":"2-he","quoteId":"q-kisoku-14_2-1-2-he","scope":"prime","item":2,"subitem":"ヘ","label":"監理技術者補佐(置くとき)","condition":"unknown","noneMeansAbsent":true,"parts":[{"label":"監理技術者補佐の氏名","re":"補佐(\\s*(氏名|名))?$"},{"label":"監理技術者補佐の資格","re":"補佐.*資格"}]},{"id":"2-to","quoteId":"q-kisoku-14_2-1-2-to","scope":"prime","item":2,"subitem":"ト","label":"専門技術者など、技術上の管理をする者(置くとき)","condition":"unknown","noneMeansAbsent":true,"parts":[{"label":"専門技術者などの氏名","re":"(専門技術者|技術上の管理(をつかさどる者)?)(\\s*(氏名|名))?$"},{"label":"管理をつかさどる工事の内容","re":"(専門技術者|技術上の管理).*(工事|内容)"},{"label":"専門技術者などの資格","re":"(専門技術者|技術上の管理).*資格"}]},{"id":"2-chi-1","quoteId":"q-kisoku-14_2-1-2-chi-1","scope":"prime","item":2,"subitem":"チ","point":1,"label":"従事する者の氏名・生年月日・年齢","parts":[{"label":"従事する者の氏名など","re":"作業員名簿|従事者|生年月日"}]},{"id":"2-chi-2","quoteId":"q-kisoku-14_2-1-2-chi-2","scope":"prime","item":2,"subitem":"チ","point":2,"label":"従事する者の職種","parts":[{"label":"職種","re":"職種"}]},{"id":"2-chi-3","quoteId":"q-kisoku-14_2-1-2-chi-3","scope":"prime","item":2,"subitem":"チ","point":3,"label":"従事する者の社会保険の加入等の状況","parts":[{"label":"従事する者の社会保険","re":"(従事|作業員|労働者).*社会保険|社会保険.*(従事|作業員|労働者)"}]},{"id":"2-chi-4","quoteId":"q-kisoku-14_2-1-2-chi-4","scope":"prime","item":2,"subitem":"チ","point":4,"label":"従事する者が被共済者か否か","parts":[{"label":"退職金共済","re":"退職金共済|建退共|被共済者"}]},{"id":"2-chi-5","quoteId":"q-kisoku-14_2-1-2-chi-5","scope":"prime","item":2,"subitem":"チ","point":5,"label":"従事する者の安全衛生の教育(受けているとき)","condition":"unknown","parts":[{"label":"安全衛生の教育","re":"安全衛生|教育"}]},{"id":"2-chi-6","quoteId":"q-kisoku-14_2-1-2-chi-6","scope":"prime","item":2,"subitem":"チ","point":6,"label":"従事する者の資格(本人が希望しないときは除く)","condition":"unknown","parts":[{"label":"従事する者の資格","re":"(従事者|作業員).*資格|保有資格"}]},{"id":"2-ri","quoteId":"q-kisoku-14_2-1-2-ri","scope":"prime","item":2,"subitem":"リ","label":"一号特定技能外国人・外国人技能実習生の従事の状況","parts":[{"label":"外国人の従事","re":"外国人|特定技能|技能実習"}],"note":"台帳の欄の名前が条文の言葉(一号特定技能外国人・外国人技能実習生)と違うときは、同じ事柄を書いた欄か確かめてください"},{"id":"3-i","quoteId":"q-kisoku-14_2-1-3-i","scope":"sub","item":3,"subitem":"イ","label":"下請負人の商号・名称と住所","parts":[{"label":"商号・名称","overlap":"name","re":"^(商号|名称|会社名)","heading":true},{"label":"住所","re":"住所|所在地"}]},{"id":"3-ro","quoteId":"q-kisoku-14_2-1-3-ro","scope":"sub","item":3,"subitem":"ロ","label":"許可番号と許可を受けた建設業の種類(建設業者のとき)","condition":"license","parts":[{"label":"許可番号","re":"許可番号"},{"label":"許可を受けた建設業","re":"許可を受けた建設業|建設業の種類|許可業種"}]},{"id":"3-ha","quoteId":"q-kisoku-14_2-1-3-ha","scope":"sub","item":3,"subitem":"ハ","label":"健康保険等の加入状況","parts":[{"label":"健康保険","re":"健康保険","not":"作業員|従事|労働者|技能者"},{"label":"厚生年金保険","re":"厚生年金","not":"作業員|従事|労働者|技能者"},{"label":"雇用保険","re":"雇用保険","not":"作業員|従事|労働者|技能者"}]},{"id":"4-i","quoteId":"q-kisoku-14_2-1-4-i","scope":"sub","item":4,"subitem":"イ","label":"下請けの工事の名称・内容・工期","parts":[{"label":"工事の名称","re":"^工事(名|名称|件名)"},{"label":"工事の内容","overlap":"work","re":"工事(の)?内容|工事概要"},{"label":"工期","overlap":"period","re":"^工期"}]},{"id":"4-ro","quoteId":"q-kisoku-14_2-1-4-ro","scope":"sub","item":4,"subitem":"ロ","label":"下請契約を結んだ日","parts":[{"label":"契約を結んだ日","re":"契約(日|年月日|締結日)"}]},{"id":"4-ha","quoteId":"q-kisoku-14_2-1-4-ha","scope":"sub","item":4,"subitem":"ハ","label":"注文者の監督員(置くとき)","condition":"unknown","parts":[{"label":"監督員の氏名","re":"監督員"},{"label":"法第19条の2第2項の通知事項","readable":false}]},{"id":"4-ni","quoteId":"q-kisoku-14_2-1-4-ni","scope":"sub","item":4,"subitem":"ニ","label":"下請負人の現場代理人(置くとき)","condition":"unknown","parts":[{"label":"現場代理人の氏名","re":"現場代理人"},{"label":"法第19条の2第1項の通知事項","readable":false}]},{"id":"4-ho","quoteId":"q-kisoku-14_2-1-4-ho","scope":"sub","item":4,"subitem":"ホ","label":"主任技術者(氏名・資格・専任か。建設業者のとき)","condition":"license","parts":[{"label":"主任技術者の氏名","overlap":"engineer","re":"^主任技術者(\\s*(氏名|名))?$"},{"label":"主任技術者の資格","qualification":true,"overlap":"engineer.qualification","re":"^資格$|^主任技術者\\s*資格"},{"label":"専任か否か","re":"専任","not":"補佐|専門技術者|技術上の管理"}]},{"id":"4-he","quoteId":"q-kisoku-14_2-1-4-he","scope":"sub","item":4,"subitem":"ヘ","label":"専門技術者など、技術上の管理をする者(置くとき)","condition":"unknown","noneMeansAbsent":true,"parts":[{"label":"専門技術者などの氏名","re":"(専門技術者|技術上の管理(をつかさどる者)?)(\\s*(氏名|名))?$"},{"label":"管理をつかさどる工事の内容","re":"(専門技術者|技術上の管理).*(工事|内容)"},{"label":"専門技術者などの資格","re":"(専門技術者|技術上の管理).*資格"}]},{"id":"4-to","quoteId":"q-kisoku-14_2-1-4-to","scope":"sub","item":4,"subitem":"ト","label":"下請契約を結んだ作成建設業者の営業所(作成建設業者が請け負わせたとき)","condition":"tier1","parts":[{"label":"営業所の名称","re":"営業所(の)?名称|契約営業所|^営業所$"},{"label":"営業所の所在地","re":"営業所の?所在地"}]},{"id":"4-chi-1","quoteId":"q-kisoku-14_2-1-4-chi-1","scope":"sub","item":4,"subitem":"チ","point":1,"label":"従事する者の氏名・生年月日・年齢","parts":[{"label":"従事する者の氏名など","re":"作業員名簿|従事者|生年月日"}]},{"id":"4-chi-2","quoteId":"q-kisoku-14_2-1-4-chi-2","scope":"sub","item":4,"subitem":"チ","point":2,"label":"従事する者の職種","parts":[{"label":"職種","re":"職種"}]},{"id":"4-chi-3","quoteId":"q-kisoku-14_2-1-4-chi-3","scope":"sub","item":4,"subitem":"チ","point":3,"label":"従事する者の社会保険の加入等の状況","parts":[{"label":"従事する者の社会保険","re":"(従事|作業員|労働者).*社会保険|社会保険.*(従事|作業員|労働者)"}]},{"id":"4-chi-4","quoteId":"q-kisoku-14_2-1-4-chi-4","scope":"sub","item":4,"subitem":"チ","point":4,"label":"従事する者が被共済者か否か","parts":[{"label":"退職金共済","re":"退職金共済|建退共|被共済者"}]},{"id":"4-chi-5","quoteId":"q-kisoku-14_2-1-4-chi-5","scope":"sub","item":4,"subitem":"チ","point":5,"label":"従事する者の安全衛生の教育(受けているとき)","condition":"unknown","parts":[{"label":"安全衛生の教育","re":"安全衛生|教育"}]},{"id":"4-chi-6","quoteId":"q-kisoku-14_2-1-4-chi-6","scope":"sub","item":4,"subitem":"チ","point":6,"label":"従事する者の資格(本人が希望しないときは除く)","condition":"unknown","parts":[{"label":"従事する者の資格","re":"(従事者|作業員).*資格|保有資格"}]},{"id":"4-ri","quoteId":"q-kisoku-14_2-1-4-ri","scope":"sub","item":4,"subitem":"リ","label":"一号特定技能外国人・外国人技能実習生の従事の状況","parts":[{"label":"外国人の従事","re":"外国人|特定技能|技能実習"}],"note":"台帳の欄の名前が条文の言葉(一号特定技能外国人・外国人技能実習生)と違うときは、同じ事柄を書いた欄か確かめてください"}]};
 __m["data/quotes.json"] = {"note":"法令の抜き書き。text は data/sources の原文に一字一句そのまま入っている文(空白の違いだけ許す)。文の一部を抜くときも、ただし書・「を除き」・読み替え・適用しないの部分は切り落とさない。paragraph は項の番号、item は号の番号(無ければ null)、subitem は号の細分の片仮名(イ・ロ…。あるものだけ。細分の下の (１) などは id の末尾の数字で示す)。照合は src/quote-check.mjs と scripts/check-quotes.mjs","quotes":[{"id":"q-kensetsu-24_8-1","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"特定建設業者は、発注者から直接建設工事を請け負つた場合において、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になるときは"},{"id":"q-kensetsu-24_8-1-items","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"下請負人の商号又は名称、当該下請負人に係る建設工事の内容及び工期その他の国土交通省令で定める事項を記載した施工体制台帳を作成し、工事現場ごとに備え置かなければならない。"},{"id":"q-kensetsu-24_8-1-taicho","sourceId":"kensetsu-24_8","article":"24の8","paragraph":1,"item":null,"text":"施工体制台帳を作成し、工事現場ごとに備え置かなければならない。"},{"id":"q-kensetsu-24_8-2","sourceId":"kensetsu-24_8","article":"24の8","paragraph":2,"item":null,"text":"前項の建設工事の下請負人は、その請け負つた建設工事を他の建設業を営む者に請け負わせたときは、国土交通省令で定めるところにより、同項の特定建設業者に対して、当該他の建設業を営む者の商号又は名称、当該者の請け負つた建設工事の内容及び工期その他の国土交通省令で定める事項を通知しなければならない。"},{"id":"q-kensetsu-24_8-4","sourceId":"kensetsu-24_8","article":"24の8","paragraph":4,"item":null,"text":"第一項の特定建設業者は、国土交通省令で定めるところにより、当該建設工事における各下請負人の施工の分担関係を表示した施工体系図を作成し、これを当該工事現場の見やすい場所に掲げなければならない。"},{"id":"q-rei-7_4-1","sourceId":"rei-7_4","article":"7の4","paragraph":1,"item":null,"text":"法第二十四条の八第一項の政令で定める金額は、五千万円とする。ただし、特定建設業者が発注者から直接請け負つた建設工事が建築一式工事である場合においては、八千万円とする。"},{"id":"q-nyukei-15-1","sourceId":"nyukei-15","article":"15","paragraph":1,"item":null,"text":"公共工事についての建設業法第二十四条の八第一項、第二項及び第四項の規定の適用については、これらの規定中「特定建設業者」とあるのは「建設業者」と、同条第一項中「締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が政令で定める金額以上になる」とあるのは「下請契約を締結した」と、同条第四項中「見やすい場所」とあるのは「工事関係者が見やすい場所及び公衆が見やすい場所」とする。"},{"id":"q-nyukei-15-2","sourceId":"nyukei-15","article":"15","paragraph":2,"item":null,"text":"公共工事の受注者（前項の規定により読み替えて適用される建設業法第二十四条の八第一項の規定により同項に規定する施工体制台帳（以下「施工体制台帳」という。）を作成しなければならないこととされているものに限る。）は、当該公共工事に関する工事現場の施工体制を発注者が情報通信技術を利用する方法により確認することができる措置として国土交通省令で定めるものを講じている場合を除き、作成した施工体制台帳（同項の規定により記載すべきものとされた事項に変更が生じたことに伴い新たに作成されたものを含む。）の写しを発注者に提出しなければならない。この場合においては、同条第三項の規定は、適用しない。"},{"id":"q-kensetsu-3-1","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":null,"text":"建設業を営もうとする者は、次に掲げる区分により、この章で定めるところにより、二以上の都道府県の区域内に営業所（本店又は支店若しくは政令で定めるこれに準ずるものをいう。以下同じ。）を設けて営業をしようとする場合にあつては国土交通大臣の、一の都道府県の区域内にのみ営業所を設けて営業をしようとする場合にあつては当該営業所の所在地を管轄する都道府県知事の許可を受けなければならない。ただし、政令で定める軽微な建設工事のみを請け負うことを営業とする者は、この限りでない。"},{"id":"q-kensetsu-3-1-2","sourceId":"kensetsu-3","article":"3","paragraph":1,"item":2,"text":"その者が発注者から直接請け負う一件の建設工事につき、その工事の全部又は一部を、下請代金の額（その工事に係る下請契約が二以上あるときは、下請代金の額の総額）が政令で定める金額以上となる下請契約を締結して施工しようとするもの"},{"id":"q-rei-2-1","sourceId":"rei-2","article":"2","paragraph":1,"item":null,"text":"法第三条第一項第二号の政令で定める金額は、五千万円とする。ただし、同項の許可を受けようとする建設業が建築工事業である場合においては、八千万円とする。"},{"id":"q-kensetsu-26-1","sourceId":"kensetsu-26","article":"26","paragraph":1,"item":null,"text":"建設業者は、その請け負つた建設工事を施工するときは、当該建設工事に関し第七条第二号イ、ロ又はハに該当する者で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「主任技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-2","sourceId":"kensetsu-26","article":"26","paragraph":2,"item":null,"text":"発注者から直接建設工事を請け負つた特定建設業者は、当該建設工事を施工するために締結した下請契約の請負代金の額（当該下請契約が二以上あるときは、それらの請負代金の額の総額）が第三条第一項第二号の政令で定める金額以上になる場合においては、前項の規定にかかわらず、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者（当該建設工事に係る建設業が指定建設業である場合にあつては、同号イに該当する者又は同号ハの規定により国土交通大臣が同号イに掲げる者と同等以上の能力を有するものと認定した者）で当該工事現場における建設工事の施工の技術上の管理をつかさどるもの（以下「監理技術者」という。）を置かなければならない。"},{"id":"q-kensetsu-26-3","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":null,"text":"公共性のある施設若しくは工作物又は多数の者が利用する施設若しくは工作物に関する重要な建設工事で政令で定めるものについては、前二項の規定により置かなければならない主任技術者又は監理技術者は、工事現場ごとに、専任の者でなければならない。ただし、次に掲げる主任技術者又は監理技術者については、この限りでない。"},{"id":"q-kensetsu-26-3-1","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":1,"text":"一　当該建設工事が次のイからハまでに掲げる要件のいずれにも該当する場合における主任技術者又は監理技術者\n　イ　当該建設工事の請負代金の額が政令で定める金額未満となるものであること。\n　ロ　当該建設工事の工事現場間の移動時間又は連絡方法その他の当該工事現場の施工体制の確保のために必要な事項に関し国土交通省令で定める要件に適合するものであること。\n　ハ　主任技術者又は監理技術者が当該建設工事の工事現場の状況の確認その他の当該工事現場に係る第二十六条の四第一項に規定する職務を情報通信技術を利用する方法により行うため必要な措置として国土交通省令で定めるものが講じられるものであること。"},{"id":"q-kensetsu-26-3-2","sourceId":"kensetsu-26","article":"26","paragraph":3,"item":2,"text":"二　当該建設工事の工事現場に、当該監理技術者の行うべき第二十六条の四第一項に規定する職務を補佐する者として、当該建設工事に関し第十五条第二号イ、ロ又はハに該当する者に準ずる者として政令で定める者を専任で置く場合における監理技術者"},{"id":"q-kensetsu-26-4","sourceId":"kensetsu-26","article":"26","paragraph":4,"item":null,"text":"前項ただし書の規定は、同項各号の建設工事の工事現場の数が、同一の主任技術者又は監理技術者が各工事現場に係る第二十六条の四第一項に規定する職務を行つたとしてもその適切な遂行に支障を生ずるおそれがないものとして政令で定める数を超えるときは、適用しない。"},{"id":"q-rei-27-1","sourceId":"rei-27","article":"27","paragraph":1,"item":null,"text":"法第二十六条第三項の政令で定める重要な建設工事は、次の各号のいずれかに該当する建設工事で工事一件の請負代金の額が四千五百万円（当該建設工事が建築一式工事である場合にあつては、九千万円）以上のものとする。"},{"id":"q-rei-27-1-1","sourceId":"rei-27","article":"27","paragraph":1,"item":1,"text":"国又は地方公共団体が注文者である施設又は工作物に関する建設工事"},{"id":"q-rei-27-2","sourceId":"rei-27","article":"27","paragraph":2,"item":null,"text":"前項に規定する建設工事のうち密接な関係のある二以上の建設工事を同一の建設業者が同一の場所又は近接した場所において施工するものについては、同一の専任の主任技術者がこれらの建設工事を管理することができる。"},{"id":"q-kensetsu-24_8-3","sourceId":"kensetsu-24_8","article":"24の8","paragraph":3,"item":null,"text":"第一項の特定建設業者は、同項の発注者から請求があつたときは、同項の規定により備え置かれた施工体制台帳を、その発注者の閲覧に供しなければならない。"},{"id":"q-mlit-guideline-tax","sourceId":"mlit-kyoka-guideline","article":null,"paragraph":null,"item":null,"section":"【その他】2.","page":44,"text":"法、令及び規則の規定中、「請負代金の額」その他の個々の取引に係る請負代金に係る用語は、当該取引に係る消費税及び地方消費税の額を含むものとする。"},{"id":"q-kisoku-14_2-1","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":null,"text":"法第二十四条の八第一項の国土交通省令で定める事項は、次のとおりとする。"},{"id":"q-kisoku-14_2-1-1","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":1,"text":"作成建設業者（法第二十四条の八第一項の規定（公共工事の入札及び契約の適正化の促進に関する法律（平成十二年法律第百二十七号。次項第一号において「入札契約適正化法」という。）第十五条第一項の規定により読み替えて適用される場合を含む。）により施工体制台帳を作成する場合における当該建設業者をいう。以下同じ。）に関する次に掲げる事項"},{"id":"q-kisoku-14_2-1-1-i","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":1,"subitem":"イ","text":"許可を受けて営む建設業の種類"},{"id":"q-kisoku-14_2-1-1-ro","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":1,"subitem":"ロ","text":"健康保険法第四十八条の規定による被保険者の資格の取得の届出、厚生年金保険法第二十七条の規定による被保険者の資格の取得の届出及び雇用保険法第七条の規定による被保険者となつたことの届出の状況（第三号ハにおいて「健康保険等の加入状況」という。）"},{"id":"q-kisoku-14_2-1-2","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"text":"作成建設業者が請け負つた建設工事に関する次に掲げる事項"},{"id":"q-kisoku-14_2-1-2-i","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"イ","text":"建設工事の名称、内容及び工期"},{"id":"q-kisoku-14_2-1-2-ro","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"ロ","text":"発注者と請負契約を締結した年月日、当該発注者の商号、名称又は氏名及び住所並びに当該請負契約を締結した営業所の名称及び所在地"},{"id":"q-kisoku-14_2-1-2-ha","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"ハ","text":"発注者が監督員を置くときは、当該監督員の氏名及び法第十九条の二第二項に規定する通知事項"},{"id":"q-kisoku-14_2-1-2-ni","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"ニ","text":"作成建設業者が現場代理人を置くときは、当該現場代理人の氏名及び法第十九条の二第一項に規定する通知事項"},{"id":"q-kisoku-14_2-1-2-ho","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"ホ","text":"主任技術者又は監理技術者の氏名、その者が有する主任技術者資格（建設業の種類に応じ、法第七条第二号イ若しくはロに規定する実務の経験若しくは学科の修得又は同号ハの規定による国土交通大臣の認定があることをいう。以下同じ。）又は監理技術者資格及びその者が専任の主任技術者又は監理技術者であるか否かの別"},{"id":"q-kisoku-14_2-1-2-he","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"ヘ","text":"法第二十六条第三項第二号の規定により監理技術者の行うべき法第二十六条の四第一項に規定する職務を補佐する者（以下「監理技術者補佐」という。）を置くときは、その者の氏名及びその者が有する監理技術者補佐資格（主任技術者資格を有し、かつ、令第二十九条第一号に規定する国土交通大臣が定める要件に該当すること、又は同条第二号の規定による国土交通大臣の認定があることをいう。次項第三号及び第二十六条第二項第三号イにおいて同じ。）"},{"id":"q-kisoku-14_2-1-2-to","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"ト","text":"法第二十六条の二第一項又は第二項の規定により建設工事の施工の技術上の管理をつかさどる者でホの主任技術者若しくは監理技術者又はヘの監理技術者補佐以外のものを置くときは、その者の氏名、その者が管理をつかさどる建設工事の内容及びその者が有する主任技術者資格"},{"id":"q-kisoku-14_2-1-2-chi","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"チ","text":"建設工事に従事する者に関する次に掲げる事項（建設工事に従事する者が希望しない場合においては、（６）に掲げるものを除く。）"},{"id":"q-kisoku-14_2-1-2-chi-1","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"チ","text":"氏名、生年月日及び年齢"},{"id":"q-kisoku-14_2-1-2-chi-2","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"チ","text":"職種"},{"id":"q-kisoku-14_2-1-2-chi-3","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"チ","text":"健康保険法又は国民健康保険法（昭和三十三年法律第百九十二号）による医療保険、国民年金法（昭和三十四年法律第百四十一号）又は厚生年金保険法による年金及び雇用保険法による雇用保険（第四号チ（３）において「社会保険」という。）の加入等の状況"},{"id":"q-kisoku-14_2-1-2-chi-4","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"チ","text":"中小企業退職金共済法（昭和三十四年法律第百六十号）第二条第七項に規定する被共済者に該当する者（第四号チ（４）において単に「被共済者」という。）であるか否かの別"},{"id":"q-kisoku-14_2-1-2-chi-5","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"チ","text":"安全衛生に関する教育を受けているときは、その内容"},{"id":"q-kisoku-14_2-1-2-chi-6","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"チ","text":"建設工事に係る知識及び技術又は技能に関する資格"},{"id":"q-kisoku-14_2-1-2-ri","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":2,"subitem":"リ","text":"出入国管理及び難民認定法（昭和二十六年政令第三百十九号）別表第一の二の表の特定技能の在留資格（同表の特定技能の項の下欄第一号に係るものに限る。）を決定された者（第四号リにおいて「一号特定技能外国人」という。）及び同表の技能実習の在留資格を決定された者（第四号リにおいて「外国人技能実習生」という。）の従事の状況"},{"id":"q-kisoku-14_2-1-3","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":3,"text":"前号の建設工事の下請負人に関する次に掲げる事項"},{"id":"q-kisoku-14_2-1-3-i","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":3,"subitem":"イ","text":"商号又は名称及び住所"},{"id":"q-kisoku-14_2-1-3-ro","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":3,"subitem":"ロ","text":"当該下請負人が建設業者であるときは、その者の許可番号及びその請け負つた建設工事に係る許可を受けた建設業の種類"},{"id":"q-kisoku-14_2-1-3-ha","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":3,"subitem":"ハ","text":"健康保険等の加入状況"},{"id":"q-kisoku-14_2-1-4","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"text":"前号の下請負人が請け負つた建設工事に関する次に掲げる事項"},{"id":"q-kisoku-14_2-1-4-i","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"イ","text":"建設工事の名称、内容及び工期"},{"id":"q-kisoku-14_2-1-4-ro","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"ロ","text":"当該下請負人が注文者と下請契約を締結した年月日"},{"id":"q-kisoku-14_2-1-4-ha","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"ハ","text":"注文者が監督員を置くときは、当該監督員の氏名及び法第十九条の二第二項に規定する通知事項"},{"id":"q-kisoku-14_2-1-4-ni","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"ニ","text":"当該下請負人が現場代理人を置くときは、当該現場代理人の氏名及び法第十九条の二第一項に規定する通知事項"},{"id":"q-kisoku-14_2-1-4-ho","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"ホ","text":"当該下請負人が建設業者であるときは、その者が置く主任技術者の氏名、当該主任技術者が有する主任技術者資格及び当該主任技術者が専任の者であるか否かの別"},{"id":"q-kisoku-14_2-1-4-he","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"ヘ","text":"当該下請負人が法第二十六条の二第一項又は第二項の規定により建設工事の施工の技術上の管理をつかさどる者でホの主任技術者以外のものを置くときは、当該者の氏名、その者が管理をつかさどる建設工事の内容及びその有する主任技術者資格"},{"id":"q-kisoku-14_2-1-4-to","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"ト","text":"当該建設工事が作成建設業者の請け負わせたものであるときは、当該建設工事について請負契約を締結した作成建設業者の営業所の名称及び所在地"},{"id":"q-kisoku-14_2-1-4-chi","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"チ","text":"建設工事に従事する者に関する次に掲げる事項（建設工事に従事する者が希望しない場合においては、（６）に掲げるものを除く。）"},{"id":"q-kisoku-14_2-1-4-chi-1","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"チ","text":"氏名、生年月日及び年齢"},{"id":"q-kisoku-14_2-1-4-chi-2","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"チ","text":"職種"},{"id":"q-kisoku-14_2-1-4-chi-3","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"チ","text":"社会保険の加入等の状況"},{"id":"q-kisoku-14_2-1-4-chi-4","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"チ","text":"被共済者であるか否かの別"},{"id":"q-kisoku-14_2-1-4-chi-5","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"チ","text":"安全衛生に関する教育を受けているときは、その内容"},{"id":"q-kisoku-14_2-1-4-chi-6","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"チ","text":"建設工事に係る知識及び技術又は技能に関する資格"},{"id":"q-kisoku-14_2-1-4-ri","sourceId":"kisoku-14_2","article":"14の2","paragraph":1,"item":4,"subitem":"リ","text":"一号特定技能外国人及び外国人技能実習生の従事の状況"}]};
@@ -6564,7 +6577,7 @@ __m["src/ui/app.mjs"] = (function () {
 // 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
-const { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
+const { readBidForm, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
 const { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -6644,6 +6657,7 @@ function showEntry(doc) {
   if (entry) entry.hidden = false;
   const back = doc.getElementById('entry-back');
   if (back) back.hidden = true;
+  setBidStatus(doc, '');
   doc.getElementById('sample-load')?.focus?.();
 }
 // 段を開き、今の段の印へ焦点を移す(押したボタンが隠れて焦点が消えないように)。画面は scrollId の要素まで動かす
@@ -6658,12 +6672,41 @@ function openPanelForLink(doc, href) {
   if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
 }
 
+// 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
+const NEXT_STEP = '下の「まとめ」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
+const BID_NOTICE_DONE = '✓ 結果が出ました。' + NEXT_STEP;
+const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。' + NEXT_STEP;
+const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
+const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。下の「受注後の段取り」から読んでください。';
+const NOTICE_STALE = '＊ 条件が変わりました。もう一度「確認する」を押すと、新しい条件の結果が出ます。';
+function setBidStatus(doc, text) {
+  const el = doc.getElementById('bid-status');
+  if (el) el.textContent = text;
+}
+// 今の結果で done と言えるかを見て、言えなければ何が起きたかと次の一手を返す
+function bidNotice(done) {
+  if (summary.errors.length) return '＊ 金額の欄を読めませんでした。「1 条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
+  if (summary.stale) return NOTICE_STALE;
+  if (!last || !lastSchedule) return '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
+  return done;
+}
+// 金額の欄の読めない値に印を付け、直ったら外す
+function markAmountFields(doc, values) {
+  for (const [id, bad] of amountValidity(values)) {
+    const el = doc.getElementById(id);
+    if (!el) continue;
+    if (bad) el.setAttribute('aria-invalid', 'true');
+    else el.removeAttribute('aria-invalid');
+  }
+}
+
 function runBid(doc) {
   setAwardedView(doc, false);
   const bidOut = doc.getElementById('bid-result');
   const taichoOut = doc.getElementById('taicho-result');
   const values = collect(doc);
   const errors = formErrors(values);
+  markAmountFields(doc, values);
   Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
   const openEl = doc.getElementById('open-items');
   if (errors.length) {
@@ -6759,7 +6802,9 @@ function setAwardedView(doc, on) {
 function enterAwarded(doc) {
   if (!awardedAll && !lastScheduleInput && !summary.errors.length) setAwardedView(doc, true);
   if (awardedAll) runSchedule(doc, {});
-  openPanel(doc, 2, 'schedule-heading');
+  // 全部の行のときは知らせの行のすぐ下に段取りがあるので、知らせの行まで動かす(段取りの見出しまで動かすと知らせが画面の上へ隠れる)
+  openPanel(doc, 2, awardedAll ? 'bid-status' : 'schedule-heading');
+  setBidStatus(doc, awardedAll ? AWARDED_NOTICE_ALL : bidNotice(AWARDED_NOTICE_DONE));
 }
 
 const NATIONAL_NOTICE = {
@@ -7082,6 +7127,7 @@ function loadSample(doc) {
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
   openPanel(doc, 2);
+  setBidStatus(doc, bidNotice(SAMPLE_NOTICE_DONE));
 }
 
 // 「自分の工事で入れ直す」(F37a): 見本の値と見本から出た結果を消し、段1 を開く。
@@ -7108,6 +7154,8 @@ function clearSample(doc) {
   Object.assign(summary, { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, stale: false });
   setExportStatus(doc, '');
   setScheduleStatus(doc, '');
+  setBidStatus(doc, '');
+  markAmountFields(doc, {});
   for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
@@ -7163,7 +7211,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (el) initialResult.set(id, el.innerHTML);
     }
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
-    on('bid-run', () => { runBid(doc); openPanel(doc, 2); });
+    on('bid-run', () => { runBid(doc); openPanel(doc, 2); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); });
     on('sample-load', () => loadSample(doc));
     on('sample-reenter', () => clearSample(doc));
     on('entry-bid', () => openPanel(doc, 1));
@@ -7245,7 +7293,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (!el) continue;
       const changed = () => {
         if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
-        if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); }
+        if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); if (!awardedAll) setBidStatus(doc, NOTICE_STALE); }
         // 全部の行(F37c)は条件から出していないので、条件を変えても古くならない
         if (lastSchedule && !awardedAll) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
       };

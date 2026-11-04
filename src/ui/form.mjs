@@ -51,15 +51,20 @@ export function readBidForm(values = {}) {
   };
 }
 
+const AMOUNT_FIELDS = [['contract-amount', '請負代金の見込み'], ['subcontract-total', '下請けの総額']];
+const amountError = (values, key) => (flag(values[key + '-unknown']) ? null : parseYen(values[key]).error);
 // 金額の欄の読めない値の一覧(画面に出す)
 export function formErrors(values = {}) {
   const out = [];
-  for (const [key, name] of [['contract-amount', '請負代金の見込み'], ['subcontract-total', '下請けの総額']]) {
-    if (flag(values[key + '-unknown'])) continue;
-    const r = parseYen(values[key]);
-    if (r.error) out.push(name + ': ' + r.error);
+  for (const [key, name] of AMOUNT_FIELDS) {
+    const error = amountError(values, key);
+    if (error) out.push(name + ': ' + error);
   }
   return out;
+}
+// 金額の欄ごとの読めるかどうか(aria-invalid を付ける欄を決める)。[欄の id, 読めないなら true] の列
+export function amountValidity(values = {}) {
+  return AMOUNT_FIELDS.map(([key]) => [key, Boolean(amountError(values, key))]);
 }
 
 export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];

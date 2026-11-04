@@ -1,7 +1,7 @@
 // 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
-import { readBidForm, formErrors, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
+import { readBidForm, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -81,6 +81,7 @@ export function showEntry(doc) {
   if (entry) entry.hidden = false;
   const back = doc.getElementById('entry-back');
   if (back) back.hidden = true;
+  setBidStatus(doc, '');
   doc.getElementById('sample-load')?.focus?.();
 }
 // 段を開き、今の段の印へ焦点を移す(押したボタンが隠れて焦点が消えないように)。画面は scrollId の要素まで動かす
@@ -95,12 +96,41 @@ export function openPanelForLink(doc, href) {
   if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
 }
 
+// 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
+const NEXT_STEP = '下の「まとめ」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
+const BID_NOTICE_DONE = '✓ 結果が出ました。' + NEXT_STEP;
+const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。' + NEXT_STEP;
+const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
+const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。下の「受注後の段取り」から読んでください。';
+const NOTICE_STALE = '＊ 条件が変わりました。もう一度「確認する」を押すと、新しい条件の結果が出ます。';
+function setBidStatus(doc, text) {
+  const el = doc.getElementById('bid-status');
+  if (el) el.textContent = text;
+}
+// 今の結果で done と言えるかを見て、言えなければ何が起きたかと次の一手を返す
+function bidNotice(done) {
+  if (summary.errors.length) return '＊ 金額の欄を読めませんでした。「1 条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
+  if (summary.stale) return NOTICE_STALE;
+  if (!last || !lastSchedule) return '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
+  return done;
+}
+// 金額の欄の読めない値に印を付け、直ったら外す
+function markAmountFields(doc, values) {
+  for (const [id, bad] of amountValidity(values)) {
+    const el = doc.getElementById(id);
+    if (!el) continue;
+    if (bad) el.setAttribute('aria-invalid', 'true');
+    else el.removeAttribute('aria-invalid');
+  }
+}
+
 export function runBid(doc) {
   setAwardedView(doc, false);
   const bidOut = doc.getElementById('bid-result');
   const taichoOut = doc.getElementById('taicho-result');
   const values = collect(doc);
   const errors = formErrors(values);
+  markAmountFields(doc, values);
   Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
   const openEl = doc.getElementById('open-items');
   if (errors.length) {
@@ -196,7 +226,9 @@ function setAwardedView(doc, on) {
 export function enterAwarded(doc) {
   if (!awardedAll && !lastScheduleInput && !summary.errors.length) setAwardedView(doc, true);
   if (awardedAll) runSchedule(doc, {});
-  openPanel(doc, 2, 'schedule-heading');
+  // 全部の行のときは知らせの行のすぐ下に段取りがあるので、知らせの行まで動かす(段取りの見出しまで動かすと知らせが画面の上へ隠れる)
+  openPanel(doc, 2, awardedAll ? 'bid-status' : 'schedule-heading');
+  setBidStatus(doc, awardedAll ? AWARDED_NOTICE_ALL : bidNotice(AWARDED_NOTICE_DONE));
 }
 
 const NATIONAL_NOTICE = {
@@ -519,6 +551,7 @@ export function loadSample(doc) {
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
   openPanel(doc, 2);
+  setBidStatus(doc, bidNotice(SAMPLE_NOTICE_DONE));
 }
 
 // 「自分の工事で入れ直す」(F37a): 見本の値と見本から出た結果を消し、段1 を開く。
@@ -545,6 +578,8 @@ export function clearSample(doc) {
   Object.assign(summary, { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, stale: false });
   setExportStatus(doc, '');
   setScheduleStatus(doc, '');
+  setBidStatus(doc, '');
+  markAmountFields(doc, {});
   for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
@@ -600,7 +635,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (el) initialResult.set(id, el.innerHTML);
     }
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
-    on('bid-run', () => { runBid(doc); openPanel(doc, 2); });
+    on('bid-run', () => { runBid(doc); openPanel(doc, 2); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); });
     on('sample-load', () => loadSample(doc));
     on('sample-reenter', () => clearSample(doc));
     on('entry-bid', () => openPanel(doc, 1));
@@ -682,7 +717,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (!el) continue;
       const changed = () => {
         if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
-        if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); }
+        if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); if (!awardedAll) setBidStatus(doc, NOTICE_STALE); }
         // 全部の行(F37c)は条件から出していないので、条件を変えても古くならない
         if (lastSchedule && !awardedAll) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
       };
