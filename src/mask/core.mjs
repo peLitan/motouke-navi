@@ -10,11 +10,12 @@
 // 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形 > 文脈の規則。重なったら優先の高いほう、同じなら長いほうを取る。
 // ただし、足した語・辞書の語が、形で見つけた長い語(メール・会社名・住所・電話など)の中に収まるときは、長い方を取る(F27d。
 //   「林」を足しても「小林商事株式会社」は会社名として、「a」を足してもメールはメールとして置き換える)。
+//   文脈の規則で見つけた長い語の中に収まるときも長い方を取る(F31c。「林」を足しても「担当者: 小林 一郎」の名を残さない)。
 // 英数字で始まる・終わる語は、英数字の途中では当てない(「a」が「data」の中に当たらない)。
 // 形・規則は trim(語, 位置, 文) を持てる(F24a)。見つけた語のうち置き換える所 [始まり, 終わり](語の中の位置)を返し、null なら取らない。
 // 法人格の無い団体・施設の名前の規則(F24a。org-suffix)は業界を問わないので、辞書の文脈の規則の後ろにいつも足す(同じ所なら辞書の規則を取る)。
 
-import { companyPatterns, orgSuffixPatterns } from './rules-company.mjs';
+import { companyPatterns, orgSuffixPatterns, facilityPatterns } from './rules-company.mjs';
 import { addressPatterns } from './rules-address.mjs';
 
 const DEFAULT_LABELS = {
@@ -206,7 +207,7 @@ export function createMasker({ dictionaries = [] } = {}) {
     for (const p of d.patterns || []) dictPatterns.push({ kind: p.kind, re: withGlobal(p.re) });
     for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept, trim: p.trim });
   }
-  for (const p of orgSuffixPatterns()) contextPatterns.push(p);
+  for (const p of [...orgSuffixPatterns(), ...facilityPatterns()]) contextPatterns.push(p);
   const userTerms = []; // { word, kind, re }
   const byOriginal = new Map(); // 元の語(空白を除いた形)→ 対応表の1行
   const byToken = new Map(); // 記号 → 対応表の1行
@@ -287,6 +288,16 @@ export function createMasker({ dictionaries = [] } = {}) {
       if (overlaps(c, chosen)) continue;
       chosen.push(c);
     }
+    // 足した語・辞書の語が文脈で見つけた長い語の中に収まるなら、長い方に置き換える(F31c)。
+    // 文脈の語が形と重なるときは取り替えない(足した語を外すと、形に負けた文脈の語とともに語が漏れるため)
+    const contexts = cands.filter((x) => x.priority === 4 && !chosen.includes(x)).sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start);
+    for (const c of contexts) {
+      const hit = chosen.filter((x) => c.start < x.end && x.start < c.end);
+      const inside = (x) => (x.priority <= 1 || x.priority === 4) && c.start <= x.start && x.end <= c.end && (x.end - x.start) < (c.end - c.start);
+      if (!hit.some((x) => x.priority <= 1) || !hit.every(inside)) continue;
+      for (const x of hit) chosen.splice(chosen.indexOf(x), 1);
+      chosen.push(c);
+    }
     // 文脈で見つけた語は、同じ文の中のほかの場所(文脈の無い所)でも同じ語として置き換える
     const seen = new Set();
     for (const c of chosen.filter((x) => x.rule)) {
@@ -295,9 +306,9 @@ export function createMasker({ dictionaries = [] } = {}) {
       seen.add(keyOf(word));
       for (const m of text.matchAll(termRegExp(word))) {
         const more = { start: m.index, end: m.index + m[0].length, kind: c.kind, rule: c.rule };
-        // 重なるのが、この語の中に収まる文脈の語だけなら(「中央病院」が「みほん台 中央病院」の中にあるなど)、長い方に置き換える
+        // 重なるのが、この語の中に収まる文脈の語・足した語だけなら(「中央病院」が「みほん台 中央病院」の中にある、「林」が2か所目の「小林 一郎」の中にある、など)、長い方に置き換える
         const hit = chosen.filter((x) => more.start < x.end && x.start < more.end);
-        if (hit.length && hit.every((x) => x.rule && x.start >= more.start && x.end <= more.end && x !== c)) {
+        if (hit.length && hit.every((x) => (x.rule || x.priority <= 1) && x.start >= more.start && x.end <= more.end && x !== c)) {
           for (const x of hit) chosen.splice(chosen.indexOf(x), 1);
         }
         if (!overlaps(more, chosen)) chosen.push(more);

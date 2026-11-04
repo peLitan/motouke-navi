@@ -14,11 +14,17 @@
 //   前の語 + 略し方: 語が団体の語尾で終わる・前に欄名がある・後ろが「御中」「と契約」などのときだけ取る(abbrBefore)
 //   略し方 + 後ろの語: 前に字が無い・前が欄名か助詞・後ろの語が団体の語尾で終わるときだけ取る(abbrAfter)
 // 法人格だけの一般の文(「当社は株式会社です」「株式会社又は合同会社」「株式会社法」)は取らない(CORP_TAIL_*)
+// 施設の名前(F31c):
+//   org-suffix: 施設の語尾なら、名前の途中のひらがなも入れる(「さくら市立ひまわり幼稚園」「甲野ひまわり幼稚園」)。ひらがなは3字以上で、活用の字で終わらないもの(「大きな病院」「通っている幼稚園」は取らない)
+//   facility-head: 施設の種類の語 + 名前(「デイサービスセンターひまわり」「特別養護老人ホームさくらの里」)。種類の語も合わせて1つに置き換える
+//   facility-operator: 福祉・医療・学校などの法人の名前の空白の後ろの、「園」などで終わる短い名前(「社会福祉法人みほん会 ためし園」)
 
 import {
   CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM,
   ORG_GENERIC_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS,
   AMBIGUOUS_ABBREVIATIONS, ORG_SUFFIX_GENERIC_WORDS, PREFECTURE_NAMES_KEN, CORP_TAIL_SENTENCE_WORDS, CORP_TAIL_SYSTEM_WORDS,
+  FACILITY_HEAD_WORDS, FACILITY_HEAD_TAIL_WORDS, FACILITY_HEAD_TAIL_CHARS, FACILITY_OPERATOR_TYPES, FACILITY_OPERATOR_ABBREVIATIONS,
+  FACILITY_SHORT_SUFFIXES, FACILITY_SHORT_NON_NAMES,
 } from './company-types.mjs';
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -32,6 +38,7 @@ const SP = '[ \\u3000]';
 const isHira = (c) => !!c && /\p{Script=Hiragana}/u.test(c);
 const isSolid = (c) => !!c && new RegExp(`[${SOLID}]`, 'u').test(c);
 const isNameChar = (c) => isHira(c) || isSolid(c);
+const HIRA_RUN = `[${HIRA}]*`;
 
 // 囲み文字: U+3200〜U+33FF の字を NFKC で正規化し、法人の種類の字(括弧を外した形)か法人の種類の語になる字を拾う
 export function enclosedCorporateChars() {
@@ -231,6 +238,23 @@ export function companyPatterns(kind = 'company') {
   return [before, after];
 }
 
+export const FACILITY_RULES = [
+  { id: 'facility-head', name: '施設の種類の語 + 名前', example: 'デイサービスセンターひまわり・グループホーム甲野' },
+  { id: 'facility-operator', name: '法人の名前の後ろの施設の名前', example: '社会福祉法人みほん会 ためし園' },
+];
+
+// 名前の途中にひらがなを入れてよい語尾(施設)。「新たな建設」のような文を取らないよう、会社の語尾には使わない
+const MIXED_NAME_SUFFIXES = new Set([...FACILITY_SUFFIXES_LAW, 'クリニック', '医院', 'デイサービスセンター', 'グループホーム']);
+const PLAIN_NAME = new RegExp(`^${HIRA_RUN}[${SOLID}]*$`, 'u');
+const MIXED_NAME = new RegExp(`^${HIRA_RUN}[${SOLID}]+[${HIRA}]{3,}[${SOLID}]*$`, 'u');
+const INFLECTED = /[るたいなだくてでう]$/u;
+function nameShapeOk(kept, sfx) {
+  if (PLAIN_NAME.test(kept)) return true;
+  if (!MIXED_NAME_SUFFIXES.has(sfx) || !MIXED_NAME.test(kept)) return false;
+  // 途中のひらがなの並びが活用の字で終わるなら文の一部(「通っている」「素晴らしい」)
+  return ![...kept.matchAll(new RegExp(`[${HIRA}]+`, 'gu'))].some((m) => m.index > 0 && INFLECTED.test(m[0]));
+}
+
 // 法人格の無い団体・施設の名前の規則(文脈の規則として、確信の弱い語にする)
 export function orgSuffixPatterns({ kind = 'company', suffixes = ORG_SUFFIXES, minRest = 2 } = {}) {
   const suffixAlt = alt(suffixes);
@@ -246,11 +270,54 @@ export function orgSuffixPatterns({ kind = 'company', suffixes = ORG_SUFFIXES, m
       const h = trimHead(name);
       if (h < 0) return null;
       const kept = name.slice(h);
-      // ひらがなは名前の頭だけ(「ひまわり幼稚園」「みほん市役所」)。漢字のあとのひらがな(「新たな建設」)は名前にしない
-      if (!new RegExp(`^${'[\\p{Script=Hiragana}]'}*[${SOLID}]*$`, 'u').test(kept)) return null;
+      // ひらがなは名前の頭だけ(「ひまわり幼稚園」「みほん市役所」)。漢字のあとのひらがな(「新たな建設」)は名前にしない。施設の語尾は nameShapeOk
+      if (!nameShapeOk(kept, sfx)) return null;
       if (orgRestLength(kept) < minRest) return null;
       if (sfx === '県庁' && PREFECTURE_NAMES_KEN.includes(kept)) return null;
       return [h, word.length];
     },
   }];
+}
+
+const SENTENCE_IN_TAIL = /ます|ません|ない|ある|あり|いる|する|した|です|でした|よう|こと|もの|ため|とき|ところ|として/u;
+const HEAD_NOT_NAME = new RegExp(`^(?:${alt(FACILITY_HEAD_TAIL_WORDS)})`, 'u');
+const NOT_A_FLOOR = /^[0-9０-９一二三四五六七八九十第]+[階棟号館室名人床]/u;
+const headTailNotName = (kept) => HEAD_NOT_NAME.test(kept) || FACILITY_HEAD_TAIL_CHARS.includes(kept) || NOT_A_FLOOR.test(kept)
+  || BREAKS.some((b) => b.length > 1 && kept.startsWith(b)) || (isHira(kept[0]) && SENTENCE_IN_TAIL.test(kept));
+const NON_NAME_END = new RegExp(`(?:${alt(FACILITY_SHORT_NON_NAMES)})$`, 'u');
+
+// 施設の名前の規則(F31c)。文脈の規則として使う(確信の弱い語)
+export function facilityPatterns(kind = 'company') {
+  const headAlt = alt(FACILITY_HEAD_WORDS);
+  const NEXT = `(?:(?!${headAlt}|${CORP})${NAME})`;
+  const head = {
+    kind,
+    rule: 'facility-head',
+    re: new RegExp(`(?:${headAlt})${SP}?${NEXT}{1,20}`, 'gu'),
+    trim(word) {
+      const h = word.match(new RegExp(`^(?:${headAlt})${SP}?`, 'u'))[0];
+      const name = word.slice(h.length).replace(/・+$/u, '');
+      // ひらがなの名前の後ろの「の職員」「に入居」は trimTail では切れないので、ここで切る(「さくらの里」の「の里」は残す)
+      const cut = [...name].findIndex((c, i) => i > 0 && PARTICLES.includes(c) && HEAD_NOT_NAME.test(name.slice(i + 1)));
+      const len = cut > 0 ? cut : trimTail(name);
+      const kept = name.slice(0, len);
+      if (!kept || headTailNotName(kept) || isCorpTailWord(kept)) return null;
+      if (kept.replace(FILLER, '').length < 2) return null;
+      return [0, h.length + len];
+    },
+  };
+  const operator = `(?:${alt(FACILITY_OPERATOR_TYPES)}|[(（](?:${alt(FACILITY_OPERATOR_ABBREVIATIONS)})[)）])`;
+  const suffix = alt(FACILITY_SHORT_SUFFIXES);
+  const after = {
+    kind,
+    rule: 'facility-operator',
+    re: new RegExp(`(?<=${operator}${SP}?${NAME}{1,30}${SP})${NAME}{1,20}?(?:${suffix})(?![\\p{Script=Han}\\p{Script=Katakana}ー々])`, 'gu'),
+    trim(word) {
+      if (NON_NAME_END.test(word)) return null;
+      const sfx = word.match(new RegExp(`(?:${suffix})$`, 'u'))[0];
+      if (orgRestLength(word.slice(0, word.length - sfx.length)) < 2) return null;
+      return [0, word.length];
+    },
+  };
+  return [head, after];
 }
