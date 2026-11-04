@@ -109,14 +109,15 @@ test('置き換えの前と後の2列は、狭い画面(400px を含む幅)で1�
   const one = narrowMedia().filter((m) => m.width >= 400 && m.rules.some((r) => r.sel === '.mask-cols' && prop(r.body, 'grid-template-columns') === 'minmax(0, 1fr)'));
   assert.ok(one.length, '狭い画面で1列にする決まりが無い');
   assert.match(body, /<div class="mask-cols">\s*<div><h3>前<\/h3><pre id="mask-before"><\/pre><\/div>\s*<div><h3>後<\/h3><pre id="mask-after"><\/pre><\/div>/);
-  // 見本のボタンも狭い画面では幅いっぱい
-  assert.ok(one.some((m) => m.rules.some((r) => r.sel === '.sample-button' && prop(r.body, 'width') === '100%')));
+  // 入口の3択も狭い画面では1列にして幅いっぱい
+  assert.ok(one.some((m) => m.rules.some((r) => r.sel === '.entry-choices' && prop(r.body, 'grid-template-columns') === 'minmax(0, 1fr)')));
+  assert.equal(prop(ruleOf('.entry-button'), 'width'), '100%');
 });
 
 test('ボタン・入力欄・選ぶ印・折りたたみの見出しは指で押せる大きさ(44px)', () => {
   assert.ok(toPx(prop(ruleOf('button'), 'min-height')) >= 44, 'ボタンが低い');
   assert.ok(toPx(prop(ruleOf('input[type="text"], select'), 'min-height')) >= 44, '入力欄が低い');
-  assert.ok(toPx(prop(ruleOf('.sample-button'), 'min-height')) >= 44);
+  assert.ok(toPx(prop(ruleOf('.entry-button'), 'min-height')) >= 44);
   // 丸・四角の印そのものは 20px にし、行(ラベルを含む)を 44px にする。ラベルは for で印とつながり、押すと選べる
   const box = ruleOf('input[type="radio"], input[type="checkbox"]');
   assert.ok(toPx(prop(box, 'width')) >= 20 && toPx(prop(box, 'height')) >= 20);

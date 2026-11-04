@@ -49,6 +49,51 @@ function collect(doc) {
   return values;
 }
 
+// 段の切り替え(F37a): #panel-1〜3 の hidden を付け外しして1つずつ見せる。段階の表示は今いる段だけ印を付け、入口を選んだあとは押せる。
+// 要素はすべて静的な HTML にあり、ここでは作らない。結果は隠れた段にも書く
+const PANELS = [1, 2, 3];
+export function showPanel(doc, n) {
+  for (const i of PANELS) {
+    const panel = doc.getElementById('panel-' + i);
+    if (panel) panel.hidden = i !== n;
+    const step = doc.getElementById('step-' + i);
+    if (!step) continue;
+    step.disabled = false;
+    if (i === n) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
+  }
+  const entry = doc.getElementById('entry');
+  if (entry) entry.hidden = true;
+  const back = doc.getElementById('entry-back');
+  if (back) back.hidden = false;
+}
+// 入口に戻す: 3択を見せ、段を隠し、段階の表示を押せない形にする。入れた値と結果は消さない
+export function showEntry(doc) {
+  for (const i of PANELS) {
+    const panel = doc.getElementById('panel-' + i);
+    if (panel) panel.hidden = true;
+    const step = doc.getElementById('step-' + i);
+    if (!step) continue;
+    step.disabled = true;
+    step.removeAttribute('aria-current');
+  }
+  const entry = doc.getElementById('entry');
+  if (entry) entry.hidden = false;
+  const back = doc.getElementById('entry-back');
+  if (back) back.hidden = true;
+  doc.getElementById('sample-load')?.focus?.();
+}
+// 段を開き、今の段の印へ焦点を移す(押したボタンが隠れて焦点が消えないように)。画面は scrollId の要素まで動かす
+function openPanel(doc, n, scrollId = 'steps') {
+  showPanel(doc, n);
+  doc.getElementById('step-' + n)?.focus?.({ preventScroll: true });
+  doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
+}
+// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開く。動くのはリンクの既定の動きに任せる
+export function openPanelForLink(doc, href) {
+  const panel = doc.getElementById(String(href ?? '').replace(/^#/, ''))?.closest?.('[id^="panel-"]');
+  if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
+}
+
 export function runBid(doc) {
   const bidOut = doc.getElementById('bid-result');
   const taichoOut = doc.getElementById('taicho-result');
@@ -234,7 +279,7 @@ export function runLedgerCheck(doc) {
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') {
-    outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、「見本で試す」を押してください。']);
+    outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、入口の「まず見本で試す」を押してください。']);
     lastChecklist = null; checklistText = null; checklistChecked.clear();
     const cl = doc.getElementById('checklist-result');
     if (cl) cl.innerHTML = '<p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p>';
@@ -371,7 +416,7 @@ export function runPlanCheck(doc) {
   summary.plan = null;
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、「見本で試す」を押してください。']); return; }
+  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。']); return; }
   try {
     const form = readBidForm(collect(doc));
     const out = checkPlanToc(text, { workType: form.workType ?? undefined, table: rulesTable });
@@ -412,9 +457,77 @@ export function loadSample(doc) {
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
-  // 見本のあとは、結論の枠(まとめ)を画面に出す
+  // 見本のあとは、段2 を開いて結論の枠(まとめ)を画面に出す
+  const banner = doc.getElementById('sample-banner');
+  if (banner) banner.hidden = false;
+  openPanel(doc, 2);
+}
+
+// 「自分の工事で入れ直す」(F37a): 見本の値と見本から出た結果を消し、段1 を開く。
+// 見本を読み込んだあとに利用者が貼り替えた台帳・目次は、見本ではないので消さない
+const RESULT_IDS = ['bid-result', 'taicho-result', 'schedule-result', 'open-items', 'check-result', 'checklist-result', 'plan-result'];
+let initialForm = null;
+const initialResult = new Map();
+function restoreResult(doc, id) {
+  const el = doc.getElementById(id);
+  if (el && initialResult.has(id)) el.innerHTML = initialResult.get(id);
+}
+export function clearSample(doc) {
+  for (const [id, v] of Object.entries(initialForm ?? {})) {
+    const el = doc.getElementById(id);
+    if (!el) continue;
+    if (typeof v === 'boolean') el.checked = v;
+    else el.value = v;
+  }
+  last = null;
+  stale = false;
+  lastSchedule = null;
+  lastScheduleInput = null;
+  summaryShown = false;
+  Object.assign(summary, { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, stale: false });
+  setExportStatus(doc, '');
+  setScheduleStatus(doc, '');
+  for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
-  if (sum && typeof sum.scrollIntoView === 'function') sum.scrollIntoView({ block: 'start' });
+  if (sum) { sum.hidden = true; sum.innerHTML = ''; }
+
+  const ledger = doc.getElementById('ledger-input');
+  if (ledger && ledger.value === SAMPLE.documents.ledger) {
+    ledger.value = '';
+    lastCheck = null;
+    summary.check = null;
+    lastChecklist = null;
+    checklistText = null;
+    checklistStale = false;
+    checklistChecked.clear();
+    setCheckStatus(doc, '');
+    setChecklistStatus(doc, '');
+    restoreResult(doc, 'check-result');
+    restoreResult(doc, 'checklist-result');
+  } else if (lastCheck) {
+    // 自分の台帳の点検は残すが、見本の条件で出した結果なので書き出さない
+    lastCheck = null;
+    setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。');
+  }
+  const plan = doc.getElementById('plan-input');
+  if (plan && plan.value === SAMPLE.documents.planToc) {
+    plan.value = '';
+    lastPlan = null;
+    summary.plan = null;
+    setPlanStatus(doc, '');
+    restoreResult(doc, 'plan-result');
+  }
+  for (const id of ['sample-ledger', 'sample-plan']) {
+    const el = doc.getElementById(id);
+    if (el) el.textContent = '';
+  }
+  const docs = doc.getElementById('sample-docs');
+  if (docs) docs.hidden = true;
+  const st = doc.getElementById('sample-status');
+  if (st) st.textContent = '';
+  const banner = doc.getElementById('sample-banner');
+  if (banner) banner.hidden = true;
+  openPanel(doc, 1);
 }
 
 export function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
@@ -423,8 +536,24 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       const btn = doc.getElementById(id);
       if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); f(); });
     };
-    on('bid-run', () => runBid(doc));
+    initialForm = collect(doc);
+    for (const id of RESULT_IDS) {
+      const el = doc.getElementById(id);
+      if (el) initialResult.set(id, el.innerHTML);
+    }
+    on('bid-run', () => { runBid(doc); openPanel(doc, 2); });
     on('sample-load', () => loadSample(doc));
+    on('sample-reenter', () => clearSample(doc));
+    on('entry-bid', () => openPanel(doc, 1));
+    on('entry-awarded', () => openPanel(doc, 2, 'schedule-heading'));
+    on('entry-back', () => showEntry(doc));
+    for (const i of PANELS) on('step-' + i, () => openPanel(doc, i));
+    on('next-step-3', () => openPanel(doc, 3));
+    const main = doc.getElementById('main');
+    if (main) main.addEventListener('click', (ev) => {
+      const a = ev && ev.target && ev.target.closest ? ev.target.closest('a[href^="#"]') : null;
+      if (a) openPanelForLink(doc, a.getAttribute('href'));
+    });
     on('print-btn', () => printResult(doc, win));
     on('csv-btn', () => exportCsv(doc));
     on('ledger-run', () => runLedgerCheck(doc));

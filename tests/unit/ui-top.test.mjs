@@ -22,24 +22,25 @@ test('h1 のすぐ後に「このツールでできること」と3つの箇条�
   assert.equal((ul[1].match(/<li>/g) || []).length, 3);
 });
 
-test('「まず見本で試す」の枠に大きなボタン「見本で試す(架空の工事)」がある(見本を読み込むボタン)', () => {
-  const start = body.match(/<div class="start no-print" id="start">([\s\S]*?)<\/div>/);
-  assert.ok(start, '「まず見本で試す」の枠が無い');
-  assert.ok(start[1].includes('<h2>まず見本で試す</h2>'));
-  const btn = start[1].match(/<button type="button" id="sample-load" class="sample-button">([\s\S]*?)<\/button>/);
-  assert.ok(btn, '見本のボタンが枠の中に無い、または大きなボタンの class が無い');
-  assert.ok(btn[1].includes('見本で試す(架空の工事)'));
-  assert.ok(btn[1].includes('見本を読み込む'));
-  assert.match(html, /\.sample-button \{[^}]*font-size: 1\.25rem/, 'ボタンの文字が大きくない');
+test('入口の枠「どこから始めますか」に3択が同じ形で並び、見本が先頭(見本を読み込むボタン)', () => {
+  const start = body.slice(body.indexOf('<div class="start no-print" id="start">'), body.indexOf('id="entry-back"'));
+  assert.ok(start.includes('<h2>どこから始めますか</h2>'));
+  const btns = [...start.matchAll(/<button type="button" id="(sample-load|entry-bid|entry-awarded)" class="([^"]*)">([\s\S]*?)<\/button>/g)];
+  assert.deepEqual(btns.map((m) => m[1]), ['sample-load', 'entry-bid', 'entry-awarded']);
+  for (const m of btns) assert.ok(m[2].split(' ').includes('entry-button'), m[1] + ' が同じ形でない');
+  assert.ok(btns[0][2].split(' ').includes('sample-button'), '見本だけ色を濃くする印が無い');
+  assert.ok(btns[0][3].includes('まず見本で試す') && btns[0][3].includes('初めての方はこちら') && btns[0][3].includes('見本を読み込む'));
+  assert.ok(btns[1][3].includes('これから入札する'));
+  assert.ok(btns[2][3].includes('もう受注した'));
+  assert.match(html, /\.entry-button \{[^}]*font-size: 1\.25rem/, 'ボタンの文字が大きくない');
   assert.equal((body.match(/id="sample-load"/g) || []).length, 1, '見本のボタンが2つある');
-  // 見本の枠は 1. の節の中、最初の入力欄より前
   assert.ok(body.indexOf('id="start"') < body.indexOf('id="bid-form"'));
 });
 
 test('段階の表示が 1 条件を入れる → 2 結果を見る → 3 書類を確かめる の順にある', () => {
   const ol = body.match(/<ol class="steps" id="steps"[^>]*>([\s\S]*?)<\/ol>/);
   assert.ok(ol, '段階の表示が無い');
-  const items = [...ol[1].matchAll(/<li>([^<]*)<\/li>/g)].map((m) => m[1]);
+  const items = [...ol[1].matchAll(/<li><button [^>]*>([^<]*)<\/button><\/li>/g)].map((m) => m[1]);
   assert.deepEqual(items, ['1 条件を入れる', '2 結果を見る', '3 書類を確かめる']);
 });
 

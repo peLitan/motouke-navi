@@ -49,13 +49,24 @@
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
   .start { border: 2px solid #1d4ed8; background: #eff6ff; padding: 0.75rem 1rem; margin: 1rem 0; }
   .start h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
-  .sample-button { display: inline-block; font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1.5rem; min-height: 3rem; color: #fff; background: #1d4ed8; border: 2px solid #1e3a8a; border-radius: 0.375rem; cursor: pointer; text-align: left; }
+  /* 入口の3択(F37a): 同じ大きさのボタンを1つの枠に並べ、見本だけ色を濃くする */
+  .entry-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+  .entry-button { display: block; width: 100%; margin: 0; font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1rem; min-height: 3rem; color: #1e3a8a; background: #fff; border: 2px solid #1d4ed8; border-radius: 0.375rem; cursor: pointer; text-align: left; }
+  .entry-button:hover { background: #dbeafe; }
+  .entry-button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .entry-button .btn-sub { display: block; font-size: 1rem; font-weight: normal; }
+  .sample-button { color: #fff; background: #1d4ed8; border-color: #1e3a8a; }
   .sample-button:hover { color: #fff; background: #1e40af; }
-  .sample-button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
-  .sample-button .btn-sub { display: block; font-size: 1rem; font-weight: normal; }
   .steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0.75rem 0 0; }
-  .steps li { border: 1px solid #1d4ed8; background: #fff; border-radius: 1rem; padding: 0.2rem 0.75rem; }
-  .steps li + li::before { content: "→ "; color: #1d4ed8; }
+  .steps li { display: flex; align-items: center; }
+  .steps li + li::before { content: "→"; margin-right: 0.5rem; color: #1d4ed8; }
+  /* 段階の表示(F37a): 入口を選ぶまでは塗らず、押せない形。選んだあとは今いる段だけ塗る */
+  .steps button { margin: 0; padding: 0.2rem 0.75rem; color: #1e3a8a; background: #fff; border: 1px solid #1d4ed8; border-radius: 1rem; }
+  .steps button:disabled { color: #4b5563; background: transparent; border: 1px dashed #6b7280; cursor: not-allowed; }
+  .steps button[aria-current="step"] { color: #fff; background: #1d4ed8; font-weight: bold; }
+  .steps button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .sample-banner { border-left: 6px solid #1d4ed8; background: #eff6ff; padding: 0.25rem 1rem; margin: 0.5rem 0; }
+  .sample-banner p { margin: 0.25rem 0; }
   /* 結論の印とまとめの枠(F14b)。色だけで区別しない: 記号(✕ ! ✓)と言葉を必ず添える。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; }
@@ -79,7 +90,6 @@
   #bid > h2 { margin: 0.75rem 0 0.5rem; }
   .start { margin: 0.5rem 0 1rem; }
   .start p { margin: 0.25rem 0; }
-  #sample-status:empty { margin: 0; }
   .print-only { display: none; }
   .sign-table { border-collapse: collapse; width: 100%; }
   .sign-table th, .sign-table td { border: 1px solid #1f2937; padding: 0.5rem; height: 2.5rem; text-align: left; }
@@ -127,12 +137,14 @@
   @media (max-width: 40rem) {
     body { padding: 0.75rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
-    .sample-button { display: block; width: 100%; }
+    .entry-choices { grid-template-columns: minmax(0, 1fr); }
   }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
     body { max-width: none; padding: 0; font-size: 10.5pt; }
     button, .export, .no-print { display: none !important; }
+    /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
+    #panel-1[hidden], #panel-2[hidden], #panel-3[hidden] { display: block; }
     .result { border: none; padding: 0; }
     .table-scroll { overflow: visible; }
     .table-scroll table.checklist-table { min-width: 0; }
@@ -178,20 +190,26 @@
 </details>
 </header>
 <main id="main">
-<section id="bid">
-<h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
 <div class="start no-print" id="start">
-<h2>まず見本で試す</h2>
-<p>架空の工事の条件と書類を入れて、1.〜3. の確認をそのまま出します。初めての方はまずこのボタンを押してください。</p>
-<button type="button" id="sample-load" class="sample-button"><span class="btn-main">見本で試す(架空の工事)</span><span class="btn-sub">見本を読み込む(条件・施工体制台帳・施工計画書の目次)</span></button>
-<p id="sample-status" aria-live="polite"></p>
+<div id="entry">
+<h2>どこから始めますか</h2>
+<div class="entry-choices">
+<button type="button" id="sample-load" class="entry-button sample-button"><span class="btn-main">まず見本で試す</span><span class="btn-sub">初めての方はこちら。架空の工事の見本を読み込む</span></button>
+<button type="button" id="entry-bid" class="entry-button"><span class="btn-main">これから入札する</span><span class="btn-sub">工事の条件を入れて、要るものを確かめる</span></button>
+<button type="button" id="entry-awarded" class="entry-button"><span class="btn-main">もう受注した</span><span class="btn-sub">受注後の段取りの一覧から見る</span></button>
+</div>
+</div>
 <ol class="steps" id="steps" aria-label="使う順番">
-<li>1 条件を入れる</li>
-<li>2 結果を見る</li>
-<li>3 書類を確かめる</li>
+<li><button type="button" id="step-1" disabled>1 条件を入れる</button></li>
+<li><button type="button" id="step-2" disabled>2 結果を見る</button></li>
+<li><button type="button" id="step-3" disabled>3 書類を確かめる</button></li>
 </ol>
+<button type="button" id="entry-back" hidden>入口に戻る</button>
 </div>
 <p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
+<section id="panel-1" hidden>
+<section id="bid">
+<h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
 <p>案件の条件を入れて「確認する」を押すと、受注したら要るもの(許可・技術者・台帳など)と、確認が要る点を、根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
 <p class="form-lead" id="form-lead">※必須の質問には、分からなければ「分からない」を選んでください。「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
@@ -246,12 +264,20 @@
 <p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
+</section>
+</section>
+<section id="panel-2" hidden>
+<h2>結果</h2>
+<div id="sample-banner" class="sample-banner no-print" hidden>
+<p id="sample-status" aria-live="polite"></p>
+<button type="button" id="sample-reenter">自分の工事で入れ直す</button>
+</div>
 <div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
-<h3>受注後の段取り(着手から完成・引き渡しまで)</h3>
+<h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
 <div class="row no-print"><label for="rules-load">段取りの表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
 <input type="file" id="rules-load" name="rules-load" accept=".json,application/json">
@@ -277,7 +303,9 @@
 <p id="csv-note">Excel で開ける CSV として、この PC に保存します(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
 </div>
+<div class="row no-print"><button type="button" id="next-step-3">次へ: 3 書類を確かめる</button></div>
 </section>
+<section id="panel-3" hidden>
 <section id="ledger-check">
 <h2>2. 施工体制台帳の点検</h2>
 <p>施工体制台帳を、見出しと「| 項目 | 内容 |」の表の形で貼って「台帳を点検する」を押すと、抜け・食い違いの候補を根拠の条つきで出します。発注者(公共・民間)と工事の種類は、上の「1.」の選ぶ欄の値を使います。決められないことは「判断できない」に出します。</p>
@@ -303,7 +331,7 @@
 | 主任技術者 氏名 | (氏名) |
 | 資格 | (資格) |
 | 専任・非専任 | 専任 または 非専任 |</pre>
-<p>「見本で試す」を押すと、架空の台帳がこの欄に入ります。</p>
+<p>入口の「まず見本で試す」を押すと、架空の台帳がこの欄に入ります。</p>
 </details>
 <div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
 <input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
@@ -338,6 +366,7 @@
 <button type="button" id="plan-csv-btn">目次の点検の結果を CSV に書き出す</button></div>
 <p id="plan-status" aria-live="polite"></p>
 <div id="plan-result" class="result" aria-live="polite"><p>目次を貼って「目次を点検する」を押してください。</p></div>
+</section>
 </section>
 <div class="other-tools no-print" id="other-tools">
 <h2>ここからは別の道具</h2>

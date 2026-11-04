@@ -77,33 +77,29 @@ function estimate() {
   const sum = text(body.match(/<details class="scope" id="scope"><summary>([\s\S]*?)<\/summary>/)[1]);
   add('法令の一覧の見出し(閉じた details)', Math.max(px(cssValue('details > summary', 'padding').split(/\s+/)[0]) * 2 + block(sum, REM, LH, W - REM), 2.75 * REM) + marginTB('details.scope'));
 
-  // header と main の間にほかのブロックがあれば、ここで落とす(見積もりから漏らさない)
-  const between = body.slice(body.indexOf('</details>', body.indexOf('id="scope"')), body.indexOf('<section id="bid">'));
-  assert.equal(text(between), '', '法令の一覧と 1. の節の間に、見積もっていない文がある: ' + text(between));
+  // header と入口の枠の間にほかのブロックがあれば、ここで落とす(見積もりから漏らさない)
+  const between = body.slice(body.indexOf('</details>', body.indexOf('id="scope"')), body.indexOf('<div class="start no-print" id="start">'));
+  assert.equal(text(between), '', '法令の一覧と入口の枠の間に、見積もっていない文がある: ' + text(between));
 
-  // 1. の見出し(h2 は 1.5em)
-  const sec = body.slice(body.indexOf('<section id="bid">'));
-  add('1. の見出し', block(text(sec.match(/<h2>([\s\S]*?)<\/h2>/)[1]), 1.5 * REM, LH, W) + marginTB('#bid > h2'));
-
-  // 見本の枠(枠 2px・内側 0.75rem 1rem)
-  const start = sec.match(/<div class="start no-print" id="start">([\s\S]*?)<\/div>/)[1];
+  // 入口の枠(枠 2px・内側 0.75rem 1rem): 見出しと、同じ大きさの3択と、段階の表示
+  const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="entry-back"'));
   const inner = W - 2 * REM - 4;
   h = marginTB('.start') + 0.75 * REM * 2 + 4;
   h += block(text(start.match(/<h2>([\s\S]*?)<\/h2>/)[1]), px(cssValue('.start h2', 'font-size')), LH, inner) + marginTB('.start h2');
-  for (const m of start.matchAll(/<p(?: [^>]*)?>([\s\S]*?)<\/p>/g)) {
-    if (text(m[1]) === '') continue; // #sample-status は押す前は空(余白も 0)
-    h += block(text(m[1]), REM, LH, inner) + marginTB('.start p');
-  }
-  const btnMain = text(start.match(/<span class="btn-main">([\s\S]*?)<\/span>/)[1]);
-  const btnSub = text(start.match(/<span class="btn-sub">([\s\S]*?)<\/span>/)[1]);
-  const btnW = inner - 1.5 * REM * 2 - 4;
-  h += 0.75 * REM * 2 + 4 + block(btnMain, 1.25 * REM, LH, btnW) + block(btnSub, REM, LH, btnW) + marginTB('button');
-  const steps = [...start.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => text(m[1]));
-  // 段階は横に並ぶ。全部の幅が枠に入らなければ2行と数える
+  // 3択は横に3つ並ぶ(間は 0.75rem)。一番高いボタンの高さが列の高さ
+  const btns = [...start.matchAll(/<button type="button" id="(?:sample-load|entry-bid|entry-awarded)"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => m[1]);
+  assert.equal(btns.length, 3);
+  const btnW = (inner - 0.75 * REM * 2) / 3 - 1 * REM * 2 - 4;
+  h += Math.max(...btns.map((b) => 0.75 * REM * 2 + 4
+    + block(text(b.match(/<span class="btn-main">([\s\S]*?)<\/span>/)[1]), 1.25 * REM, LH, btnW)
+    + block(text(b.match(/<span class="btn-sub">([\s\S]*?)<\/span>/)[1]), REM, LH, btnW)));
+  const steps = [...start.matchAll(/<button type="button" id="step-\d"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => text(m[1]));
+  assert.equal(steps.length, 3);
+  // 段階は横に並ぶ。全部の幅が枠に入らなければ2行と数える(ボタンの高さは 2.75rem)
   const stepsW = steps.reduce((n, s) => n + (ems(s) + 2) * REM + 1.5 * REM + 2 + 0.5 * REM, 0);
   const rows = Math.ceil(stepsW / inner);
-  h += marginTB('.steps') + rows * (REM * LH + 0.2 * REM * 2 + 2) + (rows - 1) * 0.5 * REM;
-  add('見本の枠(ボタンと段階の表示まで)', h);
+  h += marginTB('.steps') + rows * 2.75 * REM + (rows - 1) * 0.5 * REM;
+  add('入口の枠(3択と段階の表示まで)', h);
   return { parts, total: parts.reduce((n, p) => n + p.h, 0), W };
 }
 
@@ -114,8 +110,8 @@ test('幅1280・高さ900の最初の1画面に、題・断り書き・できる
   assert.ok(total <= VIEW_H, `最初の1画面に入らない(見積もり ${Math.round(total)}px): ${detail}`);
 });
 
-test('並び: 題 → 断り書き → できること → 見ていない法令の1行 → 法令の一覧(閉じた details) → 見本のボタン → 段階の表示', () => {
-  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="scope-not-line"', '<details class="scope" id="scope">', 'id="sample-load"', 'id="steps"'].map((k) => body.indexOf(k));
+test('並び: 題 → 断り書き → できること → 見ていない法令の1行 → 法令の一覧(閉じた details) → 入口の3択 → 段階の表示', () => {
+  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="scope-not-line"', '<details class="scope" id="scope">', 'id="sample-load"', 'id="entry-bid"', 'id="entry-awarded"', 'id="steps"'].map((k) => body.indexOf(k));
   assert.ok(order.every((n) => n >= 0), '冒頭のどれかが無い: ' + order);
   for (let i = 1; i < order.length; i++) assert.ok(order[i - 1] < order[i], '並びが違う: ' + i);
 });
@@ -146,9 +142,9 @@ test('題は作品名「Motouke Navi」に何のツールかの説明を添え�
   assert.ok(!html.includes('施工体制の確認の候補'), '古い題が残っている');
 });
 
-test('通信しないことの説明は消さず、見本の枠の下に置いた', () => {
+test('通信しないことの説明は消さず、入口の枠の下の、段の外に置いた(どの段でも見える)', () => {
   const i = body.indexOf('この画面は外部と通信しません');
-  assert.ok(i > body.indexOf('id="steps"') && i < body.indexOf('id="bid-form"'));
+  assert.ok(i > body.indexOf('id="steps"') && i < body.indexOf('id="panel-1"'));
 });
 
 test('07 の決まりは崩さない: 断り書き・PDL の表示・CSP で通信先無し・外部の読み込み無し・index.html を作り直した', () => {
