@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-H7OsiiDMVoJD46a9XsIduq2pqMtJbJJPn8oCDdjOCUQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jX40k7GVwHdFdDo7woztroDLPqByhin8n6ZWllh1J9I='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -41,7 +41,7 @@
   mark.mask-replace { color: #111827; background: #e5e7eb; }
   mark.mask-keep { color: #111827; background: #dbeafe; }
   #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
-  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
+  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"], .rules-switch button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
   #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
@@ -320,10 +320,18 @@
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
-<div class="row no-print"><label for="rules-load">段取りの表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
-<input type="file" id="rules-load" name="rules-load" accept=".json,application/json">
+<div class="row no-print rules-switch" role="group" aria-label="段取りの例の切り替え">
+<button type="button" id="rules-national" aria-pressed="true">国の直轄の例(国が発注する工事)</button>
+<button type="button" id="rules-wakayama" aria-pressed="false">和歌山県の例(7つの節だけ)</button>
+<span id="rules-file-on" hidden>読み込んだ表を使っています</span>
 <button type="button" id="rules-clear" hidden>国の直轄の例に戻す</button></div>
-<p id="rules-status" aria-live="polite"></p>
+<p id="rules-status" class="no-print" aria-live="polite"></p>
+<details class="fold no-print" id="rules-more"><summary>直轄とは・例の違い・自分の表を読み込む</summary>
+<p>直轄 = 国(国土交通省の地方整備局など)が自分で発注する工事。</p>
+<p>和歌山県の例は、県の「土木請負工事必携」の7つの節だけから作った行です。条件を当てはめないので、要らない行も出ます。切り替えると 3 の目次の点検の記載項目も同じ例に変わります。</p>
+<div class="row"><label for="rules-load">自分の発注者の表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
+<input type="file" id="rules-load" name="rules-load" accept=".json,application/json"></div>
+</details>
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
@@ -543,6 +551,7 @@
 <p>この画面の判定には、国土交通省「建設業許可事務ガイドライン」(https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf)の一部(【その他】２.「請負代金の額」等の内容について)を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。</p>
 <p>加工: 上の節の一部を抜き出し、判定の根拠(金額を税込みで比べること)に使いました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
 <p>段取りの一覧には、国土交通省「土木工事共通仕様書(案)令和8年3月」(https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html。HTML版【試行版】)の第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-20・1-1-1-21・1-1-1-23・1-1-1-24・1-1-1-28・1-1-1-33・1-1-1-34・1-1-1-42 を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。加工: 上の条の文の一部を抜き出し、いつ・何を・誰にの形に言い換えて並べました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
+<p id="credit-wakayama">段取りと記載項目の「和歌山県の例」には、和歌山県「土木請負工事必携(令和7年11月)」(https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html。取得日 2026-11-04)の 1-1-1-6〜12 を使っています。和歌山県ホームページ公開情報利用規約(https://www.pref.wakayama.lg.jp/prefg/000200/opendata/hpopendatakiyaku.html)に従って利用しています。加工: 上の節の文を抜き出し、行の形に言い換えました。加工者はこの作品の作者です。和歌山県「土木請負工事必携(令和7年11月)」を加工して作成。この出力は和歌山県が作成したものではありません。</p>
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
 <div id="sign-off" class="print-only sign-off" aria-hidden="true">
@@ -1646,7 +1655,7 @@ function renderSchedule(rows = [], detail = {}, notes = new Map()) {
           + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : ''))
         + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + noteCell(r) + '</tr>').join('')
       + '</tbody></table>')
-      + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? '読み込んだ表の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
+      + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? docLabel + 'の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
       + '</ul></details></details>';
   }).join('');
@@ -1661,7 +1670,7 @@ function renderSchedule(rows = [], detail = {}, notes = new Map()) {
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
   return lead + hiddenLine + noteList + body + skipped
-    + '<p class="human">' + (detail.custom ? '読み込んだ表の行です' : '国の直轄の例です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
+    + '<p class="human">' + (detail.custom ? docLabel + 'の行です' : '国の直轄の例です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
 // 施工計画書の目次の点検(F07)。抜けの候補を、根拠(共通仕様書の箇所・ページ・原文)つきで出す
@@ -3466,6 +3475,13 @@ function tableCredit(table) {
     + 'この出力は' + s.publisher + 'が作成したものではありません。';
 }
 
+// 画面に組み込んだ例の注記の文(F37d)。table.label と table.scope は例を選ぶ側が持つ
+function exampleNotice(table) {
+  const s = table.source;
+  return s.publisher + '「' + s.document + ' ' + s.edition + '」の' + table.scope + 'の例です(' + table.count + '行)。ほかの節と特記仕様書の中身は入っていません。'
+    + tableCredit(table) + '出典: ' + s.url + '(取得日 ' + s.fetchedAt + ')';
+}
+
 // 画面の注記の文。ファイルが照合を通ったものかは画面で確かめられないので、照合が済んだとは書かない
 function tableNotice(table) {
   const s = table.source;
@@ -3473,7 +3489,7 @@ function tableNotice(table) {
     + '出典: 発注者 ' + s.publisher + '・題名 ' + s.title + '・版 ' + s.edition + (s.url ? '・' + s.url : '');
 }
 
-return { RULES_MAX_BYTES, UNDETERMINED, parseRulesFile, tableName, tableCredit, tableNotice };
+return { RULES_MAX_BYTES, UNDETERMINED, parseRulesFile, tableName, tableCredit, exampleNotice, tableNotice };
 })();
 __m["src/schedule.mjs"] = (function () {
 // 段取りの一覧(F06a: 着手まで、F06b: 施工中から完成・引き渡しまで。国の直轄の土木工事の例)。
@@ -3549,11 +3565,12 @@ function apply(rule, input) {
 // 読み込んだ表(F26b)の行。条件の欄が無いので入力は当てはめず、どの行も「確かめる」にする(「行う」と言い切らない)
 function loadedDetail(input, table) {
   const name = tableName(table);
+  const label = table.label ?? '読み込んだ表';
   const skipped = [];
   if (input.direct === false) {
-    return { rows: [], skipped: table.schedule.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes: ['読み込んだ表は発注者の仕様書の受注者(元請け)の行です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください'], docLabel: '読み込んだ表', custom: true };
+    return { rows: [], skipped: table.schedule.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes: [label + 'は発注者の仕様書の受注者(元請け)の行です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください'], docLabel: label, custom: true };
   }
-  const notes = ['読み込んだ表の行です: ' + name + '(' + table.source.edition + ' の版)。金額や下請の有無などの条件は当てはめていないので、要らない行も出ます'];
+  const notes = [label + 'の行です: ' + name + '(' + table.source.edition + ' の版)。金額や下請の有無などの条件は当てはめていないので、要らない行も出ます'];
   if (input.orderer === 'private') notes.push('民間工事です。読み込んだ表は発注者の仕様書の行なので、この工事の契約書で確かめてください');
   const order = ['start', 'work', 'completion', UNDETERMINED];
   const rows = [...table.schedule].sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase)).map((r) => ({
@@ -3570,7 +3587,7 @@ function loadedDetail(input, table) {
       url: table.source.url, fetchedAt: table.source.fetchedAt, version: sourceVersion({ edition: table.source.edition }),
     },
   }));
-  return { rows, skipped, notes, docLabel: '読み込んだ表', custom: true };
+  return { rows, skipped, notes, docLabel: label, custom: true };
 }
 
 // 段取りの行と、出さなかった行の理由を返す。table は読み込んだ表(無ければ国の直轄の例)。段取りの行が無い表は国の例のまま
@@ -3756,6 +3773,7 @@ function checkPlanToc(text, opts = {}) {
 
 return { normalizeLine, tocHeading, PLAN_ITEMS, KENCHIKU_UNDECIDABLE, OTHER_NOTE, checkPlanToc };
 })();
+__m["data/specs/wakayama_r0711_rows.json"] = {"source":{"publisher":"和歌山県","document":"土木請負工事必携","title":"土木請負工事必携 第1編 共通編 第1章 総則 1-1-1-6〜1-1-1-12","edition":"令和7年11月","url":"https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html","fetchedAt":"2026-11-04"},"rows":[{"kind":"plan-item","section":"1-1-1-6","no":1,"label":"工事概要","quote":"（1）工事概要"},{"kind":"plan-item","section":"1-1-1-6","no":2,"label":"計画工程表","quote":"（2）計画工程表"},{"kind":"plan-item","section":"1-1-1-6","no":3,"label":"現場組織表","quote":"（3）現場組織表"},{"kind":"plan-item","section":"1-1-1-6","no":4,"label":"指定機械","quote":"（4）指定機械"},{"kind":"plan-item","section":"1-1-1-6","no":5,"label":"主要船舶・機械","quote":"（5）主要船舶・機械"},{"kind":"plan-item","section":"1-1-1-6","no":6,"label":"主要資材","quote":"（6）主要資材"},{"kind":"plan-item","section":"1-1-1-6","no":7,"label":"施工方法","quote":"（7）施工方法（主要機械、仮設備計画、工事用地等を含む）"},{"kind":"plan-item","section":"1-1-1-6","no":8,"label":"施工管理計画","quote":"（8）施工管理計画"},{"kind":"plan-item","section":"1-1-1-6","no":9,"label":"安全管理","quote":"（9）安全管理"},{"kind":"plan-item","section":"1-1-1-6","no":10,"label":"緊急時の体制及び対応","quote":"（10）緊急時の体制及び対応"},{"kind":"plan-item","section":"1-1-1-6","no":11,"label":"交通管理","quote":"（11）交通管理"},{"kind":"plan-item","section":"1-1-1-6","no":12,"label":"環境対策","quote":"（12）環境対策"},{"kind":"plan-item","section":"1-1-1-6","no":13,"label":"現場作業環境の整備","quote":"（13）現場作業環境の整備"},{"kind":"plan-item","section":"1-1-1-6","no":14,"label":"再生資源の利用の促進と建設副産物の適正処理方法","quote":"（14）再生資源の利用の促進と建設副産物の適正処理方法"},{"kind":"plan-item","section":"1-1-1-6","no":15,"label":"法定休日・所定休日","quote":"（15）法定休日・所定休日（週休二日の導入）"},{"kind":"plan-item","section":"1-1-1-6","no":16,"label":"その他","quote":"（16）その他"},{"kind":"schedule","id":"start-plan","phase":"start","when":"工事着手前又は施工方法が確定した時期","what":"施工計画書を提出する","to":"監督員","section":"1-1-1-6","title":"施工計画書","quote":"受注者は、工事着手前又は施工方法が確定した時期に工事目的物を完成するために必要な手順や工法等についての施工計画書を監督員に提出しなければならない。","note":"維持工事等簡易な工事では、監督員の承諾を得て記載内容の一部を省略できる(同じ節)。"},{"kind":"schedule","id":"work-plan-change","phase":"work","when":"施工計画書の内容に重要な変更が生じた場合、その都度当該工事に着手する前","what":"変更に関する事項について変更施工計画書を提出する","to":"監督員","section":"1-1-1-6","title":"施工計画書(変更施工計画書)","quote":"受注者は、施工計画書の内容に重要な変更が生じた場合（工期や数量等の軽微な変更は除く）には、その都度当該工事に着手する前に変更に関する事項について、変更施工計画書を監督員に提出しなければならない。","note":"工期や数量等の軽微な変更は除く。"},{"kind":"schedule","id":"plan-detail","phase":"判断できない","when":"施工計画書を提出した際","what":"監督員が指示した事項について、さらに詳細な施工計画書を提出する","to":"監督員","undetermined":{"phase":"原文は「施工計画書を提出した際」とするだけで、施工計画書の提出は工事着手前又は施工方法が確定した時期のいずれもあり得るため、着手までか施工中かを決められない"},"section":"1-1-1-6","title":"施工計画書(詳細施工計画書)","quote":"受注者は、施工計画書を提出した際、監督員が指示した事項について、さらに詳細な施工計画書を提出しなければならない。","note":"監督員の指示があった場合のみ。"},{"kind":"schedule","id":"start-corins","phase":"start","when":"受注時は契約後、土曜日、日曜日、祝日等を除き10日以内","what":"「登録のための確認のお願い」をコリンズから監督員にメール送信して確認を受けたうえ、受注時の工事実績情報をコリンズに登録する","to":"登録機関","section":"1-1-1-7","title":"コリンズ（CORINS）への登録","quote":"受注者は、受注時または変更時において工事請負代金額が500万円以上の工事について、工事実績情報システム（コリンズ）に基づき、受注・変更・完成・訂正時に工事実績情報として作成した「登録のための確認のお願い」をコリンズから監督員にメール送信し、監督員の確認を受けたうえ、受注時は契約後、土曜日、日曜日、祝日等を除き10日以内に、登録内容の変更時は変更があった日から土曜日、日曜日、祝日等を除き10日以内に、完成時は工事完成後、土曜日、日曜日、祝日等を除き10日以内に、訂正時は適宜登録機関に登録をしなければならない。","note":"条件: 受注時または変更時の工事請負代金額が500万円以上(単価契約の場合は契約総額)の工事。"},{"kind":"schedule","id":"work-corins-change","phase":"work","when":"登録内容の変更時は変更があった日から土曜日、日曜日、祝日等を除き10日以内","what":"「登録のための確認のお願い」をコリンズから監督員にメール送信して確認を受けたうえ、変更時の工事実績情報をコリンズに登録する","to":"登録機関","section":"1-1-1-7","title":"コリンズ（CORINS）への登録","quote":"受注者は、受注時または変更時において工事請負代金額が500万円以上の工事について、工事実績情報システム（コリンズ）に基づき、受注・変更・完成・訂正時に工事実績情報として作成した「登録のための確認のお願い」をコリンズから監督員にメール送信し、監督員の確認を受けたうえ、受注時は契約後、土曜日、日曜日、祝日等を除き10日以内に、登録内容の変更時は変更があった日から土曜日、日曜日、祝日等を除き10日以内に、完成時は工事完成後、土曜日、日曜日、祝日等を除き10日以内に、訂正時は適宜登録機関に登録をしなければならない。","note":"条件: 工事請負代金額500万円以上。変更時と工事完成時の間が10日間(土曜日、日曜日、祝日等を除く)に満たない場合は、変更時の登録申請を省略できる(同じ節)。"},{"kind":"schedule","id":"done-corins","phase":"completion","when":"完成時は工事完成後、土曜日、日曜日、祝日等を除き10日以内","what":"「登録のための確認のお願い」をコリンズから監督員にメール送信して確認を受けたうえ、完成時の工事実績情報をコリンズに登録する","to":"登録機関","section":"1-1-1-7","title":"コリンズ（CORINS）への登録","quote":"受注者は、受注時または変更時において工事請負代金額が500万円以上の工事について、工事実績情報システム（コリンズ）に基づき、受注・変更・完成・訂正時に工事実績情報として作成した「登録のための確認のお願い」をコリンズから監督員にメール送信し、監督員の確認を受けたうえ、受注時は契約後、土曜日、日曜日、祝日等を除き10日以内に、登録内容の変更時は変更があった日から土曜日、日曜日、祝日等を除き10日以内に、完成時は工事完成後、土曜日、日曜日、祝日等を除き10日以内に、訂正時は適宜登録機関に登録をしなければならない。","note":"条件: 工事請負代金額500万円以上。"},{"kind":"schedule","id":"corins-correct","phase":"判断できない","when":"訂正時は適宜","what":"「登録のための確認のお願い」をコリンズから監督員にメール送信して確認を受けたうえ、訂正の工事実績情報をコリンズに登録する","to":"登録機関","undetermined":{"phase":"原文は「訂正時は適宜」とするだけで、訂正がいつ起きるか(着手まで・施工中・完成後)を決められない"},"section":"1-1-1-7","title":"コリンズ（CORINS）への登録","quote":"受注者は、受注時または変更時において工事請負代金額が500万円以上の工事について、工事実績情報システム（コリンズ）に基づき、受注・変更・完成・訂正時に工事実績情報として作成した「登録のための確認のお願い」をコリンズから監督員にメール送信し、監督員の確認を受けたうえ、受注時は契約後、土曜日、日曜日、祝日等を除き10日以内に、登録内容の変更時は変更があった日から土曜日、日曜日、祝日等を除き10日以内に、完成時は工事完成後、土曜日、日曜日、祝日等を除き10日以内に、訂正時は適宜登録機関に登録をしなければならない。","note":"条件: 工事請負代金額500万円以上。工事完成後の訂正・削除は別の行(done-corins-after)。"},{"kind":"schedule","id":"done-corins-after","phase":"completion","when":"本工事の完成後において訂正または削除する場合(速やかに発注者の確認を受けた上で)","what":"コリンズから発注者にメール送信して発注者の確認を受け、訂正または削除を登録申請する","to":"登録機関","section":"1-1-1-7","title":"コリンズ（CORINS）への登録","quote":"また、本工事の完成後において訂正または削除する場合においても同様に、コリンズから発注者にメール送信し、速やかに発注者の確認を受けた上で、登録機関に登録申請しなければならない。","note":"確認の相手は監督員ではなく発注者。"},{"kind":"schedule","id":"work-oral-instruction","phase":"work","when":"後日(口頭による指示等が行われた場合)","what":"口頭による指示等の内容を書面により監督員と受注者の両者で確認する","to":"監督員","section":"1-1-1-8","title":"監督員","quote":"後日書面により監督員と受注者の両者が指示内容等を確認するものとする。","note":"緊急を要する場合に監督員が口頭で指示等を行ったときのみ。"},{"kind":"schedule","id":"land-return","phase":"判断できない","when":"工事用地等の使用終了後(速やかに)","what":"設計図書の定めまたは監督員の指示に従い工事用地等を復旧の上、返還する","to":"発注者","undetermined":{"phase":"原文は「使用終了後」とするだけで、使用終了が完成時か施工中かを決められない(完成前に発注者が返還を要求した場合も返還する)"},"section":"1-1-1-9","title":"工事用地等の使用","quote":"受注者は、第1項に規定した工事用地等の使用終了後は、設計図書の定めまたは監督員の指示に従い復旧の上、速やかに発注者に返還しなければならない。","note":"工事の完成前に発注者が返還を要求した場合も速やかに返還する(同じ節)。"},{"kind":"schedule","id":"start-commence","phase":"start","when":"特記仕様書に定めがある期日まで","what":"工事に着手する","to":"判断できない","undetermined":{"to":"原文に提出・通知の相手が書いていない(着手そのものの決まり)"},"section":"1-1-1-10","title":"工事着手","quote":"受注者は、特記仕様書に工事に着手すべき期日について定めがある場合には、その期日までに工事着手しなければならない。","note":"特記仕様書に着手期日の定めがある場合のみ。"},{"kind":"schedule","id":"sekou-taisei-daicho","phase":"判断できない","when":"判断できない","what":"国土交通省令及び「施工体制台帳に係る書類の提出について」に従って記載した施工体制台帳を作成し、工事現場に備えるとともに、その写しを提出する","to":"監督員","undetermined":{"phase":"原文は「下請契約を締結した場合」とするだけで、下請契約の時期(着手まで・施工中)を決められない","when":"原文は条件(下請契約を締結した場合)を定めるだけで、作成・提出の時期の定めが無い"},"section":"1-1-1-12","title":"施工体制台帳","quote":"受注者は、工事を施工するために下請契約を締結した場合、国土交通省令及び「施工体制台帳に係る書類の提出について」（令和3年3月5日付け国官技第319号、国営建技第16号、令和3年3月22日付け国港技第90号）に従って記載した施工体制台帳を作成し、工事現場に備えるとともに、その写しを監督員に提出しなければならない。","note":"条件: 下請契約を締結した場合。施工体制台帳等は原則として電子データで作成・提出する(同じ節)。"},{"kind":"schedule","id":"sekou-taikeizu","phase":"判断できない","when":"判断できない","what":"各下請負者の施工の分担関係を表示した施工体系図を作成し、工事関係者が見やすい場所及び公衆が見やすい場所に掲げるとともに、その写しを提出する","to":"監督員","undetermined":{"phase":"原文に時期の定めが無く、下請契約の時期(着手まで・施工中)も決められない","when":"原文に時期の定めが無い"},"section":"1-1-1-12","title":"施工体制台帳(施工体系図)","quote":"第1項の受注者は、国土交通省令及び「施工体制台帳に係る書類の提出について」（令和3年3月5日付け国官技第319号、国建技第16号、令和3年3月22日付け国港技第90号）に従って、各下請負者の施工の分担関係を表示した施工体系図を作成し、公共工事の入札及び契約の適正化の促進に関する法律に従って、工事関係者が見やすい場所及び公衆が見やすい場所に掲げるとともにその写しを監督員に提出しなければならない。","note":"第1項の受注者(下請契約を締結した受注者)が対象。"},{"kind":"schedule","id":"work-nafuda","phase":"work","when":"判断できない","what":"監理技術者、監理技術者補佐、主任技術者(下請負者を含む)及び専門技術者(専任している場合のみ)に、工事名、工期、顔写真、所属会社名及び社印の入った名札等を工事現場内で着用させる","to":"判断できない","undetermined":{"when":"原文は場所(工事現場内)を定め、時期の定めが無い","to":"着用させる決まりで、提出の相手は無い"},"section":"1-1-1-12","title":"施工体制台帳(名札等の着用)","quote":"第1項の受注者は、監理技術者、監理技術者補佐、主任技術者（下請負者を含む）及び第1項の受注者の専門技術者（専任している場合のみ）に、工事現場内において、工事名、工期、顔写真、所属会社名及び社印の入った名札等を着用させなければならない。","note":"名札は図1-1-1を標準とする。第1項の受注者(下請契約を締結した受注者)が対象。"},{"kind":"schedule","id":"work-taisei-change","phase":"work","when":"施工体制台帳及び施工体系図に変更が生じた場合、その都度速やかに","what":"変更した施工体制台帳及び施工体系図を提出する","to":"監督員","section":"1-1-1-12","title":"施工体制台帳(施工体制台帳等変更時の処置)","quote":"第1項の受注者は、施工体制台帳及び施工体系図に変更が生じた場合は、その都度速やかに監督員に提出しなければならない。"}]};
 __m["src/sample.mjs"] = (function () {
 // 見本(F05f): 「見本を読み込む」ボタンで画面に入れる、架空の工事の条件と書類。
 // 工事名・会社名・人名・番号はすべて架空(実在の工事・会社・人とは関係ない)。実際の工事の書類は使っていない。
@@ -6479,7 +6497,8 @@ const { judgeTaicho } = __m["src/taicho.mjs"];
 const { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, toCsv } = __m["src/export.mjs"];
 const { buildScheduleDetail } = __m["src/schedule.mjs"];
 const { checkPlanToc } = __m["src/plan-check.mjs"];
-const { parseRulesFile, tableNotice, RULES_MAX_BYTES } = __m["src/rules-load.mjs"];
+const { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } = __m["src/rules-load.mjs"];
+const wakayamaRows = __m["data/specs/wakayama_r0711_rows.json"];
 const { SAMPLE } = __m["src/sample.mjs"];
 const { startMask } = __m["src/ui/mask-app.mjs"];
 const { startAi } = __m["src/ui/ai-app.mjs"];
@@ -6644,15 +6663,21 @@ function applyRulesTable(doc) {
   for (const [noticeId, aboutId, key] of RULES_SIDES) {
     const custom = Boolean(rulesTable?.[key].length);
     const notice = doc.getElementById(noticeId);
-    if (notice) notice.textContent = custom ? tableNotice(rulesTable) : NATIONAL_NOTICE[noticeId];
+    if (notice) notice.textContent = !custom ? NATIONAL_NOTICE[noticeId] : rulesTable.label ? exampleNotice(rulesTable) : tableNotice(rulesTable);
     const about = doc.getElementById(aboutId);
     if (about) about.hidden = custom;
     // 説明の折りたたみ(F37b)は中身が隠れると空になるので、見出しごと隠す
     const fold = about?.closest?.('details');
     if (fold) fold.hidden = custom;
   }
-  const clear = doc.getElementById('rules-clear');
-  if (clear) clear.hidden = !rulesTable;
+  // 読み込んだ表のときは、2つの例のどちらも押されていない形にして、その旨を出す
+  doc.getElementById('rules-national')?.setAttribute?.('aria-pressed', String(!rulesTable));
+  doc.getElementById('rules-wakayama')?.setAttribute?.('aria-pressed', String(Boolean(rulesTable?.label)));
+  const fromFile = Boolean(rulesTable) && !rulesTable.label;
+  for (const id of ['rules-clear', 'rules-file-on']) {
+    const el = doc.getElementById(id);
+    if (el) el.hidden = !fromFile;
+  }
   if (lastSchedule && lastScheduleInput) {
     runSchedule(doc, lastScheduleInput);
     if (summaryShown) updateSummary(doc);
@@ -6686,6 +6711,15 @@ function loadRulesFile(doc, text) {
     + (missing.length ? missing.join('と') + 'の行が無いので、そちらは国の直轄の例のままです。' : '')
     + 'ブラウザには保存しません。ページを閉じると消えます。');
   return true;
+}
+// 和歌山県の例(F37d)。index.html に組み込んだ行を、ファイルと同じ確かめと同じ道で使う
+function useWakayamaExample(doc) {
+  const dropped = Boolean(rulesTable) && !rulesTable.label;
+  const table = parseRulesFile(JSON.stringify(wakayamaRows));
+  rulesTable = { ...table, label: '和歌山県の例', scope: '7つの節だけ(1-1-1-6〜12)' };
+  applyRulesTable(doc);
+  setRulesStatus(doc, '和歌山県の例にしました(段取り ' + table.schedule.length + '行・記載項目 ' + table.planItems.length + '行)。'
+    + (dropped ? '読み込んだ表は手放しました。もう一度使うときはファイルを選び直してください。' : ''));
 }
 function clearRulesTable(doc) {
   rulesTable = null;
@@ -7049,6 +7083,8 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (t.nextElementSibling) t.nextElementSibling.textContent = t.value;
     });
     on('rules-clear', () => clearRulesTable(doc));
+    on('rules-national', () => clearRulesTable(doc));
+    on('rules-wakayama', () => useWakayamaExample(doc));
     const rulesFile = doc.getElementById('rules-load');
     if (rulesFile) rulesFile.addEventListener('change', async () => {
       const f = rulesFile.files && rulesFile.files[0];
@@ -7110,7 +7146,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { showPanel, showEntry, openPanelForLink, runBid, setScheduleNote, loadRulesFile, clearRulesTable, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, clearSample, startApp };
+return { showPanel, showEntry, openPanelForLink, runBid, setScheduleNote, loadRulesFile, useWakayamaExample, clearRulesTable, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, clearSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

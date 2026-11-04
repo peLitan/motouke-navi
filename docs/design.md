@@ -104,3 +104,8 @@
 - ファイルの形は { format: "mask-dict", version: 1, notice, terms: [{ word, kind }] }。記号・対応表は入れない(対応表のファイル format: "mask-map" とは別)
 - 読み込みは今の足した語に加える。中身をすべて確かめてから加え、おかしければ理由を出して何も変えない
 
+## 例の切り替え(F37d)
+- 切り替えは `#rules-national` と `#rules-wakayama` の2つのボタン(`aria-pressed`)。和歌山県の行は `src/ui/app.mjs` の import で build に入り、`parseRulesFile` を通して `rulesTable` に置き、`applyRulesTable` で出す。ファイルの読み込みと道は同じ
+- 組み込みの例は `label` と `scope` を持つ。`label` が無い表は読み込んだ表で、注記は `tableNotice`、例の注記は `exampleNotice`。段取りの見出しの語は `label` を使い、例を「読み込んだ表」と呼ばない
+- ファイルの読み込みは折りたたみ `#rules-more` の中の3つ目の選び方。`#rules-status`・`#rules-clear`・`#rules-file-on` は畳むと見えなくなるので外に置く
+- 行は押す前から index.html に入るので、県の表示は `#schedule-notice` のほかに `footer#credits` の `#credit-wakayama` にも build で書く(`tableCredit` と JSON の `source` から作る。利用規約の URL だけ build.mjs に書く)

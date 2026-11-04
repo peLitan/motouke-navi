@@ -41,7 +41,7 @@
   mark.mask-replace { color: #111827; background: #e5e7eb; }
   mark.mask-keep { color: #111827; background: #dbeafe; }
   #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid #ccc; padding: 0.2rem 0.5rem; }
-  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
+  #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"], .rules-switch button[aria-pressed="true"] { font-weight: bold; outline: 2px solid #1f2937; }
   #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: #f8fafc; padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
@@ -308,10 +308,18 @@
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
-<div class="row no-print"><label for="rules-load">段取りの表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
-<input type="file" id="rules-load" name="rules-load" accept=".json,application/json">
+<div class="row no-print rules-switch" role="group" aria-label="段取りの例の切り替え">
+<button type="button" id="rules-national" aria-pressed="true">国の直轄の例(国が発注する工事)</button>
+<button type="button" id="rules-wakayama" aria-pressed="false">和歌山県の例(7つの節だけ)</button>
+<span id="rules-file-on" hidden>読み込んだ表を使っています</span>
 <button type="button" id="rules-clear" hidden>国の直轄の例に戻す</button></div>
-<p id="rules-status" aria-live="polite"></p>
+<p id="rules-status" class="no-print" aria-live="polite"></p>
+<details class="fold no-print" id="rules-more"><summary>直轄とは・例の違い・自分の表を読み込む</summary>
+<p>直轄 = 国(国土交通省の地方整備局など)が自分で発注する工事。</p>
+<p>和歌山県の例は、県の「土木請負工事必携」の7つの節だけから作った行です。条件を当てはめないので、要らない行も出ます。切り替えると 3 の目次の点検の記載項目も同じ例に変わります。</p>
+<div class="row"><label for="rules-load">自分の発注者の表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
+<input type="file" id="rules-load" name="rules-load" accept=".json,application/json"></div>
+</details>
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
@@ -518,6 +526,7 @@
 <p>この画面の判定には、国土交通省「建設業許可事務ガイドライン」(https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf)の一部(【その他】２.「請負代金の額」等の内容について)を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。</p>
 <p>加工: 上の節の一部を抜き出し、判定の根拠(金額を税込みで比べること)に使いました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
 <p>段取りの一覧には、国土交通省「土木工事共通仕様書(案)令和8年3月」(https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html。HTML版【試行版】)の第1編 第1章 第1節 総則のうち 1-1-1-3・1-1-1-6・1-1-1-7・1-1-1-11・1-1-1-12・1-1-1-13・1-1-1-20・1-1-1-21・1-1-1-23・1-1-1-24・1-1-1-28・1-1-1-33・1-1-1-34・1-1-1-42 を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。加工: 上の条の文の一部を抜き出し、いつ・何を・誰にの形に言い換えて並べました。加工者はこの作品の作者です。この画面の出力は国土交通省が作成したものではない点に注意してください。</p>
+{{WAKAYAMA_CREDIT}}
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
 <div id="sign-off" class="print-only sign-off" aria-hidden="true">

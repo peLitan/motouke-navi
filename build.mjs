@@ -8,6 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { sourceVersion } from './src/source-version.mjs';
+import { parseRulesFile, tableCredit } from './src/rules-load.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SHELL = path.join(ROOT, 'src', 'ui', 'shell.html');
@@ -106,15 +107,25 @@ export function checklistReferenceHtml() {
   return escHtml('参考: ' + r.publisher + '「' + r.title + '」(' + r.url + '。掲載ページ「' + r.pageTitle + '」' + r.page + '。取得日 ' + r.fetchedAt + ')。このツールはチェックリストの文を写しておらず、表の事項は施行規則 第14条の2 の原文から作っています');
 }
 
+// 和歌山県の例の表示(F37d): 行は押す前から index.html に入るので、切り替えの注記のほかに、いつも出す表示の欄にも書く
+export function wakayamaCreditHtml() {
+  const table = parseRulesFile(fs.readFileSync(path.join(ROOT, 'data', 'specs', 'wakayama_r0711_rows.json'), 'utf8'));
+  const s = table.source;
+  return '<p id="credit-wakayama">' + escHtml('段取りと記載項目の「和歌山県の例」には、' + s.publisher + '「' + s.document + '(' + s.edition + ')」(' + s.url + '。取得日 ' + s.fetchedAt + ')の 1-1-1-6〜12 を使っています。'
+    + '和歌山県ホームページ公開情報利用規約(https://www.pref.wakayama.lg.jp/prefg/000200/opendata/hpopendatakiyaku.html)に従って利用しています。'
+    + '加工: 上の節の文を抜き出し、行の形に言い換えました。加工者はこの作品の作者です。' + tableCredit(table)) + '</p>';
+}
+
 export function buildHtml() {
   const shell = fs.readFileSync(SHELL, 'utf8');
-  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}', '{{CHECKLIST_REFERENCE}}']) {
+  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}', '{{CHECKLIST_REFERENCE}}', '{{WAKAYAMA_CREDIT}}']) {
     if (!shell.includes(key)) throw new Error('shell.html に ' + key + ' の場所が無い');
   }
   const withBody = shell
     .replace('{{SOURCES}}', () => sourcesHtml())
     .replace('{{SCOPE}}', () => scopeHtml())
     .replace('{{CHECKLIST_REFERENCE}}', () => checklistReferenceHtml())
+    .replace('{{WAKAYAMA_CREDIT}}', () => wakayamaCreditHtml())
     .replace('{{SCRIPT}}', () => `<script>\n${bundle()}</script>`);
   return withBody.replace('{{CSP}}', () => makeCsp(withBody));
 }

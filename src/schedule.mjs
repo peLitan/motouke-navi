@@ -71,11 +71,12 @@ function apply(rule, input) {
 // 読み込んだ表(F26b)の行。条件の欄が無いので入力は当てはめず、どの行も「確かめる」にする(「行う」と言い切らない)
 function loadedDetail(input, table) {
   const name = tableName(table);
+  const label = table.label ?? '読み込んだ表';
   const skipped = [];
   if (input.direct === false) {
-    return { rows: [], skipped: table.schedule.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes: ['読み込んだ表は発注者の仕様書の受注者(元請け)の行です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください'], docLabel: '読み込んだ表', custom: true };
+    return { rows: [], skipped: table.schedule.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes: [label + 'は発注者の仕様書の受注者(元請け)の行です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください'], docLabel: label, custom: true };
   }
-  const notes = ['読み込んだ表の行です: ' + name + '(' + table.source.edition + ' の版)。金額や下請の有無などの条件は当てはめていないので、要らない行も出ます'];
+  const notes = [label + 'の行です: ' + name + '(' + table.source.edition + ' の版)。金額や下請の有無などの条件は当てはめていないので、要らない行も出ます'];
   if (input.orderer === 'private') notes.push('民間工事です。読み込んだ表は発注者の仕様書の行なので、この工事の契約書で確かめてください');
   const order = ['start', 'work', 'completion', UNDETERMINED];
   const rows = [...table.schedule].sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase)).map((r) => ({
@@ -92,7 +93,7 @@ function loadedDetail(input, table) {
       url: table.source.url, fetchedAt: table.source.fetchedAt, version: sourceVersion({ edition: table.source.edition }),
     },
   }));
-  return { rows, skipped, notes, docLabel: '読み込んだ表', custom: true };
+  return { rows, skipped, notes, docLabel: label, custom: true };
 }
 
 // 段取りの行と、出さなかった行の理由を返す。table は読み込んだ表(無ければ国の直轄の例)。段取りの行が無い表は国の例のまま

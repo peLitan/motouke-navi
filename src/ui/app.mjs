@@ -14,7 +14,8 @@ import { judgeTaicho } from '../taicho.mjs';
 import { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, toCsv } from '../export.mjs';
 import { buildScheduleDetail } from '../schedule.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
-import { parseRulesFile, tableNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
+import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
+import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
 import { startAi } from './ai-app.mjs';
@@ -179,15 +180,21 @@ function applyRulesTable(doc) {
   for (const [noticeId, aboutId, key] of RULES_SIDES) {
     const custom = Boolean(rulesTable?.[key].length);
     const notice = doc.getElementById(noticeId);
-    if (notice) notice.textContent = custom ? tableNotice(rulesTable) : NATIONAL_NOTICE[noticeId];
+    if (notice) notice.textContent = !custom ? NATIONAL_NOTICE[noticeId] : rulesTable.label ? exampleNotice(rulesTable) : tableNotice(rulesTable);
     const about = doc.getElementById(aboutId);
     if (about) about.hidden = custom;
     // 説明の折りたたみ(F37b)は中身が隠れると空になるので、見出しごと隠す
     const fold = about?.closest?.('details');
     if (fold) fold.hidden = custom;
   }
-  const clear = doc.getElementById('rules-clear');
-  if (clear) clear.hidden = !rulesTable;
+  // 読み込んだ表のときは、2つの例のどちらも押されていない形にして、その旨を出す
+  doc.getElementById('rules-national')?.setAttribute?.('aria-pressed', String(!rulesTable));
+  doc.getElementById('rules-wakayama')?.setAttribute?.('aria-pressed', String(Boolean(rulesTable?.label)));
+  const fromFile = Boolean(rulesTable) && !rulesTable.label;
+  for (const id of ['rules-clear', 'rules-file-on']) {
+    const el = doc.getElementById(id);
+    if (el) el.hidden = !fromFile;
+  }
   if (lastSchedule && lastScheduleInput) {
     runSchedule(doc, lastScheduleInput);
     if (summaryShown) updateSummary(doc);
@@ -221,6 +228,15 @@ export function loadRulesFile(doc, text) {
     + (missing.length ? missing.join('と') + 'の行が無いので、そちらは国の直轄の例のままです。' : '')
     + 'ブラウザには保存しません。ページを閉じると消えます。');
   return true;
+}
+// 和歌山県の例(F37d)。index.html に組み込んだ行を、ファイルと同じ確かめと同じ道で使う
+export function useWakayamaExample(doc) {
+  const dropped = Boolean(rulesTable) && !rulesTable.label;
+  const table = parseRulesFile(JSON.stringify(wakayamaRows));
+  rulesTable = { ...table, label: '和歌山県の例', scope: '7つの節だけ(1-1-1-6〜12)' };
+  applyRulesTable(doc);
+  setRulesStatus(doc, '和歌山県の例にしました(段取り ' + table.schedule.length + '行・記載項目 ' + table.planItems.length + '行)。'
+    + (dropped ? '読み込んだ表は手放しました。もう一度使うときはファイルを選び直してください。' : ''));
 }
 export function clearRulesTable(doc) {
   rulesTable = null;
@@ -584,6 +600,8 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (t.nextElementSibling) t.nextElementSibling.textContent = t.value;
     });
     on('rules-clear', () => clearRulesTable(doc));
+    on('rules-national', () => clearRulesTable(doc));
+    on('rules-wakayama', () => useWakayamaExample(doc));
     const rulesFile = doc.getElementById('rules-load');
     if (rulesFile) rulesFile.addEventListener('change', async () => {
       const f = rulesFile.files && rulesFile.files[0];

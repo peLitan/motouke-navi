@@ -61,6 +61,13 @@ export function tableCredit(table) {
     + 'この出力は' + s.publisher + 'が作成したものではありません。';
 }
 
+// 画面に組み込んだ例の注記の文(F37d)。table.label と table.scope は例を選ぶ側が持つ
+export function exampleNotice(table) {
+  const s = table.source;
+  return s.publisher + '「' + s.document + ' ' + s.edition + '」の' + table.scope + 'の例です(' + table.count + '行)。ほかの節と特記仕様書の中身は入っていません。'
+    + tableCredit(table) + '出典: ' + s.url + '(取得日 ' + s.fetchedAt + ')';
+}
+
 // 画面の注記の文。ファイルが照合を通ったものかは画面で確かめられないので、照合が済んだとは書かない
 export function tableNotice(table) {
   const s = table.source;
