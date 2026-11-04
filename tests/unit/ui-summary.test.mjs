@@ -46,9 +46,12 @@ const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
 test('印の色は 赤系・黄系・緑系で、文字と地のコントラストが 4.5:1 以上', () => {
   const hue = { required: 'r', needs_check: 'y', not_required: 'g' };
   for (const st of Object.keys(hue)) {
-    const rule = html.match(new RegExp('\\.badge-' + st + ' \\{ color: (#[0-9a-f]{6}); background: (#[0-9a-f]{6}); border-color: (#[0-9a-f]{6}); \\}'));
+    // 色は :root の変数(F38a)。値に戻して比べる
+    const rule = html.match(new RegExp('\\.badge-' + st + ' \\{ color: var\\((--[\\w-]+)\\); background: var\\((--[\\w-]+)\\); border-color: var\\((--[\\w-]+)\\); \\}'));
     assert.ok(rule, '印の色の決まりが無い: ' + st);
-    const [, fg, bg] = rule;
+    const hexOfVar = (name) => { const v = html.match(new RegExp(name + ': (#[0-9a-f]{3,6});'))[1]; return v.length === 4 ? '#' + [...v.slice(1)].map((c) => c + c).join('') : v; };
+    const fg = hexOfVar(rule[1]);
+    const bg = hexOfVar(rule[2]);
     assert.ok(ratio(fg, bg) >= 4.5, st + ' のコントラストが足りない: ' + ratio(fg, bg).toFixed(2));
     const [r, g, b] = fg.slice(1).match(/../g).map((x) => parseInt(x, 16));
     if (hue[st] === 'r') assert.ok(r > g && r > b, '要るの色が赤系でない');
