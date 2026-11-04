@@ -8,11 +8,16 @@
 // - 「raw」の文字を含まないコマンドも見る: グロブ(r?w/・*/・** など raw に当たる形)、再帰の検索(grep -r・rg・find・Get-ChildItem -Recurse など)、
 //   書いたスクリプトの実行(中身にファイルの読み取り・別のコマンドの起動があれば止める)、node -e・python -c などのその場のコード、変数・コマンドの置き換え
 // - シンボリックリンクは実体のパスで判断する。RAW・Raw のような大文字も raw とみなす
+// F31a で足したこと:
+// - Bash の道具のコマンドは、引用符の外の \ を bash と同じく次の1字をそのままにしてから判定する(r\aw は raw)。行の終わりの \ は bash と同じく無かったことにする
+//   PowerShell では \ はパスの区切りなので外さない。Bash の道具でも、\ を区切りと読んだ形も見る(前から止めていた形を通さないため)
+// - スクリプトが静的 import・require の相対パスで読み込む別のファイル、Python の手元の import、node -r・--import の読み込みも中身を見る
 // - Write・Edit は、書く中身に raw/ の読み取りの形があれば止める
 // - 止めたときは「人が中身を確かめて、自分の端末で実行してください」と人に回す文を出す
 //
 // 限界(README にも書く。止めきれない操作):
 // - コマンドの読み方は簡単なもの。別名(alias)・関数・npm run や make などのタスクの中身・sed の r コマンド・標準入力からパスを受ける道具などは見ていない
+// - スクリプトの中身は文字で探すだけ。パッケージの名前で読み込むもの(node_modules の中)、NODE_OPTIONS など環境変数で読み込ませる形、Ruby・PHP・Perl などの読み込み、別名を付けた require は見ていない
 // - raw/ を探すのは作業フォルダから3階層まで。それより深い所の raw/ は、パスに raw の文字があるときだけ止める
 // - プラグインのフォルダ(CLAUDE_PLUGIN_ROOT)のスクリプトは中身を見ずに通す(点検の Skill のスクリプトを止めないため)
 // - フックは Claude Code の道具だけを見る。人が端末で開いたファイルや、別のプログラム、MCP の道具は止められない
@@ -179,7 +184,8 @@ function globHitsRaw(token, cwd) {
 // ---- コマンドの読み方(簡単なもの) ----
 
 // コマンドを、演算子(; & | && || 改行 括弧)で区切った単純なコマンドの並びにする。各語は { text(引用符を外した文字), glob(引用符の外にグロブの文字があるか) }
-export function splitCommand(cmd) {
+// 既定は bash の読み方(引用符の外の \ は次の1字をそのままにする)。backslashPath が true のときは \ をパスの区切りとして残し、空白・引用符・演算子の前でだけ外す
+export function splitCommand(cmd, { backslashPath = false } = {}) {
   const cmds = [];
   let words = [];
   let cur = null;
@@ -196,9 +202,16 @@ export function splitCommand(cmd) {
     } else if (c === '"') {
       cur = cur || { text: '', glob: false };
       let j = i + 1;
-      while (j < s.length && s[j] !== '"') { if (s[j] === '\\' && j + 1 < s.length) j++; cur.text += s[j]; j++; }
+      while (j < s.length && s[j] !== '"') {
+        if (s[j] === '\\' && s[j + 1] === '\n') { j += 2; continue; } // 行の終わりの \ は無かったことになる
+        if (s[j] === '\\' && j + 1 < s.length) j++;
+        cur.text += s[j];
+        j++;
+      }
       i = j;
-    } else if (c === '\\' && i + 1 < s.length && /[\s'"\\;&|()<>]/.test(s[i + 1])) {
+    } else if (c === '\\' && s[i + 1] === '\n') {
+      i++; // 行の終わりの \ は無かったことになる(語は続く)
+    } else if (c === '\\' && i + 1 < s.length && (!backslashPath || /[\s'"\\;&|()<>]/.test(s[i + 1]))) {
       cur = cur || { text: '', glob: false };
       cur.text += s[i + 1];
       i++;
@@ -234,8 +247,72 @@ const INTERP = {
 };
 const SCRIPT_EXT = /\.(m?js|cjs|ts|mts|cts|py|sh|bash|zsh|ps1|psm1|rb|pl|php|bat|cmd|lua|r|jl|awk)$/i;
 // ファイルの読み取り・一覧・別のコマンドの起動・その場のコードの実行の関数(スクリプトの中身・書く中身で探す。シェルのスクリプトはコマンドとして読む)
-export const READ_API = /readFile|createReadStream|readdir|opendir|openSync|\bfs\.|node:fs|['"]fs['"]|\bopen\s*\(|ReadAll(Text|Lines|Bytes)|StreamReader|Get-Content|Get-ChildItem|Select-String|child_process|execSync|execFile|spawn|\bexec\s*\(|\beval\s*\(|subprocess|os\.system|popen|\bglob\b|os\.walk|scandir|listdir|pathlib|Deno\.(read|open|run|Command)|Bun\.(file|spawn|\$)|File\.(read|open|foreach)|IO\.(read|foreach|popen)|getline|import\s*\(|require\s*\(\s*[^'"\s]/;
+export const READ_API = /readFile|createReadStream|readdir|opendir|openSync|\bfs\.|node:fs|['"]fs['"]|\bopen\s*\(|ReadAll(Text|Lines|Bytes)|StreamReader|Get-Content|Get-ChildItem|Select-String|child_process|execSync|execFile|spawn|\bexec\s*\(|\beval\s*\(|subprocess|os\.system|popen|\bglob\b|os\.walk|scandir|listdir|pathlib|Deno\.(read|open|run|Command)|Bun\.(file|spawn|\$)|File\.(read|open|foreach)|IO\.(read|foreach|popen)|getline|import\s*\(|require\s*\(\s*[^'"\s]|createRequire|worker_threads|\bnew\s+Worker\b/;
 const SHELL_EXT = /\.(sh|bash|zsh|ps1|psm1|bat|cmd)$/i;
+const WINDOWS_SHELL_EXT = /\.(ps1|psm1|bat|cmd)$/i;
+const JS_EXT = /\.(m?js|cjs|jsx|ts|mts|cts|tsx)$/i;
+const JS_SHEBANG = /^#!.*\b(node|nodejs|deno|bun|tsx|ts-node)\b/;
+const PY_SHEBANG = /^#!.*\bpython/;
+const JS_TRY = ['', '.js', '.mjs', '.cjs', '.ts', '.mts', '.cts', '.jsx', '.tsx', '.json', '/index.js', '/index.mjs', '/index.cjs', '/index.ts'];
+const LOCAL_SPEC = /^(\.{1,2}($|[\\/])|\/|file:)/; // 相対パス・絶対パス・file: の指定(パッケージの名前は見ない)
+const NODE_LIKE = new Set(['node', 'nodejs', 'bun', 'tsx', 'ts-node']);
+const NODE_LOAD_FLAG = /^(-r|--require|--import|--loader|--experimental-loader)$/;
+const MAX_LOADED_FILES = 64;
+
+const isFile = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
+
+// JS の読み込みの指定を、実在のファイルにする。見つからなければ null
+function resolveJs(spec, fromFile) {
+  const clean = spec.replace(/[?#].*$/, '');
+  let base;
+  try {
+    base = clean.startsWith('file:') ? slash(fileURLToPath(clean)) : path.posix.resolve(path.posix.dirname(fromFile), slash(clean));
+  } catch { return null; }
+  for (const t of JS_TRY) if (isFile(base + t)) return base + t;
+  return null;
+}
+
+// JS の静的 import・export from・require・import() の相対パス
+function jsLoads(text, fromFile) {
+  const out = [];
+  for (const m of text.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"`])([^'"`\n]+)\1/g)) {
+    if (LOCAL_SPEC.test(m[2])) out.push({ spec: m[2], file: resolveJs(m[2], fromFile) });
+  }
+  return out;
+}
+
+// Python の import のうち、手元に同じ名前のファイルがあるもの(無ければ標準のライブラリなどとして見ない)
+function pyLoads(text, fromFile, root) {
+  const out = [];
+  const add = (dir, mod) => {
+    const p = path.posix.join(dir, ...mod.split('.').filter(Boolean));
+    if (p === dir) return;
+    for (const file of [p + '.py', p + '/__init__.py']) if (isFile(file)) out.push({ spec: mod, file });
+  };
+  const here = path.posix.dirname(fromFile);
+  for (const m of text.matchAll(/^[ \t]*(?:(?:try|else|except[^:\n]*|if [^:\n]*):[ \t]*)?from[ \t]+(\.*)([\w.]*)[ \t]+import[ \t]+(\([^)]*\)|[^\n;#]+)/gm)) {
+    let dir = m[1] ? here : root;
+    for (let i = 1; i < m[1].length; i++) dir = path.posix.dirname(dir);
+    add(dir, m[2]);
+    for (const name of m[3].replace(/[()]/g, '').split(',')) add(dir, (m[2] ? m[2] + '.' : '') + name.trim().split(/\s/)[0]);
+  }
+  for (const m of text.matchAll(/^[ \t]*(?:(?:try|else|except[^:\n]*|if [^:\n]*):[ \t]*)?import[ \t]+([^\n;#]+)/gm)) {
+    for (const name of m[1].split(',')) add(root, name.trim().split(/\s/)[0]);
+  }
+  return out;
+}
+
+// node -r・--import などで先に読み込むファイル
+function nodeLoadFlags(args) {
+  const loads = [];
+  const values = new Set();
+  args.forEach((a, i) => {
+    const m = /^--(?:require|import|loader|experimental-loader)=(.+)$/.exec(a);
+    if (m) loads.push(m[1]);
+    else if (NODE_LOAD_FLAG.test(a) && args[i + 1]) { loads.push(args[i + 1]); values.add(i + 1); }
+  });
+  return { loads: loads.filter((l) => LOCAL_SPEC.test(l)), values };
+}
 
 // このフックを配ったプラグインのフォルダ(スクリプトを中身を見ずに通す所)。プラグインでないときは null
 export function trustedRoot(env = process.env) {
@@ -313,7 +390,11 @@ function expandVars(s, env) {
 }
 
 // 書いたスクリプトの中身が、ファイルを読む・別のコマンドを起こす形か。シェルのスクリプトは中身をコマンドとして判断する
-function scriptLooksReading(abs, here, env, depth) {
+// 読み込む別のファイルも同じように見る(ctx は1回の判断で見たファイルと、Python の import の起点)
+function scriptLooksReading(abs, here, env, depth, ctx = { seen: new Set(), root: path.posix.dirname(abs) }) {
+  if (ctx.seen.has(abs)) return null;
+  ctx.seen.add(abs);
+  if (ctx.seen.size > MAX_LOADED_FILES) return '読み込むファイルが多すぎて確かめきれない';
   let st;
   try { st = fs.statSync(abs); } catch { return 'スクリプトのファイルが見つからない'; }
   if (!st.isFile()) return null;
@@ -322,17 +403,28 @@ function scriptLooksReading(abs, here, env, depth) {
   if (RAW_IN_COMMAND.test(text)) return 'スクリプトの中に raw/ の指定がある';
   if (SHELL_EXT.test(abs) || /^#!.*\b(ba|z|da|k)?sh\b/.test(text)) {
     if (depth >= 3) return 'スクリプトが別のスクリプトを深く呼んでいて確かめきれない';
-    const r = decideCommand(text, here, env, depth + 1);
+    const r = decideCommand(text, here, env, depth + 1, { powershell: WINDOWS_SHELL_EXT.test(abs) });
     return r.block ? 'シェルのスクリプトの中のコマンドが止める形(' + r.reason.split('ので止めました')[0] + ')' : null;
   }
   if (READ_API.test(text)) return 'スクリプトの中にファイルの読み取り・コマンドの起動がある';
+  const isJs = JS_EXT.test(abs) || JS_SHEBANG.test(text);
+  const isPy = /\.py$/i.test(abs) || PY_SHEBANG.test(text);
+  const loads = isJs ? jsLoads(text, abs) : isPy ? pyLoads(text, abs, ctx.root) : [];
+  for (const { spec, file } of loads) {
+    if (!file) return `読み込む別のファイル(${spec})が見つからず中身を確かめられない`;
+    if (/\.json$/i.test(file)) continue;
+    const why = scriptLooksReading(realOf(file) || file, here, env, depth, ctx);
+    if (why) return `読み込む別のファイル(${spec})について、${why}`;
+  }
   return null;
 }
 
 // Bash・PowerShell のコマンドの判断
-export function decideCommand(command, cwd, env = process.env, depth = 0) {
+// powershell が true のときは \ をパスの区切りとして読む。Bash の道具は bash の読み方に加えて、\ を区切りと読んだ形も見る
+export function decideCommand(command, cwd, env = process.env, depth = 0, { powershell = false } = {}) {
   const cmd = String(command ?? '');
-  if (RAW_IN_COMMAND.test(cmd)) return block('コマンドの中に raw/ の指定があるので止めました。' + REASON_TOOL);
+  const hasRawWord = splitCommand(cmd, { backslashPath: powershell }).flat().some((w) => RAW_IN_COMMAND.test(w.text));
+  if (RAW_IN_COMMAND.test(cmd) || hasRawWord) return block('コマンドの中に raw/ の指定があるので止めました。' + REASON_TOOL);
   const startCwd = slash(cwd || process.cwd());
   if (!rawWorkspace(startCwd)) return pass();
   if (startCwd.split('/').some(isRawName)) return block('作業フォルダが raw/ の中なので、コマンドを止めました。' + REASON_TOOL);
@@ -340,9 +432,19 @@ export function decideCommand(command, cwd, env = process.env, depth = 0) {
   const dyn = dynamicPart(cmd);
   if (dyn) return block(`作業フォルダに raw/ があり、コマンドに${dyn}が入っていて、どのファイルを読むか分からないので止めました。` + HUMAN);
 
+  const expanded = expandVars(cmd, env);
+  for (const backslashPath of powershell ? [true] : [false, true]) {
+    const r = decideWords(splitCommand(expanded, { backslashPath }), startCwd, env, depth);
+    if (r.block) return r;
+  }
+  return pass();
+}
+
+// 単純なコマンドの並びを順に判断する(cd で変わる場所を追う)
+function decideWords(commands, startCwd, env, depth) {
   const trust = trustedRoot(env);
   let here = startCwd;
-  for (const words of splitCommand(expandVars(cmd, env))) {
+  for (const words of commands) {
     let ws = words.map((w) => ({ ...w, text: slash(w.text) }));
     // 前に付く VAR=値 と、包むだけのコマンド(sudo・env・time など)を外す
     while (ws.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(ws[0].text) || WRAPPERS.has(cmdName(ws[0].text)))) {
@@ -389,19 +491,25 @@ export function decideCommand(command, cwd, env = process.env, depth = 0) {
 
     // スクリプトの実行(node a.mjs、python a.py、bash a.sh、./a.sh、pwsh -File a.ps1)
     let script = null;
+    let preloads = [];
     const inline = INTERP[name];
     if (inline) {
       const lower = args.map((a) => a.toLowerCase());
       if (lower.some((a) => inline.includes(a))) return block(`作業フォルダに raw/ があり、${name} にその場のコードを渡す形なので止めました(中身から読むファイルが分からないため)。` + HUMAN);
       const fileIdx = lower.findIndex((a) => a === '-file' || a === '-f');
       if ((name === 'pwsh' || name === 'powershell') && fileIdx >= 0) script = args[fileIdx + 1];
-      else script = args.find((a) => !a.startsWith('-'));
-      if (!script && name !== 'cmd') return block(`作業フォルダに raw/ があり、${name} がコードを標準入力から読む形なので止めました。` + HUMAN);
+      else {
+        const flags = NODE_LIKE.has(name) ? nodeLoadFlags(args) : { loads: [], values: new Set() };
+        preloads = flags.loads;
+        script = args.find((a, i) => !a.startsWith('-') && !flags.values.has(i));
+      }
+      if (!script && !preloads.length && name !== 'cmd') return block(`作業フォルダに raw/ があり、${name} がコードを標準入力から読む形なので止めました。` + HUMAN);
     } else if (SCRIPT_EXT.test(ws[0].text) || ws[0].text.startsWith('./') || ws[0].text.startsWith('../')) {
       script = ws[0].text;
     }
-    if (script) {
-      const abs = resolveAbs(script, here);
+    for (const p of [script, ...preloads]) {
+      if (!p) continue;
+      const abs = resolveAbs(p, here);
       const real = realOf(abs) || abs;
       if (trust && insideDir(real, realOf(trust) || trust)) continue;
       const why = scriptLooksReading(real, here, env, depth);
@@ -459,8 +567,9 @@ export function decideTool(input, env = process.env) {
       return pass();
     }
     case 'Bash':
-    case 'PowerShell':
       return decideCommand(ti.command, cwd, env);
+    case 'PowerShell':
+      return decideCommand(ti.command, cwd, env, 0, { powershell: true });
     default:
       return pass();
   }
