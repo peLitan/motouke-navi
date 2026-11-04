@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildHtml } from '../../build.mjs';
-import { parseRulesFile, tableNotice } from '../../src/rules-load.mjs';
+import { parseRulesFile, tableNotice, tableCredit } from '../../src/rules-load.mjs';
 import { buildScheduleDetail } from '../../src/schedule.mjs';
 import { checkPlanToc, PLAN_ITEMS } from '../../src/plan-check.mjs';
 import { renderSchedule, renderPlanResult } from '../../src/ui/view.mjs';
@@ -131,6 +131,47 @@ test('画面: 読み込むと注記が変わり、壊れたファイルでは今
   assert.equal(doc.getElementById('rules-clear').hidden, true);
   runPlanCheck(doc);
   assert.ok(!doc.getElementById('plan-result').innerHTML.includes('和歌山県'));
+});
+
+test('F35a: 見本のファイルを読み込むと、段取りと目次の注記に加工の表示と県の作成でない旨が出て、戻すと消える', () => {
+  const credit = '和歌山県「土木請負工事必携(令和7年11月)」を加工して作成';
+  const notMade = 'この出力は和歌山県が作成したものではありません';
+  const doc = fakeDoc();
+  assert.equal(loadRulesFile(doc, FILE), true);
+  for (const id of ['schedule-notice', 'plan-notice']) {
+    const shown = doc.getElementById(id).textContent;
+    assert.ok(shown.includes(credit), id);
+    assert.ok(shown.includes(notMade), id);
+  }
+  clearRulesTable(doc);
+  for (const id of ['schedule-notice', 'plan-notice']) {
+    const shown = doc.getElementById(id).textContent;
+    assert.ok(!shown.includes('を加工して作成'), id);
+    assert.ok(!shown.includes('和歌山県'), id);
+  }
+});
+
+test('F35a: 表示はファイルの出典から作り、県の名前を決め打ちしない。document が無ければ title を使う', () => {
+  const t = parseRulesFile(JSON.stringify({ source: SOURCE, rows: [SCHED] }));
+  assert.equal(tableCredit(t), '架空県「架空の仕様書(令和9年1月)」を加工して作成。この出力は架空県が作成したものではありません。');
+  assert.ok(!tableNotice(t).includes('和歌山県'));
+  const blank = parseRulesFile(JSON.stringify({ source: { ...SOURCE, document: ' ' }, rows: [SCHED] }));
+  assert.ok(tableCredit(blank).includes('「架空の仕様書('));
+  const doc = fakeDoc();
+  assert.equal(loadRulesFile(doc, JSON.stringify({ source: SOURCE, rows: [SCHED] })), true);
+  assert.ok(doc.getElementById('schedule-notice').textContent.includes(tableCredit(t)));
+  clearRulesTable(doc);
+});
+
+test('F35a: 表示を出す処理が index.html に入り、印刷でも消えない欄に出る', () => {
+  const html = buildHtml();
+  assert.ok(html.includes('を加工して作成。'));
+  assert.ok(html.includes('が作成したものではありません。'));
+  for (const id of ['schedule-notice', 'plan-notice']) {
+    const tag = html.match(new RegExp('<p [^>]*id="' + id + '"[^>]*>'));
+    assert.ok(tag, id);
+    assert.ok(!tag[0].includes('no-print'), id);
+  }
 });
 
 test('ファイルの中の文はそのまま HTML にしない', () => {

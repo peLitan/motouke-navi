@@ -45,7 +45,7 @@ export function parseRulesFile(fileText) {
     ids.add(row.id);
   });
   return {
-    source: { publisher: s.publisher, title: s.title, edition: s.edition, url: text(s.url) ?? '', fetchedAt: text(s.fetchedAt) ?? '' },
+    source: { publisher: s.publisher, title: s.title, document: text(s.document) ?? s.title, edition: s.edition, url: text(s.url) ?? '', fetchedAt: text(s.fetchedAt) ?? '' },
     schedule: data.rows.filter((r) => r.kind === 'schedule'),
     planItems: data.rows.filter((r) => r.kind === 'plan-item'),
     count: data.rows.length,
@@ -54,9 +54,16 @@ export function parseRulesFile(fileText) {
 
 export const tableName = (table) => table.source.publisher + '「' + table.source.title + '」';
 
+// 公開資料の利用規約が求める表示(F35a)。読み込んだ行は発注者の資料を加工したものなので、どのファイルでも出す
+export function tableCredit(table) {
+  const s = table.source;
+  return s.publisher + '「' + s.document + '(' + s.edition + ')」を加工して作成。'
+    + 'この出力は' + s.publisher + 'が作成したものではありません。';
+}
+
 // 画面の注記の文。ファイルが照合を通ったものかは画面で確かめられないので、照合が済んだとは書かない
 export function tableNotice(table) {
   const s = table.source;
-  return '読み込んだ表です(' + table.count + '行)。画面では原文と照らしていません。'
+  return '読み込んだ表です(' + table.count + '行)。画面では原文と照らしていません。' + tableCredit(table)
     + '出典: 発注者 ' + s.publisher + '・題名 ' + s.title + '・版 ' + s.edition + (s.url ? '・' + s.url : '');
 }

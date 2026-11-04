@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-x1nyov2nmWh0eTkPOfrdhqKvHxmGP/c5jt/C7zAI7bY='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-HsnpCTaWytN3wgmHK9VDwKiXRmMkFHy/3FR5mMQ8jbE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -3345,7 +3345,7 @@ function parseRulesFile(fileText) {
     ids.add(row.id);
   });
   return {
-    source: { publisher: s.publisher, title: s.title, edition: s.edition, url: text(s.url) ?? '', fetchedAt: text(s.fetchedAt) ?? '' },
+    source: { publisher: s.publisher, title: s.title, document: text(s.document) ?? s.title, edition: s.edition, url: text(s.url) ?? '', fetchedAt: text(s.fetchedAt) ?? '' },
     schedule: data.rows.filter((r) => r.kind === 'schedule'),
     planItems: data.rows.filter((r) => r.kind === 'plan-item'),
     count: data.rows.length,
@@ -3354,14 +3354,21 @@ function parseRulesFile(fileText) {
 
 const tableName = (table) => table.source.publisher + '「' + table.source.title + '」';
 
+// 公開資料の利用規約が求める表示(F35a)。読み込んだ行は発注者の資料を加工したものなので、どのファイルでも出す
+function tableCredit(table) {
+  const s = table.source;
+  return s.publisher + '「' + s.document + '(' + s.edition + ')」を加工して作成。'
+    + 'この出力は' + s.publisher + 'が作成したものではありません。';
+}
+
 // 画面の注記の文。ファイルが照合を通ったものかは画面で確かめられないので、照合が済んだとは書かない
 function tableNotice(table) {
   const s = table.source;
-  return '読み込んだ表です(' + table.count + '行)。画面では原文と照らしていません。'
+  return '読み込んだ表です(' + table.count + '行)。画面では原文と照らしていません。' + tableCredit(table)
     + '出典: 発注者 ' + s.publisher + '・題名 ' + s.title + '・版 ' + s.edition + (s.url ? '・' + s.url : '');
 }
 
-return { RULES_MAX_BYTES, UNDETERMINED, parseRulesFile, tableName, tableNotice };
+return { RULES_MAX_BYTES, UNDETERMINED, parseRulesFile, tableName, tableCredit, tableNotice };
 })();
 __m["src/schedule.mjs"] = (function () {
 // 段取りの一覧(F06a: 着手まで、F06b: 施工中から完成・引き渡しまで。国の直轄の土木工事の例)。

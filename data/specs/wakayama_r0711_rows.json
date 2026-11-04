@@ -1,4 +1,4 @@
-{ "source": { "publisher": "和歌山県", "title": "土木請負工事必携 第1編 共通編 第1章 総則 1-1-1-6〜1-1-1-12", "edition": "令和7年11月", "url": "https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html", "fetchedAt": "2026-11-04" },
+{ "source": { "publisher": "和歌山県", "document": "土木請負工事必携", "title": "土木請負工事必携 第1編 共通編 第1章 総則 1-1-1-6〜1-1-1-12", "edition": "令和7年11月", "url": "https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html", "fetchedAt": "2026-11-04" },
   "rows": [
   { "kind": "plan-item", "section": "1-1-1-6", "no": 1, "label": "工事概要", "quote": "（1）工事概要" },
   { "kind": "plan-item", "section": "1-1-1-6", "no": 2, "label": "計画工程表", "quote": "（2）計画工程表" },
