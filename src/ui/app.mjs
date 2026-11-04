@@ -119,7 +119,7 @@ export function runBid(doc) {
     const bid = bidCheck(input);
     const taicho = judgeTaicho(input);
     bidOut.innerHTML = renderBidResult(bid, values);
-    // 結果の最後に「確認が要る項目」と「未回答」の一覧(F14f)
+    // 結果の最後に「確認が要る点」と「未回答」の一覧(F14f)
     if (openEl) openEl.innerHTML = renderOpenItems(bid, values);
     taichoOut.innerHTML = renderTaichoResult(taicho);
     last = { bid, taicho };

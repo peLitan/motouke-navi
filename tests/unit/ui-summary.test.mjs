@@ -26,8 +26,8 @@ test('まとめの枠は 1. の入力欄のすぐ後・入札前の確認の結�
   assert.ok(sum < body.indexOf('id="check-result"') && sum < body.indexOf('id="plan-result"'));
 });
 
-test('結論の印は 要る=✕・確認が要る=!・要らない=✓・未回答=?(F14f) で、言葉を必ず添える(色だけで区別しない)', () => {
-  assert.deepEqual(STATUS_MARK, { required: '✕', needs_check: '!', not_required: '✓', unanswered: '?' });
+test('結論の印は 要る=●・確認が要る=!・要らない=✓・未回答=?(F14f) で、言葉を必ず添える(色だけで区別しない)', () => {
+  assert.deepEqual(STATUS_MARK, { required: '●', needs_check: '!', not_required: '✓', unanswered: '?' });
   for (const [st, word] of [['required', '要る'], ['needs_check', '確認が要る'], ['not_required', '要らない'], ['unanswered', '未回答']]) {
     const b = statusBadge(st);
     assert.ok(b.includes('class="badge badge-' + st + '"'));
@@ -80,7 +80,7 @@ test('renderSummary: 件数・一覧・台帳の候補・目次の抜け・入�
   });
   const text = out.replace(/<[^>]+>/g, '');
   assert.ok(out.startsWith('<h3 id="summary-title">まとめ</h3>'));
-  assert.ok(/✕ 要る 2件/.test(text) && /! 確認が要る 1件/.test(text) && /✓ 要らない 1件/.test(text), '件数が無い: ' + text);
+  assert.ok(/● 要る 2項目/.test(text) && /! 確認が要る 1項目/.test(text) && /✓ 要らない 1項目/.test(text), '件数が無い: ' + text);
   // 一覧は 要る → 確認が要る → 要らない の順
   const order = ['項目A', '項目D', '項目B', '項目C'].map((l) => out.indexOf('>' + l + '</a>'));
   assert.ok(order.every((v, i) => v > 0 && (i === 0 || v > order[i - 1])), '一覧の順が違う');

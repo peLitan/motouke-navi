@@ -1,6 +1,6 @@
 // F14f: 聞き方と結果の順。質問に「分からない」を置き、選んだ質問を使う項目は「確認が要る」にする。状態は 要る/要らない/確認が要る/未回答。
 // 未回答が残るうちは「仮の一覧」。各項目は 結論 → 理由(入れた条件)→ 根拠の条 → 確かめ先 の順。確かめ先は根拠の原文に書かれた相手だけ。
-// 冒頭に見ている法令・見ていない法令と資料。結果の最後に「確認が要る項目」と「未回答」。印刷の最後に「確認した人・日付」の空欄
+// 冒頭に見ている法令・見ていない法令と資料。結果の最後に「確認が要る点」と「未回答」。印刷の最後に「確認した人・日付」の空欄
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -131,14 +131,14 @@ test('確かめ先は根拠の原文に書かれた相手だけ。原文に相�
   assert.match(text(itemHtml(nvOut, 'taicho')), /確かめ先: 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します/);
 });
 
-test('結果の最後に「確認が要る項目」と「未回答」の一覧。まとめの枠も未回答を数える', () => {
+test('結果の最後に「確認が要る点」と「未回答」の一覧。まとめの枠も未回答を数える', () => {
   const v = { ...FULL, license: '', 'engineer-qualification': '', 'contract-amount-unknown': true };
   const bid = bidCheck(readBidForm(v));
   const o = openItems(bid, v);
   assert.deepEqual(o.unanswered.map((q) => q.name), ['元請けの許可の種類', '置ける技術者の資格']);
   assert.deepEqual(o.unknown.map((q) => q.name), ['請負代金の見込み']);
   const t = text(renderOpenItems(bid, v));
-  assert.match(t, /確認が要る項目\(\d+件\)/);
+  assert.match(t, /確認が要る点\(\d+件\)/);
   assert.match(t, /技術者を専任で置く必要があるか: 請負代金の見込み/);
   assert.match(t, /「分からない」を選んだ質問: 請負代金の見込み\(使う項目: 技術者を専任で置く必要があるか\)/);
   assert.match(t, /未回答\(2問\)元請けの許可の種類/);

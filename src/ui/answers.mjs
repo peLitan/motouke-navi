@@ -99,21 +99,29 @@ export function contactsFor(item, values = {}) {
   return f(orderer);
 }
 
-// 結果の最後の一覧: 「確認が要る項目」と「未回答」
-//   needsCheck: [{ label, message }](画面の状態が「確認が要る」の項目と、bidCheck の確認が要る点)
+// 「確認が要る点」の数え方を1つにする(F37g)。まとめ・入札前の確認・最後の一覧は、どれもこの関数の結果を使う。
+//   bidCheck の checks のうち、画面の状態が「未回答」の項目は未回答の一覧へ回すので除く。
+//   status はその項目の画面の状態。結論の出た項目(要る など)についての確認も入る。values が無いときは判定の状態を使う
+export function needsCheckPoints(bid, values) {
+  const items = bid?.items ?? [];
+  const points = [];
+  for (const c of bid?.checks ?? []) {
+    const it = items.find((x) => x.key === c.key);
+    const status = !it ? 'needs_check' : values ? displayStatus(it, values) : it.status;
+    if (status !== 'unanswered') points.push({ label: c.label, message: c.message, status });
+  }
+  return points;
+}
+
+// 結果の最後の一覧: 「確認が要る点」と「未回答」
+//   needsCheck: needsCheckPoints の結果
 //   unanswered: [{ id, name, items: [項目名] }](未回答の質問と、それを使う項目のうち決められなかったもの)
 //   unknown: [{ id, name, items }](「分からない」を選んだ質問)
 export function openItems(bid, values = {}) {
   const items = bid?.items ?? [];
-  const needsCheck = [];
-  for (const c of bid?.checks ?? []) {
-    const it = items.find((x) => x.key === c.key);
-    if (it && displayStatus(it, values) === 'unanswered') continue; // 未回答の一覧に出す
-    needsCheck.push({ label: c.label, message: c.message });
-  }
   const affected = (id) => items.filter((it) => it.status === 'needs_check' && (ITEM_DEPS[it.key] ?? []).includes(id)).map((it) => it.label);
   return {
-    needsCheck,
+    needsCheck: needsCheckPoints(bid, values),
     unanswered: unansweredQuestions(values).map((q) => ({ ...q, items: affected(q.id) })),
     unknown: unknownQuestions(values).map((q) => ({ ...q, items: affected(q.id) })),
   };

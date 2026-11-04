@@ -3,7 +3,7 @@
 import { readDirect } from './form.mjs';
 import { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } from '../checklist.mjs';
 import { sourceVersion, versionText } from '../source-version.mjs';
-import { displayStatus, itemConditions, contactsFor, openItems, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
+import { displayStatus, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -44,12 +44,17 @@ function amountBasisBlock(ab) {
 }
 
 export const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る', unanswered: '未回答' };
-// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=✕と赤系、確認が要る=!と黄系、要らない=✓と緑系、未回答=?と灰色。F14f)
-export const STATUS_MARK = { required: '✕', needs_check: '!', not_required: '✓', unanswered: '?' };
+// 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=●と赤系、確認が要る=!と黄系、要らない=✓と緑系、未回答=?と灰色。F14f)
+export const STATUS_MARK = { required: '●', needs_check: '!', not_required: '✓', unanswered: '?' };
 export function statusBadge(status, extra = '') {
   const word = BID_STATUS[status] ?? String(status ?? '');
   const mark = STATUS_MARK[status];
   return '<span class="badge badge-' + esc(status) + '">' + (mark ? '<span class="mark" aria-hidden="true">' + esc(mark) + '</span> ' : '') + esc(word + extra) + '</span>';
+}
+// 「確認が要る」の項目の数と「確認が要る点」の数が違うときの説明(F37g)。結論の出た項目についての確認があると数が増える
+function pointsNote(points) {
+  const n = points.filter((p) => p.status !== 'needs_check').length;
+  return n ? 'うち ' + n + '件は、結論の出た項目について確かめる点です(「確認が要る」の項目の数には入りません)。' : '';
 }
 // 結果の項目へのページの中のリンクの行き先(まとめの枠から移る)
 export const bidItemId = (key) => 'bid-item-' + String(key ?? '').replace(/[^\w-]/g, '_');
@@ -83,8 +88,9 @@ export function renderBidResult(bid, values) {
       + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml + unansweredNote
       + basisList(it.basis) + exceptionList(it.exceptions) + contactHtml + '</li>';
   }).join('');
-  const checks = bid.checks.length
-    ? '<h3>確認が要る点(' + bid.checks.length + '件)</h3><ul class="checks">' + bid.checks.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
+  const points = needsCheckPoints(bid, values);
+  const checks = points.length
+    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
   const un = values ? unansweredQuestions(values) : [];
   const provisional = un.length
@@ -94,7 +100,7 @@ export function renderBidResult(bid, values) {
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
 }
 
-// 結果の最後の一覧(F14f): 「確認が要る項目」と「未回答」。印刷にも出す
+// 結果の最後の一覧(F14f): 「確認が要る点」と「未回答」。印刷にも出す
 export function renderOpenItems(bid, values = {}) {
   const o = openItems(bid, values);
   const need = o.needsCheck.length
@@ -106,8 +112,8 @@ export function renderOpenItems(bid, values = {}) {
   const un = o.unanswered.length
     ? '<ul class="open-unanswered">' + o.unanswered.map((q) => '<li><strong>' + esc(q.name) + '</strong>' + (q.items.length ? ' — この質問に答えると決まることがある項目: ' + esc(q.items.join('・')) : '') + '</li>').join('') + '</ul>'
     : '<p>ありません。</p>';
-  return '<h3 id="open-items-title">確認が要る項目と未回答の質問</h3>'
-    + '<h4>確認が要る項目(' + o.needsCheck.length + '件)</h4>' + need + known
+  return '<h3 id="open-items-title">確認が要る点と未回答の質問</h3>'
+    + '<h4>確認が要る点(' + o.needsCheck.length + '件)</h4>' + need + known
     + '<h4>未回答(' + o.unanswered.length + '問)</h4>' + un;
 }
 
@@ -366,13 +372,14 @@ export function renderSummary(state = {}) {
     const dst = (it) => (vals ? displayStatus(it, vals) : it.status);
     const un = vals ? unansweredQuestions(vals) : [];
     const order = ['required', 'needs_check', 'unanswered', 'not_required'];
+    const points = needsCheckPoints(state.bid, vals ?? undefined);
     const count = (st) => items.filter((it) => dst(it) === st).length;
     parts.push((un.length ? '<p class="provisional"><strong>仮の一覧です</strong>(未回答の質問 ' + un.length + 'つ)。<a href="#open-items">未回答の一覧</a>を見て、答えるか「分からない」を選んでください。</p>' : '')
       + '<h4>受注したら要るもの(' + items.length + '項目' + (un.length ? '・仮の一覧' : '') + ')</h4>'
-      + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>件</li>').join('') + '</ul>'
+      + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
       + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
         .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
-      + ((state.bid.checks ?? []).length ? '<p><a href="#bid-result">確認が要る点 ' + state.bid.checks.length + '件</a>を入札前の確認の欄に出しています。</p>' : ''));
+      + (points.length ? '<p><a href="#bid-result">確認が要る点 ' + points.length + '件</a>を入札前の確認の欄に出しています。' + esc(pointsNote(points)) + '</p>' : ''));
   } else {
     parts.push('<h4>受注したら要るもの</h4><p>' + NOT_YET('確認する') + '</p>');
   }
