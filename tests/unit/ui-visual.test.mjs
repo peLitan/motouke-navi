@@ -1,9 +1,12 @@
 // F38b: 押す所の形と焦点。ブラウザが無いので、CSS の書いた値と静的な HTML で確かめる(描いた結果ではない)。
 // ボタンの形(主・副・押せない・選んでいる)、入力欄の枠、押す所の高さ 44px 以上、角の丸み 4px の1種、焦点の2重の輪、入口に戻るの置き場所
+// F38c: 札・表・枠。札が色だけに頼らないこと、枠の色と地の比、選んでいる印の字、まとめと表の線
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { buildHtml } from '../../build.mjs';
+import { statusBadge, STATUS_MARK, BID_STATUS } from '../../src/ui/view.mjs';
+import { renderCandidates } from '../../src/ui/mask-app.mjs';
 
 const shell = fs.readFileSync(new URL('../../src/ui/shell.html', import.meta.url), 'utf8');
 const css = shell.match(/<style>([\s\S]*?)<\/style>/)[1].replace(/\/\*[\s\S]*?\*\//g, '');
@@ -166,6 +169,91 @@ test('結果の中のリンクは縦に余白を足した形', () => {
   assert.equal(r, ruleWith('.result a'));
   assert.equal(prop(r, 'display'), 'inline-block');
   assert.equal(prop(r, 'padding'), '0.2rem 0');
+});
+
+test('札: 色を抜いても、印と言葉で4つの状態が見分けられる', () => {
+  const statuses = Object.keys(BID_STATUS);
+  assert.deepEqual(statuses.sort(), ['needs_check', 'not_required', 'required', 'unanswered']);
+  const seen = new Set();
+  for (const st of statuses) {
+    const badge = statusBadge(st);
+    const mark = badge.match(/<span class="mark" aria-hidden="true">([^<]+)<\/span>/)?.[1];
+    assert.equal(mark, STATUS_MARK[st], st + ' の印が無い');
+    const words = badge.replace(/<span class="mark"[^>]*>[^<]*<\/span>/, '').replace(/<[^>]+>/g, '').trim();
+    assert.equal(words, BID_STATUS[st], st + ' の言葉が無い');
+    seen.add(mark);
+    seen.add(words);
+  }
+  assert.equal(seen.size, statuses.length * 2, '印か言葉が重なっている');
+  // 札の地はどれも白。文字は白地で 4.5:1、枠は 3:1 以上。印は札の中で太字
+  for (const st of statuses) {
+    const r = ruleOf('.badge-' + st);
+    assert.equal(color(prop(r, 'background')), vars['--paper'], st);
+    atLeast(color(prop(r, 'color')), vars['--paper'], 4.5, st + ' の字');
+    atLeast(color(prop(r, 'border-color')), vars['--paper'], 3, st + ' の枠');
+  }
+  assert.equal(prop(ruleOf('.badge'), 'font-weight'), 'bold');
+  assert.equal(prop(ruleOf('.badge .mark'), 'font-weight'), 'bold');
+});
+
+test('枠の色と地の比: 線はどれも 3:1 以上(押せない物と、枠が塗りと同じ色の物を除く)', () => {
+  let checked = 0;
+  for (const r of rules) {
+    if (r.sel === ':root' || r.sel.includes(':disabled')) continue;
+    const bg = prop(r.body, 'background') ?? 'var(--paper)';
+    for (const m of r.body.matchAll(/(?:^|;)\s*(border(?:-[a-z]+)*|outline)\s*:\s*([^;]+)/g)) {
+      const v = m[2].match(/var\(--[\w-]+\)/)?.[0];
+      if (!v) continue;
+      if (v === bg) { atLeast(color(bg), vars['--paper'], 3, r.sel + ' の塗り'); continue; }
+      atLeast(color(v), bg === 'transparent' ? vars['--paper'] : color(bg), 3, r.sel + ' の ' + m[1]);
+      checked += 1;
+    }
+  }
+  assert.ok(checked >= 20, '見た線が少ない: ' + checked);
+});
+
+test('選んでいる印: 3か所とも「✓ 選択中」の字が出る。CSS で足すので文言と aria-pressed の扱いは変えない', () => {
+  const on = rules.find((r) => selectors(r.sel).includes('.rules-switch button[aria-pressed="true"]::before'));
+  assert.ok(on, '選んでいる印の字の決まりが無い');
+  assert.deepEqual(selectors(on.sel).sort(), ['#mask-candidates', '#mask-review', '.rules-switch'].map((p) => p + ' button[aria-pressed="true"]::before').sort());
+  assert.equal(prop(on.body, 'content'), '"✓ 選択中 "');
+  assert.match(on.body, /content: "✓ 選択中 " \/ "";/);
+  assert.match(body, /<button type="button" id="rules-national" aria-pressed="true">国の直轄の例/);
+});
+
+test('まとめ・見本の帯・断り書き: 黒い目立つ枠は断り書きと対応表の警告だけ', () => {
+  const sum = ruleOf('.summary');
+  assert.equal(prop(sum, 'border'), '1px solid var(--line)');
+  assert.equal(prop(sum, 'border-left-width'), '6px');
+  assert.equal(prop(sum, 'border-radius'), '4px');
+  const banner = ruleOf('.sample-banner');
+  assert.equal(prop(banner, 'border'), '1px solid var(--primary)');
+  assert.equal(color(prop(banner, 'background')), vars['--paper']);
+  assert.equal(prop(ruleOf('.disclaimer'), 'border'), '3px solid var(--line-strong)');
+  assert.equal(color(prop(ruleOf('.disclaimer'), 'background')), vars['--paper'], 'クリーム色に戻っている');
+  // --line-strong の太い枠(全周)は断り書きの1つの決まりだけ。その class が付くのは2か所
+  const heavy = rules.filter((r) => /(?:^|;)\s*border: *[2-9]px solid var\(--line-strong\)/.test(r.body)).map((r) => r.sel);
+  assert.deepEqual(heavy, ['.disclaimer']);
+  assert.deepEqual([...body.matchAll(/class="disclaimer[^"]*"(?: id="([^"]+)")?/g)].map((m) => m[1]).sort(), ['disclaimer', 'map-warning']);
+});
+
+test('表: 見出しの下は黒い 2px、行は灰色の 1px、回数の列は右寄せ。カードでは行の線を消す', () => {
+  assert.equal(prop(ruleOf('th'), 'border-bottom'), '2px solid var(--line-strong)');
+  assert.equal(prop(ruleOf('td'), 'border-bottom'), '1px solid var(--line)');
+  assert.equal(prop(ruleOf('table'), 'border-collapse'), 'collapse');
+  assert.equal(prop(ruleOf('th.num, td.num'), 'text-align'), 'right');
+  const cands = renderCandidates([{ word: '架空建設', basis: '語尾', count: 3 }], () => false);
+  assert.match(cands, /<th class="num">回数<\/th>/);
+  assert.match(cands, /<td class="num">3<\/td>/);
+  // 狭い画面のカードは枠で区切るので、各欄の下の線を出さない
+  const narrow = css.match(/@media \(max-width: 40rem\) \{[\s\S]*?\n {2}\}/)[0];
+  assert.match(narrow, /table\.schedule td \{[^}]*border-bottom: none/);
+});
+
+test('まとめの項目は札と名前を1行に並べる', () => {
+  const li = ruleOf('.summary-items li');
+  assert.equal(prop(li, 'display'), 'flex');
+  assert.equal(prop(li, 'align-items'), 'baseline');
 });
 
 test('07 の決まり: 外部と通信しない・外部の読み込み無し・断り書きと PDL の表示・保存しない・index.html 1つで動く', () => {

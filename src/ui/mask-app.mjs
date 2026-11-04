@@ -119,14 +119,14 @@ export function renderCandidates(list, skipped = isCandidateSkipped) {
   const rows = list.slice(0, CANDIDATE_SHOWN).map((c) => {
     const skip = skipped(c.word);
     const attr = 'data-word="' + esc(c.word) + '"';
-    return '<tr' + (skip ? ' class="mask-keep"' : '') + '><td>' + esc(c.word) + '</td><td>' + esc(c.basis) + '</td><td>' + c.count + '</td><td>' + (skip ? '足さない' : '未選択')
+    return '<tr' + (skip ? ' class="mask-keep"' : '') + '><td>' + esc(c.word) + '</td><td>' + esc(c.basis) + '</td><td class="num">' + c.count + '</td><td>' + (skip ? '足さない' : '未選択')
       + '</td><td><button type="button" data-candidate="add" ' + attr + '>辞書に足す</button> <button type="button" data-candidate="skip" ' + attr + ' aria-pressed="' + skip + '">足さない</button></td></tr>';
   });
   const undecided = list.filter((c) => !skipped(c.word)).length;
   const more = list.length > CANDIDATE_SHOWN ? ' 表には先頭の ' + CANDIDATE_SHOWN + ' 件を出しています(ほか ' + (list.length - CANDIDATE_SHOWN) + ' 件)。足すと次の候補が出ます。' : '';
   return '<h3>辞書に足す候補(会社・団体の名前らしい語)</h3>'
     + '<p class="note">置き換えで見つからなかった語のうち、語尾や欄から会社・団体の名前らしいと見た語です。候補は自動では置き換えません。選ぶまで、この語は後の欄に元のまま残ります。名前の語は「辞書に足す」(会社名として足し、すぐに置き換え直します)、普通の言葉は「足さない」を選んでください(全 ' + list.length + ' 件・未選択 ' + undecided + ' 件)。' + more + '</p>'
-    + scrollTable('辞書に足す候補', '<table><thead><tr><th>語</th><th>見つけた所</th><th>回数</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
+    + scrollTable('辞書に足す候補', '<table><thead><tr><th>語</th><th>見つけた所</th><th class="num">回数</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
 }
 
 // 候補の1件を「辞書に足す」か「足さない」にする(F36b)。足すときだけ辞書に入れて置き換え直す

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-0FYFbOZTXcuRPCihSg+x/gZ/Xxd1P0S4peZzYcOUZSQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-N47PfgsPjJbM2fMJmrrFU4O/VH53sb+QBfe6B1CUIXM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -64,7 +64,7 @@
   .summary a, .result a { display: inline-block; padding: 0.2rem 0; }
   .human { font-weight: bold; }
   .errors { color: var(--need); }
-  blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); }
+  blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 0.75rem; }
   footer { margin-top: 2rem; border-top: 1px solid var(--line); font-size: 1rem; color: var(--ink); }
   .export { margin: 0.5rem 0 1rem; }
   .mask-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
@@ -77,6 +77,8 @@
   mark.mask-keep { color: var(--ink); background: var(--primary-bg); }
   #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid var(--line); padding: 0.2rem 0.5rem; }
   #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"], .rules-switch button[aria-pressed="true"] { color: var(--ink); background: var(--primary-bg); border: 2px solid var(--primary); font-weight: bold; }
+  /* 選んでいる方は字でも示す(F38c)。白黒でも分かる。読み上げには aria-pressed があるので、対応するブラウザでは2つ目の content で字を読ませない */
+  #mask-review button[aria-pressed="true"]::before, #mask-candidates button[aria-pressed="true"]::before, .rules-switch button[aria-pressed="true"]::before { content: "✓ 選択中 "; content: "✓ 選択中 " / ""; }
   #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: var(--paper-2); padding: 0.5rem; max-width: 100%; overflow-x: auto; }
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
@@ -101,17 +103,22 @@
   .steps button[aria-current="step"] { color: var(--paper); background: var(--primary); font-weight: bold; }
   /* 入口に戻る(F38b): 4つ目の段に見えないよう、段の列の下の行に灰色の枠で置く。hidden で隠すので display は決めない */
   #entry-back { margin: 0.5rem 0 0; color: var(--ink); border-color: var(--line); }
-  #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--line); }
-  .sample-banner { border-left: 6px solid var(--primary); background: var(--primary-bg); padding: 0.25rem 1rem; margin: 0.5rem 0; }
+  #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--ink-2); }
+  /* 見本の帯(F38c): 白地に主の色の枠。薄い青の地は入口の枠だけにする */
+  .sample-banner { border: 1px solid var(--primary); border-left-width: 6px; border-radius: 4px; background: var(--paper); padding: 0.25rem 1rem; margin: 0.5rem 0; }
   .sample-banner p { margin: 0.25rem 0; }
-  /* 結論の印とまとめの枠(F14b)。色だけで区別しない: 記号(● ! ✓)と言葉を必ず添える。文字と地の色のコントラストは 4.5:1 以上 */
+  /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; border-radius: 4px; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
-  .badge .mark { display: inline-block; min-width: 1em; text-align: center; }
+  .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
   .badge-required { color: var(--need); background: var(--paper); border-color: var(--need-line); }
   .badge-needs_check { color: var(--check); background: var(--paper); border-color: var(--check-line); }
   .badge-not_required { color: var(--ok); background: var(--paper); border-color: var(--ok-line); }
   .badge-unanswered { color: var(--ink-2); background: var(--paper); border-color: var(--line); border-style: dashed; }
   /* 答えの状態と結果の順(F14f): 理由・入れた条件・確かめ先の見出し語、仮の一覧の知らせ、見ている法令の範囲、印刷だけに出す確認の欄 */
+  .items { padding-left: 0; list-style: none; }
+  .item { border-top: 1px solid var(--line); padding: 0.5rem 0; }
+  .item:first-child { border-top: none; }
+  .item h4 { margin: 0.25rem 0; }
   .item .part { font-weight: bold; }
   .ans-unknown, .ans-unanswered { font-weight: bold; text-decoration: underline; }
   .provisional { border-left: 4px solid var(--line); padding: 0.1rem 0 0.1rem 0.75rem; color: var(--ink); }
@@ -131,12 +138,13 @@
   .sign-table { border-collapse: collapse; width: 100%; }
   .sign-table th, .sign-table td { border: 1px solid var(--line-strong); padding: 0.5rem; height: 2.5rem; text-align: left; }
   .sign-table th { width: 8rem; }
-  .summary { border-left: 6px solid var(--line); background: var(--paper); padding: 0.5rem 1rem 0.75rem; margin: 1rem 0 1.5rem; }
+  /* まとめの枠は通常の線。黒い目立つ枠は断り書きと対応表の警告だけ */
+  .summary { border: 1px solid var(--line); border-left-width: 6px; border-radius: 4px; background: var(--paper); padding: 0.5rem 1rem 0.75rem; margin: 1rem 0 1.5rem; }
   .summary h3 { margin: 0.25rem 0 0.5rem; font-size: 1.25rem; }
   .summary h4 { margin: 0.75rem 0 0.25rem; }
   .summary-counts, .summary-items { list-style: none; padding: 0; margin: 0.25rem 0; }
   .summary-counts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
-  .summary-items li { margin: 0.2rem 0; }
+  .summary-items li { margin: 0.2rem 0; display: flex; gap: 0.5rem; align-items: baseline; }
   .summary-table { border-collapse: collapse; }
   .summary-table th, .summary-table td { text-align: left; vertical-align: top; padding: 0.2rem 1rem 0.2rem 0; border-bottom: 1px solid var(--line); }
   .summary-list { margin: 0.25rem 0; }
@@ -174,6 +182,11 @@
   /* 四角の印とラベルの行も、押せる高さにする */
   .check-row { display: flex; align-items: center; min-height: 2.75rem; }
   .check-row > input { flex: none; }
+  /* 表(F38c): 見出しの下は黒い 2px、行は灰色の 1px。数の列(.num)は右寄せ。幅 40rem 以下の段取りの表はカード */
+  table { border-collapse: collapse; }
+  th { text-align: left; vertical-align: bottom; padding: 0.4rem 0.6rem; border-bottom: 2px solid var(--line-strong); }
+  td { vertical-align: top; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); }
+  th.num, td.num { text-align: right; }
   .table-scroll { max-width: 100%; overflow-x: auto; margin: 0.25rem 0 0.75rem; }
   .table-scroll:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
   /* 台帳の記載事項の表(F16c): 「空」は太字で目立たせる(色だけに頼らない)。「確認した」の欄は押しやすく、印刷でも文字で残る */
@@ -197,7 +210,7 @@
     table.schedule, table.schedule tbody, table.schedule tr, table.schedule td { display: block; width: 100%; }
     table.schedule thead { display: none; }
     table.schedule tr { border: 1px solid var(--line); border-radius: 4px; padding: 0.25rem 0.75rem; margin: 0 0 0.75rem; }
-    table.schedule td { padding: 0.2rem 0; }
+    table.schedule td { padding: 0.2rem 0; border-bottom: none; }
     table.schedule td:empty { display: none; }
     table.schedule td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
   }
@@ -6165,14 +6178,14 @@ function renderCandidates(list, skipped = isCandidateSkipped) {
   const rows = list.slice(0, CANDIDATE_SHOWN).map((c) => {
     const skip = skipped(c.word);
     const attr = 'data-word="' + esc(c.word) + '"';
-    return '<tr' + (skip ? ' class="mask-keep"' : '') + '><td>' + esc(c.word) + '</td><td>' + esc(c.basis) + '</td><td>' + c.count + '</td><td>' + (skip ? '足さない' : '未選択')
+    return '<tr' + (skip ? ' class="mask-keep"' : '') + '><td>' + esc(c.word) + '</td><td>' + esc(c.basis) + '</td><td class="num">' + c.count + '</td><td>' + (skip ? '足さない' : '未選択')
       + '</td><td><button type="button" data-candidate="add" ' + attr + '>辞書に足す</button> <button type="button" data-candidate="skip" ' + attr + ' aria-pressed="' + skip + '">足さない</button></td></tr>';
   });
   const undecided = list.filter((c) => !skipped(c.word)).length;
   const more = list.length > CANDIDATE_SHOWN ? ' 表には先頭の ' + CANDIDATE_SHOWN + ' 件を出しています(ほか ' + (list.length - CANDIDATE_SHOWN) + ' 件)。足すと次の候補が出ます。' : '';
   return '<h3>辞書に足す候補(会社・団体の名前らしい語)</h3>'
     + '<p class="note">置き換えで見つからなかった語のうち、語尾や欄から会社・団体の名前らしいと見た語です。候補は自動では置き換えません。選ぶまで、この語は後の欄に元のまま残ります。名前の語は「辞書に足す」(会社名として足し、すぐに置き換え直します)、普通の言葉は「足さない」を選んでください(全 ' + list.length + ' 件・未選択 ' + undecided + ' 件)。' + more + '</p>'
-    + scrollTable('辞書に足す候補', '<table><thead><tr><th>語</th><th>見つけた所</th><th>回数</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
+    + scrollTable('辞書に足す候補', '<table><thead><tr><th>語</th><th>見つけた所</th><th class="num">回数</th><th>状態</th><th>選ぶ</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>');
 }
 
 // 候補の1件を「辞書に足す」か「足さない」にする(F36b)。足すときだけ辞書に入れて置き換え直す
