@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-h9jxa3BXFHlasnBfZ40Oi7S/Znb2E83GOVigGsr2JgE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cRRUoFeLw72U/CJWsR1ZDTEMf5aCQAu0Zsw3Cv693nE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -115,6 +115,8 @@
   details.basis > summary { color: #1e3a8a; }
   details.schedule-table { margin: 0.5rem 0; }
   details.schedule-table > summary { font-weight: bold; font-size: 1.1rem; }
+  details.schedule-phase { margin: 0.25rem 0; }
+  details.schedule-phase > summary h4 { display: inline; margin: 0; }
   .schedule-lead { margin: 0.25rem 0 0.5rem; }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
   .other-tools > summary h2 { display: inline; margin: 0; }
@@ -132,7 +134,6 @@
   input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
   .table-scroll { max-width: 100%; overflow-x: auto; margin: 0.25rem 0 0.75rem; }
   .table-scroll:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
-  .table-scroll table.schedule { min-width: 36rem; }
   /* 台帳の記載事項の表(F16c): 「空」は太字で目立たせる(色だけに頼らない)。「確認した」の欄は押しやすく、印刷でも文字で残る */
   .table-scroll table.checklist-table { min-width: 48rem; }
   .checklist-table .cl-check { white-space: nowrap; }
@@ -143,6 +144,19 @@
     body { padding: 0.75rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
     .entry-choices { grid-template-columns: minmax(0, 1fr); }
+    /* 段階の表示は1行に収める(F37f)。字は 16px のまま、名前の後ろを隠し(「1 条件」)、順は番号で分かるので矢印を外す */
+    .steps { flex-wrap: nowrap; gap: 0.25rem; }
+    .steps li { flex: 1 1 auto; min-width: 0; }
+    .steps li + li::before { content: none; }
+    .steps button { width: 100%; padding: 0.2rem 0.5rem; }
+    .step-more { display: none; }
+    /* 段取りの表は行ごとのカードにする(F37f)。列の見出しの代わりに、各欄の前に data-label を出す */
+    table.schedule, table.schedule tbody, table.schedule tr, table.schedule td { display: block; width: 100%; }
+    table.schedule thead { display: none; }
+    table.schedule tr { border: 1px solid #9ca3af; border-radius: 4px; padding: 0.25rem 0.75rem; margin: 0 0 0.75rem; }
+    table.schedule td { padding: 0.2rem 0; }
+    table.schedule td:empty { display: none; }
+    table.schedule td::before { content: attr(data-label); display: block; font-weight: bold; color: #374151; }
   }
   /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
   @media print {
@@ -222,9 +236,9 @@
 </div>
 </div>
 <ol class="steps" id="steps" aria-label="使う順番">
-<li><button type="button" id="step-1" disabled>1 条件を入れる</button></li>
-<li><button type="button" id="step-2" disabled>2 結果を見る</button></li>
-<li><button type="button" id="step-3" disabled>3 書類を確かめる</button></li>
+<li><button type="button" id="step-1" disabled aria-label="1 条件を入れる">1 条件<span class="step-more">を入れる</span></button></li>
+<li><button type="button" id="step-2" disabled aria-label="2 結果を見る">2 結果<span class="step-more">を見る</span></button></li>
+<li><button type="button" id="step-3" disabled aria-label="3 書類を確かめる">3 書類<span class="step-more">を確かめる</span></button></li>
 </ol>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </div>
@@ -1598,20 +1612,25 @@ function renderSchedule(rows = [], detail = {}) {
   const phases = [...new Set(rows.map((r) => r.phase))];
   const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
   const docLabel = esc(detail.docLabel ?? '共通仕様書');
+  // 列の名前は1か所で持ち、見出しと各 td の data-label を同じにする。狭い画面ではカードの項目名に data-label を使う(F37f)
+  const cols = ['いつ', '何を', '誰に', '状態', '根拠(' + docLabel + 'の箇所)'];
+  const td = (i, inner) => '<td data-label="' + cols[i] + '">' + inner + '</td>';
   // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
-  const tables = phases.map((ph) => {
+  // 区切りごとに畳める(F37f)。最初の区切りだけ開け、見出しに件数を出す。印刷では全部開く
+  const tables = phases.map((ph, i) => {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
-    return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
-      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(' + docLabel + 'の箇所)</th></tr></thead><tbody>'
-      + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
-        + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
-        + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
-        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
+    return '<details class="schedule-phase"' + (i === 0 ? ' open' : '') + '><summary><h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4></summary>'
+      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr>' + cols.map((c) => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>'
+      + list.map((r) => '<tr class="schedule-row">' + td(0, esc(r.when))
+        + td(1, esc(r.what)
+          + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
+          + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : ''))
+        + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + '</tr>').join('')
       + '</tbody></table>')
       + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? '読み込んだ表の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
-      + '</ul></details>';
+      + '</ul></details></details>';
   }).join('');
   // 結論(何件あるか・段ごとの件数)は閉じずに出し、表は「受注後の段取り(○件)」の折りたたみに入れる
   const lead = rows.length

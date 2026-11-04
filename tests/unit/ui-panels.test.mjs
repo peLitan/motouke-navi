@@ -27,7 +27,7 @@ function assertOn(page, n) {
 
 test('開いた直後: 段は全部隠れ、段階は塗らず押せない。3択が見える', () => {
   for (const id of PANELS) assert.match(body, new RegExp('<section id="' + id + '" hidden>'), id);
-  for (const id of STEPS) assert.match(body, new RegExp('<button type="button" id="' + id + '" disabled>'), id);
+  for (const id of STEPS) assert.match(body, new RegExp('<button type="button" id="' + id + '" disabled[ >]'), id);
   assert.ok(!/<ol class="steps"[\s\S]*?<\/ol>/.exec(body)[0].includes('aria-current'), '選ぶ前から印が付いている');
   assert.match(body, /<div id="entry">/, '3択が最初から隠れている');
   assert.match(body, /<button type="button" id="entry-back" hidden>/);

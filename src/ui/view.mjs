@@ -215,20 +215,25 @@ export function renderSchedule(rows = [], detail = {}) {
   const phases = [...new Set(rows.map((r) => r.phase))];
   const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
   const docLabel = esc(detail.docLabel ?? '共通仕様書');
+  // 列の名前は1か所で持ち、見出しと各 td の data-label を同じにする。狭い画面ではカードの項目名に data-label を使う(F37f)
+  const cols = ['いつ', '何を', '誰に', '状態', '根拠(' + docLabel + 'の箇所)'];
+  const td = (i, inner) => '<td data-label="' + cols[i] + '">' + inner + '</td>';
   // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
-  const tables = phases.map((ph) => {
+  // 区切りごとに畳める(F37f)。最初の区切りだけ開け、見出しに件数を出す。印刷では全部開く
+  const tables = phases.map((ph, i) => {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
-    return '<h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4>'
-      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr><th>いつ</th><th>何を</th><th>誰に</th><th>状態</th><th>根拠(' + docLabel + 'の箇所)</th></tr></thead><tbody>'
-      + list.map((r) => '<tr class="schedule-row"><td>' + esc(r.when) + '</td><td>' + esc(r.what)
-        + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
-        + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '')
-        + '</td><td>' + esc(r.to) + '</td><td>' + esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '') + '</td><td>' + sectionText(r.basis) + '</td></tr>').join('')
+    return '<details class="schedule-phase"' + (i === 0 ? ' open' : '') + '><summary><h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4></summary>'
+      + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr>' + cols.map((c) => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>'
+      + list.map((r) => '<tr class="schedule-row">' + td(0, esc(r.when))
+        + td(1, esc(r.what)
+          + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
+          + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : ''))
+        + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + '</tr>').join('')
       + '</tbody></table>')
       + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? '読み込んだ表の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
-      + '</ul></details>';
+      + '</ul></details></details>';
   }).join('');
   // 結論(何件あるか・段ごとの件数)は閉じずに出し、表は「受注後の段取り(○件)」の折りたたみに入れる
   const lead = rows.length

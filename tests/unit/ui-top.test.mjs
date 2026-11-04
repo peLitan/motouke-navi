@@ -40,7 +40,8 @@ test('入口の枠「どこから始めますか」に3択が同じ形で並び�
 test('段階の表示が 1 条件を入れる → 2 結果を見る → 3 書類を確かめる の順にある', () => {
   const ol = body.match(/<ol class="steps" id="steps"[^>]*>([\s\S]*?)<\/ol>/);
   assert.ok(ol, '段階の表示が無い');
-  const items = [...ol[1].matchAll(/<li><button [^>]*>([^<]*)<\/button><\/li>/g)].map((m) => m[1]);
+  // 狭い画面では名前の後ろを span ごと隠す(F37f)ので、タグを除いた文字で比べる
+  const items = [...ol[1].matchAll(/<li><button [^>]*>(.*?)<\/button><\/li>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
   assert.deepEqual(items, ['1 条件を入れる', '2 結果を見る', '3 書類を確かめる']);
 });
 

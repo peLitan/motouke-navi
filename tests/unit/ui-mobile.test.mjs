@@ -69,8 +69,8 @@ test('表は .table-scroll の枠の中だけで横に動く(見本の結果・�
   assert.equal(prop(sc, 'overflow-x'), 'auto');
   assert.equal(prop(sc, 'max-width'), '100%');
   assert.ok(ruleOf('.table-scroll:focus-visible'), 'キーボードで枠に来たときの印が無い');
-  // 段取りの表は5列あるので、狭い画面では潰さずに枠の中で横に動かす
-  assert.ok(toPx(prop(ruleOf('.table-scroll table.schedule'), 'min-width')) > 400);
+  // 段取りの表は最小の幅を持たない。狭い画面では行ごとのカードになる(F37f。tests/unit/ui-cards.test.mjs)
+  assert.equal(ruleOf('.table-scroll table.schedule'), undefined);
   // 部品の形: 名前つきの枠でキーボードでも動かせる
   assert.equal(scrollTable('段取りの表', '<table></table>'), '<div class="table-scroll" role="region" tabindex="0" aria-label="段取りの表"><table></table></div>');
 
