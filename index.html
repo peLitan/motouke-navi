@@ -221,10 +221,14 @@
     table.schedule td:empty { display: none; }
     table.schedule td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
   }
-  /* 印刷: ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す */
+  /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
+     知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
   @media print {
+    @page { margin: 15mm; }
+    :root { --ink: #000; --ink-2: #000; --paper-2: #fff; --line: #000; --line-strong: #000; --primary: #000; --primary-dark: #000; --primary-bg: #fff; --need: #000; --need-line: #000; --check: #000; --check-line: #000; --ok: #000; --ok-line: #000; }
     body { max-width: none; padding: 0; font-size: 10.5pt; }
     button, .export, .no-print { display: none !important; }
+    p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status) { display: none !important; }
     /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
     #panel-1[hidden], #panel-2[hidden], #panel-3[hidden] { display: block; }
     .result { border: none; padding: 0; }

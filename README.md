@@ -114,6 +114,7 @@
 | Anthropic「How long do you store my organization's data?」 | https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data | 2026-11-02 |
 | Anthropic「Is my data used for model training?」 | https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training | 2026-11-02 |
 | Claude Code の文書(plugins/manifest-reference・plugins/create・plugins/components・hooks・sub-agents) | https://code.claude.com/docs/en/plugins/manifest-reference.md ほか4ページ | 2026-11-03 |
+| デジタル庁デザインシステム `@digital-go-jp/design-tokens`(MIT。画面の色の値の多くを借りた。この画面はデジタル庁が作ったものではない) | https://www.npmjs.com/package/@digital-go-jp/design-tokens | 2026-11-05 |
 
 - 会社・団体の名前の語の一覧(`src/mask/company-types.mjs`)は、国税庁「法人種別」(https://www.houjin-bangou.nta.go.jp/documents/k-resource-dl-ver4.pdf)・法務局「商業・法人登記の申請書様式」(https://houmukyoku.moj.go.jp/homu/COMMERCE_11-1.html)・Unicode の文字表(https://www.unicode.org/Public/18.0.0/charts/PDF/U3200.pdf)・学校教育法 第1条・医療法 第1条の5・老人福祉法 第5条の3・介護保険法 第8条(e-Gov の URL はファイルに書いた)の語を、作る係とは別の進行役が並べた一覧(2026-11-03)から入れました。開発用のエージェントはこれらのページを開いておらず、原文と照合していません。略し方と慣用の語尾は公式の一覧が無いので「慣用」として分けています
 - 住所の規則(`src/mask/rules-address.mjs`)の並び(〒・都道府県・市区町村・町字・丁目・番地・号・建物名)は、デジタル庁「アドレス・ベース・レジストリ」(https://www.digital.go.jp/policies/base_registry_address)・日本郵便「郵便番号データの説明」(https://www.post.japanpost.jp/service/search/zipcode/download/readme.html)を、都道府県の名前は総務省「全国地方公共団体コード」(https://www.soumu.go.jp/denshijiti/code.html)を出典として、作る係とは別の進行役が並べた一覧(2026-11-03)から入れました。開発用のエージェントはこれらのページを開いておらず、原文と照合していません。建物名の語尾と「市区町村ではない語」は慣用です
