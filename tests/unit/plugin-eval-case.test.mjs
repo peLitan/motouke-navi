@@ -48,11 +48,10 @@ test('調べる名前はどれも E1 の書類にあり、Skill などプラグ�
   }
 });
 
-test('read_masked の返事に残る名前は、記録した1つ(丁山)だけ', () => {
+test('read_masked の返事に、検査する8つの名前のどれも残らない(F36a で丁山も置き換わった)', () => {
   const masked = DOCS.map((d) => readMaskedWithCheck(E1, d, { mapPath: '', dictPath: '' }).masked).join('\n');
   const left = patterns.filter((p) => masked.includes(p));
-  // 直して空になるのはよい。増えたら落とす。case.yaml から丁山を外して合わせない
-  assert.ok(left.every((p) => p === '丁山'), left.join(','));
+  assert.deepEqual(left, []);
   assert.ok(patterns.includes('丁山'));
 });
 

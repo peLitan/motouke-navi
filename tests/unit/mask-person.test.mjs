@@ -105,7 +105,7 @@ test('一般の規則だけでも動く(分野の役職は辞書から足す)', 
 test('規則のファイルは分野の語を持たない。規則の一覧がある', () => {
   const src = fs.readFileSync(new URL('../../src/mask/rules-person.mjs', import.meta.url), 'utf8');
   for (const w of ['建設', '工事', '施工', '下請', '元請', '許可', '現場代理人', '技術者']) assert.ok(!src.includes(w), '規則に建設の語: ' + w);
-  assert.deepEqual(PERSON_RULES.map((r) => r.id), ['honorific', 'title', 'label', 'title-after', 'list']);
+  assert.deepEqual(PERSON_RULES.map((r) => r.id), ['honorific', 'title', 'label', 'title-after', 'list', 'dept']);
 });
 
 test('既にある形(メール・電話・許可番号)はそのまま', () => {

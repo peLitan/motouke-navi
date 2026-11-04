@@ -2,7 +2,7 @@
 // この規則は分野の語を持たない。分野の役職(その業界にしかない役職の名前など)は、辞書のファイルから personContextPatterns に渡す。
 // 見つけた語は、置き換えの部品(core.mjs)で「文脈で見つけた語」(確信の弱い語)として扱う。辞書の語・形と重なれば、辞書の方を取る。
 //
-// 規則は5つ:
+// 規則は6つ:
 //   honorific:   名前の後ろの敬称(様・殿・氏・さん)。例「甲野様」「甲野 一郎 殿」
 //   title:       名前の前の役職(代表取締役・部長・担当者 など)。区切り(空白・コロン・縦線・タブ・半角と全角の括弧)のあとの名前。例「部長 甲野一郎」「部長（甲野 一郎）」
 //   label:       名前の前の欄名(氏名・担当者・作成者 など)。区切りのあとの名前。例「氏名: 甲野 一郎」
@@ -10,6 +10,10 @@
 //                直に付く形は、姓に付けて呼ぶ役職(所長・部長・課長 など)だけにし、部署・場所の語(本店・管理・作業 など)は人名にしない。
 //                分野の役職・部署の語は、辞書のファイルから attachedTitles・orgWords で足す
 //   list:        役職・欄名の後ろの名前に、読点(、,，)や中黒(・)で並ぶ2人目以降の名前(F27b)。例「氏名: 甲野 一郎、乙川 二郎」
+//   dept:        部署の語(〜課・〜部・〜局・〜室・〜係・〜班)の後ろの、姓と名が空白で分かれた名前(F36a)。例「町 総務課 甲野 一郎(別紙のとおり)」。
+//                部署の語は人名にも置き換えの対象にもしない。「姓 名」の形だけを見るので、部署の後ろの1語(「総務課 甲野」)は取らない。
+//                部署の語は語尾の前に2字以上あるものだけ(「一部 ...」「内部 ...」を部署にしない)。行をまたがない。
+//                部署の後ろには仕事の語の2語が並ぶこともある(「企画部 経営 戦略」)ので、DEPT_STOP_WORDS と辞書の deptStopWords の語を含むものは取らない
 // 名前の形: 漢字の姓(1〜4字)+ 空白 + 名(漢字・カタカナ 1〜6字、または区切りの手前で終わるひらがな 2〜4字)、
 //           または空白の無い漢字の並び 2〜5字(前後に漢字が続かないもの)
 // 置き換えすぎを減らすため、次の語は人名にしない: 役職・欄名そのもの、止める語(未定・同上・専任 など)、
@@ -79,6 +83,13 @@ export const ORG_WORDS = [
   '購買', '調達', '資材', '事業', '統括', '地区', '地域', '海外', '国内', '管理', '機械', '電気', '設備', '環境', '研究', '広報', '法務',
   '財務', '情報', '工場', '部門', '本店', '本部', '現地', '当日', '前日', '翌日', '今回', '前回', '次回', '新任', '前任', '後任', '歴代',
 ];
+// 部署の語の語尾(F36a)
+export const DEPT_ENDINGS = ['課', '部', '局', '室', '係', '班'];
+// 部署の後ろの「語 語」の片方がこの語なら人名にしない(F36a)。部署の中の仕事や組織の語で、2語に分けて書かれるもの
+export const DEPT_STOP_WORDS = [
+  '経営', '戦略', '計画', '都市', '地域', '振興', '推進', '対策', '調整', '管理', '運営', '維持', '保全', '点検', '検査', '補修', '修繕',
+  '報告', '提出', '協議', '連絡', '対応', '処理', '作成', '完了', '着手', '開始', '終了', '実施', '関係', '資料', '書類', '一覧', '担当',
+];
 // 人名に付かない字(この字で終わる語は人名にしない)
 export const NON_NAME_ENDINGS = '者任欄書証号番年月日円等的性化級式法表票類課部係所局室会社業費額率度期済無未要可否屋員手名先地内外中仕模同多異客神';
 
@@ -92,11 +103,13 @@ export const PERSON_RULES = [
   { id: 'label', name: '欄名の後ろ', example: '氏名: 甲野 一郎・担当者 甲野一郎' },
   { id: 'title-after', name: '役職の前', example: '甲野 一郎(部長)・乙川所長に報告・丙田部長 承認' },
   { id: 'list', name: '並びの2人目以降', example: '氏名: 甲野 一郎、乙川 二郎' },
+  { id: 'dept', name: '部署の後ろ', example: '総務課 甲野 一郎・町 総務課 甲野 一郎(別紙のとおり)' },
 ];
 
 // 文脈規則の形を作る。titles・labels・stopWords は分野の辞書から足す語(一般の語に足す)
 export function personContextPatterns({
   titles = [], labels = [], stopWords = [], honorifics = HONORIFICS, attachedTitles = [], orgWords = [], headerWords = [], occupations = [],
+  deptStopWords = [],
 } = {}) {
   const allTitles = [...GENERIC_TITLES, ...titles];
   const allLabels = [...GENERIC_LABELS, ...labels];
@@ -156,6 +169,13 @@ export function personContextPatterns({
     return true;
   };
   const head = `(?:${alt(context)})${SEP}`;
+  // 部署の語の後ろの「姓 名」(F36a): 上の決まりに加え、部署の中の仕事や組織の語を含まない
+  const deptStops = new Set([...DEPT_STOP_WORDS, ...deptStopWords]);
+  const acceptAfterDept = (word, index, text) =>
+    accept(word, index, text) && !String(word).trim().split(/[\s　]+/).some((p) => deptStops.has(p));
+  const dept = `(?<![${HAN}${KANA}])[${HAN}]{2,10}(?:${alt(DEPT_ENDINGS)})`;
+  const deptSep = `(?:[ \\u3000\\t]*[:：|｜(（\\t][ \\u3000\\t]*|[ \\u3000\\t]+)`;
+  const spacedName = `[${HAN}]{1,4}${SP}{1,2}${GIVEN}`;
   return [
     {
       kind: 'person',
@@ -184,6 +204,13 @@ export function personContextPatterns({
       rule: 'list',
       re: new RegExp(`(?<=${head}(?:${NAME}${LIST_SEP})+)${NAME}`, 'gu'),
       accept: (word, index, text) => accept(word, index, text) && !honorifics.some((h) => compact(word).endsWith(h)),
+    },
+    // 部署の語の後ろの「姓 名」と、読点・中黒で並ぶ2人目以降(F36a)
+    {
+      kind: 'person',
+      rule: 'dept',
+      re: new RegExp(`(?<=${dept}${deptSep}(?:${spacedName}${LIST_SEP})*)${spacedName}`, 'gu'),
+      accept: acceptAfterDept,
     },
   ];
 }
