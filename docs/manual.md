@@ -260,7 +260,7 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 ### 絞っていること
 - 鍵: `ANTHROPIC_API_KEY`・`ANTHROPIC_AUTH_TOKEN` を外してから `claude` を動かします。端末に鍵が入っていても送られません。記録の `apiKeySource` が `none` でなければ注意を出します
 - 道具: `--permission-mode dontAsk` で、`--allowedTools` に挙げた物のほかは断ります。挙げたのは、Skill `construction-check`、`read_masked`・`list_masked`、係 `refuter`、Skill のフォルダの読み取り、`check-articles.mjs` の実行、作業フォルダの `tmp/` の読み書きです
-- 二重の守り: `--disallowedTools` で `raw/` の直接の読み書きと Web を断ります。プラグインは権限の決まりを配れませんが、この入口ではコマンドの指定で渡せます。プラグインのフックも同時に働きます
+- 二重の守り: `--disallowedTools` が断るのは、`Read`・`Edit` の `raw/` への操作と、`WebFetch`・`WebSearch` です。`Bash` などほかの道具はこの指定の範囲の外で、上の `--allowedTools` に無いので断られます。プラグインは権限の決まりを配れませんが、この入口ではコマンドの指定で渡せます。プラグインのフックも同時に働きます
 - 保存: `--no-session-persistence` で Claude Code のセッションを保存しません。残るのは上の記録だけです
 
 ### API の版との違い
