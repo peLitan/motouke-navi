@@ -302,11 +302,17 @@
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>
 </div>
 <div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
+<details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+</details>
 <h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
+<div id="awarded-notice" class="note" hidden>
+<p id="awarded-notice-text">条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて『確認する』を押すと、要る・要らないが分かれます。</p>
+<button type="button" id="awarded-conditions">条件を入れる</button>
+</div>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
 <div class="row no-print rules-switch" role="group" aria-label="段取りの例の切り替え">
 <button type="button" id="rules-national" aria-pressed="true">国の直轄の例(国が発注する工事)</button>

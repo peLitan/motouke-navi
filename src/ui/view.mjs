@@ -253,10 +253,10 @@ export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
   }).join('');
   // 結論(何件あるか・段ごとの件数)は閉じずに出し、表は「受注後の段取り(○件)」の折りたたみに入れる
   const lead = rows.length
-    ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。表は下の「受注後の段取り」を開くと見られます。</p>'
+    ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。' + (detail.all ? '' : '表は下の「受注後の段取り」を開くと見られます。') + '</p>'
     : '';
   const body = rows.length
-    ? '<details class="schedule-table"' + (rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary><p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>' + tables + '</details>'
+    ? '<details class="schedule-table"' + (detail.all || rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary><p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>' + tables + '</details>'
     : '<p>入れた条件では、出す段取りの行がありません。</p>';
   const skipped = (detail.skipped ?? []).length
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'

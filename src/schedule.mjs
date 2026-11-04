@@ -96,8 +96,13 @@ function loadedDetail(input, table) {
   return { rows, skipped, notes, docLabel: label, custom: true };
 }
 
-// 段取りの行と、出さなかった行の理由を返す。table は読み込んだ表(無ければ国の直轄の例)。段取りの行が無い表は国の例のまま
-export function buildScheduleDetail(input = {}, table = null) {
+// 段取りの行と、出さなかった行の理由を返す。table は読み込んだ表(無ければ国の直轄の例)。段取りの行が無い表は国の例のまま。
+// all: true(F37c)は、条件を入れていない人に全部の行を出す。入力は見ず、どの行も状態は「確かめる」(「行う」と言い切らない)
+export function buildScheduleDetail(input = {}, table = null, { all = false } = {}) {
+  return all ? { ...scheduleDetail({}, table, true), all: true } : scheduleDetail(input, table, false);
+}
+
+function scheduleDetail(input, table, all) {
   if (table?.schedule?.length) return loadedDetail(input, table);
   const rows = [];
   const skipped = [];
@@ -119,7 +124,7 @@ export function buildScheduleDetail(input = {}, table = null) {
       when: rule.when,
       what: rule.what,
       to: rule.to,
-      status: r.checks.length ? 'needs_check' : 'applies',
+      status: all || r.checks.length ? 'needs_check' : 'applies',
       checks: r.checks,
       note: rule.note ?? '',
       basis: basisOf(rule),

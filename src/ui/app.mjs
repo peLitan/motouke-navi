@@ -96,6 +96,7 @@ export function openPanelForLink(doc, href) {
 }
 
 export function runBid(doc) {
+  setAwardedView(doc, false);
   const bidOut = doc.getElementById('bid-result');
   const taichoOut = doc.getElementById('taicho-result');
   const values = collect(doc);
@@ -157,14 +158,45 @@ function runSchedule(doc, input, errors = []) {
   if (!out) return;
   if (!input) { out.innerHTML = renderErrors(errors); return; }
   try {
-    const detail = buildScheduleDetail(input, rulesTable);
+    const detail = buildScheduleDetail(input, rulesTable, { all: awardedAll });
     out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
-    summary.scheduleCount = detail.rows.length;
+    // 全部の行(F37c)は条件から出した件数ではないので、まとめには載せない
+    summary.scheduleCount = awardedAll ? null : detail.rows.length;
   } catch (e) {
     out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
+}
+
+// 「もう受注した」(F37c): 条件をまだ入れていない人には、全部の行を「確かめる」で出す。
+// 読み込んだ表と和歌山県の例は条件で行が分かれないので、国の例と同じ文にしない
+let awardedAll = false;
+export function awardedNotice(table) {
+  const custom = Boolean(table?.schedule?.length);
+  const name = custom ? table.label ?? '読み込んだ表' : '国の直轄の例';
+  return '条件を入れていないので、' + name + 'の全部の行を出しています。'
+    + (custom ? 'この表は条件を入れても行は分かれません。入札前の確認と台帳が要るかは、工事の条件を入れて『確認する』を押すと出ます。' : '工事の条件を入れて『確認する』を押すと、要る・要らないが分かれます。');
+}
+function setAwardedText(doc) {
+  const text = doc.getElementById('awarded-notice-text');
+  if (text) text.textContent = awardedNotice(rulesTable);
+}
+function setAwardedView(doc, on) {
+  awardedAll = on;
+  setAwardedText(doc);
+  const box = doc.getElementById('awarded-notice');
+  if (box) box.hidden = !on;
+  const fold = doc.getElementById('bid-fold');
+  if (fold) fold.open = !on;
+  const hint = doc.getElementById('bid-fold-hint');
+  if (hint) hint.hidden = !on;
+}
+// 条件から出した結果(入力の誤りの知らせを含む)があれば、全部の行で上書きせず、そのまま見せる
+export function enterAwarded(doc) {
+  if (!awardedAll && !lastScheduleInput && !summary.errors.length) setAwardedView(doc, true);
+  if (awardedAll) runSchedule(doc, {});
+  openPanel(doc, 2, 'schedule-heading');
 }
 
 const NATIONAL_NOTICE = {
@@ -195,6 +227,7 @@ function applyRulesTable(doc) {
     const el = doc.getElementById(id);
     if (el) el.hidden = !fromFile;
   }
+  setAwardedText(doc);
   if (lastSchedule && lastScheduleInput) {
     runSchedule(doc, lastScheduleInput);
     if (summaryShown) updateSummary(doc);
@@ -566,11 +599,13 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       const el = doc.getElementById(id);
       if (el) initialResult.set(id, el.innerHTML);
     }
+    setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
     on('bid-run', () => { runBid(doc); openPanel(doc, 2); });
     on('sample-load', () => loadSample(doc));
     on('sample-reenter', () => clearSample(doc));
     on('entry-bid', () => openPanel(doc, 1));
-    on('entry-awarded', () => openPanel(doc, 2, 'schedule-heading'));
+    on('entry-awarded', () => enterAwarded(doc));
+    on('awarded-conditions', () => openPanel(doc, 1));
     on('entry-back', () => showEntry(doc));
     for (const i of PANELS) on('step-' + i, () => openPanel(doc, i));
     on('next-step-3', () => openPanel(doc, 3));
@@ -648,7 +683,8 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       const changed = () => {
         if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
         if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); }
-        if (lastSchedule) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
+        // 全部の行(F37c)は条件から出していないので、条件を変えても古くならない
+        if (lastSchedule && !awardedAll) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
       };
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
