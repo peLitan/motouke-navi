@@ -1,4 +1,4 @@
-// 画面の「段取りの表を読み込む」(F26b)。Skill spec-to-rules が作った行のファイル(照合で残った行)を読み、形を確かめる。
+// 画面の「段取りの表を読み込む」(F26b)。Skill spec-to-rules が作った行のファイルを読み、形を確かめる。
 // 画面の中で原文とは照らさない(原文はファイルに入っていない)。読んだ表はメモリだけに持ち、保存しない。
 export const RULES_MAX_BYTES = 1024 * 1024;
 export const UNDETERMINED = '判断できない';
@@ -12,6 +12,7 @@ function rowProblem(row) {
   if (row.kind !== 'plan-item' && row.kind !== 'schedule') return '種類(kind)が plan-item でも schedule でもありません';
   const need = row.kind === 'schedule' ? ['when', 'what', 'to', 'section', 'quote'] : ['label', 'section', 'quote'];
   for (const k of need) if (!text(row[k])) return k + ' がありません';
+  if (row.kind === 'plan-item' && typeof row.no !== 'number') return '番号(no)がありません';
   if (row.kind === 'schedule' && !PHASES.includes(row.phase)) return '段(phase)が start・work・completion・判断できない のどれでもありません';
   const why = row.undetermined && typeof row.undetermined === 'object' ? row.undetermined : {};
   for (const [k, v] of Object.entries(row)) {
@@ -53,9 +54,9 @@ export function parseRulesFile(fileText) {
 
 export const tableName = (table) => table.source.publisher + '「' + table.source.title + '」';
 
-// 画面の注記の文。残った行の数はファイルの行の数(照合で外した行は --out に入らない)
+// 画面の注記の文。ファイルが照合を通ったものかは画面で確かめられないので、照合が済んだとは書かない
 export function tableNotice(table) {
   const s = table.source;
-  return 'この表はツールの外で原文と照合済み(残った行 ' + table.count + '行)。画面では原文と照らしていません(ファイルが照合を通ったものかも、画面では確かめられません)。'
+  return '読み込んだ表です(' + table.count + '行)。画面では原文と照らしていません。'
     + '出典: 発注者 ' + s.publisher + '・題名 ' + s.title + '・版 ' + s.edition + (s.url ? '・' + s.url : '');
 }

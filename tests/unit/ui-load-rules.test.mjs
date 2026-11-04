@@ -30,13 +30,14 @@ function fakeDoc() {
   };
 }
 
-test('見本のファイルを読むと、記載項目16行と段取りの行が出て、残った行の数と出典が分かる', () => {
+test('見本のファイルを読むと、記載項目16行と段取りの行が出て、行の数と出典が分かる', () => {
   const t = parseRulesFile(FILE);
   assert.equal(t.planItems.length, 16);
   assert.equal(t.schedule.length, 15);
   assert.equal(t.count, 31);
   const notice = tableNotice(t);
-  assert.match(notice, /ツールの外で原文と照合済み\(残った行 31行\)/);
+  assert.match(notice, /読み込んだ表です\(31行\)/);
+  assert.ok(!notice.includes('照合済み'));
   assert.match(notice, /画面では原文と照らしていません/);
   for (const w of ['和歌山県', '土木請負工事必携', '令和7年11月']) assert.ok(notice.includes(w), w);
 });
@@ -104,6 +105,7 @@ test('壊れたファイル・形の違うファイルは理由を出して拒�
     [JSON.stringify({ source: SOURCE, rows: [{ ...SCHED, when: '判断できない' }] }), /undetermined\.when/],
     [JSON.stringify({ source: SOURCE, rows: [{ ...SCHED, id: 'a' }, { ...SCHED, id: 'a' }] }), /id が重なって/],
     [JSON.stringify({ source: SOURCE, rows: [null] }), /1行目/],
+    [JSON.stringify({ source: SOURCE, rows: [{ kind: 'plan-item', label: '概要', section: '1-1', quote: '（1）概要' }] }), /1行目.*no/],
   ];
   for (const [text, re] of cases) assert.throws(() => parseRulesFile(text), re, text);
 });
@@ -113,7 +115,7 @@ test('画面: 読み込むと注記が変わり、壊れたファイルでは今
   doc.getElementById('plan-input').value = '工事概要';
   assert.equal(loadRulesFile(doc, FILE), true);
   assert.match(doc.getElementById('schedule-notice').textContent, /和歌山県/);
-  assert.match(doc.getElementById('plan-notice').textContent, /残った行 31行/);
+  assert.match(doc.getElementById('plan-notice').textContent, /読み込んだ表です\(31行\)/);
   assert.equal(doc.getElementById('schedule-about').hidden, true);
   assert.equal(doc.getElementById('rules-clear').hidden, false);
   assert.match(doc.getElementById('rules-status').textContent, /段取り 15行・記載項目 16行/);
