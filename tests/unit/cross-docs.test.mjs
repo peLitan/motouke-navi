@@ -134,6 +134,132 @@ test('体系図の別の書き方を読む: 枝の線・見出しの語・表。
   assert.equal(readOrderer('発注者との協議: 別紙\n発注者: 架空市'), '架空市');
 });
 
+// F34a: 反証の再現の入力。同じ会社を片方にしか無いと言い切らない
+const OTOKAWA = ledgerText([['乙川土工株式会社', '乙川 三郎']]);
+const OTO_HEI = ledgerText([['乙川土工株式会社', '乙川 三郎'], ['丙野舗装株式会社', '丙野 五郎']]);
+const subsOf = (out) => ({ cand: by(out.candidates, 'cross.subs'), und: by(out.undecidable, 'cross.subs') });
+
+for (const line of ['[一次] 乙川土工株式会社 土工事', '[一次] 乙川土工株式会社(土木)', '├─ 乙川土工株式会社(土工事)']) {
+  test('A-1 会社名の後ろの工種は別の会社にせず、判断できないに回す: ' + line, () => {
+    const { cand, und } = subsOf(run(OTOKAWA, { taikeizu: line }).out);
+    assert.deepEqual(cand, []);
+    assert.equal(und.length, 1);
+    assert.match(und[0].message, /名前の一部が合います/);
+    assert.match(und[0].message, /技術者の氏名は比べていません/);
+    assert.equal(und[0].target, '乙川土工株式会社');
+  });
+}
+
+test('A-1 「 / 」で区切った工種は今までどおり読む', () => {
+  const { base, out } = run(OTOKAWA, { taikeizu: '[一次] 乙川土工株式会社 / 工事内容: 土工事\n主任技術者: 乙川 三郎' });
+  assert.deepEqual(out.candidates, base.candidates);
+  assert.deepEqual(out.undecidable, base.undecidable);
+});
+
+test('A-2 台帳の見出しの(架空)の添え書きで別の会社にしない', () => {
+  const { cand, und } = subsOf(run(ledgerText([['乙川土工株式会社(架空)', '乙川 三郎']]), { taikeizu: '[一次] 乙川土工株式会社' }).out);
+  assert.deepEqual(cand, []);
+  assert.equal(und.length, 1);
+  assert.match(und[0].message, /乙川土工株式会社\(架空\)/);
+});
+
+test('A-3 表の形は読まず、注意を出して判断できないに回す', () => {
+  const table = ['発注者: 架空県ためし市', '| 次数 | 会社名 | 主任技術者 |', '|---|---|---|', '| 一次 | 乙川土工株式会社 | 乙川 三郎 |'].join('\n');
+  const d = parseTaikeizu(table);
+  assert.deepEqual(d.subs, []);
+  assert.equal(d.orderer, '架空県ためし市');
+  assert.equal(d.tableLine, 2);
+  const { out } = run(OTOKAWA, { taikeizu: table });
+  const { cand, und } = subsOf(out);
+  assert.deepEqual(cand, []);
+  assert.equal(und.length, 1);
+  assert.match(und[0].message, /一覧表の形で読まなかった/);
+  assert.ok(out.crossWarnings.some((w) => /2行目: 列の見出しのある一覧表の形は読みません/.test(w)));
+  assert.deepEqual(by(out.candidates, 'cross.engineer'), []);
+});
+
+test('A-3 2列の表: 会社名の列の見出しなら読まず、項目と内容の表と発注者の行は今までどおり読む', () => {
+  const two = parseTaikeizu('| 会社名 | 次数 |\n|---|---|\n| 乙川土工株式会社 | 一次 |');
+  assert.equal(two.tableLine, 1);
+  const { cand } = subsOf(run(OTOKAWA, { taikeizu: '| 会社名 | 次数 |\n|---|---|\n| 乙川土工株式会社 | 一次 |' }).out);
+  assert.deepEqual(cand, []);
+  const kv = parseTaikeizu('| 項目 | 内容 |\n|---|---|\n| 発注者 | 架空県 | 備考 |\n| 一次下請 | 乙川土工株式会社 |');
+  assert.equal(kv.tableLine, 0);
+  assert.match(kv.orderer, /^架空県/);
+  assert.deepEqual(kv.subs.map((s) => s.name), ['乙川土工株式会社']);
+});
+
+test('表の一部だけ読めても、片方に無いとは言わない', () => {
+  const mixed = ['[一次] 丙野舗装株式会社', '| 次数 | 会社名 | 主任技術者 |', '|---|---|---|', '| 一次 | 乙川土工株式会社 | 乙川 三郎 |'].join('\n');
+  const { cand, und } = subsOf(run(OTO_HEI, { taikeizu: mixed }).out);
+  assert.deepEqual(cand, []);
+  assert.equal(und.length, 1);
+});
+
+for (const line of ['下請負人: 乙川土工株式会社、丙野舗装株式会社', '一次下請: 乙川土工(株)(土工)、丙野舗装(株)(舗装)']) {
+  test('A-4 1行に複数社は言い切らず、それぞれ判断できないに回す: ' + line, () => {
+    const { cand, und } = subsOf(run(OTO_HEI, { taikeizu: line }).out);
+    assert.deepEqual(cand, []);
+    assert.deepEqual(und.map((u) => u.target).sort(), ['丙野舗装株式会社', '乙川土工株式会社'].sort());
+  });
+}
+
+test('A-5 未知の役割のラベルは会社名に入れない。台帳に無い会社も下請負人と言い切らない', () => {
+  const tree = ['  +-- [協力会社] 乙川土工株式会社', '  |     主任技術者: 乙川 三郎', '  |     +-- [再下請] 己島電設有限会社'].join('\n');
+  assert.deepEqual(parseTaikeizu(tree).subs.map((s) => [s.name, s.label, s.engineers]), [['乙川土工株式会社', '協力会社', ['乙川 三郎']], ['己島電設有限会社', '再下請', []]]);
+  const { out } = run(OTOKAWA, { taikeizu: tree });
+  const { cand, und } = subsOf(out);
+  assert.deepEqual(cand, []);
+  assert.equal(und.length, 1);
+  assert.match(und[0].message, /\[再下請\] 己島電設有限会社/);
+  assert.deepEqual(by(out.candidates, 'cross.engineer'), []);
+});
+
+test('A-5 枝の線の無い行の未知のラベルも同じに読む', () => {
+  assert.deepEqual(subsOf(run(OTOKAWA, { taikeizu: '[協力会社] 乙川土工株式会社 主任技術者: 乙川 三郎' }).out).cand, []);
+});
+
+test('A-6 元請けの行を下請負人にしない。元請けの技術者を下請けに付けない', () => {
+  const tree = ['+-- 架空建設株式会社(元請)', '|   監理技術者: 甲野 一郎', '|   +-- 乙川土工株式会社', '|       主任技術者: 乙川 三郎'].join('\n');
+  const d = parseTaikeizu(tree);
+  assert.deepEqual(d.subs.map((s) => [s.name, s.engineers]), [['乙川土工株式会社', ['乙川 三郎']]]);
+  const { base, out } = run(OTOKAWA, { taikeizu: tree });
+  assert.deepEqual(out.candidates, base.candidates);
+  assert.deepEqual(out.undecidable, base.undecidable);
+});
+
+test('A-6 印の無い元請けの枝: 同じ名前は数えず、一部が合うだけなら判断できない', () => {
+  const same = subsOf(run(OTOKAWA, { taikeizu: '+-- 架空建設株式会社\n+-- 乙川土工株式会社' }).out);
+  assert.deepEqual([same.cand, same.und], [[], []]);
+  const part = subsOf(run(OTOKAWA, { taikeizu: '+-- 架空建設株式会社 本店\n+-- 乙川土工株式会社' }).out);
+  assert.deepEqual(part.cand, []);
+  assert.match(part.und[0].message, /元請けの行か下請負人か/);
+});
+
+test('A-9 中黒の有無は別の会社と言い切らない', () => {
+  const { cand, und } = subsOf(run(ledgerText([['ハイパー・テック株式会社', '甲野 三郎']]), { taikeizu: '[一次] ハイパーテック株式会社' }).out);
+  assert.deepEqual(cand, []);
+  assert.equal(und.length, 1);
+});
+
+test('読まなかった行に名前があれば、体系図に見当たらないと言い切らない', () => {
+  const { out } = run(OTO_HEI, { taikeizu: '[一次] 丙野舗装株式会社\n参考 乙川土工株式会社' });
+  const { cand, und } = subsOf(out);
+  assert.deepEqual(cand, []);
+  assert.match(und[0].message, /読めなかった行「参考 乙川土工株式会社」/);
+});
+
+test('別の会社は今までどおり候補に出す。一部が合う名前でも、ほかの台帳の行と同じなら横取りしない', () => {
+  const other = subsOf(run(OTOKAWA, { taikeizu: '[一次] 丙野舗装株式会社' }).out);
+  assert.equal(other.cand.length, 2);
+  assert.deepEqual(other.und, []);
+  const ledger = ledgerText([['乙川土工株式会社', '乙川 三郎'], ['乙川土工建設株式会社', '乙川 四郎']]);
+  const { cand, und } = subsOf(run(ledger, { taikeizu: '[一次] 乙川土工建設株式会社\n主任技術者: 乙川 四郎' }).out);
+  assert.deepEqual(cand.map((c) => c.target), ['乙川土工株式会社']);
+  assert.deepEqual(und, []);
+  assert.match(cand[0].message, /施工体系図に見当たりません/);
+});
+
 test('画面: 体系図の欄に貼ると結果と CSV の元に出て、空なら台帳だけの結果と同じ。index.html に欄がある', () => {
   const els = {
     'ledger-input': { value: LEDGER }, 'taikeizu-input': { value: '' }, 'plan-input': { value: '' },

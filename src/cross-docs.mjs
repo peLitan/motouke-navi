@@ -22,6 +22,12 @@ const companyKey = (x) => fullForm(x).replace(/\([^()]*次[^()]*\)$/, '');
 const coreKey = (x) => companyKey(x).replace(/株式会社|有限会社|合同会社|合資会社|合名会社/g, '');
 // 発注者の「架空県みほん市(みほん市長)」のような末尾のかっこは、同じ発注者の書き添えとして比べない
 const ordererKey = (x) => fullForm(x).replace(/\([^()]*\)$/, '');
+// 名前の一部が合うかを見る形。かっこの書き添えと中黒を外す。工種の添え書きや1行に複数社は、この形の含む・含まれるで拾う
+const looseKey = (x) => coreKey(x).replace(/\([^()]*\)/g, '').replace(/[・.,]/g, '');
+const partlySame = (a, b) => {
+  const [x, y] = [looseKey(a), looseKey(b)];
+  return x.length >= 2 && y.length >= 2 && (x.includes(y) || y.includes(x));
+};
 
 const ROLE_PRIME = /^元請(?:負人|業者|け)?(?:\([^()]*\))?$/;
 const ROLE_SUB = /^(?:([一二三四五六七八九1-9]次)(?:下請(?:負人|業者|け)?)?|下請(?:負人|業者|け)?)(?:\(([一二三四五六七八九1-9]次)\))?$/;
@@ -30,6 +36,22 @@ const ENGINEER_KEY = /^(?:主任|監理)技術者(?:氏名|の氏名|名)?(?:\([
 const COMPANY_LIKE = /株式会社|有限会社|合同会社|合資会社|合名会社|\((?:株|有|同|資|名)\)/;
 const TREE_HEAD = /^[\s|│┃├└┌┬┼┤┣┗─━+*・-]+/;
 const TREE_BRANCH = /[+├└┣┗─━-]/;
+const TRAIL_PRIME = /\(元請(?:負人|業者|け)?\)$/;
+const COMPANY_COLUMN = /^(?:会社名?|会社の?名称|商号|名称|商号又は名称|下請負人名)$/;
+
+const tableCells = (line) => {
+  const t = line.trim();
+  if (!/^\|.*\|$/.test(t) || /^[|:\s-]+$/.test(t)) return null;
+  return t.slice(1, -1).split('|').map((c) => c.trim());
+};
+// 列の見出しのある一覧表の行か。3列以上の行(発注者の行を除く)と、2列でも見出しの行に会社名の列があるもの
+function isListTableRow(lines, i) {
+  const cells = tableCells(lines[i]);
+  if (!cells) return false;
+  if (cells.length >= 3) return !/^発注者/.test(compact(cells[0]));
+  const next = lines[i + 1]?.trim() ?? '';
+  return /^\|[|:\s-]+\|$/.test(next) && cells.some((c) => COMPANY_COLUMN.test(compact(c)));
+}
 
 // 1行を「項目: 値」の並びにする。表の行は1つ目の欄を項目にする。枝の線の後ろの行は branch を立てる
 function rowsOf(line) {
@@ -58,12 +80,16 @@ export function readOrderer(text) {
   return '';
 }
 
-// 施工体系図の文を読む。返り値: { orderer, subs: [{ name, tier, engineers: [氏名] }], warnings }
+// 施工体系図の文を読む。返り値: { orderer, subs: [{ name, tier, engineers: [氏名], label? }], unread: [行], tableLine, warnings }
+// label は役割の分からないかっこの語(協力会社など)。unread は会社名らしいが読まなかった行。tableLine は読まなかった一覧表の行番号(無ければ 0)
 // 読む形: 「[一次] 会社名」(かっこは [ 【 〔 < ( )、「一次下請: 会社名」「下請負人: 会社名」、木の枝の線の後ろの会社名。
 // 技術者は「主任技術者: 氏名」「監理技術者: 氏名」を、直前の会社のものとして読む(補佐・専門技術者は読まない)
+// 列の見出しのある一覧表は読まない(どの列が何か決めつけない)
 export function parseTaikeizu(text) {
   const subs = [];
   const warnings = [];
+  const unread = [];
+  let tableLine = 0;
   let current = null; // 'prime' か subs の要素
   const addSub = (name, tier) => {
     const n = trim(name);
@@ -89,7 +115,11 @@ export function parseTaikeizu(text) {
     if (lab) {
       // 1行に続けて書いた「[一次] 会社名 主任技術者: 氏名」は、名前と技術者に分ける
       const tail = lab[2].match(/^(.*?)\s+((?:主任|監理)技術者.*)$/);
-      if (roleOf(lab[1], tail ? tail[1] : lab[2])) {
+      const name = tail ? tail[1] : lab[2];
+      const known = roleOf(lab[1], name);
+      const labeled = !known && COMPANY_LIKE.test(name);
+      if (labeled) { addSub(name, ''); current.label = lab[1]; }
+      if (known || labeled) {
         if (tail) read(tail[2], false, lineNo);
         return;
       }
@@ -101,15 +131,20 @@ export function parseTaikeizu(text) {
       return;
     }
     if (!COMPANY_LIKE.test(seg)) return;
-    if (branch) addSub(seg, '');
-    else warnings.push('施工体系図の ' + lineNo + '行目: 会社名のようですが、元請け・下請けのどれか分からないので読みませんでした');
+    if (TRAIL_PRIME.test(compact(seg))) { current = 'prime'; return; }
+    if (branch) { addSub(seg, ''); return; }
+    unread.push(trim(seg));
+    warnings.push('施工体系図の ' + lineNo + '行目: 会社名のようですが、元請け・下請けのどれか分からないので読みませんでした');
   };
-  nfkc(text).replace(/\r\n?/g, '\n').split('\n').forEach((line, i) => {
+  const lines = nfkc(text).replace(/\r\n?/g, '\n').split('\n');
+  lines.forEach((line, i) => {
     if (/^\s*(?:```|#)/.test(line)) return;
+    if (isListTableRow(lines, i)) { tableLine ||= i + 1; return; }
     const { segs, branch } = rowsOf(line);
     segs.forEach((seg, k) => { if (seg.trim()) read(seg.trim(), branch && k === 0, i + 1); });
   });
-  return { orderer: readOrderer(text), subs, warnings };
+  if (tableLine) warnings.push('施工体系図の ' + tableLine + '行目: 列の見出しのある一覧表の形は読みません。下請負人の一覧は比べていません');
+  return { orderer: readOrderer(text), subs, unread, tableLine, warnings };
 }
 
 function compareEngineer(s, target, hits, out) {
@@ -136,31 +171,54 @@ function compareEngineer(s, target, hits, out) {
   });
 }
 
+const UNSURE_NAME = '添え書きか、書き方の違いか、別の会社か、1行に複数社を書いたものかを決められないので判断できません。下請契約で確かめてください(技術者の氏名は比べていません)';
+
 function compareSubs(ledger, diagram, out) {
   const named = (ledger.subcontractors ?? []).map((s, i) => ({ s, i })).filter(({ s }) => !noValue(s?.name));
-  if (named.length === 0 || diagram.subs.length === 0) {
-    const which = named.length === 0 ? '施工体制台帳' : '施工体系図';
-    out.undecidable.push({ target: '下請負人の一覧', field: 'cross.subs', message: which + 'から下請負人を読めなかったので、台帳と施工体系図の下請負人の一覧を比べられず判断できません。書き方を確かめてください', basis: basisOf(...LIST_BASIS) });
+  const subsBasis = () => basisOf(...LIST_BASIS);
+  const unsure = (target, message) => out.undecidable.push({ target, field: 'cross.subs', message, basis: subsBasis() });
+  if (named.length === 0 || diagram.subs.length === 0 || diagram.tableLine) {
+    const reason = named.length === 0 ? '施工体制台帳から下請負人を読めなかった'
+      : diagram.tableLine ? '施工体系図が一覧表の形で読まなかった' : '施工体系図から下請負人を読めなかった';
+    unsure('下請負人の一覧', reason + 'ので、台帳と施工体系図の下請負人の一覧を比べられず判断できません。書き方を確かめてください');
     return;
   }
   const confirm = ['どちらの書類を直すかは、下請契約と再下請負の通知で確かめてください'];
-  const used = new Set();
+  const primeName = noValue(ledger.prime?.name) ? '' : ledger.prime.name;
+  // 枝の線の後ろに名前だけある行が元請けと同じ名前なら、下請負人に数えない
+  const subs = diagram.subs.filter((d) => d.tier || d.label || !primeName || coreKey(d.name) !== coreKey(primeName));
+  const taken = new Set(subs.filter((d) => named.some(({ s }) => companyKey(s.name) === companyKey(d.name))));
+  const rest = subs.filter((d) => !taken.has(d));
+  const used = new Set(taken);
   for (const { s, i } of named) {
-    const same = diagram.subs.filter((d) => companyKey(d.name) === companyKey(s.name));
-    const hits = same.length ? same : diagram.subs.filter((d) => coreKey(d.name) === coreKey(s.name));
+    const name = trim(s.name);
     const target = subLabel(s, i);
-    if (hits.length === 0) {
-      out.candidates.push({ kind: 'mismatch', target, field: 'cross.subs', message: '施工体制台帳に下請負人「' + trim(s.name) + '」がありますが、施工体系図に見当たりません', basis: basisOf(...LIST_BASIS), confirm });
+    const same = subs.filter((d) => companyKey(d.name) === companyKey(s.name));
+    if (same.length) { compareEngineer(s, target, same, out); continue; }
+    const core = rest.filter((d) => coreKey(d.name) === coreKey(s.name));
+    if (core.length) {
+      core.forEach((d) => used.add(d));
+      unsure(target, '台帳は「' + name + '」、施工体系図は「' + core[0].name + '」で、法人の種類か位置の書き方が違います。同じ会社か決められないので、登記の名前を確かめてください(技術者の氏名は同じ会社として比べています)');
+      compareEngineer(s, target, core, out);
       continue;
     }
-    hits.forEach((d) => used.add(d));
-    if (same.length === 0) {
-      out.undecidable.push({ target, field: 'cross.subs', message: '台帳は「' + trim(s.name) + '」、施工体系図は「' + hits[0].name + '」で、法人の種類か位置の書き方が違います。同じ会社か決められないので、登記の名前を確かめてください(技術者の氏名は同じ会社として比べています)', basis: basisOf(...LIST_BASIS) });
+    const part = rest.filter((d) => partlySame(d.name, s.name));
+    if (part.length) {
+      part.forEach((d) => used.add(d));
+      unsure(target, '台帳は「' + name + '」、施工体系図は「' + part.map((d) => d.name).join('」「') + '」で、名前の一部が合います。' + UNSURE_NAME);
+      continue;
     }
-    compareEngineer(s, target, hits, out);
+    const line = diagram.unread.find((u) => partlySame(u, s.name));
+    if (line) {
+      unsure(target, '台帳の「' + name + '」は、施工体系図の読めなかった行「' + line + '」と名前の一部が合います。' + UNSURE_NAME);
+      continue;
+    }
+    out.candidates.push({ kind: 'mismatch', target, field: 'cross.subs', message: '施工体制台帳に下請負人「' + name + '」がありますが、施工体系図に見当たりません', basis: subsBasis(), confirm });
   }
-  for (const d of diagram.subs.filter((x) => !used.has(x))) {
-    out.candidates.push({ kind: 'mismatch', target: d.name, field: 'cross.subs', message: '施工体系図に下請負人「' + d.name + '」' + (d.tier ? '(' + d.tier + ')' : '') + 'がありますが、施工体制台帳に見当たりません', basis: basisOf(...LIST_BASIS), confirm });
+  for (const d of subs.filter((x) => !used.has(x))) {
+    if (d.label) unsure(d.name, '施工体系図の「[' + d.label + '] ' + d.name + '」は、下請負人か分からない書き方で、台帳にも見当たりません。下請負人かどうかは書類からは決められないので判断できません');
+    else if (primeName && !d.tier && partlySame(d.name, primeName)) unsure(d.name, '施工体系図の「' + d.name + '」は元請け「' + trim(primeName) + '」と名前の一部が合います。元請けの行か下請負人か決められないので判断できません');
+    else out.candidates.push({ kind: 'mismatch', target: d.name, field: 'cross.subs', message: '施工体系図に下請負人「' + d.name + '」' + (d.tier ? '(' + d.tier + ')' : '') + 'がありますが、施工体制台帳に見当たりません', basis: subsBasis(), confirm });
   }
 }
 
