@@ -210,26 +210,42 @@ export function renderAiCandidates(list = [], warnings = []) {
 // 段取りの一覧(F06a・F06b)。rows は buildSchedule の行、detail は buildScheduleDetail の skipped・notes(無くてよい)
 export const SCHEDULE_STATUS = { applies: '行う', needs_check: '確かめる' };
 export const SCHEDULE_PHASE = { start: '着手まで', work: '施工中', completion: '完成・引き渡し' };
-export function renderSchedule(rows = [], detail = {}) {
-  const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
+// 「発注者の仕様書では」の書き込み(F37e)。行の id を鍵にする。id の無い読み込んだ行は 箇所|何を を鍵にする
+export const SCHEDULE_NOTE_LABEL = '発注者の仕様書では';
+export const SCHEDULE_NOTE_WARNING = '「' + SCHEDULE_NOTE_LABEL + '」の欄に書いたことは、ページを閉じると消えます。残すときは印刷か CSV で書き出してください。例や表を切り替えても、書いたことは残ります。書いた内容はこのツールは原文と照らしていません。';
+export const scheduleNoteKey = (r) => r.id || r.basis.section + '|' + r.what;
+// notes は 鍵 → 書いた文 の Map。画面のメモリ(app.mjs)にだけ持ち、ブラウザに保存しない
+export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
+  const noteList = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
   const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
   const docLabel = esc(detail.docLabel ?? '共通仕様書');
   // 列の名前は1か所で持ち、見出しと各 td の data-label を同じにする。狭い画面ではカードの項目名に data-label を使う(F37f)
-  const cols = ['いつ', '何を', '誰に', '状態', '根拠(' + docLabel + 'の箇所)'];
+  const cols = ['いつ', '何を', '誰に', '状態', '根拠(' + docLabel + 'の箇所)', SCHEDULE_NOTE_LABEL];
   const td = (i, inner) => '<td data-label="' + cols[i] + '">' + inner + '</td>';
+  const noteOf = (r) => notes.get(scheduleNoteKey(r)) ?? '';
+  const written = (r) => noteOf(r).trim() !== '';
+  // textarea の直後の改行は HTML の読み取りで捨てられるので、書いた文の先頭の改行が消えないように1つ足す。
+  // textarea は長い文が紙で切れるので、印刷には隣の .print-only の文を出す
+  const noteCell = (r) => td(5, '<textarea class="schedule-note no-print" rows="2" autocomplete="off" placeholder="節・期限・メモ" aria-label="' + SCHEDULE_NOTE_LABEL + ': ' + esc(r.what) + '" data-note-key="' + esc(scheduleNoteKey(r)) + '">\n' + esc(noteOf(r)) + '</textarea>'
+    + '<div class="print-only schedule-note-print">' + esc(noteOf(r)) + '</div>');
+  // 今の一覧に行が無い書き込みは、消さずに持っているが紙と CSV には載らないので、そのことを出す
+  const shownKeys = new Set(rows.map(scheduleNoteKey));
+  const hiddenNotes = [...notes].filter(([k, v]) => !shownKeys.has(k) && v.trim() !== '').length;
+  const hiddenLine = hiddenNotes ? '<p class="note no-print schedule-note-hidden">今の一覧に出ていない行の書き込みが ' + hiddenNotes + '件あります。消えてはいませんが、今の印刷と CSV には載りません。元の表や条件に戻すと出ます。</p>' : '';
   // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
   // 区切りごとに畳める(F37f)。最初の区切りだけ開け、見出しに件数を出す。印刷では全部開く
   const tables = phases.map((ph, i) => {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
-    return '<details class="schedule-phase"' + (i === 0 ? ' open' : '') + '><summary><h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4></summary>'
+    // 書き込みのある区切りは、描き直しても閉じない(書いたことが見えなくならないように)
+    return '<details class="schedule-phase"' + (i === 0 || list.some(written) ? ' open' : '') + '><summary><h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4></summary>'
       + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr>' + cols.map((c) => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row">' + td(0, esc(r.when))
         + td(1, esc(r.what)
           + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
           + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : ''))
-        + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + '</tr>').join('')
+        + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + noteCell(r) + '</tr>').join('')
       + '</tbody></table>')
       + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? '読み込んだ表の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
@@ -240,12 +256,12 @@ export function renderSchedule(rows = [], detail = {}) {
     ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。表は下の「受注後の段取り」を開くと見られます。</p>'
     : '';
   const body = rows.length
-    ? '<details class="schedule-table"><summary>受注後の段取り(' + rows.length + '件)</summary>' + tables + '</details>'
+    ? '<details class="schedule-table"' + (rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary><p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>' + tables + '</details>'
     : '<p>入れた条件では、出す段取りの行がありません。</p>';
   const skipped = (detail.skipped ?? []).length
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
-  return lead + notes + body + skipped
+  return lead + hiddenLine + noteList + body + skipped
     + '<p class="human">' + (detail.custom ? '読み込んだ表の行です' : '国の直轄の例です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 

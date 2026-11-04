@@ -40,7 +40,7 @@ test('読み込んだ表の名前が data-label の属性を壊さない', () =>
   const d = buildScheduleDetail(COND);
   const h = renderSchedule(d.rows, { ...d, docLabel: '"><img src=x onerror=alert(1)>' });
   assert.ok(!h.includes('<img'), '名前がそのまま入っている');
-  assert.ok(rowsOf(h).every((r) => cellsOf(r).length === 5));
+  assert.ok(rowsOf(h).every((r) => cellsOf(r).length === 6));
   assert.ok(h.includes('data-label="根拠(&quot;&gt;&lt;img'));
 });
 

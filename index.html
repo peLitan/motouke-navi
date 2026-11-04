@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cRRUoFeLw72U/CJWsR1ZDTEMf5aCQAu0Zsw3Cv693nE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-H7OsiiDMVoJD46a9XsIduq2pqMtJbJJPn8oCDdjOCUQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -118,6 +118,8 @@
   details.schedule-phase { margin: 0.25rem 0; }
   details.schedule-phase > summary h4 { display: inline; margin: 0; }
   .schedule-lead { margin: 0.25rem 0 0.5rem; }
+  .schedule-note { min-width: 10rem; }
+  .schedule-note-print { white-space: pre-wrap; }
   .other-tools { margin-top: 2.5rem; border-top: 4px double #64748b; padding-top: 0.5rem; }
   .other-tools > summary h2 { display: inline; margin: 0; }
   .other-tools-sub { display: block; }
@@ -1607,26 +1609,42 @@ function renderAiCandidates(list = [], warnings = []) {
 // 段取りの一覧(F06a・F06b)。rows は buildSchedule の行、detail は buildScheduleDetail の skipped・notes(無くてよい)
 const SCHEDULE_STATUS = { applies: '行う', needs_check: '確かめる' };
 const SCHEDULE_PHASE = { start: '着手まで', work: '施工中', completion: '完成・引き渡し' };
-function renderSchedule(rows = [], detail = {}) {
-  const notes = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
+// 「発注者の仕様書では」の書き込み(F37e)。行の id を鍵にする。id の無い読み込んだ行は 箇所|何を を鍵にする
+const SCHEDULE_NOTE_LABEL = '発注者の仕様書では';
+const SCHEDULE_NOTE_WARNING = '「' + SCHEDULE_NOTE_LABEL + '」の欄に書いたことは、ページを閉じると消えます。残すときは印刷か CSV で書き出してください。例や表を切り替えても、書いたことは残ります。書いた内容はこのツールは原文と照らしていません。';
+const scheduleNoteKey = (r) => r.id || r.basis.section + '|' + r.what;
+// notes は 鍵 → 書いた文 の Map。画面のメモリ(app.mjs)にだけ持ち、ブラウザに保存しない
+function renderSchedule(rows = [], detail = {}, notes = new Map()) {
+  const noteList = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
   const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
   const docLabel = esc(detail.docLabel ?? '共通仕様書');
   // 列の名前は1か所で持ち、見出しと各 td の data-label を同じにする。狭い画面ではカードの項目名に data-label を使う(F37f)
-  const cols = ['いつ', '何を', '誰に', '状態', '根拠(' + docLabel + 'の箇所)'];
+  const cols = ['いつ', '何を', '誰に', '状態', '根拠(' + docLabel + 'の箇所)', SCHEDULE_NOTE_LABEL];
   const td = (i, inner) => '<td data-label="' + cols[i] + '">' + inner + '</td>';
+  const noteOf = (r) => notes.get(scheduleNoteKey(r)) ?? '';
+  const written = (r) => noteOf(r).trim() !== '';
+  // textarea の直後の改行は HTML の読み取りで捨てられるので、書いた文の先頭の改行が消えないように1つ足す。
+  // textarea は長い文が紙で切れるので、印刷には隣の .print-only の文を出す
+  const noteCell = (r) => td(5, '<textarea class="schedule-note no-print" rows="2" autocomplete="off" placeholder="節・期限・メモ" aria-label="' + SCHEDULE_NOTE_LABEL + ': ' + esc(r.what) + '" data-note-key="' + esc(scheduleNoteKey(r)) + '">\n' + esc(noteOf(r)) + '</textarea>'
+    + '<div class="print-only schedule-note-print">' + esc(noteOf(r)) + '</div>');
+  // 今の一覧に行が無い書き込みは、消さずに持っているが紙と CSV には載らないので、そのことを出す
+  const shownKeys = new Set(rows.map(scheduleNoteKey));
+  const hiddenNotes = [...notes].filter(([k, v]) => !shownKeys.has(k) && v.trim() !== '').length;
+  const hiddenLine = hiddenNotes ? '<p class="note no-print schedule-note-hidden">今の一覧に出ていない行の書き込みが ' + hiddenNotes + '件あります。消えてはいませんが、今の印刷と CSV には載りません。元の表や条件に戻すと出ます。</p>' : '';
   // 表の中には折りたたみを入れない(F14c)。表の「根拠」の列は箇所の名前だけにし、原文の抜き書きは表の下の折りたたみにまとめる
   // 区切りごとに畳める(F37f)。最初の区切りだけ開け、見出しに件数を出す。印刷では全部開く
   const tables = phases.map((ph, i) => {
     const list = rows.filter((r) => r.phase === ph);
     const quotes = [...new Map(list.map((r) => [r.basis.section + '|' + r.basis.quote, r.basis])).values()];
-    return '<details class="schedule-phase"' + (i === 0 ? ' open' : '') + '><summary><h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4></summary>'
+    // 書き込みのある区切りは、描き直しても閉じない(書いたことが見えなくならないように)
+    return '<details class="schedule-phase"' + (i === 0 || list.some(written) ? ' open' : '') + '><summary><h4>' + esc(SCHEDULE_PHASE[ph] ?? ph) + '(' + list.length + '件)</h4></summary>'
       + scrollTable('段取りの表(' + (SCHEDULE_PHASE[ph] ?? ph) + ')', '<table class="schedule"><thead><tr>' + cols.map((c) => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>'
       + list.map((r) => '<tr class="schedule-row">' + td(0, esc(r.when))
         + td(1, esc(r.what)
           + (r.note ? '<p class="note">' + esc(r.note) + '</p>' : '')
           + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : ''))
-        + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + '</tr>').join('')
+        + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + noteCell(r) + '</tr>').join('')
       + '</tbody></table>')
       + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? '読み込んだ表の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
@@ -1637,12 +1655,12 @@ function renderSchedule(rows = [], detail = {}) {
     ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。表は下の「受注後の段取り」を開くと見られます。</p>'
     : '';
   const body = rows.length
-    ? '<details class="schedule-table"><summary>受注後の段取り(' + rows.length + '件)</summary>' + tables + '</details>'
+    ? '<details class="schedule-table"' + (rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary><p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>' + tables + '</details>'
     : '<p>入れた条件では、出す段取りの行がありません。</p>';
   const skipped = (detail.skipped ?? []).length
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
-  return lead + notes + body + skipped
+  return lead + hiddenLine + noteList + body + skipped
     + '<p class="human">' + (detail.custom ? '読み込んだ表の行です' : '国の直轄の例です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
@@ -1780,7 +1798,7 @@ function renderSummary(state = {}) {
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
 
-return { esc, scrollTable, basisLabel, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, renderSummary };
+return { esc, scrollTable, basisLabel, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, renderSummary };
 })();
 __m["src/mask/extract.mjs"] = (function () {
 // 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
@@ -3263,7 +3281,7 @@ __m["src/export.mjs"] = (function () {
 const { CHECKLIST_NOTICE, CHECKLIST_SCOPE, checklistReferenceText } = __m["src/ui/view.mjs"];
 const { CHECKLIST_LAW } = __m["src/checklist.mjs"];
 const { sourceVersion, NO_VERSION } = __m["src/source-version.mjs"];
-const { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE } = __m["src/ui/view.mjs"];
+const { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, scheduleNoteKey } = __m["src/ui/view.mjs"];
 
 // すべての結果で共通の列
 const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '版(何年何月時点の条文・資料か)', '例外・読み方の注意'];
@@ -3339,12 +3357,13 @@ function checkRows(out, notice) {
 }
 
 // 段取りの一覧(F06a)の行。段取りは「いつ・何を・誰に」が要なので、共通の列とは別の列にする(見出しの行 + 1行ずつ)
-const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', '根拠の箇所', '根拠の原文(抜き書き)', '取得日', '版', '注意'];
-function scheduleRows(rows = []) {
+const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', '根拠の箇所', '根拠の原文(抜き書き)', '取得日', '版', '注意', SCHEDULE_NOTE_LABEL];
+// notes は画面の書き込み(F37e)。鍵 → 書いた文 の Map
+function scheduleRows(rows = [], notes = new Map()) {
   return [SCHEDULE_COLUMNS.slice(), ...rows.map((r) => [
     SCHEDULE_PHASE[r.phase] ?? r.phase, r.when, r.what, r.to, SCHEDULE_STATUS[r.status] ?? r.status ?? '',
     r.basis.doc + ' ' + r.basis.section + (r.basis.sectionTitle ? ' ' + r.basis.sectionTitle : ''), r.basis.quote, r.basis.fetchedAt, r.basis.version || NO_VERSION,
-    [r.note, ...(r.checks ?? [])].filter(Boolean).join('\n'),
+    [r.note, ...(r.checks ?? [])].filter(Boolean).join('\n'), notes.get(scheduleNoteKey(r)) ?? '',
   ])];
 }
 
@@ -6584,6 +6603,12 @@ let lastSchedule = null;
 let lastScheduleInput = null;
 // 読み込んだ表(F26b)。メモリだけに持ち、ページを閉じれば消える
 let rulesTable = null;
+// 「発注者の仕様書では」の書き込み(F37e)。行の鍵 → 書いた文。メモリだけに持ち、描き直し・表の切り替え・見本の入れ直しでは消さない
+const scheduleNotes = new Map();
+function setScheduleNote(key, text) {
+  if (text) scheduleNotes.set(key, text);
+  else scheduleNotes.delete(key);
+}
 function setScheduleStatus(doc, text) {
   const el = doc.getElementById('schedule-status');
   if (el) el.textContent = text;
@@ -6597,7 +6622,7 @@ function runSchedule(doc, input, errors = []) {
   if (!input) { out.innerHTML = renderErrors(errors); return; }
   try {
     const detail = buildScheduleDetail(input, rulesTable);
-    out.innerHTML = renderSchedule(detail.rows, detail);
+    out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
     summary.scheduleCount = detail.rows.length;
@@ -6670,7 +6695,7 @@ function clearRulesTable(doc) {
 
 function exportScheduleCsv(doc) {
   if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
-  downloadText(doc, toCsv(scheduleRows(lastSchedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
+  downloadText(doc, toCsv(scheduleRows(lastSchedule, scheduleNotes)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
   setScheduleStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
@@ -7015,6 +7040,14 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (t && t.classList && t.classList.contains('checklist-check')) setChecklistChecked(doc, t.getAttribute('data-row-id'), t.checked === true);
     });
     on('schedule-csv-btn', () => exportScheduleCsv(doc));
+    // 段取りの「発注者の仕様書では」(表は描き直すので、枠で受ける)。隣の印刷用の文も同じにする
+    const schedEl = doc.getElementById('schedule-result');
+    if (schedEl) schedEl.addEventListener('input', (ev) => {
+      const t = ev && ev.target;
+      if (!t || !t.classList || !t.classList.contains('schedule-note')) return;
+      setScheduleNote(t.getAttribute('data-note-key'), t.value);
+      if (t.nextElementSibling) t.nextElementSibling.textContent = t.value;
+    });
     on('rules-clear', () => clearRulesTable(doc));
     const rulesFile = doc.getElementById('rules-load');
     if (rulesFile) rulesFile.addEventListener('change', async () => {
@@ -7077,7 +7110,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { showPanel, showEntry, openPanelForLink, runBid, loadRulesFile, clearRulesTable, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, clearSample, startApp };
+return { showPanel, showEntry, openPanelForLink, runBid, setScheduleNote, loadRulesFile, clearRulesTable, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, clearSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

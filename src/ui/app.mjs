@@ -138,6 +138,12 @@ let lastSchedule = null;
 let lastScheduleInput = null;
 // 読み込んだ表(F26b)。メモリだけに持ち、ページを閉じれば消える
 let rulesTable = null;
+// 「発注者の仕様書では」の書き込み(F37e)。行の鍵 → 書いた文。メモリだけに持ち、描き直し・表の切り替え・見本の入れ直しでは消さない
+const scheduleNotes = new Map();
+export function setScheduleNote(key, text) {
+  if (text) scheduleNotes.set(key, text);
+  else scheduleNotes.delete(key);
+}
 function setScheduleStatus(doc, text) {
   const el = doc.getElementById('schedule-status');
   if (el) el.textContent = text;
@@ -151,7 +157,7 @@ function runSchedule(doc, input, errors = []) {
   if (!input) { out.innerHTML = renderErrors(errors); return; }
   try {
     const detail = buildScheduleDetail(input, rulesTable);
-    out.innerHTML = renderSchedule(detail.rows, detail);
+    out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
     summary.scheduleCount = detail.rows.length;
@@ -224,7 +230,7 @@ export function clearRulesTable(doc) {
 
 export function exportScheduleCsv(doc) {
   if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
-  downloadText(doc, toCsv(scheduleRows(lastSchedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
+  downloadText(doc, toCsv(scheduleRows(lastSchedule, scheduleNotes)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
   setScheduleStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
@@ -569,6 +575,14 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (t && t.classList && t.classList.contains('checklist-check')) setChecklistChecked(doc, t.getAttribute('data-row-id'), t.checked === true);
     });
     on('schedule-csv-btn', () => exportScheduleCsv(doc));
+    // 段取りの「発注者の仕様書では」(表は描き直すので、枠で受ける)。隣の印刷用の文も同じにする
+    const schedEl = doc.getElementById('schedule-result');
+    if (schedEl) schedEl.addEventListener('input', (ev) => {
+      const t = ev && ev.target;
+      if (!t || !t.classList || !t.classList.contains('schedule-note')) return;
+      setScheduleNote(t.getAttribute('data-note-key'), t.value);
+      if (t.nextElementSibling) t.nextElementSibling.textContent = t.value;
+    });
     on('rules-clear', () => clearRulesTable(doc));
     const rulesFile = doc.getElementById('rules-load');
     if (rulesFile) rulesFile.addEventListener('change', async () => {
