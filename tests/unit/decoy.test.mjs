@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createMasker } from '../../src/mask/core.mjs';
 import { CONSTRUCTION_DICT } from '../../src/mask/dict-construction.mjs';
 import { MEDICAL_DICT } from '../../src/mask/dict-medical.mjs';
-import { makeDecoys, checkDecoys, decoyMessage, DECOY_TYPES, DECOY_PER_KIND, DECOY_LABELS } from '../../src/mask/decoy.mjs';
+import { makeDecoys, makeHardDecoys, checkDecoys, decoyMessage, DECOY_TYPES, DECOY_HARD_TYPES, DECOY_PER_KIND, DECOY_LABELS } from '../../src/mask/decoy.mjs';
 import { runMask, resetMask, setDecoyRandom, lastDecoyCheck } from '../../src/ui/mask-app.mjs';
 import { handleMessage, readMasked } from '../../integration/claude-code/mcp/masked-files.mjs';
 import { indexHtml, runPage, withoutScripts } from '../acceptance/_helpers.mjs';
@@ -87,7 +87,7 @@ test('検査の結果: 残った語があれば、数・型・語を出す(置�
   assert.equal(r.masked, 0);
   assert.equal(r.missed.length, 6);
   const msg = decoyMessage(r);
-  assert.match(msg, /6語のうち 0語を置き換えました/);
+  assert.match(msg, /見つけやすい型 0\/6・見つけにくい型 0\/6/);
   assert.match(msg, /注意: 6語が残りました/);
   for (const d of decoys) assert.ok(msg.includes(d.type) && msg.includes(d.word), d.type);
   // 一部だけ当たる語(人名の姓だけ)は、置き換えたとみなさない
@@ -96,7 +96,7 @@ test('検査の結果: 残った語があれば、数・型・語を出す(置�
   assert.equal(checkDecoys(half, '', { decoys: one }).masked, 0);
   // 全部置き換えたときは注意を出さない
   const okMsg = decoyMessage(checkDecoys(createMasker({ dictionaries: [CONSTRUCTION_DICT] }), TEXT, { decoys }));
-  assert.match(okMsg, /^確かめのための見本 6語のうち 6語を置き換えました\(.*\)。$/);
+  assert.match(okMsg, /^確かめのための見本: 見つけやすい型 6\/6・見つけにくい型 \d\/6\(/);
   assert.ok(!okMsg.includes('注意'));
 });
 
@@ -125,7 +125,7 @@ test('画面の部品: 置き換えるたびに検査の結果を出し、見本
     assert.equal(r.total, 6);
     assert.equal(r.masked, 6);
     assert.equal(doc.els['mask-decoy'].textContent, decoyMessage(r));
-    assert.match(doc.els['mask-decoy'].textContent, /6語のうち 6語を置き換えました/);
+    assert.match(doc.els['mask-decoy'].textContent, /見つけやすい型 6\/6・見つけにくい型 \d\/6/);
     const shown = doc.els['mask-after'].innerHTML + doc.els['mask-map'].innerHTML + doc.els['mask-before'].textContent;
     for (const d of makeDecoys(seeded(7))) for (const w of words(d)) assert.ok(!shown.includes(w), '見本の語が出た: ' + w);
     // 型は毎回変わる(次の置き換えでは別の乱数の続き)
@@ -148,7 +148,7 @@ test('画面(index.html): 置き換えの状態の下に検査の結果の欄が
   const page = runPage();
   await page.set('mask-input', TEXT);
   await page.click('mask-run');
-  assert.match(page.text('mask-decoy'), /^確かめのための見本 6語のうち 6語を置き換えました\(見本は架空の人名・会社名・住所で/);
+  assert.match(page.text('mask-decoy'), /^確かめのための見本: 見つけやすい型 6\/6・見つけにくい型 \d\/6\(置き換えた数\/混ぜた数。見本は架空の人名・会社名・住所で/);
   for (const w of ['担当者:', '氏名：', '㈱', '〒']) assert.ok(!page.text('mask-after').includes(w), '後の欄に見本の行: ' + w);
 });
 
@@ -164,7 +164,7 @@ test('プラグインの道具: read_masked の2つ目の文に検査の結果�
     const masked = r.result.content[0].text;
     assert.equal(masked, readMasked(root, 'raw/a.txt', { mapPath: null }));
     assert.equal(masked, createMasker({ dictionaries: [CONSTRUCTION_DICT] }).mask(TEXT).masked);
-    assert.match(r.result.content[1].text, /^確かめのための見本 6語のうち 6語を置き換えました\(見本は架空の人名・会社名・住所で/);
+    assert.match(r.result.content[1].text, /^確かめのための見本: 見つけやすい型 6\/6・見つけにくい型 \d\/6\(置き換えた数\/混ぜた数。見本は架空の人名・会社名・住所で/);
     for (const w of ['担当者:', '氏名：', '㈱', '〒', '御中']) assert.ok(!masked.includes(w), '中身に見本の行: ' + w);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
