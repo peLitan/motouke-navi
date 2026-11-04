@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1+GD16RAL9/gN7y5yNnxCgthyev6YKR/CqvikgfcX38='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-vSoqoXCBGnc8lOO3YWb1nPJx/Rr0JI72l112scO6/8c='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -2857,6 +2857,15 @@ const compact = (x) => nfkc(x).replace(/\s+/g, '');
 const noValue = (x) => /^(?:なし|無し|ナシ|未定|該当なし|[-ー―—]+)?$/.test(compact(x));
 const SHORT_FORM = [[/\(株\)/g, '株式会社'], [/\(有\)/g, '有限会社'], [/\(同\)/g, '合同会社'], [/\(資\)/g, '合資会社'], [/\(名\)/g, '合名会社']];
 const fullForm = (x) => SHORT_FORM.reduce((s, [re, to]) => s.replace(re, to), compact(x));
+const uniqueBy = (list, key) => [...new Map(list.map((x) => [key(x), x])).values()];
+
+// 技術者の欄を氏名の並びにする。かっこの書き添え(専任・交代の日付など)を先に外すので、日付の「/」では分けない。
+// 「、」「,」「;」「/」「→」で分ける。「・」はかっこの直後のときだけ区切りに読む(「ジョン・スミス」のような1人の名前を割らない)
+function personNames(value) {
+  let s = nfkc(value);
+  for (let prev = ''; prev !== s;) { prev = s; s = s.replace(/\([^()]*\)/g, ' '); }
+  return uniqueBy(s.split(/[、,;/→⇒]|\s+・\s*/).map(trim).filter((n) => !noValue(n)), compact);
+}
 
 // 名前を比べる形。(株)と株式会社は同じに読む。companyKey が同じなら同じ名前、coreKey だけ同じなら書き方の違う名前
 const companyKey = (x) => fullForm(x).replace(/\([^()]*次[^()]*\)$/, '');
@@ -2948,8 +2957,7 @@ function parseTaikeizu(text) {
     return true;
   };
   const engineer = (value) => {
-    const name = trim(value).replace(/\s*\([^()]*\)$/, '');
-    if (current && current !== 'prime' && !noValue(name)) current.engineers.push(name);
+    if (current && current !== 'prime') current.engineers.push(...personNames(value));
   };
   const read = (seg, branch, lineNo) => {
     const lab = seg.match(LABEL);
@@ -2988,27 +2996,32 @@ function parseTaikeizu(text) {
   return { orderer: readOrderer(text), subs, unread, tableLine, warnings };
 }
 
-function compareEngineer(s, target, hits, out) {
+// group: 台帳の同じ会社の節(旧・新で2つあることがある)。氏名はまとめて集合で比べ、どちらかがもう片方に含まれるなら合うとする
+function compareEngineer(group, target, hits, out) {
   const basis = basisOf('q-kisoku-14_2-1-4-ho', 'q-kensetsu-24_8-4');
-  const ledgerName = noValue(s.engineer?.name) ? '' : trim(s.engineer.name);
-  const names = hits.flatMap((d) => d.engineers);
-  if (ledgerName && names.length === 0) {
-    out.undecidable.push({ target, field: 'cross.engineer', message: '施工体系図から「' + trim(s.name) + '」の技術者の氏名を読めなかったので、台帳の「' + ledgerName + '」と比べられず判断できません', basis });
+  const ledgerNames = uniqueBy(group.flatMap(({ s }) => personNames(s.engineer?.name)), compact);
+  const names = uniqueBy(hits.flatMap((d) => d.engineers), compact);
+  const quoted = (list) => '「' + list.join('」「') + '」';
+  if (ledgerNames.length > 0 && names.length === 0) {
+    out.undecidable.push({ target, field: 'cross.engineer', message: '施工体系図から「' + trim(group[0].s.name) + '」の技術者の氏名を読めなかったので、台帳の' + quoted(ledgerNames) + 'と比べられず判断できません', basis });
     return;
   }
-  if (!ledgerName && names.length > 0) {
+  if (ledgerNames.length === 0 && names.length > 0) {
     // 台帳の空はすでに点検の結果に出ているので、同じ行に体系図の氏名を書き足す。二重に出さない
-    const note = '(施工体系図には「' + names.join('」「') + '」とあります)';
-    const row = [...out.candidates, ...out.undecidable].find((x) => x.target === target && x.field === 'engineer');
-    if (row) row.message += note;
-    else out.undecidable.push({ target, field: 'cross.engineer', message: '台帳から技術者の氏名を読めなかったので、施工体系図と比べられず判断できません' + note, basis });
+    const note = '(施工体系図には' + quoted(names) + 'とあります)';
+    const targets = group.map(({ s, i }) => subLabel(s, i));
+    const rows = [...out.candidates, ...out.undecidable].filter((x) => targets.includes(x.target) && x.field === 'engineer');
+    rows.forEach((row) => { row.message += note; });
+    if (rows.length === 0) out.undecidable.push({ target, field: 'cross.engineer', message: '台帳から技術者の氏名を読めなかったので、施工体系図と比べられず判断できません' + note, basis });
     return;
   }
-  if (!ledgerName || names.some((n) => compact(n) === compact(ledgerName))) return;
+  const inLedger = new Set(ledgerNames.map(compact));
+  const inDiagram = new Set(names.map(compact));
+  if (ledgerNames.every((n) => inDiagram.has(compact(n))) || names.every((n) => inLedger.has(compact(n)))) return;
   out.candidates.push({
     kind: 'mismatch', target, field: 'cross.engineer',
-    message: '同じ下請負人の技術者の氏名が、施工体制台帳は「' + ledgerName + '」、施工体系図は「' + names.join('」「') + '」で合いません',
-    basis, confirm: ['字の違い(異体字など)か別の人かは、下請けの届けで確かめてください'],
+    message: '同じ下請負人の技術者の氏名が、施工体制台帳は' + quoted(ledgerNames) + '、施工体系図は' + quoted(names) + 'で合いません',
+    basis, confirm: ['字の違い(異体字など)か、別の人か、技術者の交代(前任・後任)かは、下請けの届けで確かめてください'],
   });
 }
 
@@ -3031,16 +3044,19 @@ function compareSubs(ledger, diagram, out) {
   const taken = new Set(subs.filter((d) => named.some(({ s }) => companyKey(s.name) === companyKey(d.name))));
   const rest = subs.filter((d) => !taken.has(d));
   const used = new Set(taken);
-  for (const { s, i } of named) {
+  // 台帳の同じ会社の節はまとめて1社として比べる(技術者の交代で節が2つある台帳)
+  for (const key of new Set(named.map(({ s }) => companyKey(s.name)))) {
+    const group = named.filter(({ s }) => companyKey(s.name) === key);
+    const { s, i } = group[0];
     const name = trim(s.name);
     const target = subLabel(s, i);
     const same = subs.filter((d) => companyKey(d.name) === companyKey(s.name));
-    if (same.length) { compareEngineer(s, target, same, out); continue; }
+    if (same.length) { compareEngineer(group, target, same, out); continue; }
     const core = rest.filter((d) => coreKey(d.name) === coreKey(s.name));
     if (core.length) {
       core.forEach((d) => used.add(d));
       unsure(target, '台帳は「' + name + '」、施工体系図は「' + core[0].name + '」で、法人の種類か位置の書き方が違います。同じ会社か決められないので、登記の名前を確かめてください(技術者の氏名は同じ会社として比べています)');
-      compareEngineer(s, target, core, out);
+      compareEngineer(group, target, core, out);
       continue;
     }
     const part = rest.filter((d) => partlySame(d.name, s.name));
@@ -3063,9 +3079,7 @@ function compareSubs(ledger, diagram, out) {
   }
 }
 
-function compareOrderer(ledger, taikeizuOrderer, planOrderer, out) {
-  const list = [['施工体制台帳', ledger.project?.orderer], ['施工体系図', taikeizuOrderer], ['施工計画書の目次', planOrderer]]
-    .filter(([, v]) => !noValue(v)).map(([doc, v]) => [doc, trim(v)]);
+function compareOrderer(list, out) {
   if (new Set(list.map(([, v]) => ordererKey(v))).size < 2) return;
   out.undecidable.push({
     target: '発注者', field: 'cross.orderer',
@@ -3085,10 +3099,13 @@ function addCrossCandidates(out, ledger, docs = {}) {
   const next = { ...out, candidates: (out.candidates ?? []).map((c) => ({ ...c })), undecidable: (out.undecidable ?? []).map((u) => ({ ...u })) };
   const diagram = hasTaikeizu ? parseTaikeizu(docs.taikeizu) : null;
   if (diagram) compareSubs(ledger, diagram, next);
-  compareOrderer(ledger, diagram?.orderer, planOrderer, next);
+  const orderers = [['施工体制台帳', ledger.project?.orderer], ['施工体系図', diagram?.orderer], ['施工計画書の目次', planOrderer]]
+    .filter(([, v]) => !noValue(v)).map(([doc, v]) => [doc, trim(v)]);
+  compareOrderer(orderers, next);
   const given = [hasTaikeizu ? '施工体系図' : null, hasPlan ? '施工計画書の目次' : null].filter(Boolean).join('・');
-  const seen = [hasTaikeizu ? '下請負人の一覧・下請けの技術者の氏名' : null, '発注者の名前'].filter(Boolean).join('・');
-  const crossNote = '台帳と' + given + 'は、' + seen + 'だけを突き合わせています。元請けの技術者・工事の内容・工期は比べていません';
+  // 発注者の名前は、書いてある書類が2つ以上あるときだけ突き合わせたと書く
+  const seen = [hasTaikeizu ? '下請負人の一覧・下請けの技術者の氏名' : null, orderers.length >= 2 ? '発注者の名前' : null].filter(Boolean).join('・');
+  const crossNote = '台帳と' + given + 'は、' + (seen ? seen + 'だけを突き合わせています。元請けの技術者・工事の内容・工期は比べていません' : '比べられる項目が無く、突き合わせていません');
   next.notes = (out.notes ?? []).map((n) => (/突き合わせはしていません/.test(n) ? crossNote : n));
   next.crossWarnings = [
     ...(diagram?.warnings ?? []),

@@ -283,3 +283,86 @@ test('画面: 体系図の欄に貼ると結果と CSV の元に出て、空な�
   const page = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(page, /id="taikeizu-input"/);
 });
+
+// F34b: 技術者の氏名の比べ方と、注意の文
+const engineerOf = ({ out }) => ({ cand: by(out.candidates, 'cross.engineer'), und: by(out.undecidable, 'cross.engineer') });
+
+test('A-7: 台帳の氏名の末尾のかっこも外して比べる', () => {
+  const r = run(ledgerText([['乙川土工株式会社', '乙川 三郎(専任)']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎(専任)' });
+  assert.deepEqual(engineerOf(r), { cand: [], und: [] });
+  // かっこだけが同じで氏名が違えば、今までどおり出す(日付や書き添えで合うことにしない)
+  const other = engineerOf(run(ledgerText([['乙川土工株式会社', '乙川 三郎(専任)']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 四郎(専任)' }));
+  assert.equal(other.cand.length, 1);
+  assert.match(other.cand[0].message, /施工体制台帳は「乙川 三郎」、施工体系図は「乙川 四郎」/);
+});
+
+test('A-8: 1つの欄の複数の氏名は、日付の「/」で割らずに分けて集合で比べる', () => {
+  const ledger = ledgerText([['乙川土工株式会社', '乙川 三郎(〜2026/10/31)、乙川 四郎(2026/11/1〜)']]);
+  const both = '[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎(〜2026/10/31)\n主任技術者: 乙川 四郎(2026/11/1〜)';
+  assert.deepEqual(engineerOf(run(ledger, { taikeizu: both })), { cand: [], und: [] });
+  assert.deepEqual(parseTaikeizu('[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎、乙川 四郎(2026/11/1〜)').subs[0].engineers, ['乙川 三郎', '乙川 四郎']);
+  for (const sep of [',', ';', '→', ' / ']) {
+    const r = run(ledgerText([['乙川土工株式会社', `乙川 三郎${sep}乙川 四郎`]]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 四郎' });
+    assert.deepEqual(engineerOf(r), { cand: [], und: [] }, sep);
+  }
+  assert.deepEqual(engineerOf(run(ledgerText([['乙川土工株式会社', '乙川 三郎(前任)・乙川 四郎(後任)']]), { taikeizu: both })), { cand: [], und: [] });
+  // 「・」でつないだ1人の名前は割らない
+  const foreign = engineerOf(run(ledgerText([['乙川土工株式会社', 'ジョン・スミス']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: スミス' }));
+  assert.match(foreign.cand[0].message, /「ジョン・スミス」、施工体系図は「スミス」/);
+});
+
+test('A-8: 同じ会社の節が旧・新の2つでも、まとめて比べて1社として扱う', () => {
+  const ledger = ledgerText([['乙川土工株式会社', '乙川 三郎'], ['乙川土工(株)', '乙川 四郎']]);
+  const newOnly = run(ledger, { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 四郎' });
+  assert.deepEqual(engineerOf(newOnly), { cand: [], und: [] });
+  assert.deepEqual(by(newOnly.out.candidates, 'cross.subs'), []);
+  // どちらの節の氏名とも違えば1件だけ出し、両方の氏名を見せる
+  const none = engineerOf(run(ledger, { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 別人 五郎' }));
+  assert.equal(none.cand.length, 1);
+  assert.match(none.cand[0].message, /「乙川 三郎」「乙川 四郎」、施工体系図は「別人 五郎」/);
+  // 体系図に無い会社の節が2つでも、見当たらないの候補は1件
+  const missing = run(ledger, { taikeizu: '[一次] 丙野舗装株式会社\n主任技術者: 丙野 五郎' }).out;
+  assert.deepEqual(by(missing.candidates, 'cross.subs').filter((c) => /台帳に下請負人/.test(c.message)).map((c) => c.target), ['乙川土工株式会社']);
+  // 片方の節だけ氏名が空でも、もう片方の氏名で比べる
+  const half = engineerOf(run(ledgerText([['乙川土工株式会社', ''], ['乙川土工(株)', '乙川 四郎']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 四郎' }));
+  assert.deepEqual(half, { cand: [], und: [] });
+});
+
+test('A-8: 集合の比べ: 含まれるなら合い、両方に相手に無い氏名があれば候補。確かめることに交代を書く', () => {
+  const ledger = ledgerText([['乙川土工株式会社', '乙川 三郎、乙川 四郎']]);
+  const { cand, und } = engineerOf(run(ledger, { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎\n主任技術者: 別人 五郎' }));
+  assert.equal(cand.length, 1);
+  assert.deepEqual(und, []);
+  assert.match(cand[0].confirm.join(''), /技術者の交代\(前任・後任\)/);
+  const single = engineerOf(run(ledgerText([['乙川土工株式会社', '乙川 三郎']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎\n監理技術者: 別人 五郎' }));
+  assert.deepEqual(single, { cand: [], und: [] });
+});
+
+test('空の扱い: かっこを外すと空の氏名は空として読み、同じ会社の空の節の両方に体系図の氏名を足す', () => {
+  const r = run(ledgerText([['乙川土工株式会社', '未定(調整中)']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎' });
+  assert.deepEqual(by(r.out.candidates, 'cross.engineer'), []);
+  const two = run(ledgerText([['乙川土工株式会社', ''], ['乙川土工(株)', '']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎' }).out;
+  const rows = [...two.candidates, ...two.undecidable].filter((x) => x.field === 'engineer');
+  assert.equal(rows.length, 2);
+  for (const row of rows) assert.equal(row.message.match(/施工体系図には「乙川 三郎」とあります/g).length, 1);
+});
+
+test('A-10: 発注者の名前を比べていないときは、注意の文に書かない', () => {
+  const crossNote = (out) => out.notes.find((n) => /突き合わせて/.test(n));
+  const noOrderer = run(ledgerText([['乙川土工株式会社', '乙川 三郎']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 三郎' }).out;
+  assert.match(crossNote(noOrderer), /下請負人の一覧・下請けの技術者の氏名だけを突き合わせています/);
+  assert.doesNotMatch(crossNote(noOrderer), /発注者/);
+  assert.ok(noOrderer.crossWarnings.some((w) => /「発注者: …」の行が見つからない/.test(w)));
+  // 体系図に行が無くても、目次と台帳で比べたなら書く
+  const withPlan = run(ledgerText([['乙川土工株式会社', '乙川 三郎']]), { taikeizu: '[一次] 乙川土工株式会社', plan: '発注者: 架空県ためし市' }).out;
+  assert.match(crossNote(withPlan), /発注者の名前だけを突き合わせています/);
+  // 台帳に発注者が無く目次だけにあるときは、比べたものが無い
+  const nothing = run(ledgerText([['乙川土工株式会社', '乙川 三郎']], ''), { plan: '発注者: 架空県ためし市' }).out;
+  assert.match(crossNote(nothing), /台帳と施工計画書の目次は、比べられる項目が無く、突き合わせていません/);
+  assert.doesNotMatch(crossNote(nothing), /発注者/);
+});
+
+test('A-8: 節の見出しの会社名が全く同じ2つでも、まとめて比べる', () => {
+  const r = run(ledgerText([['乙川土工株式会社', '乙川 三郎'], ['乙川土工株式会社', '乙川 四郎']]), { taikeizu: '[一次] 乙川土工株式会社\n主任技術者: 乙川 四郎' });
+  assert.deepEqual(engineerOf(r), { cand: [], und: [] });
+});
