@@ -265,7 +265,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 
 - `.claude-plugin/plugin.json`: プラグインの名前(`motouke-navi-guard`)などの宣言。`.claude-plugin/` にはこのファイルだけを置き、ほかの部品はプラグインの直下に置く
 - `hooks/hooks.json`: PreToolUse(Read・Grep・Glob・Bash・PowerShell・Edit・Write・NotebookEdit)と UserPromptSubmit で `${CLAUDE_PLUGIN_ROOT}/scripts/guard-raw.mjs` を動かす。`raw/` を指すと終了コード 2 で止め、理由を標準エラーに出す
-- `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える。辞書のファイルを使うときは環境変数 `MASK_DICT` に辞書のパスを入れる(上の「使い方」の 3.)
+- `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える。この `env` に `MASK_DICT` はありません。プラグインから辞書を使う方法は確かめていません(上の「使い方」の 3. は作業フォルダに置く `.mcp.json` の場合です。道具が `MASK_DICT` を読むことは、道具を直接動かす試験で確かめました)
 - `scripts/guard-raw.mjs`・`mcp/masked-files.mjs`・`src/mask/`: `integration/claude-code/` と `src/mask/` の写し。プラグインは入れたときに別の場所へ写されるので、置き換えの部品も中に置いている。元を直したら `node scripts/sync-plugin.mjs` で写しを作り直す(写しが元と同じことは `tests/unit/plugin-structure.test.mjs` で確かめる)
 
 - `skills/construction-check/`: 建設の書類を点検する Skill(F20b)
@@ -328,7 +328,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - 仕込みの評価: 作る係とは別の係が、架空の書類3件(`fixtures/`)に抜けと誤りを仕込み、その一覧(仕込み表)はリポジトリと PC の外に置きました。作る係は仕込み表を読みません
 
 検証:
-- 受け入れテスト 21 ファイル・110 件がすべて通る(`node --test tests/acceptance/*.test.mjs`)。ほかに単体の試験が 52 ファイルある(`tests/unit/`)
+- 受け入れテスト 21 ファイル・110 件がすべて通る(`node --test tests/acceptance/*.test.mjs`)。ほかに単体の試験が 65 ファイル・477 件ある(`tests/unit/` の `*.test.mjs` の数と `node --test tests/unit/*.test.mjs` の件数。2026-11-04 に数えた)
 - 規則表の抜き書き 99 件が原文にある(`node scripts/quote-rate.mjs`。2026-11-03 22:57 に回した数。施行規則 第14条の2 の抜き書き 40 件を足す前は 59 件だった)
 - 仕込みの評価(見つけた・見落とし・言い過ぎ)は、仕込み表を持つ係が別の会話で数えた。仕込み 11 件のうち見つけた 7・見落とし 4・言い過ぎ 0(保留付きの仕込み外の指摘が 9 件。2026-11-04 の採点。`docs/評価.md`)。4 件は見落としています
 
