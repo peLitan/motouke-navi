@@ -70,6 +70,8 @@ test('.mcp.json: プラグインの直下にあり、masked-files を ${CLAUDE_P
   assert.equal(s.command, 'node');
   assert.deepEqual(s.args, ['${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs']);
   assert.equal(s.env.MASK_TOOL_DIR, '${CLAUDE_PLUGIN_ROOT}');
+  // F35b: 辞書のファイルを渡す口。対応表と同じく、入れないときは空に展開する
+  assert.equal(s.env.MASK_DICT, '${MASK_DICT:-}');
   assert.ok(!JSON.stringify(m).includes('CLAUDE_PROJECT_DIR'));
   assert.ok(fs.existsSync(path.join(PLUGIN, 'mcp', 'masked-files.mjs')));
   assert.ok(fs.existsSync(path.join(PLUGIN, 'src', 'mask', 'core.mjs')));
@@ -114,6 +116,24 @@ test('道具: plugin/ だけを別の場所に写しても(入れたときと同
     if (saved === undefined) delete process.env.MASK_TOOL_DIR; else process.env.MASK_TOOL_DIR = saved;
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+test('Skill construction-check: 候補を出したあと refuter に見直させ、確かめられない候補を外す手順があり、番号が続く', () => {
+  const text = fs.readFileSync(path.join(PLUGIN, 'skills', 'construction-check', 'SKILL.md'), 'utf8');
+  const steps = /## 手順\n([\s\S]*?)\n## /.exec(text)[1];
+  const numbers = [...steps.matchAll(/^(\d+)\. /gm)].map((m) => Number(m[1]));
+  assert.deepEqual(numbers, numbers.map((_, i) => i + 1));
+  const at = (w) => { const i = steps.indexOf(w); assert.ok(i >= 0, w); return i; };
+  // 条番号の確かめ → 係を呼ぶ → 外す → 見せる の順
+  assert.ok(at('check-articles.mjs') < at('`motouke-navi-guard:refuter`'));
+  assert.ok(at('`motouke-navi-guard:refuter`') < at('指摘の一覧から外し'));
+  assert.ok(at('指摘の一覧から外し') < at('外した候補をそのまま見せる'));
+  // 呼ぶ名前の係が実在し、渡すと書いた3つを係が受け取ると書いている
+  const agent = fs.readFileSync(path.join(PLUGIN, 'agents', 'refuter.md'), 'utf8');
+  assert.match(agent, /^name: refuter$/m);
+  assert.equal(readJson('.claude-plugin/plugin.json').name, 'motouke-navi-guard');
+  for (const w of ['点検した書類のパス', '指摘の一覧', '原文の抜き書き']) assert.ok(agent.includes(w), w);
+  for (const w of ['点検した書類の', '指摘の一覧', '原文の抜き書き']) at(w);
 });
 
 test('係(agents): 置いた係のファイルに、プラグインでは無視される項目を書かない', () => {

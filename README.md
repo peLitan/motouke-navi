@@ -77,7 +77,7 @@
 
 ## Claude Code のプラグイン(plugin/)
 上の守り(フック)と道具を、作業フォルダに写さずに使えるようにしたプラグインです。建設の書類を点検する Skill(`skills/construction-check/`)、発注者の仕様書の文から段取りと施工計画書の記載項目の行を作って原文と機械で照らす Skill(`skills/spec-to-rules/`。[説明](docs/manual.md#claude-code-のプラグインplugin))と、指摘の候補を崩しにかかる反証の係(`agents/refuter.md`)が入っています。`claude --plugin-dir ./plugin` で、そのセッションだけ読み込めます。
-- `plugin/.mcp.json` の `env` には `MASK_DICT` がありません。プラグインから辞書を使う方法は確かめていません(辞書の読み込みは道具を直接動かす試験で確かめただけです)
+- 辞書は、端末で環境変数 `MASK_DICT` に辞書のファイルのパスを入れてから `claude --plugin-dir ./plugin` で開くと使えます(`plugin/.mcp.json` の `env` が `"MASK_DICT": "${MASK_DICT:-}"` を道具へ渡します)。入れないと空が渡り、辞書なしで動きます。確かめたのは2つに分けてです。同じ書き方の使い捨てのプラグインで、Claude Code 2.1.317 が値と空を道具へ渡すことを `claude mcp list` で確かめ(2026-11-04)、道具が辞書の語を置き換えることは単体の試験で確かめました。このプラグインで Claude に `read_masked` を呼ばせて、辞書の語が置き換わるところまで通しては確かめていません
 - プラグインは `permissions.deny` と sandbox の設定を配れません。コマンドでの読み取りを sandbox で止めるには、`integration/claude-code/.claude/settings.json` を作業フォルダに置いてください
 - Skill が根拠にできるのは取得した8つの条だけです。条番号の確かめは、その条・項・号が取得した原文にあるかだけを見ます
 - 部品・試した記録・限界の全部は [docs/manual.md の「Claude Code のプラグイン」](docs/manual.md#claude-code-のプラグインplugin)

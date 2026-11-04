@@ -268,11 +268,11 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 
 - `.claude-plugin/plugin.json`: プラグインの名前(`motouke-navi-guard`)などの宣言。`.claude-plugin/` にはこのファイルだけを置き、ほかの部品はプラグインの直下に置く
 - `hooks/hooks.json`: PreToolUse(Read・Grep・Glob・Bash・PowerShell・Edit・Write・NotebookEdit)と UserPromptSubmit で `${CLAUDE_PLUGIN_ROOT}/scripts/guard-raw.mjs` を動かす。`raw/` を指すと終了コード 2 で止め、理由を標準エラーに出す
-- `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える。この `env` に `MASK_DICT` はありません。プラグインから辞書を使う方法は確かめていません(上の「使い方」の 3. は作業フォルダに置く `.mcp.json` の場合です。道具が `MASK_DICT` を読むことは、道具を直接動かす試験で確かめました)
+- `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える。`env` の `"MASK_DICT": "${MASK_DICT:-}"` で、端末の環境変数 `MASK_DICT`(辞書のファイルのパス)を道具へ渡す(F35b)。入れないと空が渡り、辞書なしで動く。同じ書き方の使い捨てのプラグインを `claude --plugin-dir <フォルダ> mcp list` で起動し、Claude Code 2.1.317 が値と空を道具へ渡すことを確かめた(2026-11-04)。このプラグインで Claude に `read_masked` を呼ばせて通しては確かめていない(上の「使い方」の 3. は作業フォルダに置く `.mcp.json` の場合で、こちらの `env` には `MASK_DICT` が無いので足す必要がある。道具が `MASK_DICT` を読むことは、道具を直接動かす試験で確かめました)
 - `scripts/guard-raw.mjs`・`mcp/masked-files.mjs`・`src/mask/`: `integration/claude-code/` と `src/mask/` の写し。プラグインは入れたときに別の場所へ写されるので、置き換えの部品も中に置いている。元を直したら `node scripts/sync-plugin.mjs` で写しを作り直す(写しが元と同じことは `tests/unit/plugin-structure.test.mjs` で確かめる)
 
 - `skills/construction-check/`: 建設の書類を点検する Skill(F20b)
-  - `SKILL.md`(500 行以内): 書類は道具 `masked-files` の `read_masked` で置き換えた後の中身だけを読み、取得した条に照らして抜けや食い違いの「候補」を、法令名・条・項・号と原文の短い抜き書きつきで書く手順。見ていない条は根拠にせず人に回す
+  - `SKILL.md`(500 行以内): 書類は道具 `masked-files` の `read_masked` で置き換えた後の中身だけを読み、取得した条に照らして抜けや食い違いの「候補」を、法令名・条・項・号と原文の短い抜き書きつきで書く手順。見ていない条は根拠にせず人に回す。候補を出したあと反証の係 `refuter` に見直させ、「確かめられない」とされた候補を指摘の一覧から外して「外した候補」として別に見せる(F35b。外した候補は消さない)
   - `reference/articles.md`: 取得した8つの条(建設業法 第3条・第24条の8・第26条、建設業法施行令 第2条・第7条の4・第27条、入札契約適正化法 第15条、建設業法施行規則 第14条の2)の作る側の言葉での要約と、見ていない条の一覧(取得した条の中から引かれている条)。要約は入口で、根拠は原文
   - `reference/sources/`: 取得した法令の原文と取得日の一覧(`data/sources/` の写し)
   - `scripts/check-articles.mjs`: 点検の結果(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる。`node plugin/skills/construction-check/scripts/check-articles.mjs <指摘のファイル>` で、条番号ごとに「ある」「無い」(取得していない条・無い項や号)「確かめられない」(「法第○条」「同条」のように法令名が無い)を出し、1つでも「ある」以外があれば終了コード 1。項・号の切り出しは `src/quote-check.mjs` の写し(`lib/quote-check.mjs`)を使う
@@ -303,7 +303,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 読み込ませて確かめたこと(2026-11-03。架空の書類 A の施工体制台帳だけを `raw/` に置いた作業フォルダで、`claude --plugin-dir` で開いた。1回だけで、ほかの書類では確かめていない):
 - `raw/` の Read: 人が画面で頼み、フックに止められ、`read_masked` で記号に置き換わった中身が返った
 - Skill: 同じ頼みを `claude -p --plugin-dir` で回し、記録(stream-json)で見た。Skill `motouke-navi-guard:construction-check` が呼ばれ、`read_masked` で読み、`reference/sources/` の原文を根拠に指摘の候補を10件出した。`check-articles.mjs` では条番号30件のうち「ある」26・「無い」3・「確かめられない」1だった(候補の中身が正しいかは数えていない)
-- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた
+- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた。この確かめは Skill の手順に係を呼ぶことを書く前のもので、書いた後(F35b)の手順では走らせていない
 
 確かめた公式のページ(Claude Code の文書。取得日 2026-11-03。作る係の環境からは開けなかったので、作る係とは別の進行役が別の環境で開いて要点を渡した。題名は受け取っていないので URL の末尾の名前で示す):
 - plugins/manifest-reference https://code.claude.com/docs/en/plugins/manifest-reference.md (plugin.json の置き場と必須の項目、`${CLAUDE_PLUGIN_ROOT}` などの変数)
