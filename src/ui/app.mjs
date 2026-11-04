@@ -7,6 +7,7 @@ import { checkChecklistText } from '../checklist.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
+import { addCrossCandidates } from '../cross-docs.mjs';
 import { addChecklistCandidates } from '../ledger-check.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
@@ -261,6 +262,14 @@ export function runLedgerCheck(doc) {
     } catch (e) {
       warnings.push('記載事項の「空」の行を候補に足す途中で止まりました: ' + String(e && e.message ? e.message : e));
     }
+    // 施工体系図の欄と目次の点検の欄に文があれば突き合わせる(F32a)。どちらも空なら台帳だけの結果のまま
+    const textOf = (id) => String(doc.getElementById(id)?.value ?? '');
+    try {
+      out = addCrossCandidates(out, ledger, { taikeizu: textOf('taikeizu-input'), plan: textOf('plan-input') });
+      warnings.push(...(out.crossWarnings ?? []));
+    } catch (e) {
+      warnings.push('書類どうしの突き合わせの途中で止まりました: ' + String(e && e.message ? e.message : e));
+    }
     outEl.innerHTML = renderCheckResult(out, warnings);
     lastCheck = out;
     summary.check = out;
@@ -447,7 +456,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       planEl.addEventListener('change', changed);
     }
     // 台帳の文や条件を変えたら、前の点検の結果は書き出さない
-    for (const id of ['ledger-input', ...BID_FORM_IDS]) {
+    for (const id of ['ledger-input', 'taikeizu-input', 'plan-input', ...BID_FORM_IDS]) {
       const el = doc.getElementById(id);
       if (!el) continue;
       const changed = () => {

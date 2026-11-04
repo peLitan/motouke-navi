@@ -153,6 +153,9 @@ export const CHECK_FIELD = {
   'subcontractors.amount': '下請けの請負代金の額',
   'engineer.dedicated': '技術者の専任',
   'project.ordererType': '発注者(公共か民間か)',
+  'cross.subs': '書類どうしの下請負人の一覧',
+  'cross.engineer': '書類どうしの技術者の氏名',
+  'cross.orderer': '書類どうしの発注者の名前',
 };
 // 記載事項の表から足した候補(F29b)の field は 'checklist.<事項の id>'
 export const fieldLabel = (f) => CHECK_FIELD[f] ?? CHECKLIST_ITEMS.find((it) => 'checklist.' + it.id === f)?.label ?? String(f ?? '');

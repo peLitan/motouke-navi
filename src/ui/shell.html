@@ -312,6 +312,9 @@
 <div id="ledger-unreadable" class="result" aria-live="polite"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
 <textarea id="ledger-input" name="ledger-input" rows="12" cols="80"></textarea></div>
+<div class="row"><label for="taikeizu-input">施工体系図の文(任意)</label><br>
+<textarea id="taikeizu-input" name="taikeizu-input" rows="8" cols="80" placeholder="例&#10;発注者: (発注者の名前)&#10;[元請] (会社名)&#10;[一次] (下請けの会社名)&#10;  主任技術者: (氏名)"></textarea></div>
+<p class="note" id="taikeizu-note">貼ると、台帳と下請負人の一覧・下請けの技術者の氏名・発注者の名前を突き合わせます。下の「施工計画書の目次」の欄に「発注者: …」の行があれば、発注者の名前もあわせて比べます。どちらも空なら台帳だけを点検します。</p>
 <div class="row"><button type="button" id="ledger-run">台帳を点検する</button>
 <button type="button" id="check-csv-btn">点検の結果を CSV に書き出す</button></div>
 <p id="check-status" aria-live="polite"></p>
