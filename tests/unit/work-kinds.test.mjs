@@ -15,7 +15,8 @@ import { SAMPLE } from '../../src/sample.mjs';
 import { checkEstimate, renderMarkdown, exitCodeOf, loadTables } from '../../plugin/skills/estimate/scripts/check-estimate.mjs';
 import { runPage } from '../acceptance/_helpers.mjs';
 
-const OTHERS = WORK_KINDS.filter((k) => k.id !== DEFAULT_WORK_KIND);
+// 段取りの表も無い工種(建築の段取りは F44b で足した。建築の目次と積算はまだ無い)
+const OTHERS = WORK_KINDS.filter((k) => !hasKindTable(k.id, 'schedule'));
 const body = buildHtml();
 
 test('固定: 土木の段取り・目次・積算の出力が、工種を足す前の基準と同じ', () => {
@@ -112,7 +113,7 @@ test('積算: 表の無い工種は額を出さず、どの行も合計に入れ
   assert.throws(() => checkEstimate(data('x'), [], tables), RangeError);
 });
 
-test('画面: 土木の見本は出典の行を出し、建築に変えて確認すると切り替わる。見本・CSV・まとめ・安全の候補も通る', async () => {
+test('画面: 土木の見本は出典の行を出し、管工事に変えて確認すると切り替わる。見本・CSV・まとめ・安全の候補も通る', async () => {
   const page = runPage();
   await page.click('sample-load');
   await page.click('confirm-go').catch(() => {});
@@ -121,11 +122,11 @@ test('画面: 土木の見本は出典の行を出し、建築に変えて確認
   assert.ok(line().includes('土木工事共通仕様書(案)令和8年3月') && line().includes('取得日 2026-11-02'), line());
   assert.ok(page.text('schedule-result').includes('受注後の段取りは'));
   assert.equal(page.el('rules-wakayama').hidden, false);
-  page.el('work-kind').value = 'kenchiku';
+  page.el('work-kind').value = 'kan';
   page.el('work-kind').dispatchEvent({ type: 'change' });
   assert.ok(line().includes('土木工事共通仕様書'), '確認を押す前は、出ている結果の出典のまま');
   await page.click('bid-run');
-  assert.ok(line().includes('工種: 建築') && line().includes(NOT_READ), line());
+  assert.ok(line().includes('工種: 管工事') && line().includes(NOT_READ), line());
   assert.ok(page.text('schedule-result').includes(NOT_READ));
   assert.ok(page.el('schedule-notice').textContent.includes(NOT_READ));
   assert.equal(page.el('schedule-about').hidden, true);
@@ -134,7 +135,7 @@ test('画面: 土木の見本は出典の行を出し、建築に変えて確認
   assert.ok(page.text('bid-result').length > 0 && !page.text('bid-result').includes(NOT_READ), '法令の判定は出る');
   await page.click('schedule-csv-btn');
   const csv = await page.blobs.at(-1).text();
-  assert.ok(csv.includes('工種') && csv.includes('建築') && csv.includes(NOT_READ));
+  assert.ok(csv.includes('工種') && csv.includes('管工事') && csv.includes(NOT_READ));
   await page.click('plan-run');
   assert.ok(page.text('plan-result').includes(NOT_READ));
   assert.ok(page.el('work-kind-plan').textContent.includes(NOT_READ));

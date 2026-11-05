@@ -7,7 +7,7 @@ export const ALWAYS_SHOWN = '法令の判定・安全の法令の候補・公告
 
 export const WORK_KINDS = [
   { id: 'doboku', label: '土木(建設機械施工を含む)', tables: { schedule: 'mlit-doboku-spec-r8', plan: 'mlit-doboku-spec-r8', estimate: 'mlit-sekisan-unyou-r8' } },
-  { id: 'kenchiku', label: '建築', tables: {} },
+  { id: 'kenchiku', label: '建築', tables: { schedule: 'mlit-kenchiku-spec-r7' } },
   { id: 'denki', label: '電気工事', tables: {} },
   { id: 'kan', label: '管工事', tables: {} },
   { id: 'tsushin', label: '電気通信工事', tables: {} },

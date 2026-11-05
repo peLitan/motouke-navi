@@ -1,5 +1,6 @@
 // 工種ごとの表と、その出典・版・取得日(F44a)。どの工種がどの表を使うかは work-kinds.mjs の tables の id で決まる
 import scheduleData from '../data/schedule.json' with { type: 'json' };
+import kenchikuSchedule from '../data/schedule-kenchiku.json' with { type: 'json' };
 import planData from '../data/plan-items.json' with { type: 'json' };
 import estimateRates from '../data/estimate-rates.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
@@ -9,6 +10,7 @@ import { NOT_READ, ALWAYS_SHOWN, hasKindTable, workKindOf, workKindLabel } from 
 // [表の id, 部分] → 表。表が足されたら、ここに行を足す
 const TABLES = {
   'mlit-doboku-spec-r8': { schedule: scheduleData, plan: planData },
+  'mlit-kenchiku-spec-r7': { schedule: kenchikuSchedule },
   'mlit-sekisan-unyou-r8': { estimate: estimateRates },
 };
 const PART_LABEL = { schedule: '段取りの表', plan: '施工計画書の記載項目', estimate: '積算の表' };

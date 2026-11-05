@@ -329,6 +329,19 @@
       "sha256": "1464309f397ab7657275dbb5b267362881599c2d3ac6b90f646dbe88e25b6009",
       "excerpt": "取得した .xlsx をそのまま置いた(34,977 バイト。手を加えていない)。台帳の Excel の読み込み(src/ledger-xlsx.mjs)の試験で、本物の様式として読む。この様式には請負代金額の欄が無い",
       "license": "ページに権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
+    },
+    {
+      "id": "mlit-kenchiku-spec-r7",
+      "edition": "令和7年5月12日 最終改定",
+      "kind": "document",
+      "title": "公共建築工事標準仕様書(建築工事編)令和7年版(令和7年5月12日 最終改定。国土交通省大臣官房官庁営繕部。１章 各章共通事項)",
+      "publisher": "国土交通省大臣官房官庁営繕部",
+      "url": "https://www.mlit.go.jp/gobuild/content/001888816.pdf",
+      "section": "１章",
+      "fetchedAt": "2026-11-05",
+      "file": "mlit-kenchiku-spec-r7-ch1.txt",
+      "excerpt": "PDF の1章(PDF の 7〜16 ページ)の文字を scripts/fetch-kenchiku-spec.mjs で取り出した(行を位置でそろえただけ。手で打ち直していない)。2章以降は取り込んでいない。行の頭の「--- PDF の n ページ ---」は取り出すときに足した印で、原文の文字ではない",
+      "license": "資料の1ページが案内する国土交通省ホームページの利用ルール(https://www.mlit.go.jp/link.html)により、権利表記が無いので公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する。文から段取りの行に作り直したのはこの作品の作者で、国土交通省が作ったものではない"
     }
   ]
 }

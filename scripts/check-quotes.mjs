@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkQuote } from '../src/quote-check.mjs';
+import { checkKindSchedule } from '../src/kind-schedule-check.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
@@ -21,7 +22,20 @@ for (const q of quotes) {
   console.log(`${r.ok ? '一致' : '不一致'}\t${q.id}\t${where}${r.ok ? '' : '\t' + r.reason}`);
   if (!r.ok) ng++;
 }
+// 工種の段取りの表(F44b): 行ごとに、抜き書きが箇所の号の中にあるか、期日が抜き書きから読めるかを見る
+const kindTables = ['data/schedule-kenchiku.json'].map(readJson);
+let kindRows = 0;
+for (const table of kindTables) {
+  const errors = checkKindSchedule(table, texts[table.sourceId]);
+  kindRows += table.rules.length;
+  for (const r of table.rules) {
+    const own = errors.filter((e) => e.startsWith(r.id + ':'));
+    console.log(`${own.length ? '不一致' : '一致'}\t${r.id}\t${table.sourceId} ${r.section}${own.length ? '\t' + own.join(' / ') : ''}`);
+  }
+  for (const e of errors.filter((x) => !table.rules.some((r) => x.startsWith(r.id + ':')))) console.log('不一致\t' + e);
+  ng += new Set(errors.map((e) => e.split(':')[0])).size;
+}
 const noQuote = sources.filter((s) => s.kind === 'law' && !quotes.some((q) => q.sourceId === s.id)).map((s) => s.id);
 if (noQuote.length) console.log('抜き書きの無い条: ' + noQuote.join(', '));
-console.log(`抜き書き ${quotes.length} 件のうち 不一致 ${ng} 件`);
+console.log(`抜き書き ${quotes.length + kindRows} 件のうち 不一致 ${ng} 件`);
 process.exit(ng || noQuote.length ? 1 : 0);

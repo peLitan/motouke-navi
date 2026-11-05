@@ -9,7 +9,7 @@ import { tableName, UNDETERMINED } from './rules-load.mjs';
 import { kindTable } from './work-kind-tables.mjs';
 import { DEFAULT_WORK_KIND } from './work-kinds.mjs';
 
-const FIELD_LABEL = {
+export const FIELD_LABEL = {
   hasSubcontract: '下請契約があるか',
   ictMeasure: '発注者が情報通信技術で確認できる措置を講じているか',
   hasSuppliedMaterial: '支給材料・貸与品があるか',
@@ -44,7 +44,7 @@ function basisOf(rule, data) {
     section: rule.section,
     sectionTitle: rule.title,
     sourceId: data.sourceId,
-    quote: rule.quote,
+    quote: rule.deadline ? rule.quote + ' ／ ' + rule.deadline.quote : rule.quote,
     url: s.url,
     fetchedAt: s.fetchedAt,
     version: sourceVersion(s),
@@ -67,8 +67,17 @@ function apply(rule, input) {
     if (isUnknown(v)) checks.push(rule.threshold.label + 'が分からないので、' + yen(t) + '以上なら行います');
     else if (v < t) return { show: false, skip: rule.threshold.label + 'が' + yen(t) + '未満なので出していません' };
   }
+  if (rule.ask) checks.push(rule.ask); // 入力の欄が無い条件(特記の有無など)は、推測せず確かめる行にする
   return { show: true, checks };
 }
+
+// 期日は抜き書きから読む(F44b)。when の {期日} を deadline.quote の pattern に当たる文字で置き換える。読めなければ規則表の誤りとして止める
+export function deadlineText(rule) {
+  const m = String(rule.deadline.quote).replace(/[\s　]+/g, '').match(new RegExp(rule.deadline.pattern));
+  if (!m) throw new Error('段取りの規則表: 抜き書きから期日を読めない: ' + rule.id);
+  return m[0];
+}
+const whenOf = (rule) => (rule.deadline ? rule.when.replace('{期日}', deadlineText(rule)) : rule.when);
 
 // 読み込んだ表(F26b)の行。条件の欄が無いので入力は当てはめず、どの行も「確かめる」にする(「行う」と言い切らない)
 function loadedDetail(input, table) {
@@ -105,6 +114,9 @@ export function buildScheduleDetail(input = {}, table = null, { all = false } = 
   return all ? { ...scheduleDetail({ workKind: input.workKind }, table, true), all: true } : scheduleDetail(input, table, false);
 }
 
+// 土木の表には無い欄。工種の表が名前を持つときだけ返す
+const labelsOf = (data) => (data.docLabel ? { docLabel: data.docLabel, exampleLabel: data.exampleLabel } : {});
+
 function scheduleDetail(input, table, all) {
   if (table?.schedule?.length) return loadedDetail(input, table);
   const workKind = input.workKind ?? DEFAULT_WORK_KIND;
@@ -115,10 +127,10 @@ function scheduleDetail(input, table, all) {
   const notes = [];
   if (input.direct === false) {
     notes.push('この段取りは発注者から直接請け負った受注者(元請け)の例です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください');
-    return { rows, skipped: data.rules.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes };
+    return { rows, skipped: data.rules.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes, ...labelsOf(data) };
   }
-  if (input.orderer === 'private') notes.push('民間工事です。この一覧は国の直轄の例なので、発注者の仕様書・契約書で置き換えてください');
-  notes.push(HANDOVER_NOTE);
+  if (input.orderer === 'private') notes.push(data.privateNote ?? '民間工事です。この一覧は国の直轄の例なので、発注者の仕様書・契約書で置き換えてください');
+  notes.push(...(data.notes ?? [HANDOVER_NOTE]));
   const order = Object.keys(PHASES);
   const rules = [...data.rules].sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
   for (const rule of rules) {
@@ -127,7 +139,7 @@ function scheduleDetail(input, table, all) {
     rows.push({
       id: rule.id,
       phase: rule.phase,
-      when: rule.when,
+      when: whenOf(rule),
       what: rule.what,
       to: rule.to,
       status: all || r.checks.length ? 'needs_check' : 'applies',
@@ -136,7 +148,7 @@ function scheduleDetail(input, table, all) {
       basis: basisOf(rule, data),
     });
   }
-  return { rows, skipped, notes };
+  return { rows, skipped, notes, ...labelsOf(data) };
 }
 
 export function buildSchedule(input = {}) {

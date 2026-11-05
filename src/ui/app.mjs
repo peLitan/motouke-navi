@@ -17,7 +17,7 @@ import { SAFETY_IDS, readSafetyAnswers, renderSafetyResult, safetyAnswerRows, sa
 import { sourceVersion } from '../source-version.mjs';
 import sourcesData from '../../data/sources/index.json' with { type: 'json' };
 import { buildScheduleDetail } from '../schedule.mjs';
-import { kindSourceText } from '../work-kind-tables.mjs';
+import { kindSourceText, kindTable } from '../work-kind-tables.mjs';
 import { DEFAULT_WORK_KIND, NOT_READ, ALWAYS_SHOWN, hasKindTable } from '../work-kinds.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
 import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
@@ -353,17 +353,17 @@ function runSchedule(doc, input, errors = []) {
 // 「もう受注した」(F37c): 条件をまだ入れていない人には、全部の行を「確かめる」で出す。
 // 読み込んだ表と和歌山県の例は条件で行が分かれないので、国の例と同じ文にしない
 let awardedAll = false;
-export function awardedNotice(table, notRead = false) {
+export function awardedNotice(table, notRead = false, exampleLabel = '国の直轄の例') {
   if (notRead) return NOT_READ + 'ので、段取りの行はありません。' + ALWAYS_SHOWN + '。工事の条件を入れて『確認する』を押すと出ます。';
   const custom = Boolean(table?.schedule?.length);
-  const name = custom ? table.label ?? '読み込んだ表' : '国の直轄の例';
+  const name = custom ? table.label ?? '読み込んだ表' : exampleLabel;
   return '条件を入れていないので、' + name + 'の全部の行を出しています。'
     + (custom ? 'この表は条件を入れても行は分かれません。入札前の確認と台帳が要るかは、工事の条件を入れて『確認する』を押すと出ます。' : '工事の条件を入れて『確認する』を押すと、要る・要らないが分かれます。');
 }
 function setAwardedText(doc) {
   const text = doc.getElementById('awarded-notice-text');
   const table = tableFor(shownKind.schedule);
-  if (text) text.textContent = awardedNotice(table, !table?.schedule?.length && !hasKindTable(shownKind.schedule, 'schedule'));
+  if (text) text.textContent = awardedNotice(table, !table?.schedule?.length && !hasKindTable(shownKind.schedule, 'schedule'), kindTable(shownKind.schedule, 'schedule')?.exampleLabel);
 }
 function setAwardedView(doc, on) {
   awardedAll = on;
@@ -400,12 +400,14 @@ function applyRulesSides(doc) {
     const custom = Boolean(table?.[key].length);
     const notRead = !custom && !hasKindTable(kind, part);
     const notice = doc.getElementById(noticeId);
-    if (notice) notice.textContent = notRead ? NOT_READ + '。発注者の仕様書で確かめてください' : !custom ? NATIONAL_NOTICE[noticeId] : table.label ? exampleNotice(table) : tableNotice(table);
+    if (notice) notice.textContent = notRead ? NOT_READ + '。発注者の仕様書で確かめてください' : !custom ? kindTable(kind, part)?.notice ?? NATIONAL_NOTICE[noticeId] : table.label ? exampleNotice(table) : tableNotice(table);
     const about = doc.getElementById(aboutId);
-    if (about) about.hidden = custom || notRead;
+    // 説明の文は土木の表の話なので、土木の表を出しているときだけ見せる
+    const civilText = !custom && !notRead && !kindTable(kind, part)?.notice;
+    if (about) about.hidden = !civilText;
     // 説明の折りたたみ(F37b)は中身が隠れると空になるので、見出しごと隠す
     const fold = about?.closest?.('details');
-    if (fold) fold.hidden = custom || notRead;
+    if (fold) fold.hidden = !civilText;
     const kindLine = doc.getElementById(kindLineId);
     if (kindLine) kindLine.textContent = kindSourceText(kind, part);
   }

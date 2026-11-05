@@ -265,7 +265,7 @@ export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
           + (r.checks?.length ? '<ul class="checks">' + r.checks.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : ''))
         + td(2, esc(r.to)) + td(3, esc(SCHEDULE_STATUS[r.status] ?? r.status ?? '')) + td(4, sectionText(r.basis)) + noteCell(r) + '</tr>').join('')
       + '</tbody></table>')
-      + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? docLabel + 'の抜き書き' : '共通仕様書の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
+      + '<details class="basis schedule-basis"><summary>根拠: ' + (detail.custom ? docLabel + 'の抜き書き' : docLabel + 'の原文') + '(' + esc(SCHEDULE_PHASE[ph] ?? ph) + '・' + quotes.length + '件)</summary><ul>'
       + quotes.map((b) => '<li><strong>' + sectionText(b) + '</strong>(' + esc(b.doc) + '、' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
       + '</ul></details></details>';
   }).join('');
@@ -280,7 +280,7 @@ export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
   return lead + hiddenLine + noteList + body + skipped
-    + '<p class="human">' + (detail.custom ? docLabel + 'の行です' : '国の直轄の例です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
+    + '<p class="human">' + (detail.custom ? docLabel + 'の行です' : esc(detail.exampleLabel ?? '国の直轄の例') + 'です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
 // 施工計画書の目次の点検(F07)。抜けの候補を、根拠(共通仕様書の箇所・ページ・原文)つきで出す
