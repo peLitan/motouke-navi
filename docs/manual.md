@@ -521,7 +521,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 読み込ませて確かめたこと(2026-11-03。架空の書類 A の施工体制台帳だけを `raw/` に置いた作業フォルダで、`claude --plugin-dir` で開いた。1回だけで、ほかの書類では確かめていない):
 - `raw/` の Read: 人が画面で頼み、フックに止められ、`read_masked` で記号に置き換わった中身が返った
 - Skill: 同じ頼みを `claude -p --plugin-dir` で回し、記録(stream-json)で見た。Skill `motouke-navi-guard:construction-check` が呼ばれ、`read_masked` で読み、`reference/sources/` の原文を根拠に指摘の候補を10件出した。`check-articles.mjs` では条番号30件のうち「ある」26・「無い」3・「確かめられない」1だった(候補の中身が正しいかは数えていない)
-- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた。この確かめは Skill の手順に係を呼ぶことを書く前のもので、書いた後(F35b)の手順では走らせていない
+- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた。この確かめは Skill の手順に係を呼ぶことを書く前のもの。書いた後の手順で走らせた結果は、上の「走らせた記録(今の版。2026-11-05、版 156b15c)」にある(元の18件のうち 残る 15・崩れた 2・確かめられない 1)
 
 確かめた公式のページ(Claude Code の文書。取得日 2026-11-03。作る係の環境からは開けなかったので、作る係とは別の進行役が別の環境で開いて要点を渡した。題名は受け取っていないので URL の末尾の名前で示す):
 - plugins/manifest-reference https://code.claude.com/docs/en/plugins/manifest-reference.md (plugin.json の置き場と必須の項目、`${CLAUDE_PLUGIN_ROOT}` などの変数)
