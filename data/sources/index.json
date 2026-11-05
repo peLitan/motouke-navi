@@ -41,6 +41,45 @@
       "file": "law-kensetsu-26.txt"
     },
     {
+      "id": "kensetsu-2",
+      "kind": "law",
+      "law": "建設業法",
+      "lawId": "324AC0000000100",
+      "article": "2",
+      "title": "建設業法 第2条（定義）",
+      "url": "https://laws.e-gov.go.jp/law/324AC0000000100",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml",
+      "revisionId": "324AC0000000100_20251212_506AC0000000049",
+      "fetchedAt": "2026-11-06",
+      "file": "law-kensetsu-2.txt"
+    },
+    {
+      "id": "kensetsu-20",
+      "kind": "law",
+      "law": "建設業法",
+      "lawId": "324AC0000000100",
+      "article": "20",
+      "title": "建設業法 第20条（建設工事の見積り等）",
+      "url": "https://laws.e-gov.go.jp/law/324AC0000000100",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml",
+      "revisionId": "324AC0000000100_20251212_506AC0000000049",
+      "fetchedAt": "2026-11-06",
+      "file": "law-kensetsu-20.txt"
+    },
+    {
+      "id": "kensetsu-25_27",
+      "kind": "law",
+      "law": "建設業法",
+      "lawId": "324AC0000000100",
+      "article": "25の27",
+      "title": "建設業法 第25条の27（施工技術の確保に関する建設業者等の責務）",
+      "url": "https://laws.e-gov.go.jp/law/324AC0000000100",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/324AC0000000100?response_format=xml",
+      "revisionId": "324AC0000000100_20251212_506AC0000000049",
+      "fetchedAt": "2026-11-06",
+      "file": "law-kensetsu-25_27.txt"
+    },
+    {
       "id": "rei-2",
       "kind": "law",
       "law": "建設業法施行令",

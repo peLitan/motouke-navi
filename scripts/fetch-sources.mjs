@@ -22,7 +22,7 @@ const PAGE = 'https://laws.e-gov.go.jp/law/';
 
 // 取得する法令と条('24の8' の形)
 export const LAWS = [
-  { key: 'kensetsu', law: '建設業法', lawId: '324AC0000000100', articles: ['3', '24の8', '26'] },
+  { key: 'kensetsu', law: '建設業法', lawId: '324AC0000000100', articles: ['2', '3', '20', '24の8', '25の27', '26'] },
   { key: 'rei', law: '建設業法施行令', lawId: '331CO0000000273', articles: ['2', '7の4', '27', '37'] },
   { key: 'nyukei', law: '公共工事の入札及び契約の適正化の促進に関する法律', lawId: '412AC0000000127', articles: ['15'] },
   // 施工体制台帳の記載事項(F16)。2026-11-03 に --law kisoku で足した

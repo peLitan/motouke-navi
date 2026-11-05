@@ -40,6 +40,11 @@ export function bidCheckRows(bid) {
   return (bid.checks ?? []).map((c) => row('確認が要る点', c.label, BID_STATUS.needs_check, c.message, c.basis ?? [], []));
 }
 
+// 労務費と処遇の確認(F50a。見出しの行なし)
+export function bidDutyRows(bid) {
+  return (bid.duties ?? []).map((d) => row('労務費と処遇の確認', d.label, BID_STATUS.needs_check, d.note, d.basis, d.exceptions));
+}
+
 // 施工体制台帳が要るか(judgeTaicho の返り値): 見出しの行 + 台帳・写しの結論の2行 + 当てはめた規則表の行ごとに1行
 export function taichoRows(t) {
   const all = t.reasons.flatMap((r) => r.basis ?? []);
@@ -68,6 +73,7 @@ export function stage1Rows(bid, t, notice) {
   return [
     ...bidRows(bid),
     ...bidCheckRows(bid),
+    ...bidDutyRows(bid),
     ...amountBasisRows(bid.amountBasis, '入札前の確認'),
     ...taichoRows(t).slice(1),
     ...amountBasisRows(t.amountBasis, '施工体制台帳'),

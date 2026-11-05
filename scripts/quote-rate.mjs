@@ -62,7 +62,8 @@ const rows = [
     return { ok: true };
   }),
 ];
-const filtered = filterVerifiedRules(rules.rules, quotes, texts);
+const allRules = [...rules.rules, ...rules.laborDuties];
+const filtered = filterVerifiedRules(allRules, quotes, texts);
 const abQuotes = (rules.amountBasis?.basis ?? []).map((b) => b.quoteId);
 const abOk = abQuotes.every((id) => { const q = quotes.find((x) => x.id === id); return q && checkQuote(q, texts).ok; });
 
@@ -71,7 +72,7 @@ const ok = rows.reduce((a, r) => a + r.ok, 0);
 const result = {
   quotes: rows,
   quotesAll: { total, ok, rate: total ? ok / total : null },
-  rules: { total: rules.rules.length, kept: filtered.kept.length, dropped: filtered.dropped.map((r) => r.id), problems: filtered.problems },
+  rules: { total: allRules.length, kept: filtered.kept.length, dropped: filtered.dropped.map((r) => r.id), problems: filtered.problems },
   amountBasis: { ok: abOk },
   ng,
 };

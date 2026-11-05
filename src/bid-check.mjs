@@ -6,6 +6,7 @@ import quotesData from '../data/quotes.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { judgeTaicho, resolveQuoteIds } from './taicho.mjs';
 import { findPrimeExperience, primeMessage, PRIME_CHECK_KEY, PRIME_CHECK_LABEL } from './prime-experience.mjs';
+import { laborDuties } from './labor-duty.mjs';
 
 const QUOTES = quotesData.quotes;
 const SOURCES = sourcesData.sources;
@@ -189,7 +190,7 @@ function dedicatedItem(input, t) {
 
 // 入力: { orderer: 'public'|'private', direct, workType: 'kenchiku-ikkatsu'|'other', contractAmount(円・税込み), hasSubcontract,
 //         subcontractTotal(円・税込み), license: 'tokutei'|'ippan', engineerQualification: 'kanri'|'shunin', ictMeasure, participationConditions(公告の参加の条件の文。任意) }
-// 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message }], amountBasis, disclaimer }
+// 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message }], duties(労務費と処遇の候補), amountBasis, disclaimer }
 export function bidCheck(input = {}) {
   const lt = licenseThreshold();
   const dt = dedicatedThreshold();
@@ -218,6 +219,7 @@ export function bidCheck(input = {}) {
   return {
     items,
     checks,
+    duties: laborDuties(input),
     amountBasis: tc.amountBasis,
     disclaimer: '受注したら要るものと確認が要る点を、取得した法令の原文の条で並べたものです。入札するかどうかの判断は、発注者の公告・仕様書と許可通知書などを確かめたうえで人がしてください',
   };

@@ -103,11 +103,18 @@ export function renderBidResult(bid, values) {
   const checks = points.length
     ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
+  // 労務費と処遇の候補(F50a): 上の「確認が要る点」の件数には混ぜない
+  const dutyList = bid.duties ?? [];
+  const duties = dutyList.length
+    ? '<h3 id="labor-duties">労務費と処遇の確認(確認が要る候補)</h3><p class="points-note">上の件数には数えていません。原文の抜き書きを見て、担当者が確かめてください。このツールは当たる・当たらないを判定しません。</p><ul class="items">'
+      + dutyList.map((d) => '<li class="duty item status-needs_check"><h4>' + esc(d.label) + ': <span class="status">' + statusBadge('needs_check') + '</span></h4><p class="reason">' + esc(d.note) + '</p>'
+        + '<details class="basis"><summary>根拠を見る: ' + basisLabels(d.basis) + '</summary>' + basisItems(d.basis) + exceptionList(d.exceptions) + '</details></li>').join('') + '</ul>'
+    : '';
   const un = values ? unansweredQuestions(values) : [];
   const provisional = un.length
     ? '<p class="provisional"><strong>仮の一覧です</strong>。未回答の質問が ' + un.length + 'つあります(' + esc(un.map((q) => q.name).join('・')) + ')。答えるか「分からない」を選んでから、もう一度「確認する」を押してください。</p>'
     : '';
-  return provisional + '<h3>受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3><ul class="items">' + rows + '</ul>' + checks + amountBasisBlock(bid.amountBasis)
+  return provisional + '<h3>受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3><ul class="items">' + rows + '</ul>' + checks + duties + amountBasisBlock(bid.amountBasis)
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
 }
 
