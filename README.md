@@ -85,7 +85,7 @@
 - 部品・試した記録・限界の全部は [docs/manual.md の「Claude Code のプラグイン」](docs/manual.md#claude-code-のプラグインplugin)
 
 ## Claude Code での作り方
-開発の仕組み(自走キット・hook・subagent・機能の一覧)は開始前に作ったもので、このリポジトリには入っていません(審査の対象外です)。Claude Code が1つずつの機能を短いセッションで作り、人は決めることがあるときだけ答える形で作りました。受け入れテスト(`tests/acceptance/`、21 ファイル)は人の承認のあと指紋で固定し、作る係は直せません。仕組みの説明は [docs/manual.md の「Claude Code での作り方」](docs/manual.md#claude-code-での作り方) にあります。
+開発の仕組み(自走キット・hook・subagent・機能の一覧)は開始前に作ったもので、このリポジトリには入っていません(審査の対象外です)。Claude Code が1つずつの機能を短いセッションで作り、人は決めることがあるときだけ答える形で作りました。受け入れテスト(`tests/acceptance/`、21 ファイル)は人の承認のあと指紋で固定し、作る係は直せません。仕組みの説明は [docs/manual.md の「Claude Code での作り方」](docs/manual.md#claude-code-での作り方) にあります。作品の中で Claude と機械が役を分けている筋と、期間中に作った跡の数は、[docs/overview.md の「Claude の使い方」](docs/overview.md#claude-の使い方) にあります。
 
 ## 評価
 - 受け入れテスト 21 ファイル・110 件がすべて通る(`node --test tests/acceptance/*.test.mjs`)。単体の試験は `tests/unit/`
