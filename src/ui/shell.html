@@ -311,6 +311,13 @@
 <details class="fold" id="form-lead-more"><summary>選び方の詳しい説明</summary>
 <p>「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
 </details>
+<details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
+<p class="hint">Claude Code の Skill <code>bid-intake</code> が書いたファイルを選ぶと、確かめが要らなかった値だけを入れます。通信も保存もしません。</p>
+<div class="row"><label for="intake-load">拾った条件のファイル(.json)</label>
+<input type="file" id="intake-load" name="intake-load" accept=".json,application/json"></div>
+<p id="intake-status" aria-live="polite"></p>
+<div id="intake-result"></div>
+</details>
 <div class="row"><label for="orderer">発注者<span class="req req-must">※必須</span></label>
 <select id="orderer" name="orderer" aria-describedby="orderer-hint">
 <option value="">選んでください</option>

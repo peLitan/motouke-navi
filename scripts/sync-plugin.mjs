@@ -29,6 +29,8 @@ export const PLUGIN_COPIES = [
   ['data/sources/index.json', 'plugin/skills/construction-check/reference/sources/index.json'],
   // F26a: 仕様書から規則表を作る Skill の照合(check-quotes.mjs と同じ部品)
   ['src/quote-check.mjs', 'plugin/skills/spec-to-rules/scripts/lib/quote-check.mjs'],
+  // F41a: 公告から条件を拾う Skill の照合
+  ['src/quote-check.mjs', 'plugin/skills/bid-intake/scripts/lib/quote-check.mjs'],
   ...['kensetsu-3', 'kensetsu-24_8', 'kensetsu-26', 'rei-2', 'rei-7_4', 'rei-27', 'nyukei-15', 'kisoku-14_2']
     .map((id) => [`data/sources/law-${id}.txt`, `plugin/skills/construction-check/reference/sources/law-${id}.txt`]),
 ];

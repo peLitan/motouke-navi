@@ -19,6 +19,7 @@ import sourcesData from '../../data/sources/index.json' with { type: 'json' };
 import { buildScheduleDetail } from '../schedule.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
 import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
+import { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } from '../intake-load.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
 import { startMask } from './mask-app.mjs';
@@ -649,6 +650,37 @@ export function loadSample(doc) {
   setBidStatus(doc, bidNotice(SAMPLE_NOTICE_DONE));
 }
 
+// 公告から拾った条件のファイルを読み、入れてよい欄だけ入れる(F41a)。壊れたファイルは何も変えない
+function setIntakeStatus(doc, text, lines = []) {
+  const st = doc.getElementById('intake-status');
+  if (st) st.textContent = text;
+  const out = doc.getElementById('intake-result');
+  if (out) out.innerHTML = lines.length ? '<ul>' + lines.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
+}
+export function loadIntakeFile(doc, text) {
+  let t;
+  try {
+    t = parseIntakeFile(text);
+  } catch (e) {
+    setIntakeStatus(doc, '読み込めませんでした: ' + e.message + '。入力欄はそのままです。');
+    return false;
+  }
+  // 見本の値に混ぜない
+  if (doc.getElementById('sample-banner')?.hidden === false) clearSample(doc);
+  for (const [id, v] of Object.entries(t.form)) {
+    const el = doc.getElementById(id);
+    if (!el) continue;
+    el.value = v;
+    if (id === 'contract-amount') {
+      const unknown = doc.getElementById('contract-amount-unknown');
+      if (unknown) unknown.checked = false;
+    }
+    if (typeof Event === 'function') el.dispatchEvent?.(new Event('input', { bubbles: true }));
+  }
+  setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。', intakeLines(t));
+  return true;
+}
+
 // 「自分の工事で入れ直す」(F37a): 見本の値と見本から出た結果を消し、段1 を開く。
 // 見本を読み込んだあとに利用者が貼り替えた台帳・目次は、見本ではないので消さない
 const RESULT_IDS = ['bid-result', 'taicho-result', 'schedule-result', 'open-items', 'check-result', 'checklist-result', 'plan-result'];
@@ -779,6 +811,14 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (f.size > RULES_MAX_BYTES) setRulesStatus(doc, '読み込めませんでした: 表のファイルとしては大きすぎます(1MB まで)。今の表はそのままです。');
       else loadRulesFile(doc, await f.text());
       rulesFile.value = '';
+    });
+    const intakeFile = doc.getElementById('intake-load');
+    if (intakeFile) intakeFile.addEventListener('change', async () => {
+      const f = intakeFile.files && intakeFile.files[0];
+      if (!f) return;
+      if (f.size > INTAKE_MAX_BYTES) setIntakeStatus(doc, '読み込めませんでした: ファイルが大きすぎます(1MB まで)。入力欄はそのままです。');
+      else loadIntakeFile(doc, await f.text());
+      intakeFile.value = '';
     });
     on('plan-run', () => runPlanCheck(doc));
     on('plan-csv-btn', () => exportPlanCsv(doc));
