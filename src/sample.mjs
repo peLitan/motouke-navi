@@ -92,6 +92,7 @@ export const SAMPLE = {
     license: 'tokutei',
     'engineer-qualification': 'kanri',
     'ict-measure': false,
+    'participation-conditions': '',
   },
   // 見本の工事で行う作業(F40b の問い4 の id)
   safetyWorks: ['excavation', 'shoring'],

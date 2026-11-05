@@ -759,7 +759,14 @@ export function loadIntakeFile(doc, text) {
     }
     if (typeof Event === 'function') el.dispatchEvent?.(new Event('input', { bubbles: true }));
   }
-  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, Object.keys(t.form)) };
+  // 別の公告の文が残らないよう、施工実績の文は無くても置き換える(F49a)
+  const participation = doc.getElementById('participation-conditions');
+  if (participation) {
+    participation.value = t.participation;
+    if (typeof Event === 'function') participation.dispatchEvent?.(new Event('input', { bubbles: true }));
+  }
+  const filled = t.participation ? [...Object.keys(t.form), 'participation-conditions'] : Object.keys(t.form);
+  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, filled) };
   setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
   return true;
 }

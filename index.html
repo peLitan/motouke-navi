@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Fev4sbFT/fwnYjR0e16PHs3/EfZFIxHJeRJ1dxBU+A0='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DWd1JbaXf1n2c7EA2AL45QTqyz9Vuwah609VzzS40S4='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -490,6 +490,9 @@
 <details class="fold hint-fold"><summary aria-label="置ける技術者の資格の説明">説明</summary><p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></details></div>
 <div class="row check-row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
 <details class="fold hint-fold"><summary aria-label="閲覧できる措置の説明">説明</summary><p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></details></div>
+<div class="row"><label for="participation-conditions">公告の参加の条件(任意)</label>
+<textarea id="participation-conditions" name="participation-conditions" rows="3" placeholder="例 平成29年度以降に、元請けとして同種工事の施工実績を有すること。" aria-describedby="participation-conditions-hint"></textarea>
+<details class="fold hint-fold"><summary aria-label="公告の参加の条件の説明">説明</summary><p id="participation-conditions-hint" class="hint">公告の施工実績の条件の文を貼ります。公告から拾った条件を読み込むと、施工実績の抜き書きがここに入ります。元請けとしての実績を求める文があれば、確認が要る点に出します。文の語を見るだけで、参加できるかどうかは判定しません。</p></details></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
 </section>
@@ -507,6 +510,7 @@
 <div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd><dd class="confirm-change"><button type="button" id="confirm-change-license" aria-label="元請けの許可の種類を変更">変更</button></dd></div>
 <div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd><dd class="confirm-change"><button type="button" id="confirm-change-engineer-qualification" aria-label="置ける技術者の資格を変更">変更</button></dd></div>
 <div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd><dd class="confirm-change"><button type="button" id="confirm-change-ict-measure" aria-label="発注者が台帳を閲覧できる措置を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd><dd class="confirm-change"><button type="button" id="confirm-change-participation-conditions" aria-label="公告の参加の条件を変更">変更</button></dd></div>
 </dl>
 <div class="row"><button type="button" id="confirm-back">条件の画面に戻る</button></div>
 <div class="row step-next"><button type="button" id="confirm-go">この内容で結果を見る</button></div>
@@ -881,6 +885,7 @@ const readWorkKind = (values = {}) => (isWorkKind(values['work-kind']) ? values[
 
 // 欄の値の入れ物 → 判定の入力。下請けの総額が 0 なら下請契約は無い、空なら有無は分からない(null)
 function readBidForm(values = {}) {
+  const participation = String(values['participation-conditions'] ?? '').trim();
   // 金額の欄の「分からない」(F14f)に印があれば、欄の値は使わない(null。判定の側で「確認が要る」になる)
   const contract = flag(values['contract-amount-unknown']) ? { value: null } : parseYen(values['contract-amount']);
   const sub = flag(values['subcontract-total-unknown']) ? { value: null } : parseYen(values['subcontract-total']);
@@ -894,6 +899,7 @@ function readBidForm(values = {}) {
     license: choice('license', values.license),
     engineerQualification: choice('engineer-qualification', values['engineer-qualification']),
     ictMeasure: flag(values['ict-measure']),
+    ...(participation ? { participationConditions: participation } : {}),
   };
 }
 
@@ -913,7 +919,7 @@ function amountValidity(values = {}) {
   return AMOUNT_FIELDS.map(([key]) => [key, Boolean(amountError(values, key))]);
 }
 
-const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'work-kind', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];
+const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'work-kind', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure', 'participation-conditions'];
 const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'contract-amount-unknown', 'subcontract-total-unknown', 'ict-measure'];
 
 return { parseYen, readDirect, readWorkKind, readBidForm, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS };
@@ -2842,6 +2848,52 @@ function judgeTaicho(input) {
 
 return { matchesValue, matchesCondition, missingInputs, resolveBasis, resolveQuoteIds, judgeWithTables, judgeTaicho };
 })();
+__m["src/prime-experience.mjs"] = (function () {
+// 公告の参加の条件の文から「元請けとしての施工実績」を求める文を探す(F49a)。通信しない。AI も使わない。
+// 文ごとに語で見るだけなので、当たっても「確認が要る」として知らせ、参加できないとは言い切らない。
+
+// 実績の条件の語
+const EXPERIENCE = /実績|同種(?:の)?工事|同等(?:の)?工事|類似(?:の)?工事/;
+const PRIME = /元請/;
+// 元請け・下請けを問わない
+const EITHER = [
+  /元請[^。]{0,15}下請[^。]{0,10}(?:問わ|問いません|別なく|かかわらず|関わらず|いずれ)/,
+  /元請[けの負]?(?:業者|人)?(?:又は|または|若しくは|もしくは|及び|および|・|、|,|，)\s*下請/,
+  /下請[^。]{0,12}(?:含む|含みます|含め(?!な|ず|ま)|も可|でも可|でもよい|も認め|でも差し支え|も対象)/,
+];
+// 実績そのものを求めていない
+// 表の「元請けとしての実績 不要」のように、語のあいだに空白が入ることがある
+const NOT_REQUIRED = /実績(?:の有無)?[\s　]*(?:は|を|について(?:は)?)?[\s　]*(?:問わ|問いません|求めない|求めません|要しない|要しません|不要|必要としない|必要ありません)/;
+// 下請けの実績を認めないと書いてある(語が「元請」でなくても同じ条件)
+const SUB_EXCLUDED = /下請[^。]{0,12}(?:含まない|含みません|含まず|認めない|認めません|認められない|除く|除きます|不可)/;
+// 求めている形の語。実績の語があるだけの文(「…のものは本施工実績とはならない」)は条件にしない
+const REQUIRED = /有する|有して|有し|あること|ある者|あるもの|必要|求める|求めます|条件|限る|限り|のみ|実績[\s　:：]*(?:要|有)/;
+// 参加の条件ではない文(加点の説明、技術者の経験)
+const NOT_CONDITION = /加点|評価点|評価項目|評価の対象|評価する|評価します|望ましい/;
+const ENGINEER_SENTENCE = /^[^、。]{0,16}技術者(?:は|が)/;
+const ITEM_HEAD = /\n(?=[\s　]*[(（]?[0-9０-９]+[)）.．])/;
+
+// 改行を除いた文の列。PDF の折り返しでは切らず、「。」と番号の付いた行の頭で切る
+const sentences = (text) => String(text ?? '').split(ITEM_HEAD).flatMap((part) => part.split(/(?<=。)/))
+  .map((s) => s.replace(/[\s　]*\n[\s　]*/g, '').trim()).filter(Boolean);
+
+function isPrimeCondition(s) {
+  if (!EXPERIENCE.test(s) || !REQUIRED.test(s) || NOT_REQUIRED.test(s) || NOT_CONDITION.test(s) || ENGINEER_SENTENCE.test(s)) return false;
+  if (EITHER.some((re) => re.test(s))) return false;
+  return PRIME.test(s) || SUB_EXCLUDED.test(s);
+}
+
+// 当たった最初の文を返す。無ければ null
+function findPrimeExperience(text) {
+  return sentences(text).find(isPrimeCondition) ?? null;
+}
+
+const PRIME_CHECK_KEY = 'prime-experience';
+const PRIME_CHECK_LABEL = '元請けの施工実績';
+const primeMessage = (quote) => 'この工事は元請けとしての施工実績を参加の条件にしています。初めて元請けをする会社は参加できない場合があります。発注者が認める実績の範囲は、公告と説明書で確かめてください。公告の文: 「' + quote + '」';
+
+return { findPrimeExperience, PRIME_CHECK_KEY, PRIME_CHECK_LABEL, primeMessage };
+})();
 __m["src/bid-check.mjs"] = (function () {
 // 入札前の確認(F10): 案件の条件から、受注したら要るものを根拠の条つきで並べる。
 // 「入札すべき」「参加できる」とは出さない。判断の材料と確認が要る点を並べ、最後の判断は人がする。
@@ -2850,6 +2902,7 @@ __m["src/bid-check.mjs"] = (function () {
 const quotesData = __m["data/quotes.json"];
 const sourcesData = __m["data/sources/index.json"];
 const { judgeTaicho, resolveQuoteIds } = __m["src/taicho.mjs"];
+const { findPrimeExperience, primeMessage, PRIME_CHECK_KEY, PRIME_CHECK_LABEL } = __m["src/prime-experience.mjs"];
 
 const QUOTES = quotesData.quotes;
 const SOURCES = sourcesData.sources;
@@ -3032,7 +3085,7 @@ function dedicatedItem(input, t) {
 }
 
 // 入力: { orderer: 'public'|'private', direct, workType: 'kenchiku-ikkatsu'|'other', contractAmount(円・税込み), hasSubcontract,
-//         subcontractTotal(円・税込み), license: 'tokutei'|'ippan', engineerQualification: 'kanri'|'shunin', ictMeasure }
+//         subcontractTotal(円・税込み), license: 'tokutei'|'ippan', engineerQualification: 'kanri'|'shunin', ictMeasure, participationConditions(公告の参加の条件の文。任意) }
 // 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message }], amountBasis, disclaimer }
 function bidCheck(input = {}) {
   const lt = licenseThreshold();
@@ -3056,6 +3109,9 @@ function bidCheck(input = {}) {
   for (const it of items) {
     if (it.status === 'needs_check' && !checks.some((c) => c.key === it.key)) checks.push({ key: it.key, label: it.label, message: it.note });
   }
+  // 元請けとしての施工実績を求める文(F49a)。法令の判定ではないので項目にせず、確認が要る点にだけ出す
+  const prime = findPrimeExperience(input.participationConditions);
+  if (prime) checks.push({ key: PRIME_CHECK_KEY, label: PRIME_CHECK_LABEL, message: primeMessage(prime) });
   return {
     items,
     checks,
@@ -4660,6 +4716,8 @@ __m["src/intake-load.mjs"] = (function () {
 // 画面の「公告から拾った条件を読み込む」(F41a): Skill bid-intake の check-conditions.mjs --out のファイルを読む。
 // 通信しない。保存しない。入れるのは、確かめが要らなかった値だけ。
 const INTAKE_MAX_BYTES = 1024 * 1024;
+const { findPrimeExperience, PRIME_CHECK_LABEL } = __m["src/prime-experience.mjs"];
+
 const OK = '拾えた';
 // 画面の欄 → 値の確かめと、値の元の行
 const FIELDS = {
@@ -4673,6 +4731,11 @@ const list = (v, name) => {
   if (!Array.isArray(v)) throw new Error(name + ' の形が違います');
   return v;
 };
+
+// 画面の「公告の参加の条件」の欄に入れる文(F49a)。原文と照らした施工実績の抜き書き
+const participationText = (rows) => rows
+  .filter((r) => r?.key === 'past-work' && (r.status === OK || r.status === '確かめが要る'))
+  .map((r) => String(r.quote || r.value || '').trim()).filter(Boolean).join('\n');
 
 function parseIntakeFile(text) {
   let data;
@@ -4691,12 +4754,13 @@ function parseIntakeFile(text) {
   }
   // 入力の確かめ(F43d)に出す、欄の値の元の抜き書き
   const quotes = Object.fromEntries(Object.keys(form).map((id) => [id, String(rows.find((r) => r?.key === FIELDS[id].row && r.status === OK)?.quote ?? '')]));
-  return { title, form, quotes, rows, skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
+  return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
 }
 
 // 読み込んだあとに人が見る行
 function intakeLines(t) {
   const lines = [];
+  if (findPrimeExperience(t.participation)) lines.push('確認が要る ' + PRIME_CHECK_LABEL + ': 元請けとしての実績を求める文があります。結果の「確認が要る点」に出します');
   for (const r of t.rows) {
     if (r?.status === '確かめが要る') lines.push('確かめが要る ' + r.label + ': ' + (r.flags ?? []).join(' / '));
     if (r?.status === '公告に書いていない') lines.push('公告に書いていない ' + r.label);
@@ -4804,6 +4868,7 @@ const SAMPLE = {
     license: 'tokutei',
     'engineer-qualification': 'kanri',
     'ict-measure': false,
+    'participation-conditions': '',
   },
   // 見本の工事で行う作業(F40b の問い4 の id)
   safetyWorks: ['excavation', 'shoring'],
@@ -4834,6 +4899,7 @@ const CONFIRM_ROWS = [
   select('license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }),
   select('engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }),
   { key: 'ict-measure', label: '発注者が台帳を閲覧できる措置', kind: 'check', field: 'ict-measure' },
+  { key: 'participation-conditions', label: '公告の参加の条件', kind: 'text', field: 'participation-conditions' },
 ];
 
 const ROLES = [['direct', '元請け'], ['direct-sub', '下請け'], ['direct-unknown', '分からない']];
@@ -4848,6 +4914,10 @@ function answer(row, values) {
     return hit ? { text: hit[1], raw: hit[0], state: hit[0] === 'direct-unknown' ? 'unknown' : 'set' } : { text: UNSET, raw: '', state: 'unset' };
   }
   if (row.kind === 'check') return on(values[row.field]) ? { text: '講じる', raw: true, state: 'set' } : { text: '講じない(印なし)', raw: false, state: 'set' };
+  if (row.kind === 'text') {
+    const raw = String(values[row.field] ?? '').trim();
+    return { text: raw || '入れていません(任意)', raw, state: 'set' };
+  }
   if (row.kind === 'amount') {
     if (on(values[row.field + '-unknown'])) return { text: UNKNOWN, raw: 'unknown', state: 'unknown' };
     const raw = String(values[row.field] ?? '');
@@ -4877,7 +4947,8 @@ function confirmRows(values = {}, sources = {}) {
     const a = answer(row, values);
     const s = sources[row.key];
     const kept = s && s.raw === a.raw ? s : null;
-    const source = a.state === 'unset' ? '未入力' : kept ? kept.kind : '手入力';
+    const empty = a.state === 'unset' || (row.kind === 'text' && !a.raw && !kept);
+    const source = empty ? '未入力' : kept ? kept.kind : '手入力';
     return { key: row.key, label: row.label, field: row.field ?? null, text: a.text, state: a.state, source, quote: kept?.quote ?? '', estimated: source === '公告' };
   });
 }
@@ -8262,7 +8333,14 @@ function loadIntakeFile(doc, text) {
     }
     if (typeof Event === 'function') el.dispatchEvent?.(new Event('input', { bubbles: true }));
   }
-  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, Object.keys(t.form)) };
+  // 別の公告の文が残らないよう、施工実績の文は無くても置き換える(F49a)
+  const participation = doc.getElementById('participation-conditions');
+  if (participation) {
+    participation.value = t.participation;
+    if (typeof Event === 'function') participation.dispatchEvent?.(new Event('input', { bubbles: true }));
+  }
+  const filled = t.participation ? [...Object.keys(t.form), 'participation-conditions'] : Object.keys(t.form);
+  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, filled) };
   setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
   return true;
 }

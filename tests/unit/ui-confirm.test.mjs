@@ -24,9 +24,9 @@ const INTAKE = JSON.stringify({
   form: { orderer: 'public', 'work-type': 'other', 'contract-amount': '82500000' },
 });
 
-test('行の数: 判定に使う条件を全部(9行)並べ、行ごとに「変更」のボタンがあり、文は欄の選択肢と同じ', () => {
-  assert.equal(CONFIRM_ROWS.length, 9);
-  assert.equal(section.match(/class="confirm-row"/g).length, 9);
+test('行の数: 判定に使う条件を全部(10行)並べ、行ごとに「変更」のボタンがあり、文は欄の選択肢と同じ', () => {
+  assert.equal(CONFIRM_ROWS.length, 10);
+  assert.equal(section.match(/class="confirm-row"/g).length, 10);
   for (const r of CONFIRM_ROWS) {
     assert.ok(section.includes('<dt>' + r.label + '</dt>'), r.label);
     assert.match(section, new RegExp('id="confirm-value-' + r.key + '"'));

@@ -39,6 +39,7 @@ export const readWorkKind = (values = {}) => (isWorkKind(values['work-kind']) ? 
 
 // 欄の値の入れ物 → 判定の入力。下請けの総額が 0 なら下請契約は無い、空なら有無は分からない(null)
 export function readBidForm(values = {}) {
+  const participation = String(values['participation-conditions'] ?? '').trim();
   // 金額の欄の「分からない」(F14f)に印があれば、欄の値は使わない(null。判定の側で「確認が要る」になる)
   const contract = flag(values['contract-amount-unknown']) ? { value: null } : parseYen(values['contract-amount']);
   const sub = flag(values['subcontract-total-unknown']) ? { value: null } : parseYen(values['subcontract-total']);
@@ -52,6 +53,7 @@ export function readBidForm(values = {}) {
     license: choice('license', values.license),
     engineerQualification: choice('engineer-qualification', values['engineer-qualification']),
     ictMeasure: flag(values['ict-measure']),
+    ...(participation ? { participationConditions: participation } : {}),
   };
 }
 
@@ -71,5 +73,5 @@ export function amountValidity(values = {}) {
   return AMOUNT_FIELDS.map(([key]) => [key, Boolean(amountError(values, key))]);
 }
 
-export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'work-kind', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];
+export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'work-kind', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure', 'participation-conditions'];
 export const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'contract-amount-unknown', 'subcontract-total-unknown', 'ict-measure'];

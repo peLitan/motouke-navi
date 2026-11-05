@@ -457,6 +457,9 @@
 <details class="fold hint-fold"><summary aria-label="置ける技術者の資格の説明">説明</summary><p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></details></div>
 <div class="row check-row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
 <details class="fold hint-fold"><summary aria-label="閲覧できる措置の説明">説明</summary><p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></details></div>
+<div class="row"><label for="participation-conditions">公告の参加の条件(任意)</label>
+<textarea id="participation-conditions" name="participation-conditions" rows="3" placeholder="例 平成29年度以降に、元請けとして同種工事の施工実績を有すること。" aria-describedby="participation-conditions-hint"></textarea>
+<details class="fold hint-fold"><summary aria-label="公告の参加の条件の説明">説明</summary><p id="participation-conditions-hint" class="hint">公告の施工実績の条件の文を貼ります。公告から拾った条件を読み込むと、施工実績の抜き書きがここに入ります。元請けとしての実績を求める文があれば、確認が要る点に出します。文の語を見るだけで、参加できるかどうかは判定しません。</p></details></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
 </section>
@@ -474,6 +477,7 @@
 <div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd><dd class="confirm-change"><button type="button" id="confirm-change-license" aria-label="元請けの許可の種類を変更">変更</button></dd></div>
 <div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd><dd class="confirm-change"><button type="button" id="confirm-change-engineer-qualification" aria-label="置ける技術者の資格を変更">変更</button></dd></div>
 <div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd><dd class="confirm-change"><button type="button" id="confirm-change-ict-measure" aria-label="発注者が台帳を閲覧できる措置を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd><dd class="confirm-change"><button type="button" id="confirm-change-participation-conditions" aria-label="公告の参加の条件を変更">変更</button></dd></div>
 </dl>
 <div class="row"><button type="button" id="confirm-back">条件の画面に戻る</button></div>
 <div class="row step-next"><button type="button" id="confirm-go">この内容で結果を見る</button></div>

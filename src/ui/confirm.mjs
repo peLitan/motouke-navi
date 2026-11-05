@@ -16,6 +16,7 @@ export const CONFIRM_ROWS = [
   select('license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }),
   select('engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }),
   { key: 'ict-measure', label: '発注者が台帳を閲覧できる措置', kind: 'check', field: 'ict-measure' },
+  { key: 'participation-conditions', label: '公告の参加の条件', kind: 'text', field: 'participation-conditions' },
 ];
 
 const ROLES = [['direct', '元請け'], ['direct-sub', '下請け'], ['direct-unknown', '分からない']];
@@ -30,6 +31,10 @@ function answer(row, values) {
     return hit ? { text: hit[1], raw: hit[0], state: hit[0] === 'direct-unknown' ? 'unknown' : 'set' } : { text: UNSET, raw: '', state: 'unset' };
   }
   if (row.kind === 'check') return on(values[row.field]) ? { text: '講じる', raw: true, state: 'set' } : { text: '講じない(印なし)', raw: false, state: 'set' };
+  if (row.kind === 'text') {
+    const raw = String(values[row.field] ?? '').trim();
+    return { text: raw || '入れていません(任意)', raw, state: 'set' };
+  }
   if (row.kind === 'amount') {
     if (on(values[row.field + '-unknown'])) return { text: UNKNOWN, raw: 'unknown', state: 'unknown' };
     const raw = String(values[row.field] ?? '');
@@ -59,7 +64,8 @@ export function confirmRows(values = {}, sources = {}) {
     const a = answer(row, values);
     const s = sources[row.key];
     const kept = s && s.raw === a.raw ? s : null;
-    const source = a.state === 'unset' ? '未入力' : kept ? kept.kind : '手入力';
+    const empty = a.state === 'unset' || (row.kind === 'text' && !a.raw && !kept);
+    const source = empty ? '未入力' : kept ? kept.kind : '手入力';
     return { key: row.key, label: row.label, field: row.field ?? null, text: a.text, state: a.state, source, quote: kept?.quote ?? '', estimated: source === '公告' };
   });
 }

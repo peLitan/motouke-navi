@@ -5,6 +5,7 @@
 import quotesData from '../data/quotes.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { judgeTaicho, resolveQuoteIds } from './taicho.mjs';
+import { findPrimeExperience, primeMessage, PRIME_CHECK_KEY, PRIME_CHECK_LABEL } from './prime-experience.mjs';
 
 const QUOTES = quotesData.quotes;
 const SOURCES = sourcesData.sources;
@@ -187,7 +188,7 @@ function dedicatedItem(input, t) {
 }
 
 // 入力: { orderer: 'public'|'private', direct, workType: 'kenchiku-ikkatsu'|'other', contractAmount(円・税込み), hasSubcontract,
-//         subcontractTotal(円・税込み), license: 'tokutei'|'ippan', engineerQualification: 'kanri'|'shunin', ictMeasure }
+//         subcontractTotal(円・税込み), license: 'tokutei'|'ippan', engineerQualification: 'kanri'|'shunin', ictMeasure, participationConditions(公告の参加の条件の文。任意) }
 // 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message }], amountBasis, disclaimer }
 export function bidCheck(input = {}) {
   const lt = licenseThreshold();
@@ -211,6 +212,9 @@ export function bidCheck(input = {}) {
   for (const it of items) {
     if (it.status === 'needs_check' && !checks.some((c) => c.key === it.key)) checks.push({ key: it.key, label: it.label, message: it.note });
   }
+  // 元請けとしての施工実績を求める文(F49a)。法令の判定ではないので項目にせず、確認が要る点にだけ出す
+  const prime = findPrimeExperience(input.participationConditions);
+  if (prime) checks.push({ key: PRIME_CHECK_KEY, label: PRIME_CHECK_LABEL, message: primeMessage(prime) });
   return {
     items,
     checks,
