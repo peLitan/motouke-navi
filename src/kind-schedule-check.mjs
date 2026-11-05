@@ -6,7 +6,11 @@ const strip = (s) => String(s).replace(/[\s　]+/g, '');
 // 取り出すときに足した頁の印は原文ではないので除く(文が頁をまたいでも見つかる)
 const bodyOf = (text) => text.replace(/^--- PDF の \d+ ページ ---\n/gm, '');
 // 見出しは番号と空白の無い題名の行。機械設備工事編の 1.5.6.1 のように4段の番号もある。表の行(番号 名前 試験項目)は空白があるので見出しにしない
-const HEAD = /^(\d+\.\d+\.\d+(?:\.\d+)?) (\S+)$/gm;
+// 土木と同じ型の共通仕様書は「1-1-1-13 施工体制台帳」の形で、題名に空白が入ることがある(F44g)
+const HEAD = /^(?:(\d+\.\d+\.\d+(?:\.\d+)?) (\S+)|(\d+-\d+-\d+-\d+) (.+))$/gm;
+const COMMON_SECTION = /^\d+-\d+-\d+-\d+$/;
+// 共通仕様書の節の中の号は title の「施工体制台帳(2.施工体系図)」で指す(土木の表と同じ書き方)
+const TITLE_ITEM = /^(.+)\((\d+)\.(.+)\)$/;
 // 期限の語は、抜き書きに無ければ when に書かない
 const TIME_WORDS = ['遅滞なく', '直ちに', 'あらかじめ', '先立ち', '適時', 'ごと'];
 const HAND_PERIOD = /[0-9０-９]+\s*(日|か月|ヶ月|箇月|週|時間)/;
@@ -14,7 +18,27 @@ const HAND_PERIOD = /[0-9０-９]+\s*(日|か月|ヶ月|箇月|週|時間)/;
 function sections(text) {
   const heads = [...bodyOf(text).matchAll(HEAD)];
   const body = bodyOf(text);
-  return new Map(heads.map((m, i) => [m[1], { title: m[2].trim(), text: body.slice(m.index + m[0].length, heads[i + 1]?.index ?? body.length) }]));
+  return new Map(heads.map((m, i) => [m[1] ?? m[3], { title: (m[2] ?? m[4]).trim(), text: body.slice(m.index + m[0].length, heads[i + 1]?.index ?? body.length) }]));
+}
+
+// 「2.施工体系図」の見出しから次の号の見出しまでの文。見出しの名前まで合わなければ null
+function namedItem(sec, n, name) {
+  const heads = [...sec.text.matchAll(/^(\d+)\.\s*(\S.*)$/gm)];
+  const i = heads.findIndex((m) => Number(m[1]) === n && strip(m[2]) === strip(name));
+  return i < 0 ? null : sec.text.slice(heads[i].index + heads[i][0].length, heads[i + 1]?.index ?? sec.text.length);
+}
+
+// 共通仕様書の形の節の、題名と抜き書きの範囲を読む。号のある節は号まで書く
+function commonScope(r, sec, err) {
+  const item = TITLE_ITEM.exec(r.title);
+  if (strip(sec.title) !== strip(item ? item[1] : r.title)) err('題名が原文の見出しと違う: ' + sec.title);
+  if (item) {
+    const scope = namedItem(sec, Number(item[2]), item[3]);
+    if (scope === null) err('号が原文に無い: ' + r.title);
+    return scope;
+  }
+  if (/^1\.\s*\S/m.test(sec.text)) err('号のある節なのに title に号が無い');
+  return sec.text;
 }
 
 // 「1.2.2(3)」→ その条の (3) の文。号の見出しは行の頭の「(n) 」
@@ -66,6 +90,16 @@ export function checkKindPlan(data, text) {
   return errors;
 }
 
+// 造園の注の表の点検(F44g)。抜き書きは原文にあり、頁は原文の印と合う
+export function checkZoenBasis(data, text) {
+  if (!text) return ['原文が無い: ' + data.sourceId];
+  return data.quotes.flatMap((q) => {
+    const page = pageOf(text, q.quote);
+    if (page === null) return [q.id + ': 抜き書きが原文に無い'];
+    return page === q.page ? [] : [q.id + ': ページが違う: ' + page];
+  });
+}
+
 export function checkKindSchedule(data, text) {
   if (!text) return ['原文が無い: ' + data.sourceId];
   const secs = sections(text);
@@ -78,15 +112,17 @@ export function checkKindSchedule(data, text) {
     for (const k of ['when', 'what', 'to', 'section', 'title', 'quote']) if (!String(r[k] ?? '').trim()) err(k + ' が空');
     if (!PHASE_LABEL[r.phase]) err('phase が分からない: ' + r.phase);
     for (const k of Object.keys(r.condition ?? {})) if (!FIELD_LABEL[k]) err('分からない条件: ' + k);
-    const m = /^(\d+\.\d+\.\d+(?:\.\d+)?)(?:\((\d+)\))?$/.exec(r.section);
+    const common = COMMON_SECTION.test(r.section);
+    const m = common ? [r.section, r.section] : /^(\d+\.\d+\.\d+(?:\.\d+)?)(?:\((\d+)\))?$/.exec(r.section);
     if (!m) { err('箇所の番号の形が違う: ' + r.section); continue; }
     const sec = secs.get(m[1]);
     if (!sec) { err('箇所の見出しが原文に無い: ' + m[1]); continue; }
-    if (strip(sec.title) !== strip(r.title)) err('題名が原文の見出しと違う: ' + sec.title);
-    const scope = m[2] ? itemText(sec, Number(m[2])) : sec.text;
-    if (scope === null) { err('号が原文に無い: ' + r.section); continue; }
+    if (!common && strip(sec.title) !== strip(r.title)) err('題名が原文の見出しと違う: ' + sec.title);
+    const scope = common ? commonScope(r, sec, err) : m[2] ? itemText(sec, Number(m[2])) : sec.text;
+    if (scope === null) { if (!common) err('号が原文に無い: ' + r.section); continue; }
     if (!strip(scope).includes(strip(r.quote))) err('抜き書きが箇所の中に無い');
-    if ((r.quote.match(/。/g) ?? []).length > 1) err('抜き書きが1文を超える');
+    // かっこの中の句点(「その時点。)」)は文の終わりではない
+    if ((r.quote.replace(/。）/g, '）').match(/。/g) ?? []).length > 1) err('抜き書きが1文を超える');
     if (strip(r.quote).length < 10) err('抜き書きが短い');
     if (r.deadline) {
       if (!strip(scope).includes(strip(r.deadline.quote))) err('期日の抜き書きが箇所の中に無い');

@@ -4,7 +4,7 @@
 import { CHECKLIST_NOTICE, CHECKLIST_SCOPE, checklistReferenceText } from './ui/view.mjs';
 import { CHECKLIST_LAW } from './checklist.mjs';
 import { sourceVersion, NO_VERSION } from './source-version.mjs';
-import { kindSource, kindSourceText } from './work-kind-tables.mjs';
+import { kindNote, kindSource, kindSourceText } from './work-kind-tables.mjs';
 import { NOT_READ, workKindLabel } from './work-kinds.mjs';
 import { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, scheduleNoteKey } from './ui/view.mjs';
 
@@ -104,7 +104,7 @@ export const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', 
 // kind を渡すと、最後に工種と表の出典の行を足す(F44a。ほかの行は変えない)
 export function scheduleRows(rows = [], notes = new Map(), kind = null) {
   const s = kind && kindSource(kind, 'schedule');
-  const kindRow = kind ? [['工種', '', workKindLabel(kind), '', '', s?.title ?? '', '', s?.fetchedAt ?? '', s?.version ?? '', s ? '' : NOT_READ, '']] : [];
+  const kindRow = kind ? [['工種', '', workKindLabel(kind), '', '', s?.title ?? '', '', s?.fetchedAt ?? '', s?.version ?? '', s ? kindNote(kind, 'schedule') : NOT_READ, '']] : [];
   return [SCHEDULE_COLUMNS.slice(), ...rows.map((r) => [
     SCHEDULE_PHASE[r.phase] ?? r.phase, r.when, r.what, r.to, SCHEDULE_STATUS[r.status] ?? r.status ?? '',
     r.basis.doc + ' ' + r.basis.section + (r.basis.sectionTitle ? ' ' + r.basis.sectionTitle : ''), r.basis.quote, r.basis.fetchedAt, r.basis.version || NO_VERSION,

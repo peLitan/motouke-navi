@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkQuote } from '../src/quote-check.mjs';
-import { checkKindSchedule, checkKindPlan } from '../src/kind-schedule-check.mjs';
+import { checkKindSchedule, checkKindPlan, checkZoenBasis } from '../src/kind-schedule-check.mjs';
 import { checkKyotsuhi } from './kyotsuhi-tables.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,7 +24,7 @@ for (const q of quotes) {
   if (!r.ok) ng++;
 }
 // 工種の段取りの表(F44b・F44c): 行ごとに、抜き書きが箇所の号の中にあるか、期日が抜き書きから読めるかを見る
-const kindTables = ['data/schedule-kenchiku.json', 'data/schedule-denki.json', 'data/schedule-kan.json'].map(readJson);
+const kindTables = ['data/schedule-kenchiku.json', 'data/schedule-denki.json', 'data/schedule-kan.json', 'data/schedule-tsushin.json'].map(readJson);
 let kindRows = 0;
 for (const table of kindTables) {
   const errors = checkKindSchedule(table, texts[table.sourceId]);
@@ -36,6 +36,13 @@ for (const table of kindTables) {
   for (const e of errors.filter((x) => !table.rules.some((r) => x.startsWith(r.id + ':')))) console.log('不一致\t' + e);
   ng += new Set(errors.map((e) => e.split(':')[0])).size;
 }
+// 造園に土木の表を当てる理由の抜き書き(F44g)
+const zoenBasis = readJson('data/zoen-basis.json');
+const zoenErrors = checkZoenBasis(zoenBasis, texts[zoenBasis.sourceId]);
+kindRows += zoenBasis.quotes.length;
+for (const e of zoenErrors) console.log('不一致\t' + e);
+console.log(`${zoenErrors.length ? '不一致' : '一致'}\tzoen-basis\t${zoenBasis.sourceId} 抜き書き ${zoenBasis.quotes.length} 件`);
+ng += zoenErrors.length;
 // 建築系の施工計画書の語の表(F44d): 語ごとに、抜き書きが箇所の号の中にあるかを見る
 const kindPlans = ['data/plan-items-kenchiku.json', 'data/plan-items-denki.json', 'data/plan-items-kan.json'].map(readJson);
 for (const table of kindPlans) {

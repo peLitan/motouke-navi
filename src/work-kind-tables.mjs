@@ -3,6 +3,8 @@ import scheduleData from '../data/schedule.json' with { type: 'json' };
 import kenchikuSchedule from '../data/schedule-kenchiku.json' with { type: 'json' };
 import denkiSchedule from '../data/schedule-denki.json' with { type: 'json' };
 import kanSchedule from '../data/schedule-kan.json' with { type: 'json' };
+import tsushinSchedule from '../data/schedule-tsushin.json' with { type: 'json' };
+import zoenBasis from '../data/zoen-basis.json' with { type: 'json' };
 import planData from '../data/plan-items.json' with { type: 'json' };
 import kenchikuPlan from '../data/plan-items-kenchiku.json' with { type: 'json' };
 import denkiPlan from '../data/plan-items-denki.json' with { type: 'json' };
@@ -19,6 +21,7 @@ const TABLES = {
   'mlit-kenchiku-spec-r7': { schedule: kenchikuSchedule, plan: kenchikuPlan },
   'mlit-denki-spec-r7': { schedule: denkiSchedule, plan: denkiPlan },
   'mlit-kikai-spec-r7': { schedule: kanSchedule, plan: kanPlan },
+  'mlit-tsushin-spec-r8': { schedule: tsushinSchedule },
   'mlit-sekisan-unyou-r8': { estimate: estimateRates },
   'mlit-kyotsuhi-r8': { estimate: kyotsuhiRates },
 };
@@ -39,10 +42,18 @@ export function kindSource(id, part) {
   return { title: table.doc, version: sourceVersion(s), fetchedAt: s.fetchedAt, url: s.url };
 }
 
+// 別の工種の表を当てているときの説明(F44g: 造園の段取り)。無ければ空。画面・印刷・CSV のどれにも必ず出す
+export function kindNote(id, part) {
+  if (id !== 'zoen' || part !== 'schedule') return '';
+  const s = sourcesData.sources.find((x) => x.id === zoenBasis.sourceId);
+  return zoenBasis.text + '(出典: ' + zoenBasis.doc + '、' + s.url + '、取得日 ' + s.fetchedAt + ')';
+}
+
 // 画面・印刷・CSV の1文
 export function kindSourceText(id, part) {
   const s = kindSource(id, part);
   const head = '工種: ' + workKindLabel(id) + '。';
   if (!s) return head + NOT_READ + 'ので、' + PART_LABEL[part] + 'はありません。' + ALWAYS_SHOWN + '。';
-  return head + (kindTable(id, part).partLabel ?? PART_LABEL[part]) + 'の出典: ' + s.title + '(取得日 ' + s.fetchedAt + '・版 ' + s.version + ')。';
+  const note = kindNote(id, part);
+  return head + (kindTable(id, part).partLabel ?? PART_LABEL[part]) + 'の出典: ' + s.title + '(取得日 ' + s.fetchedAt + '・版 ' + s.version + ')。' + (note ? note + '。' : '');
 }

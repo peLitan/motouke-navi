@@ -381,6 +381,32 @@
       "file": "mlit-kyotsuhi-r8.txt",
       "excerpt": "PDF の全10ページの文字を scripts/fetch-kyotsuhi.mjs で取り出した(行を位置でそろえ、ページの下の番号を除いただけ。手で打ち直していない)。行の頭の「--- PDF の n ページ ---」は取り出すときに足した印で、原文の文ではない",
       "license": "資料の1ページが案内する国土交通省ホームページの利用ルール(https://www.mlit.go.jp/link.html)により、権利表記が無いので公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する。別表から係数の表に作り直したのはこの作品の作者で、国土交通省が作ったものではない"
+    },
+    {
+      "id": "mlit-tsushin-spec-r8",
+      "edition": "令和8年",
+      "kind": "document",
+      "title": "電気通信設備工事共通仕様書 令和8年版(国土交通省大臣官房技術調査課電気通信室。第1編 第1章 総則)",
+      "publisher": "国土交通省大臣官房技術調査課電気通信室",
+      "url": "https://www.mlit.go.jp/tec/it/denki/gijyutukijyun/R0803kouji.pdf",
+      "section": "第1編 第1章",
+      "fetchedAt": "2026-11-06",
+      "file": "mlit-tsushin-spec-r8-ch1.txt",
+      "excerpt": "PDF の第1編 第1章 総則(PDF の 34〜80 ページ)の文字を scripts/fetch-tsushin-park-spec.mjs で取り出した(PDF の中身の順のまま行にし、毎ページの番号を除いただけ。手で打ち直していない)。第1編 第2章と第2編以降は取り込んでいない。行の頭の「--- PDF の n ページ ---」は取り出すときに足した印で、原文の文字ではない",
+      "license": "ページと資料に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する。文から段取りの行に作り直したのはこの作品の作者で、国土交通省が作ったものではない"
+    },
+    {
+      "id": "mlit-park-spec-r6",
+      "edition": "令和6年5月",
+      "kind": "document",
+      "title": "公園緑地工事共通仕様書 令和6年5月(国土交通省都市局公園緑地・景観課。表紙と目次の頁)",
+      "publisher": "国土交通省都市局公園緑地・景観課",
+      "url": "https://www.mlit.go.jp/toshi/park/content/001742862.pdf",
+      "section": "目次の頁の注",
+      "fetchedAt": "2026-11-06",
+      "file": "mlit-park-spec-r6-notes.txt",
+      "excerpt": "PDF の表紙(1 ページ)と目次の頁(3 ページ)の文字を scripts/fetch-tsushin-park-spec.mjs で取り出した(手で打ち直していない)。本文は取り込んでいない。行の頭の「--- PDF の n ページ ---」は取り出すときに足した印で、原文の文字ではない",
+      "license": "ページと資料に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する。注の文から画面の説明を書いたのはこの作品の作者で、国土交通省が作ったものではない"
     }
   ]
 }
