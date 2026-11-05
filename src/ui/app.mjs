@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems, renderChecklist } from './view.mjs';
+import { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
@@ -37,10 +37,16 @@ let stale = false; // 結果を出したあとに条件を変えたか
 // まとめの枠(F14b): 最後に出した各結果を持ち、結果が出るたびに枠を書き直す(ページを閉じれば消える)
 const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, check: null, plan: null, stale: false };
 let summaryShown = false;
+const SUMMARY_FOLDS = ['summary-docs', 'summary-conditions']; // 描き直しても開いたままにするカード
 function updateSummary(doc) {
   const el = doc.getElementById('summary');
   if (!el) return;
-  el.innerHTML = renderSummary({ ...summary, values: summary.values ?? collect(doc) });
+  const state = { ...summary, values: summary.values ?? collect(doc) };
+  const top = doc.getElementById('result-top');
+  if (top) { const h = renderResultTop(state); top.innerHTML = h; top.hidden = !h; }
+  const opened = SUMMARY_FOLDS.filter((id) => doc.getElementById(id)?.open === true);
+  el.innerHTML = renderSummary(state);
+  for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
   el.hidden = false;
   summaryShown = true;
 }
@@ -112,7 +118,7 @@ export function renderSafety(doc) {
   if (qPlace) qPlace.hidden = !snap.answers.bridge || snap.answers.bridge === 'none';
   const primeNote = doc.getElementById('safety-prime-note');
   if (primeNote) primeNote.hidden = !(r.mode === 'prime' && r.assumedPrime);
-  summary.safety = { text: r.started ? esc(safetyCountText(r)) + (r.counts.total ? '(' + esc(safetyBreakdown(r)) + ')' : '') : '(条件を入れると出ます)', answerRows: r.started ? snap.answerRows : [] };
+  summary.safety = { count: r.started ? r.counts.total : null, text: r.started ? esc(safetyCountText(r)) + (r.counts.total ? '(' + esc(safetyBreakdown(r)) + ')' : '') : '(条件を入れると出ます)', answerRows: r.started ? snap.answerRows : [] };
   if (summaryShown) updateSummary(doc);
   return r;
 }
@@ -189,12 +195,15 @@ function openIntake(doc) {
 }
 // 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開く。動くのはリンクの既定の動きに任せる
 export function openPanelForLink(doc, href) {
-  const panel = doc.getElementById(String(href ?? '').replace(/^#/, ''))?.closest?.('[id^="panel-"]');
+  const target = doc.getElementById(String(href ?? '').replace(/^#/, ''));
+  const panel = target?.closest?.('[id^="panel-"]');
   if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
+  // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
+  for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
 }
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
-const NEXT_STEP = '下の「まとめ」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
+const NEXT_STEP = '下の「次にすること」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
 const BID_NOTICE_DONE = '✓ 結果が出ました。' + NEXT_STEP;
 const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。' + NEXT_STEP;
 const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
@@ -719,6 +728,8 @@ export function clearSample(doc) {
   for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
+  const top = doc.getElementById('result-top');
+  if (top) { top.hidden = true; top.innerHTML = ''; }
 
   const ledger = doc.getElementById('ledger-input');
   if (ledger && ledger.value === SAMPLE.documents.ledger) {

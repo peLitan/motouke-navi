@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ZFldVBMdhlXZd8go2TQkKKtxr9Lq8xl4E0CgFQfnKDc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dyIDqG/G4vnBFtVPNWPRdr2xjfW3ryhweK8mfQQE04U='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -73,7 +73,7 @@
   .result { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 1rem 1.5rem; margin-bottom: 1rem; }
   .form { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 1rem 1.5rem; }
   /* 結果の中のリンクは縦に余白を足し、指で押しやすくする(F38b) */
-  .summary a, .result a { display: inline-block; padding: 0.25rem 0; }
+  .summary a, .result a, .result-plain a { display: inline-block; padding: 0.25rem 0; }
   .human { font-weight: bold; }
   .errors { color: var(--need); }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 0.75rem; }
@@ -139,6 +139,7 @@
   .sample-banner p[aria-live]:not(:empty) { border: none; padding: 0; margin: 0.25rem 0; font-weight: normal; }
   /* 空の状態の文(F38d): 結果と見分ける */
   .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
+  .result-plain > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; border-radius: 8px; padding: 0 0.5rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
@@ -148,9 +149,33 @@
   .badge-unanswered { color: var(--ink-2); background: var(--paper); border-color: var(--line); border-style: dashed; }
   /* 答えの状態と結果の順(F14f): 理由・入れた条件・確かめ先の見出し語、仮の一覧の知らせ、見ている法令の範囲、印刷だけに出す確認の欄 */
   .items { padding-left: 0; list-style: none; }
-  .item { border-top: 1px solid var(--line); padding: 0.5rem 0; }
-  .item:first-child { border-top: none; }
+  /* 要る項目のカード(F43c): 見えるのは結論の1行と「根拠を見る」。中身は今の details のまま */
+  .item { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .item h4 { margin: 0.25rem 0; }
+  .item-depends { margin: 0.25rem 0; font-weight: bold; }
+  /* 結果の先頭(F43c): 数字のカードは押すとその節へ飛ぶ。安全の法令の候補は印を付け、青にしない(「問題なし」「押せる字」に読めないように) */
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; list-style: none; margin: 0.75rem 0 1rem; padding: 0; }
+  .stat { display: block; height: 100%; padding: 0.75rem 1rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-top: 6px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); text-decoration: none; }
+  .stat:hover { background: var(--paper-2); }
+  .stat-num { display: block; font-size: 2rem; font-weight: bold; line-height: 1.2; }
+  .stat-lab { display: block; font-size: 1.1875rem; font-weight: bold; text-decoration: underline; }
+  .stat-sub { display: block; color: var(--ink-2); }
+  .stat-required { border-top-color: var(--need-line); }
+  .stat-required .stat-num { color: var(--need); }
+  .stat-check { border-top-color: var(--check-line); }
+  .stat-safety { border-top-color: var(--ink-2); }
+  .next-card { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; color: var(--ink); background: var(--primary-bg); border: 1px solid var(--primary); border-radius: 12px; padding: 1rem 1.5rem; margin: 0 0 1rem; }
+  .next-text { flex: 1 1 16rem; min-width: 0; }
+  .next-title { margin: 0; font-size: 1.1875rem; font-weight: bold; }
+  .next-sub { margin: 0.25rem 0 0; }
+  .next-go { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 1rem; color: var(--paper); background: var(--primary); border-radius: 8px; font-weight: bold; text-decoration: none; }
+  .next-go:hover, .next-go:active { color: var(--paper); background: var(--primary-dark); }
+  /* 件数つきの開くカード(F43c)。開く・閉じるの字は CSS で足す */
+  details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0 1rem; margin: 0.5rem 0; }
+  details.open-card > summary, details#bid-fold > summary, details.schedule-table > summary, details.safety-fold > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; color: var(--ink); font-size: 1.1875rem; font-weight: bold; }
+  details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: "開く ▾"; margin-left: auto; color: var(--primary); font-size: 1rem; }
+  details.open-card[open] > summary::after, details#bid-fold[open] > summary::after, details.schedule-table[open] > summary::after, details.safety-fold[open] > summary::after { content: "閉じる ▴"; }
+  .open-count { font-size: 1.5rem; }
   .item .part { font-weight: bold; }
   .ans-unknown, .ans-unanswered { font-weight: bold; text-decoration: underline; }
   .provisional { border-left: 4px solid var(--line); padding: 0.25rem 0 0.25rem 0.75rem; color: var(--ink); }
@@ -241,6 +266,11 @@
     .result, .form, .summary, .other-tools { padding: 0.75rem 1rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
     .entry-choices { grid-template-columns: minmax(0, 1fr); }
+    .stats { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    .next-card { padding: 0.75rem 1rem; }
+    /* 下に止まる帯(F43c)は「次へ」の1つだけ。流れの中の行なので、下まで動かせば本文は隠れない */
+    .step-next { position: sticky; bottom: 0; margin: 1rem 0 0; padding: 0.5rem 0; background: var(--paper); border-top: 1px solid var(--line); }
+    #next-step-3 { width: 100%; margin: 0; }
     /* 進み具合(F43a): 字は 16px のまま3つの段を等しい幅に分け、丸の下に名前を全部出す(長い名前は2行に折り返す)。線は丸と丸の間に描く */
     .steps { align-items: flex-start; }
     .steps li { position: relative; flex: 1 1 0; min-width: 0; justify-content: center; }
@@ -275,6 +305,10 @@
     /* 印刷では折りたたみを開くので、「説明」などの見出しは紙に出さない */
     details.fold > summary { display: none; }
     .other-tools { margin: 0; border: none; padding: 0; }
+    details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { margin: 0; border: none; padding: 0; }
+    details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: none; }
+    .stat-lab { text-decoration: none; }
+    .item { margin: 0; padding: 0.5rem 0; border: none; border-top: 1px solid var(--line); border-radius: 0; }
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
     .print-only { display: block; }
@@ -438,10 +472,10 @@
 <p id="sample-status" aria-live="polite"></p>
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>
 </div>
-<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
+<div id="result-top" hidden></div>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
-<div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="bid-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 </details>
@@ -466,7 +500,7 @@
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
-<div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="schedule-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
@@ -479,10 +513,11 @@
 <fieldset class="row radio-group" id="safety-q-subcontract"><legend>1. 仕事の一部を他社(個人を含む)に請け負わせるか</legend><p id="safety-stage1" class="hint"></p><div><input type="radio" id="safety-sub-yes" name="safety-sub" value="yes" autocomplete="off"><label for="safety-sub-yes">はい</label></div><div><input type="radio" id="safety-sub-no" name="safety-sub" value="no" autocomplete="off"><label for="safety-sub-no">いいえ</label></div><div><input type="radio" id="safety-sub-unknown" name="safety-sub" value="unknown" autocomplete="off"><label for="safety-sub-unknown">まだ分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-workers"><legend>2. 同じ場所で常時働く人の数(自社・下請け・一人親方などを含む)</legend><p class="hint">条文の言葉は「常時」と「作業従事者」です。「常時」の意味は条文に書いてありません。迷うときは「分からない」を選び、労働基準監督署に確かめてください。</p><div><input type="radio" id="safety-workers-under" name="safety-workers" value="under" autocomplete="off"><label for="safety-workers-under">30人未満</label></div><div><input type="radio" id="safety-workers-mid" name="safety-workers" value="mid" autocomplete="off"><label for="safety-workers-mid">30人以上50人未満</label></div><div><input type="radio" id="safety-workers-high" name="safety-workers" value="high" autocomplete="off"><label for="safety-workers-high">50人以上</label></div><div><input type="radio" id="safety-workers-unknown" name="safety-workers" value="unknown" autocomplete="off"><label for="safety-workers-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-plan"><legend>3. 工事の中に次のものがあるか</legend><p class="hint">届出の項目と、統括安全衛生責任者の人数の境目を変える項目です。当たるものをすべて選びます。</p><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel" autocomplete="off"><label for="safety-plan-plan-tunnel">ずい道等の建設等の仕事（ずい道等の内部に労働者が立ち入らないものを除く。）</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel-noentry" autocomplete="off"><label for="safety-plan-plan-tunnel-noentry">ずい道等の建設の仕事で、内部に人が立ち入らないもの</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-pressure" autocomplete="off"><label for="safety-plan-plan-pressure">圧気工法による作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-excavation" autocomplete="off"><label for="safety-plan-plan-excavation">掘削の高さ又は深さが十メートル以上である地山の掘削（ずい道等の掘削及び岩石の採取のための掘削を除く。以下同じ。）の作業（掘削機械を用いる作業で、掘削面の下方に労働者が立ち入らないものを除く。）を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-structure" autocomplete="off"><label for="safety-plan-plan-structure">高さ三十一メートルを超える建築物又は工作物（橋梁を除く。）の建設、改造、解体又は破壊（以下「建設等」という。）の仕事</label></div><details class="fold" id="safety-plan-more"><summary>大規模な工事・石綿・焼却炉・土石の採取</summary><div class="check-row"><input type="checkbox" id="safety-plan-plan-tower" autocomplete="off"><label for="safety-plan-plan-tower">高さが三百メートル以上の塔の建設の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-dam" autocomplete="off"><label for="safety-plan-plan-dam">堤高（基礎地盤から堤頂までの高さをいう。）が百五十メートル以上のダムの建設の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel-long" autocomplete="off"><label for="safety-plan-plan-tunnel-long">長さが三千メートル以上のずい道等の建設の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel-shaft" autocomplete="off"><label for="safety-plan-plan-tunnel-shaft">長さが千メートル以上三千メートル未満のずい道等の建設の仕事で、深さが五十メートル以上のたて坑（通路として使用されるものに限る。）の掘削を伴うもの</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-pressure-high" autocomplete="off"><label for="safety-plan-plan-pressure-high">ゲージ圧力が〇・三メガパスカル以上の圧気工法による作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-asbestos-spray" autocomplete="off"><label for="safety-plan-plan-asbestos-spray">建築物、工作物又は船舶（鋼製の船舶に限る。次号において同じ。）に吹き付けられている石綿等（石綿等が使用されている仕上げ用塗り材を除く。）の除去、封じ込め又は囲い込みの作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-asbestos-cover" autocomplete="off"><label for="safety-plan-plan-asbestos-cover">建築物、工作物又は船舶に張り付けられている石綿等が使用されている保温材、耐火被覆材（耐火性能を有する被覆材をいう。）等の除去、封じ込め又は囲い込みの作業（石綿等の粉じんを著しく発散するおそれのあるものに限る。）を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-incinerator" autocomplete="off"><label for="safety-plan-plan-incinerator">ダイオキシン類対策特別措置法施行令別表第一第五号に掲げる廃棄物焼却炉（火格子面積が二平方メートル以上又は焼却能力が一時間当たり二〇〇キログラム以上のものに限る。）を有する廃棄物の焼却施設に設置された廃棄物焼却炉、集じん機等の設備の解体等の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-quarry" autocomplete="off"><label for="safety-plan-plan-quarry">掘削の高さ又は深さが十メートル以上の土石の採取のための掘削の作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-quarry-mine" autocomplete="off"><label for="safety-plan-plan-quarry-mine">坑内掘りによる土石の採取のための掘削の作業を行う仕事</label></div></details><div class="check-row"><input type="checkbox" id="safety-plan-none" autocomplete="off"><label for="safety-plan-none">どれにも当たらない</label></div><div class="check-row"><input type="checkbox" id="safety-plan-unknown" autocomplete="off"><label for="safety-plan-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-bridge"><legend>3 の続き. 橋梁の工事</legend><div><input type="radio" id="safety-bridge-none" name="safety-bridge" value="none" autocomplete="off"><label for="safety-bridge-none">橋梁の工事は無い</label></div><div><input type="radio" id="safety-bridge-large" name="safety-bridge" value="large" autocomplete="off"><label for="safety-bridge-large">最大支間 500m 以上(つり橋のときは 1,000m 以上)</label></div><div><input type="radio" id="safety-bridge-ge" name="safety-bridge" value="ge" autocomplete="off"><label for="safety-bridge-ge">最大支間 50m 以上で、上に当たらないもの(つり橋の 500m 以上 1,000m 未満を含む)</label></div><div><input type="radio" id="safety-bridge-mid" name="safety-bridge" value="mid" autocomplete="off"><label for="safety-bridge-mid">最大支間 30m 以上 50m 未満</label></div><div><input type="radio" id="safety-bridge-lt" name="safety-bridge" value="lt" autocomplete="off"><label for="safety-bridge-lt">最大支間 30m 未満</label></div><div><input type="radio" id="safety-bridge-unknown" name="safety-bridge" value="unknown" autocomplete="off"><label for="safety-bridge-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-place" hidden><legend>3 の続き. 橋梁の場所は、次に当たるか</legend><p class="hint">令第七条第二項第一号の厚生労働省令で定める場所は、人口が集中している地域内における道路上若しくは道路に隣接した場所又は鉄道の軌道上若しくは軌道に隣接した場所とする。</p><div><input type="radio" id="safety-place-yes" name="safety-place" value="yes" autocomplete="off"><label for="safety-place-yes">当たる</label></div><div><input type="radio" id="safety-place-no" name="safety-place" value="no" autocomplete="off"><label for="safety-place-no">当たらない</label></div><div><input type="radio" id="safety-place-unknown" name="safety-place" value="unknown" autocomplete="off"><label for="safety-place-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-works"><legend>4. 行う作業(作業主任者)</legend><div class="check-row"><input type="checkbox" id="safety-work-excavation" autocomplete="off"><label for="safety-work-excavation">地山の掘削: 掘削面の高さが二メートル以上となる地山の掘削（ずい道及びたて坑以外の坑の掘削を除く。）の作業（第十一号に掲げる作業を除く。）</label></div><div class="check-row"><input type="checkbox" id="safety-work-shoring" autocomplete="off"><label for="safety-work-shoring">土止め支保工: 土止め支保工の切りばり又は腹起こしの取付け又は取り外しの作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-formwork" autocomplete="off"><label for="safety-work-formwork">型枠支保工: 型枠支保工（支柱、はり、つなぎ、筋かい等の部材により構成され、建設物におけるスラブ、桁等のコンクリートの打設に用いる型枠を支持する仮設の設備をいう。以下同じ。）の組立て又は解体の作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-scaffold" autocomplete="off"><label for="safety-work-scaffold">足場: つり足場（ゴンドラのつり足場を除く。以下同じ。）、張出し足場又は高さが五メートル以上の構造の足場の組立て、解体又は変更の作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-none" autocomplete="off"><label for="safety-work-none">どれも行わない</label></div><div class="check-row"><input type="checkbox" id="safety-work-unknown" autocomplete="off"><label for="safety-work-unknown">まだ分からない</label></div></fieldset>
 </div>
 <p id="safety-status" class="no-print" aria-live="polite"></p>
-<div id="safety-result" class="result"><p>条件を入れると、ここに候補を出します。</p></div>
+<div id="safety-result" class="result-plain"><p>条件を入れると、ここに候補を出します。</p></div>
 <p class="note" id="safety-version"></p>
 </details>
 <div id="open-items" class="result open-items" aria-live="polite" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
+<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -496,7 +531,7 @@
 <p id="csv-note">Excel で開ける CSV として、この PC に保存します(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
 </div>
-<div class="row no-print"><button type="button" id="next-step-3">次へ: 3 書類を確かめる</button></div>
+<div class="row no-print step-next"><button type="button" id="next-step-3">次へ: 3 書類を確かめる</button></div>
 </section>
 <section id="panel-3" hidden>
 <section id="ledger-check">
@@ -1603,12 +1638,12 @@ function basisLabel(b) {
   return b.law + ' ' + s;
 }
 
+const basisLabels = (list) => esc([...new Set(list.map(basisLabel))].join('、'));
+const basisItems = (list) => '<ul>' + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('') + '</ul>';
 function basisList(list = []) {
   if (!list.length) return '<p class="basis-none">根拠: 無し</p>';
   // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
-  return '<details class="basis"><summary>根拠: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
-    + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
-    + '</ul></details>';
+  return '<details class="basis"><summary>根拠: ' + basisLabels(list) + '</summary>' + basisItems(list) + '</details>';
 }
 
 function exceptionList(list = []) {
@@ -1624,6 +1659,7 @@ function amountBasisBlock(ab) {
 const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る', unanswered: '未回答' };
 // 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=●と赤系、確認が要る=!と黄系、要らない=✓と緑系、未回答=?と灰色。F14f)
 const STATUS_MARK = { required: '●', needs_check: '!', not_required: '✓', unanswered: '?' };
+const STATUS_ORDER = ['required', 'needs_check', 'unanswered', 'not_required'];
 function statusBadge(status, extra = '') {
   const word = BID_STATUS[status] ?? String(status ?? '');
   const mark = STATUS_MARK[status];
@@ -1643,7 +1679,9 @@ const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
 //   values が無いときは、判定の状態をそのまま出す(入れた条件は出さない)
 function renderBidResult(bid, values) {
   const st = (it) => (values ? displayStatus(it, values) : it.status);
-  const rows = bid.items.map((it) => {
+  const points = needsCheckPoints(bid, values);
+  // 結論の順(F43c): 要る → 確認が要る → 未回答 → 要らない。同じ結論の中は判定の順のまま
+  const rows = bid.items.slice().sort((a, b) => STATUS_ORDER.indexOf(st(a)) - STATUS_ORDER.indexOf(st(b))).map((it) => {
     const s = st(it);
     const value = it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '';
     const conds = values ? itemConditions(it, values) : [];
@@ -1662,11 +1700,18 @@ function renderBidResult(bid, values) {
           ? '<p class="contact"><span class="part">確かめ先:</span> 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します。</p>'
           : '<p class="contact"><span class="part">確かめ先:</span> 根拠の原文に相手の定めが無いので、出していません。</p>';
     }
-    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>'
-      + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml + unansweredNote
-      + basisList(it.basis) + exceptionList(it.exceptions) + contactHtml + '</li>';
+    // 1行のカード(F43c): 見えるのは結論と、確認が要る点のある項目の1行だけ。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
+    const own = s === 'required' || s === 'not_required' ? (bid.checks ?? []).filter((c) => c.key === it.key) : [];
+    const depends = own.some((c) => c.changes)
+      ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、<a href="#open-items">確認が要る点</a>の答えで変わることがあります。</p>'
+      : own.length ? '<p class="item-depends">＊ この項目には<a href="#open-items">確認が要る点</a>があります。</p>' : '';
+    const basis = it.basis ?? [];
+    const basisPart = basis.length ? basisItems(basis) : '<p class="basis-none">根拠: 無し</p>';
+    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + depends + unansweredNote
+      + '<details class="basis"><summary>' + (basis.length ? '根拠を見る: ' + basisLabels(basis) : '理由を見る') + '</summary>'
+      + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml
+      + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
-  const points = needsCheckPoints(bid, values);
   const checks = points.length
     ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
@@ -1937,6 +1982,38 @@ function summaryValue(raw, map, values, id) {
   return s === '' ? '入れていません' : s + (/円$/.test(s) ? '' : ' 円');
 }
 const NOT_YET = (btn) => '<span class="not-yet">まだ出していません(「' + esc(btn) + '」を押すと出ます)</span>';
+// 件数つきの開くカード(F43c)。まとめの中の2つ。描き直しても開いたままにする id は app.mjs の SUMMARY_FOLDS
+const openCard = (id, title, count, inner) => '<details class="open-card" id="' + esc(id) + '"><summary><span>' + esc(title) + '</span>' + (count ? ' <span class="open-count">' + esc(count) + '</span>' : '') + '</summary>' + inner + '</details>';
+
+// 結果の先頭(F43c): 数字のカードと「次にすること」のカード。state は renderSummary と同じ
+//   数字は候補の数で、押すとその節へ飛ぶ。安全の法令の候補は「要るものの候補」に混ぜない。印(▲)を付け、リンクの色にしない
+const SAFETY_MARK = '▲';
+function nextStep(state, points, un) {
+  if (state.errors?.length) return { title: '金額の欄を直す', sub: '読めない欄に印を付けました。直してから、もう一度「確認する」を押してください。', href: 'bid-form', go: '1 条件に戻る' };
+  if (state.stale) return { title: 'もう一度「確認する」を押す', sub: '条件が変わりました。下の数は前の条件の結果です。', href: 'bid-run', go: '1 条件に戻る' };
+  if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '1 条件に戻る' };
+  if (points.length) return { title: '「確認が要る」の ' + points.length + '件を確かめる', sub: points[0].label + ': ' + points[0].message, href: 'open-items', go: '確認が要る点を見る' };
+  return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '3 書類を確かめる' };
+}
+function renderResultTop(state = {}) {
+  const errors = state.errors?.length > 0;
+  if (!errors && !state.bid) return '';
+  const vals = state.values ?? null;
+  const un = vals ? unansweredQuestions(vals) : [];
+  const points = errors ? [] : needsCheckPoints(state.bid, vals ?? undefined);
+  const n = nextStep(state, points, un);
+  const next = '<div class="next-card no-print"><div class="next-text"><p class="next-title">次にすること: ' + esc(n.title) + '</p><p class="next-sub">' + esc(n.sub) + '</p></div><a class="next-go" href="#' + esc(n.href) + '">' + esc(n.go) + '</a></div>';
+  if (errors) return next;
+  const required = state.bid.items.filter((it) => (vals ? displayStatus(it, vals) : it.status) === 'required').length;
+  const safety = state.safety?.count;
+  const stat = (cls, href, num, lab, sub) => '<li><a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
+  return '<ul class="stats" aria-label="結果の件数(候補)">'
+    + stat('required', 'bid-result', STATUS_MARK.required + ' ' + required, '要るものの候補', '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
+    + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る', '自分で確かめる点(件)')
+    + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
+    + '</ul>' + next;
+}
+
 function renderSummary(state = {}) {
   const parts = [];
   if (state.stale) parts.push('<p class="summary-stale">条件が変わりました。下の数は前の条件の結果です。もう一度「確認する」を押してください。</p>');
@@ -1949,13 +2026,13 @@ function renderSummary(state = {}) {
     const vals = state.values ?? null;
     const dst = (it) => (vals ? displayStatus(it, vals) : it.status);
     const un = vals ? unansweredQuestions(vals) : [];
-    const order = ['required', 'needs_check', 'unanswered', 'not_required'];
+    const order = STATUS_ORDER;
     const points = needsCheckPoints(state.bid, vals ?? undefined);
     const count = (st) => items.filter((it) => dst(it) === st).length;
     parts.push((un.length ? '<p class="provisional"><strong>仮の一覧です</strong>(未回答の質問 ' + un.length + 'つ)。<a href="#open-items">未回答の一覧</a>を見て、答えるか「分からない」を選んでください。</p>' : '')
       + '<h4>受注したら要るもの(' + items.length + '項目' + (un.length ? '・仮の一覧' : '') + ')</h4>'
       + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
-      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
+      + '<ul class="summary-items print-only">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
         .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
       + (points.length ? '<p><a href="#bid-result">確認が要る点 ' + points.length + '件</a>を入札前の確認の欄に出しています。' + esc(pointsNote(points)) + '</p>' : ''));
   } else {
@@ -1976,18 +2053,19 @@ function renderSummary(state = {}) {
     const und = (state.plan.undecidable ?? []).length;
     rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : '記載項目の抜けの候補 <strong>' + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
   } else rows.push(['施工計画書の目次の点検', NOT_YET('目次を点検する'), 'plan-result']);
-  parts.push('<h4>書類と段取り</h4>' + scrollTable('書類と段取りの表', '<table class="summary-table"><tbody>'
-    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>'));
+  const docCount = state.check || state.plan ? ((state.check?.candidates ?? []).length + (state.plan?.candidates ?? []).length) + '件' : 'まだ';
+  parts.push(openCard('summary-docs', '台帳と目次の点検の候補', docCount, scrollTable('書類と段取りの表', '<table class="summary-table"><tbody>'
+    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>')));
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
-  parts.push('<h4>入れた条件</h4><dl class="summary-list">'
+  parts.push(openCard('summary-conditions', '入れた条件', '', '<dl class="summary-list">'
     + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values, id)) + '</dd></div>').join('')
-    + (state.safety?.answerRows ?? []).map(([k, v]) => '<div class="summary-row"><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl>');
+    + (state.safety?.answerRows ?? []).map(([k, v]) => '<div class="summary-row"><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl>'));
   return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
 
-return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, renderSummary };
+return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
 })();
 __m["src/mask/extract.mjs"] = (function () {
 // 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
@@ -2877,7 +2955,7 @@ function bidCheck(input = {}) {
   }
   const ded = items[5];
   if (ded.status === 'required' && input.orderer === 'public') {
-    checks.push({ key: 'dedicated', label: ded.label, message: '注文者が国又は地方公共団体である工事として専任と判定した(施行令 第27条第1項第1号)。注文者がそれ以外(特殊法人など)なら第1号に当たらないので、施設・工作物の種類(第2号・第3号)を確かめる' });
+    checks.push({ key: 'dedicated', label: ded.label, changes: true, message: '注文者が国又は地方公共団体である工事として専任と判定した(施行令 第27条第1項第1号)。注文者がそれ以外(特殊法人など)なら第1号に当たらないので、施設・工作物の種類(第2号・第3号)を確かめる' });
   }
   if (engineer.value === 'kanri' && input.engineerQualification !== 'kanri') {
     checks.push({ key: 'engineer', label: engineer.label, message: '受注したら監理技術者を置くが、置ける技術者の資格が「監理技術者」と入っていない。置ける人を確かめる' });
@@ -7098,7 +7176,7 @@ __m["src/ui/app.mjs"] = (function () {
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
+const { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
 const { readLedgerXlsx, ledgerToText, FIELD_NAMES } = __m["src/ledger-xlsx.mjs"];
@@ -7133,10 +7211,16 @@ let stale = false; // 結果を出したあとに条件を変えたか
 // まとめの枠(F14b): 最後に出した各結果を持ち、結果が出るたびに枠を書き直す(ページを閉じれば消える)
 const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, check: null, plan: null, stale: false };
 let summaryShown = false;
+const SUMMARY_FOLDS = ['summary-docs', 'summary-conditions']; // 描き直しても開いたままにするカード
 function updateSummary(doc) {
   const el = doc.getElementById('summary');
   if (!el) return;
-  el.innerHTML = renderSummary({ ...summary, values: summary.values ?? collect(doc) });
+  const state = { ...summary, values: summary.values ?? collect(doc) };
+  const top = doc.getElementById('result-top');
+  if (top) { const h = renderResultTop(state); top.innerHTML = h; top.hidden = !h; }
+  const opened = SUMMARY_FOLDS.filter((id) => doc.getElementById(id)?.open === true);
+  el.innerHTML = renderSummary(state);
+  for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
   el.hidden = false;
   summaryShown = true;
 }
@@ -7208,7 +7292,7 @@ function renderSafety(doc) {
   if (qPlace) qPlace.hidden = !snap.answers.bridge || snap.answers.bridge === 'none';
   const primeNote = doc.getElementById('safety-prime-note');
   if (primeNote) primeNote.hidden = !(r.mode === 'prime' && r.assumedPrime);
-  summary.safety = { text: r.started ? esc(safetyCountText(r)) + (r.counts.total ? '(' + esc(safetyBreakdown(r)) + ')' : '') : '(条件を入れると出ます)', answerRows: r.started ? snap.answerRows : [] };
+  summary.safety = { count: r.started ? r.counts.total : null, text: r.started ? esc(safetyCountText(r)) + (r.counts.total ? '(' + esc(safetyBreakdown(r)) + ')' : '') : '(条件を入れると出ます)', answerRows: r.started ? snap.answerRows : [] };
   if (summaryShown) updateSummary(doc);
   return r;
 }
@@ -7285,12 +7369,15 @@ function openIntake(doc) {
 }
 // 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開く。動くのはリンクの既定の動きに任せる
 function openPanelForLink(doc, href) {
-  const panel = doc.getElementById(String(href ?? '').replace(/^#/, ''))?.closest?.('[id^="panel-"]');
+  const target = doc.getElementById(String(href ?? '').replace(/^#/, ''));
+  const panel = target?.closest?.('[id^="panel-"]');
   if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
+  // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
+  for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
 }
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
-const NEXT_STEP = '下の「まとめ」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
+const NEXT_STEP = '下の「次にすること」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
 const BID_NOTICE_DONE = '✓ 結果が出ました。' + NEXT_STEP;
 const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。' + NEXT_STEP;
 const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
@@ -7815,6 +7902,8 @@ function clearSample(doc) {
   for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
+  const top = doc.getElementById('result-top');
+  if (top) { top.hidden = true; top.innerHTML = ''; }
 
   const ledger = doc.getElementById('ledger-input');
   if (ledger && ledger.value === SAMPLE.documents.ledger) {

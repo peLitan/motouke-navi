@@ -86,14 +86,14 @@ test('「分からない」を選んだ質問を使う項目は「確認が要�
   assert.deepEqual(Object.values(BID_STATUS), ['要る', '要らない', '確認が要る', '未回答']);
 });
 
-test('各項目は 結論 → 理由(入れた条件)→ 根拠の条 → 確かめ先 の順', () => {
+test('各項目は 結論 → 根拠を見る(理由 → 入れた条件 → 根拠の条 → 確かめ先)の順', () => {
   const bid = bidCheck(readBidForm(FULL));
   const out = renderBidResult(bid, FULL);
   const items = [...out.matchAll(/<li class="item[\s\S]*?(?=<li class="item|<\/ul><h3>)/g)].map((m) => m[0]);
   assert.equal(items.length, bid.items.length);
   for (const h of items) {
     const at = (re) => h.search(re);
-    const pos = [at(/class="badge/), at(/>理由:</), at(/>入れた条件:</), at(/<details class="basis"|class="basis-none"/), at(/>確かめ先:</)];
+    const pos = [at(/class="badge/), at(/<details class="basis"/), at(/>理由:</), at(/>入れた条件:</), at(/<ul><li><strong>|class="basis-none"/), at(/>確かめ先:</)];
     const label = text(h).slice(0, 20);
     if (h.includes('badge-not_required')) pos.pop(); // 要らない項目には確かめ先を出さない
     for (const p of pos) assert.ok(p >= 0, '欠けている: ' + label + ' ' + pos);

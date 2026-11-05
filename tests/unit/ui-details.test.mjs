@@ -54,13 +54,13 @@ test('段取りの表の中に折りたたみが無く、原文の抜き書き�
   }
 });
 
-test('入札前の確認: 根拠の見出しは「根拠: 建設業法 第○条…」で閉じており、結論の印は閉じない', () => {
+test('入札前の確認: 根拠の見出しは「根拠を見る: 建設業法 第○条…」で閉じており、結論の印は閉じない', () => {
   const bid = bidCheck(COND);
   const html = renderBidResult(bid);
   const sums = [...html.matchAll(/<details class="basis"><summary>([^<]*)<\/summary>/g)].map((m) => m[1]);
   assert.ok(sums.length > 0, '根拠の折りたたみが無い');
-  for (const s of sums) assert.match(s, /^根拠: \S/, '見出しが「根拠: 」で始まらない: ' + s);
-  assert.ok(sums.some((s) => /^根拠: 建設業法 第\d+条/.test(s)), '「根拠: 建設業法 第○条」の見出しが無い');
+  for (const s of sums) assert.match(s, /^根拠を見る: \S/, '見出しが「根拠を見る: 」で始まらない: ' + s);
+  assert.ok(sums.some((s) => /^根拠を見る: 建設業法 第\d+条/.test(s)), '「根拠を見る: 建設業法 第○条」の見出しが無い');
   assert.ok(!/<details class="basis" open/.test(html), '根拠が最初から開いている');
   const visible = outsideDetails(html);
   for (const it of bid.items) {

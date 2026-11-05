@@ -25,12 +25,12 @@ export function basisLabel(b) {
   return b.law + ' ' + s;
 }
 
+const basisLabels = (list) => esc([...new Set(list.map(basisLabel))].join('、'));
+const basisItems = (list) => '<ul>' + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('') + '</ul>';
 export function basisList(list = []) {
   if (!list.length) return '<p class="basis-none">根拠: 無し</p>';
   // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
-  return '<details class="basis"><summary>根拠: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
-    + list.map((b) => '<li><strong>' + esc(basisLabel(b)) + '</strong>(' + esc(versionText(b)) + ')<blockquote>' + esc(b.quote) + '</blockquote></li>').join('')
-    + '</ul></details>';
+  return '<details class="basis"><summary>根拠: ' + basisLabels(list) + '</summary>' + basisItems(list) + '</details>';
 }
 
 function exceptionList(list = []) {
@@ -46,6 +46,7 @@ function amountBasisBlock(ab) {
 export const BID_STATUS = { required: '要る', not_required: '要らない', needs_check: '確認が要る', unanswered: '未回答' };
 // 結論の印(F14b): 色だけで区別しないよう、記号と言葉を必ず添える(要る=●と赤系、確認が要る=!と黄系、要らない=✓と緑系、未回答=?と灰色。F14f)
 export const STATUS_MARK = { required: '●', needs_check: '!', not_required: '✓', unanswered: '?' };
+const STATUS_ORDER = ['required', 'needs_check', 'unanswered', 'not_required'];
 export function statusBadge(status, extra = '') {
   const word = BID_STATUS[status] ?? String(status ?? '');
   const mark = STATUS_MARK[status];
@@ -65,7 +66,9 @@ export const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
 //   values が無いときは、判定の状態をそのまま出す(入れた条件は出さない)
 export function renderBidResult(bid, values) {
   const st = (it) => (values ? displayStatus(it, values) : it.status);
-  const rows = bid.items.map((it) => {
+  const points = needsCheckPoints(bid, values);
+  // 結論の順(F43c): 要る → 確認が要る → 未回答 → 要らない。同じ結論の中は判定の順のまま
+  const rows = bid.items.slice().sort((a, b) => STATUS_ORDER.indexOf(st(a)) - STATUS_ORDER.indexOf(st(b))).map((it) => {
     const s = st(it);
     const value = it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '';
     const conds = values ? itemConditions(it, values) : [];
@@ -84,11 +87,18 @@ export function renderBidResult(bid, values) {
           ? '<p class="contact"><span class="part">確かめ先:</span> 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します。</p>'
           : '<p class="contact"><span class="part">確かめ先:</span> 根拠の原文に相手の定めが無いので、出していません。</p>';
     }
-    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>'
-      + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml + unansweredNote
-      + basisList(it.basis) + exceptionList(it.exceptions) + contactHtml + '</li>';
+    // 1行のカード(F43c): 見えるのは結論と、確認が要る点のある項目の1行だけ。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
+    const own = s === 'required' || s === 'not_required' ? (bid.checks ?? []).filter((c) => c.key === it.key) : [];
+    const depends = own.some((c) => c.changes)
+      ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、<a href="#open-items">確認が要る点</a>の答えで変わることがあります。</p>'
+      : own.length ? '<p class="item-depends">＊ この項目には<a href="#open-items">確認が要る点</a>があります。</p>' : '';
+    const basis = it.basis ?? [];
+    const basisPart = basis.length ? basisItems(basis) : '<p class="basis-none">根拠: 無し</p>';
+    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + depends + unansweredNote
+      + '<details class="basis"><summary>' + (basis.length ? '根拠を見る: ' + basisLabels(basis) : '理由を見る') + '</summary>'
+      + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml
+      + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
-  const points = needsCheckPoints(bid, values);
   const checks = points.length
     ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
@@ -359,6 +369,38 @@ function summaryValue(raw, map, values, id) {
   return s === '' ? '入れていません' : s + (/円$/.test(s) ? '' : ' 円');
 }
 const NOT_YET = (btn) => '<span class="not-yet">まだ出していません(「' + esc(btn) + '」を押すと出ます)</span>';
+// 件数つきの開くカード(F43c)。まとめの中の2つ。描き直しても開いたままにする id は app.mjs の SUMMARY_FOLDS
+const openCard = (id, title, count, inner) => '<details class="open-card" id="' + esc(id) + '"><summary><span>' + esc(title) + '</span>' + (count ? ' <span class="open-count">' + esc(count) + '</span>' : '') + '</summary>' + inner + '</details>';
+
+// 結果の先頭(F43c): 数字のカードと「次にすること」のカード。state は renderSummary と同じ
+//   数字は候補の数で、押すとその節へ飛ぶ。安全の法令の候補は「要るものの候補」に混ぜない。印(▲)を付け、リンクの色にしない
+export const SAFETY_MARK = '▲';
+function nextStep(state, points, un) {
+  if (state.errors?.length) return { title: '金額の欄を直す', sub: '読めない欄に印を付けました。直してから、もう一度「確認する」を押してください。', href: 'bid-form', go: '1 条件に戻る' };
+  if (state.stale) return { title: 'もう一度「確認する」を押す', sub: '条件が変わりました。下の数は前の条件の結果です。', href: 'bid-run', go: '1 条件に戻る' };
+  if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '1 条件に戻る' };
+  if (points.length) return { title: '「確認が要る」の ' + points.length + '件を確かめる', sub: points[0].label + ': ' + points[0].message, href: 'open-items', go: '確認が要る点を見る' };
+  return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '3 書類を確かめる' };
+}
+export function renderResultTop(state = {}) {
+  const errors = state.errors?.length > 0;
+  if (!errors && !state.bid) return '';
+  const vals = state.values ?? null;
+  const un = vals ? unansweredQuestions(vals) : [];
+  const points = errors ? [] : needsCheckPoints(state.bid, vals ?? undefined);
+  const n = nextStep(state, points, un);
+  const next = '<div class="next-card no-print"><div class="next-text"><p class="next-title">次にすること: ' + esc(n.title) + '</p><p class="next-sub">' + esc(n.sub) + '</p></div><a class="next-go" href="#' + esc(n.href) + '">' + esc(n.go) + '</a></div>';
+  if (errors) return next;
+  const required = state.bid.items.filter((it) => (vals ? displayStatus(it, vals) : it.status) === 'required').length;
+  const safety = state.safety?.count;
+  const stat = (cls, href, num, lab, sub) => '<li><a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
+  return '<ul class="stats" aria-label="結果の件数(候補)">'
+    + stat('required', 'bid-result', STATUS_MARK.required + ' ' + required, '要るものの候補', '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
+    + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る', '自分で確かめる点(件)')
+    + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
+    + '</ul>' + next;
+}
+
 export function renderSummary(state = {}) {
   const parts = [];
   if (state.stale) parts.push('<p class="summary-stale">条件が変わりました。下の数は前の条件の結果です。もう一度「確認する」を押してください。</p>');
@@ -371,13 +413,13 @@ export function renderSummary(state = {}) {
     const vals = state.values ?? null;
     const dst = (it) => (vals ? displayStatus(it, vals) : it.status);
     const un = vals ? unansweredQuestions(vals) : [];
-    const order = ['required', 'needs_check', 'unanswered', 'not_required'];
+    const order = STATUS_ORDER;
     const points = needsCheckPoints(state.bid, vals ?? undefined);
     const count = (st) => items.filter((it) => dst(it) === st).length;
     parts.push((un.length ? '<p class="provisional"><strong>仮の一覧です</strong>(未回答の質問 ' + un.length + 'つ)。<a href="#open-items">未回答の一覧</a>を見て、答えるか「分からない」を選んでください。</p>' : '')
       + '<h4>受注したら要るもの(' + items.length + '項目' + (un.length ? '・仮の一覧' : '') + ')</h4>'
       + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
-      + '<ul class="summary-items">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
+      + '<ul class="summary-items print-only">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
         .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
       + (points.length ? '<p><a href="#bid-result">確認が要る点 ' + points.length + '件</a>を入札前の確認の欄に出しています。' + esc(pointsNote(points)) + '</p>' : ''));
   } else {
@@ -398,13 +440,14 @@ export function renderSummary(state = {}) {
     const und = (state.plan.undecidable ?? []).length;
     rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : '記載項目の抜けの候補 <strong>' + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
   } else rows.push(['施工計画書の目次の点検', NOT_YET('目次を点検する'), 'plan-result']);
-  parts.push('<h4>書類と段取り</h4>' + scrollTable('書類と段取りの表', '<table class="summary-table"><tbody>'
-    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>'));
+  const docCount = state.check || state.plan ? ((state.check?.candidates ?? []).length + (state.plan?.candidates ?? []).length) + '件' : 'まだ';
+  parts.push(openCard('summary-docs', '台帳と目次の点検の候補', docCount, scrollTable('書類と段取りの表', '<table class="summary-table"><tbody>'
+    + rows.map(([k, v, id]) => '<tr><th scope="row"><a href="#' + esc(id) + '">' + esc(k) + '</a></th><td>' + v + '</td></tr>').join('') + '</tbody></table>')));
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
-  parts.push('<h4>入れた条件</h4><dl class="summary-list">'
+  parts.push(openCard('summary-conditions', '入れた条件', '', '<dl class="summary-list">'
     + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values, id)) + '</dd></div>').join('')
-    + (state.safety?.answerRows ?? []).map(([k, v]) => '<div class="summary-row"><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl>');
+    + (state.safety?.answerRows ?? []).map(([k, v]) => '<div class="summary-row"><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl>'));
   return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }

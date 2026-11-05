@@ -203,7 +203,7 @@ export function bidCheck(input = {}) {
   }
   const ded = items[5];
   if (ded.status === 'required' && input.orderer === 'public') {
-    checks.push({ key: 'dedicated', label: ded.label, message: '注文者が国又は地方公共団体である工事として専任と判定した(施行令 第27条第1項第1号)。注文者がそれ以外(特殊法人など)なら第1号に当たらないので、施設・工作物の種類(第2号・第3号)を確かめる' });
+    checks.push({ key: 'dedicated', label: ded.label, changes: true, message: '注文者が国又は地方公共団体である工事として専任と判定した(施行令 第27条第1項第1号)。注文者がそれ以外(特殊法人など)なら第1号に当たらないので、施設・工作物の種類(第2号・第3号)を確かめる' });
   }
   if (engineer.value === 'kanri' && input.engineerQualification !== 'kanri') {
     checks.push({ key: 'engineer', label: engineer.label, message: '受注したら監理技術者を置くが、置ける技術者の資格が「監理技術者」と入っていない。置ける人を確かめる' });

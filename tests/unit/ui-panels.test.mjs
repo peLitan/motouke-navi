@@ -209,7 +209,7 @@ test('印刷: 隠れた段も紙に出す(CSS)。段を切り替えずに印刷�
   assert.match(printCss, /#panel-1\[hidden\], #panel-2\[hidden\], #panel-3\[hidden\] \{ display: block; \}/);
   // 入口の枠・見本の知らせ・次へは紙に出さない
   assert.match(body, /<div class="start no-print" id="start">/);
-  assert.match(body, /<div class="row no-print"><button type="button" id="next-step-3">/);
+  assert.match(body, /<div class="row no-print step-next"><button type="button" id="next-step-3">/);
   const page = runPage();
   await page.click('sample-load');
   await page.click('print-btn');

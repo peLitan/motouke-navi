@@ -73,7 +73,7 @@
   .result { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 1rem 1.5rem; margin-bottom: 1rem; }
   .form { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 1rem 1.5rem; }
   /* 結果の中のリンクは縦に余白を足し、指で押しやすくする(F38b) */
-  .summary a, .result a { display: inline-block; padding: 0.25rem 0; }
+  .summary a, .result a, .result-plain a { display: inline-block; padding: 0.25rem 0; }
   .human { font-weight: bold; }
   .errors { color: var(--need); }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 0.75rem; }
@@ -139,6 +139,7 @@
   .sample-banner p[aria-live]:not(:empty) { border: none; padding: 0; margin: 0.25rem 0; font-weight: normal; }
   /* 空の状態の文(F38d): 結果と見分ける */
   .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
+  .result-plain > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; border-radius: 8px; padding: 0 0.5rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
@@ -148,9 +149,33 @@
   .badge-unanswered { color: var(--ink-2); background: var(--paper); border-color: var(--line); border-style: dashed; }
   /* 答えの状態と結果の順(F14f): 理由・入れた条件・確かめ先の見出し語、仮の一覧の知らせ、見ている法令の範囲、印刷だけに出す確認の欄 */
   .items { padding-left: 0; list-style: none; }
-  .item { border-top: 1px solid var(--line); padding: 0.5rem 0; }
-  .item:first-child { border-top: none; }
+  /* 要る項目のカード(F43c): 見えるのは結論の1行と「根拠を見る」。中身は今の details のまま */
+  .item { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .item h4 { margin: 0.25rem 0; }
+  .item-depends { margin: 0.25rem 0; font-weight: bold; }
+  /* 結果の先頭(F43c): 数字のカードは押すとその節へ飛ぶ。安全の法令の候補は印を付け、青にしない(「問題なし」「押せる字」に読めないように) */
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; list-style: none; margin: 0.75rem 0 1rem; padding: 0; }
+  .stat { display: block; height: 100%; padding: 0.75rem 1rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-top: 6px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); text-decoration: none; }
+  .stat:hover { background: var(--paper-2); }
+  .stat-num { display: block; font-size: 2rem; font-weight: bold; line-height: 1.2; }
+  .stat-lab { display: block; font-size: 1.1875rem; font-weight: bold; text-decoration: underline; }
+  .stat-sub { display: block; color: var(--ink-2); }
+  .stat-required { border-top-color: var(--need-line); }
+  .stat-required .stat-num { color: var(--need); }
+  .stat-check { border-top-color: var(--check-line); }
+  .stat-safety { border-top-color: var(--ink-2); }
+  .next-card { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; color: var(--ink); background: var(--primary-bg); border: 1px solid var(--primary); border-radius: 12px; padding: 1rem 1.5rem; margin: 0 0 1rem; }
+  .next-text { flex: 1 1 16rem; min-width: 0; }
+  .next-title { margin: 0; font-size: 1.1875rem; font-weight: bold; }
+  .next-sub { margin: 0.25rem 0 0; }
+  .next-go { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 1rem; color: var(--paper); background: var(--primary); border-radius: 8px; font-weight: bold; text-decoration: none; }
+  .next-go:hover, .next-go:active { color: var(--paper); background: var(--primary-dark); }
+  /* 件数つきの開くカード(F43c)。開く・閉じるの字は CSS で足す */
+  details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0 1rem; margin: 0.5rem 0; }
+  details.open-card > summary, details#bid-fold > summary, details.schedule-table > summary, details.safety-fold > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; color: var(--ink); font-size: 1.1875rem; font-weight: bold; }
+  details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: "開く ▾"; margin-left: auto; color: var(--primary); font-size: 1rem; }
+  details.open-card[open] > summary::after, details#bid-fold[open] > summary::after, details.schedule-table[open] > summary::after, details.safety-fold[open] > summary::after { content: "閉じる ▴"; }
+  .open-count { font-size: 1.5rem; }
   .item .part { font-weight: bold; }
   .ans-unknown, .ans-unanswered { font-weight: bold; text-decoration: underline; }
   .provisional { border-left: 4px solid var(--line); padding: 0.25rem 0 0.25rem 0.75rem; color: var(--ink); }
@@ -241,6 +266,11 @@
     .result, .form, .summary, .other-tools { padding: 0.75rem 1rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
     .entry-choices { grid-template-columns: minmax(0, 1fr); }
+    .stats { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    .next-card { padding: 0.75rem 1rem; }
+    /* 下に止まる帯(F43c)は「次へ」の1つだけ。流れの中の行なので、下まで動かせば本文は隠れない */
+    .step-next { position: sticky; bottom: 0; margin: 1rem 0 0; padding: 0.5rem 0; background: var(--paper); border-top: 1px solid var(--line); }
+    #next-step-3 { width: 100%; margin: 0; }
     /* 進み具合(F43a): 字は 16px のまま3つの段を等しい幅に分け、丸の下に名前を全部出す(長い名前は2行に折り返す)。線は丸と丸の間に描く */
     .steps { align-items: flex-start; }
     .steps li { position: relative; flex: 1 1 0; min-width: 0; justify-content: center; }
@@ -275,6 +305,10 @@
     /* 印刷では折りたたみを開くので、「説明」などの見出しは紙に出さない */
     details.fold > summary { display: none; }
     .other-tools { margin: 0; border: none; padding: 0; }
+    details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { margin: 0; border: none; padding: 0; }
+    details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: none; }
+    .stat-lab { text-decoration: none; }
+    .item { margin: 0; padding: 0.5rem 0; border: none; border-top: 1px solid var(--line); border-radius: 0; }
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
     .print-only { display: block; }
@@ -412,10 +446,10 @@
 <p id="sample-status" aria-live="polite"></p>
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>
 </div>
-<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
+<div id="result-top" hidden></div>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
-<div id="bid-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="bid-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 </details>
@@ -440,7 +474,7 @@
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
-<div id="schedule-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="schedule-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
@@ -453,10 +487,11 @@
 {{SAFETY_QUESTIONS}}
 </div>
 <p id="safety-status" class="no-print" aria-live="polite"></p>
-<div id="safety-result" class="result"><p>条件を入れると、ここに候補を出します。</p></div>
+<div id="safety-result" class="result-plain"><p>条件を入れると、ここに候補を出します。</p></div>
 <p class="note" id="safety-version"></p>
 </details>
 <div id="open-items" class="result open-items" aria-live="polite" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
+<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -470,7 +505,7 @@
 <p id="csv-note">Excel で開ける CSV として、この PC に保存します(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
 </div>
-<div class="row no-print"><button type="button" id="next-step-3">次へ: 3 書類を確かめる</button></div>
+<div class="row no-print step-next"><button type="button" id="next-step-3">次へ: 3 書類を確かめる</button></div>
 </section>
 <section id="panel-3" hidden>
 <section id="ledger-check">

@@ -6,24 +6,25 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildHtml } from '../../build.mjs';
 import { runPage } from '../acceptance/_helpers.mjs';
-import { renderSummary, renderBidResult, statusBadge, STATUS_MARK, bidItemId } from '../../src/ui/view.mjs';
+import { renderSummary, renderResultTop, renderBidResult, statusBadge, STATUS_MARK, SAFETY_MARK, bidItemId } from '../../src/ui/view.mjs';
 import { SAMPLE } from '../../src/sample.mjs';
 import { readBidForm } from '../../src/ui/form.mjs';
 import { bidCheck } from '../../src/bid-check.mjs';
+import { openPanelForLink } from '../../src/ui/app.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const html = buildHtml();
 const body = html.slice(html.indexOf('<body>'));
 
-test('まとめの枠は 1. の入力欄のすぐ後・入札前の確認の結果より前にあり、最初は隠してある', () => {
+test('結果の先頭は数字と次にすることのカード(#result-top)で、まとめの枠は安全の法令の候補の後。どちらも最初は隠してある', () => {
   const m = body.match(/<div id="summary" class="summary"[^>]*>/);
   assert.ok(m, 'まとめの枠が無い');
   assert.ok(/\shidden[\s>]/.test(m[0]), '結果を出す前から枠が見えている');
-  const form = body.indexOf('</form>');
-  const sum = body.indexOf('id="summary"');
-  const bid = body.indexOf('id="bid-result"');
-  assert.ok(form < sum && sum < bid, 'まとめの枠が結果の一番上に無い');
-  assert.ok(sum < body.indexOf('id="check-result"') && sum < body.indexOf('id="plan-result"'));
+  assert.match(body, /<div id="result-top" hidden><\/div>/);
+  const at = (id) => body.indexOf('id="' + id + '"');
+  const order = ['bid-status', 'sample-banner', 'result-top', 'bid-fold', 'bid-result', 'schedule-result', 'safety-fold', 'open-items', 'summary', 'print-btn', 'next-step-3'];
+  for (let i = 1; i < order.length; i++) assert.ok(at(order[i - 1]) >= 0 && at(order[i - 1]) < at(order[i]), order[i - 1] + ' → ' + order[i]);
+  assert.ok(at('summary') < at('check-result') && at('summary') < at('plan-result'));
 });
 
 test('結論の印は 要る=●・確認が要る=!・要らない=✓・未回答=?(F14f) で、言葉を必ず添える(色だけで区別しない)', () => {
@@ -134,6 +135,103 @@ test('画面を動かす: 見本を押すとまとめの枠が出て、台帳の
   await page.click('bid-run');
   assert.ok(!page.text('summary').includes('条件が変わりました'));
   assert.ok(page.text('summary').includes('1000 円'));
+});
+
+const TOP_BID = { items: [
+  { key: 'a', label: '項目A', status: 'required' },
+  { key: 'b', label: '項目B', status: 'required' },
+  { key: 'c', label: '項目C', status: 'not_required' },
+], checks: [{ key: 'a', label: '項目A', message: '<確かめる>' }] };
+const topText = (o) => o.replace(/<[^>]+>/g, '');
+
+test('数字のカード: 要るものの候補・確認が要る・安全の法令の候補の3つで、押すとその節へ飛ぶ。安全は要るものに混ぜない', () => {
+  const out = renderResultTop({ bid: TOP_BID, safety: { count: 3 } });
+  const cards = [...out.matchAll(/<a class="stat stat-(\w+)" href="#([\w-]+)"><span class="stat-num">([^<]*)<\/span><span class="stat-lab">([^<]*)<\/span><span class="stat-sub">([^<]*)<\/span>/g)].map((m) => m.slice(1));
+  assert.deepEqual(cards.map((c) => c.slice(0, 4)), [
+    ['required', 'bid-result', '● 2', '要るものの候補'],
+    ['check', 'open-items', '! 1', '確認が要る'],
+    ['safety', 'safety-fold', SAFETY_MARK + ' 3', '安全の法令の候補'],
+  ]);
+  assert.ok(cards[0][4].includes('候補') && cards[2][4].includes('候補'), '件数の説明に「候補」が無い');
+  for (const c of cards) assert.ok(body.includes('id="' + c[1] + '"'), '飛ぶ先が無い: ' + c[1]);
+  // 問いに答える前の安全は 0件と言わない
+  const none = topText(renderResultTop({ bid: TOP_BID, safety: { count: null } }));
+  assert.ok(none.includes(SAFETY_MARK + ' −') && none.includes('問いに答えると出ます'));
+});
+
+test('次にすること: 誤り・条件の変更・未回答・確認が要る点・無し の順に1つだけ出す。入れた文字はエスケープする', () => {
+  const go = (o) => [topText(o.match(/<p class="next-title">([\s\S]*?)<\/p>/)[1]), o.match(/class="next-go" href="#([\w-]+)"/)[1]];
+  assert.equal(renderResultTop({}), '');
+  const err = renderResultTop({ errors: ['x'] });
+  assert.deepEqual(go(err), ['次にすること: 金額の欄を直す', 'bid-form']);
+  assert.ok(!err.includes('class="stats"'), '読めないときに数を出している');
+  assert.deepEqual(go(renderResultTop({ bid: TOP_BID, stale: true })), ['次にすること: もう一度「確認する」を押す', 'bid-run']);
+  assert.deepEqual(go(renderResultTop({ bid: TOP_BID, values: {} })).slice(1), ['bid-form']);
+  assert.match(go(renderResultTop({ bid: TOP_BID, values: {} }))[0], /^次にすること: 未回答の質問 \d+つに答える$/);
+  const check = renderResultTop({ bid: TOP_BID });
+  assert.deepEqual(go(check), ['次にすること: 「確認が要る」の 1件を確かめる', 'open-items']);
+  assert.ok(check.includes('&lt;確かめる&gt;') && !check.includes('<確かめる>'));
+  assert.deepEqual(go(renderResultTop({ bid: { ...TOP_BID, checks: [] } })), ['次にすること: 書類を確かめる', 'panel-3']);
+  assert.ok(body.includes('id="bid-run"') && body.includes('id="bid-form"') && body.includes('id="panel-3"'));
+});
+
+test('要る項目のカード: 結論は閉じず、理由と根拠は「根拠を見る」の中。結論の順に並ぶ', () => {
+  const out = renderBidResult(bidCheck(readBidForm(SAMPLE.form)), SAMPLE.form);
+  const items = [...out.matchAll(/<li class="item status-[\s\S]*?<\/details><\/li>/g)].map((m) => m[0]);
+  assert.equal(items.length, 6);
+  for (const h of items) {
+    const head = h.slice(0, h.indexOf('<details'));
+    assert.ok(head.includes('class="badge') && !head.includes('理由:'), '結論の外に理由がある');
+    assert.match(h, /<details class="basis"><summary>根拠を見る: /);
+  }
+  const mixed = renderBidResult({ items: [{ key: 'n', label: 'いらない', status: 'not_required', basis: [] }, { key: 'r', label: 'いる', status: 'required', basis: [] }], checks: [] });
+  assert.ok(mixed.indexOf('いる') < mixed.indexOf('いらない'), '要るが先に来ない');
+  assert.ok(mixed.includes('<summary>理由を見る</summary>') && mixed.includes('根拠: 無し'));
+});
+
+test('確認が要る点に左右される「要る」はそう書く。左右されない確認は言い切らない', () => {
+  const item = (key) => ({ key, label: key, status: 'required', basis: [] });
+  const out = renderBidResult({ items: [item('a'), item('b'), item('c')], checks: [{ key: 'a', label: 'a', message: 'x', changes: true }, { key: 'b', label: 'b', message: 'y' }] });
+  const parts = out.split('<li class="item').slice(1);
+  assert.ok(parts[0].includes('この「要る」は') && parts[0].includes('答えで変わることがあります') && parts[0].includes('href="#open-items"'));
+  assert.ok(parts[1].includes('この項目には') && !parts[1].includes('変わることがあります'));
+  assert.ok(!parts[2].includes('item-depends'));
+  // 見本は 専任の項目だけが左右される。判定の側が印を付ける
+  const bid = bidCheck(readBidForm(SAMPLE.form));
+  assert.deepEqual(bid.checks.filter((c) => c.changes).map((c) => c.key), ['dedicated']);
+  assert.equal((renderBidResult(bid, SAMPLE.form).match(/item-depends/g) ?? []).length, 1);
+  // 確認が要るの項目そのものには書かない(札がそう言っている)
+  assert.ok(!renderBidResult({ items: [{ key: 'a', label: 'a', status: 'needs_check', basis: [] }], checks: [{ key: 'a', label: 'a', message: 'x' }] }).includes('item-depends'));
+});
+
+test('まとめの開くカード: 台帳と目次は候補の件数つき、入れた条件も開くカード。項目の一覧は紙にだけ出す', () => {
+  const closed = renderSummary({ values: {} });
+  assert.match(closed, /<details class="open-card" id="summary-docs"><summary><span>台帳と目次の点検の候補<\/span> <span class="open-count">まだ<\/span>/);
+  const out = renderSummary({ values: {}, check: { candidates: [{}, {}], undecidable: [] }, plan: { candidates: [{}, {}, {}], undecidable: [] } });
+  assert.ok(out.includes('<span class="open-count">5件</span>'));
+  assert.match(out, /<details class="open-card" id="summary-conditions"><summary><span>入れた条件<\/span>/);
+  const withBid = renderSummary({ values: {}, bid: TOP_BID });
+  assert.ok(withBid.includes('<ul class="summary-items print-only">'));
+});
+
+test('画面を動かす: 見本のあとに先頭のカードが出て、飛ぶ先が閉じた折りたたみなら開き、見本を消すと隠れる', async () => {
+  const page = runPage(html);
+  assert.equal(page.el('result-top').hidden, true);
+  await page.click('sample-load');
+  assert.equal(page.el('result-top').hidden, false);
+  const t = page.text('result-top');
+  assert.ok(t.includes('● 6') && t.includes('! 1') && t.includes('次にすること'), t);
+  await page.set('contract-amount', '1000');
+  assert.ok(page.text('result-top').includes('もう一度「確認する」を押す'));
+  await page.click('sample-reenter');
+  assert.equal(page.el('result-top').hidden, true);
+  assert.equal(page.el('result-top').innerHTML, '');
+
+  const outer = { open: false };
+  const inner = { open: false, parentElement: { closest: () => outer } };
+  const target = { closest: (s) => (s === 'details' ? inner : null) };
+  openPanelForLink({ getElementById: () => target }, '#x');
+  assert.ok(inner.open && outer.open, '閉じた折りたたみが開かない');
 });
 
 test('07 の決まりは崩さない: 断り書き・PDL の表示・CSP で通信先無し・外部の読み込み無し・保存しない・index.html 1つ', () => {

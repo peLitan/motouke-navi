@@ -50,7 +50,7 @@ const groundOf = (r) => {
   if (bg && bg !== 'transparent') return color(bg);
   return vars['--paper'];
 };
-const isButton = (sel) => /button|#bid-run|#ledger-run|#plan-run|#next-step-3/.test(sel);
+const isButton = (sel) => /button|#bid-run|#ledger-run|#plan-run|#next-step-3|\.next-go/.test(sel);
 
 test('焦点: 全部の部品が同じ2重の輪で、輪の2色は白地でも主の色の塗りの上でも見える', () => {
   const body = ruleWith('button:focus-visible');
@@ -418,6 +418,40 @@ test('印刷: 余白があり、文字と線はどれも黒、塗りは白(ボ�
   // 断り書きの字は紙でも黒、対応表の警告の枠も黒のまま残る
   assert.equal(printVars[prop(ruleOf('.disclaimer'), 'color').match(/--[\w-]+/)[0]], '#000');
   assert.equal(prop(ruleOf('.warning-box'), 'border'), '3px solid var(--line-strong)');
+});
+
+test('結果の先頭: 数字のカードと次へのボタンは押す所 44px 以上、スマホでは1列', () => {
+  assert.equal(prop(ruleOf('.next-go'), 'min-height'), '2.75rem');
+  // カードは 数字 32px と 2行の文で 44px を超える
+  assert.equal(prop(ruleOf('.stat-num'), 'font-size'), '2rem');
+  assert.equal(prop(ruleOf('.stat'), 'display'), 'block');
+  assert.equal(prop(ruleOf('.stats'), 'grid-template-columns'), 'repeat(3, minmax(0, 1fr))');
+  assert.match(html, /@media \(max-width: 40rem\) \{[\s\S]*?\.stats \{ grid-template-columns: minmax\(0, 1fr\);/);
+});
+
+test('安全の法令の候補: 色だけに頼らず印を付け、主の色(リンクの色)にしない', () => {
+  const safety = rules.filter((r) => r.sel.includes('stat-safety'));
+  assert.ok(safety.length > 0);
+  for (const r of safety) assert.ok(!r.body.includes('--primary'), r.sel + ' が主の色');
+  assert.ok(!prop(ruleOf('.stat'), 'color').includes('--primary'), 'カードの字が主の色');
+  atLeast(vars['--ink-2'], vars['--paper'], 3, '安全のカードの線');
+});
+
+test('開くカード: 件数つきのカードの見出しは 44px で、開く・閉じるの字があり、紙には出ない', () => {
+  assert.ok(html.includes('details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: "開く ▾";'));
+  assert.ok(html.includes('details.safety-fold[open] > summary::after { content: "閉じる ▴"; }'));
+  assert.ok(printCss.includes('details.safety-fold > summary::after { content: none; }'));
+  assert.equal(prop(ruleOf('details > summary'), 'min-height'), '2.75rem');
+});
+
+test('スマホで下に止まる帯は「次へ」の1つだけ。流れの中に置き、紙には出ない', () => {
+  assert.equal((html.match(/position: (sticky|fixed)/g) ?? []).length, 1);
+  assert.match(html, /@media \(max-width: 40rem\) \{[\s\S]*?\.step-next \{ position: sticky; bottom: 0;/);
+  const bar = body.match(/<div class="row no-print step-next">([\s\S]*?)<\/div>/)[1];
+  assert.equal((bar.match(/<button/g) ?? []).length, 1);
+  assert.ok(bar.includes('次へ'));
+  // 太字の知らせや広い面を止めない: 帯の中身はボタン1つで、幅の広い決まりを持たない
+  assert.ok(!/\.step-next \{[^}]*height/.test(html));
 });
 
 test('印刷: 幅の枠は紙の幅いっぱいになる', () => {
