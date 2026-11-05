@@ -5,6 +5,8 @@
 //   --fetched-at YYYY-MM-DD                        … 取得日(省略すると今日。日本時間)
 //   --law KEY                                      … LAWS の key の法令だけを取り直す(例 --law kisoku)。
 //                                                    ほかの法令の行・取得日・版と index.json の note は前のまま残す
+//   --article 条                                   … --law と一緒に使い、その条だけを取る(例 --law rei --article 37)。
+//                                                    同じ法令のほかの条の原文・取得日も前のまま残す
 // これは作る側の道具。画面(index.html)は外部と通信しない。
 // 保存するのは本則(MainProvision)の条だけ。附則は対象外。
 // 原文のファイルは、条の見出し・条の番号で始め、第2項以降を行の頭の項の番号(「２」など)で始める(e-Gov の表示と同じ)。
@@ -21,7 +23,7 @@ const PAGE = 'https://laws.e-gov.go.jp/law/';
 // 取得する法令と条('24の8' の形)
 export const LAWS = [
   { key: 'kensetsu', law: '建設業法', lawId: '324AC0000000100', articles: ['3', '24の8', '26'] },
-  { key: 'rei', law: '建設業法施行令', lawId: '331CO0000000273', articles: ['2', '7の4', '27'] },
+  { key: 'rei', law: '建設業法施行令', lawId: '331CO0000000273', articles: ['2', '7の4', '27', '37'] },
   { key: 'nyukei', law: '公共工事の入札及び契約の適正化の促進に関する法律', lawId: '412AC0000000127', articles: ['15'] },
   // 施工体制台帳の記載事項(F16)。2026-11-03 に --law kisoku で足した
   { key: 'kisoku', law: '建設業法施行規則', lawId: '324M50004000014', articles: ['14の2'] },
@@ -101,10 +103,17 @@ function renderItems(node, lines, depth) {
     renderOther(c, lines, depth + 1, new Set([prefix + 'Title', prefix + 'Sentence']));
   }
 }
-// 表・図など、上で扱わない要素は文字だけを行にする
+// 表は1行を1つの行にし、欄を全角の空白で区切る
+function renderTable(node, lines, depth) {
+  for (const row of els(el(node, 'Table'), 'TableRow')) {
+    lines.push('　'.repeat(depth) + els(row, 'TableColumn').map(sentenceText).join('　'));
+  }
+}
+// 図など、上で扱わない要素は文字だけを行にする
 function renderOther(node, lines, depth, skip) {
   for (const c of els(node)) {
     if (skip.has(c.name) || /^(Item|Subitem\d+)$/.test(c.name)) continue;
+    if (c.name === 'TableStruct') { renderTable(c, lines, depth); continue; }
     const t = clean(text(c));
     if (t) lines.push('　'.repeat(depth) + t);
   }
@@ -156,6 +165,8 @@ async function main() {
   const only = opt('--law');
   if (only && !LAWS.some((L) => L.key === only)) throw new Error('--law の key が無い: ' + only);
   const targets = only ? LAWS.filter((L) => L.key === only) : LAWS;
+  const article = opt('--article');
+  if (article && !(only && targets[0].articles.includes(article))) throw new Error('--article は --law と一緒に、LAWS にある条を指定する: ' + article);
 
   fs.mkdirSync(OUT, { recursive: true });
   const idxPath = path.join(OUT, 'index.json');
@@ -166,7 +177,7 @@ async function main() {
     const revisionId = clean(text(find(root, (n) => n.name === 'law_revision_id')));
     const title = clean(text(find(root, (n) => n.name === 'LawTitle')));
     if (title !== L.law) throw new Error('法令名が違う: ' + title + '(期待 ' + L.law + ')');
-    for (const a of L.articles) {
+    for (const a of article ? [article] : L.articles) {
       const art = findArticle(root, a);
       const file = 'law-' + L.key + '-' + String(a).replace(/の/g, '_') + '.txt';
       fs.writeFileSync(path.join(OUT, file), renderArticle(art), 'utf8');
@@ -191,7 +202,13 @@ async function main() {
   const keptLaws = only ? (old.sources || []).filter((s) => s.kind === 'law' && s.lawId !== targets[0].lawId) : [];
   const others = (old.sources || []).filter((s) => s.kind !== 'law');
   const note = old.note || '法令の原文は e-Gov 法令 API から取得した本則の条。国交省の資料は、根拠に使う節だけを PDF から文字のまま写して保存する(全文は再配布しない)';
-  const out = { note, sources: [...keptLaws, ...lawRows, ...others] };
+  let rows = [...keptLaws, ...lawRows, ...others];
+  if (article) {
+    // その条の行だけを入れ替える。新しい行は同じ法令の最後の行の次に置く
+    rows = (old.sources || []).filter((s) => s.id !== lawRows[0].id);
+    rows.splice(rows.findLastIndex((s) => s.lawId === targets[0].lawId) + 1, 0, ...lawRows);
+  }
+  const out = { note, sources: rows };
   fs.writeFileSync(idxPath, JSON.stringify(out, null, 2) + '\n', 'utf8');
   console.log('index.json: ' + out.sources.length + ' 行');
 }
