@@ -41,8 +41,8 @@ test('安全の法令の原文: 取得した14の条がそろい、どの条に�
 
 test('「二の二」のような号の枝は、その枝の行の中にある', () => {
   const branched = quotesData.quotes.filter((q) => q.branch);
-  assert.equal(branched.length, 5);
-  const kanji = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五' };
+  assert.equal(branched.length, 8);
+  const kanji = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 15: '十五' };
   for (const q of branched) {
     const head = kanji[q.item] + 'の' + kanji[q.branch] + '　';
     const line = paragraphOf(texts[q.sourceId], q.paragraph).split('\n').find((l) => l.startsWith(head));
@@ -368,7 +368,7 @@ test('全部当たらなければ候補は空。「要らない」の結論は1�
 
 test('号の括弧書きの除外は、原文のまま候補に添える(判定はしない)', () => {
   const rows = [...safetyData.planItems, ...safetyData.chief.works].filter((x) => x.caveat);
-  assert.equal(rows.length, 4);
+  assert.equal(rows.length, 5);
   for (const x of rows) assert.ok(quoteText(x.quoteId).includes(x.caveat), x.id);
   assert.match(notice({ excavationM: 10 }).matched[0].caveat, /立ち入らない/);
   assert.match(chief({ works: ['scaffold'] }, 'safety-chief-scaffold').caveat, /ゴンドラ/);

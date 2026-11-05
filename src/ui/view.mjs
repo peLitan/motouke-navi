@@ -22,7 +22,7 @@ export function basisLabel(b) {
   const [main, ...subs] = String(b.article).split('の');
   let s = '第' + main + '条' + subs.map((x) => 'の' + x).join('');
   if (b.paragraph) s += '第' + b.paragraph + '項';
-  if (b.item) s += '第' + b.item + '号';
+  if (b.item) s += '第' + b.item + '号' + (b.branch ? 'の' + b.branch : '');
   return b.law + ' ' + s;
 }
 

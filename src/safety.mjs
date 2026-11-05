@@ -7,6 +7,7 @@
 //   workers: 同じ場所で働く人の数(数)か 'unknown'
 //   plan: planItems の id の並びか 'none'(どれにも当たらない)か 'unknown'。measure のある項目は、数の欄(bridgeSpanM など)があれば数で決める
 //   bridgeSpanM: 橋の最大支間(数か 'unknown')。bridgePlace: 則 第18条の2の2 の場所か(true|false|'unknown')。令7条と則90条で橋の条件が違うので、この2つから別々に決める
+//   excavationFaceM・scaffoldHeightM・steelFrameHeightM・woodEaveHeightM・concreteDemolitionHeightM: 作業の高さ。あれば chief.works の境目(抜き書きから読む)で決める
 //   tunnelNoEntry・excavationNoEntry・excavationRock: true なら原文の除外に当たるものとして、その項目を外す
 //   works: 作業の id の並びか 'none' か 'unknown'
 import safetyData from '../data/safety.json' with { type: 'json' };
@@ -154,7 +155,7 @@ function chiefCandidates(input) {
   const common = { label: c.label, action: c.action, note: c.note };
   const states = c.works.map((item) => ({ item, state: itemState(item, input.works, input) }));
   const hits = states.filter((x) => x.state === true).map((x) => ({
-    id: 'safety-chief-' + x.item.id, ...common, work: x.item.label, caveat: [x.item.caveat, x.item.caveat2].filter(Boolean).join('、') || null, status: 'required', needs: [],
+    id: 'safety-chief-' + x.item.id, ...common, note: [c.note, x.item.note].filter(Boolean).join('。'), work: x.item.label, caveat: [x.item.caveat, x.item.caveat2].filter(Boolean).join('、') || null, status: 'required', needs: [],
     basis: basisOf([...c.basis, { quoteId: x.item.quoteId }, ...(x.item.alsoQuoteId ? [{ quoteId: x.item.alsoQuoteId }] : [])]),
   }));
   if (hits.length) return hits;

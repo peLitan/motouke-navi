@@ -71,6 +71,7 @@ export function resolveQuoteIds(list, quotes, sources, label) {
       article: q.article,
       paragraph: q.paragraph,
       item: q.item,
+      ...(q.branch ? { branch: q.branch } : {}),
       quote: q.text,
       title: s.title,
       url: s.url,

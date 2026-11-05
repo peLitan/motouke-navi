@@ -55,6 +55,17 @@ export function itemOf(paragraph, n) {
   return lines.slice(start, end).join('\n');
 }
 
+// 第 n 号の文から、枝番の号(「十五の二　」)の文を取り出す。次の号か枝番の号の行の前まで。見つからなければ null
+export function branchOf(item, n, branch) {
+  const lines = String(item ?? '').split(/\r?\n/);
+  const head = /^[一二三四五六七八九十]+(の[一二三四五六七八九十]+)?　/;
+  const start = lines.findIndex((l) => l.startsWith(itemKanji(n) + 'の' + itemKanji(branch) + '　'));
+  if (start < 0) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) if (head.test(lines[i])) { end = i; break; }
+  return lines.slice(start, end).join('\n');
+}
+
 // 号の文から、号の細分(イ・ロ・ハ…)の文を取り出す(F16a)。細分は行の頭が全角の空白1つ・片仮名1字・全角の空白で始まる
 // (「　イ　」。原文のファイルの書き方)。細分のさらに下((１) など)は全角の空白2つで始まるので、その細分に含める。
 // 見つからなければ null
@@ -69,8 +80,8 @@ export function subitemOf(item, kana) {
   return lines.slice(start, end).join('\n');
 }
 
-// 1件の抜き書き {id, sourceId, article, paragraph, item, subitem?, text} を、出典の原文と照らす。
-// paragraph が整数ならその項の中に、さらに item が整数ならその号の中に、subitem(片仮名1字)があればその細分の中にあることまで確かめる。
+// 1件の抜き書き {id, sourceId, article, paragraph, item, branch?, subitem?, text} を、出典の原文と照らす。
+// paragraph が整数ならその項の中に、さらに item が整数ならその号の中に、branch があればその枝番の号の中に、subitem(片仮名1字)があればその細分の中にあることまで確かめる。
 // 返り値: { ok: true } か { ok: false, reason }
 export function checkQuote(q, sourceTexts) {
   if (!q || typeof q !== 'object') return { ok: false, reason: '抜き書きが無い' };
@@ -85,6 +96,10 @@ export function checkQuote(q, sourceTexts) {
   if (Number.isInteger(q.item)) {
     const it = itemOf(scope, q.item);
     if (it === null || !verifyQuote(q.text, it)) return { ok: false, reason: '第' + q.item + '号の中に無い' };
+    if (Number.isInteger(q.branch)) {
+      const br = branchOf(it, q.item, q.branch);
+      if (br === null || !verifyQuote(q.text, br)) return { ok: false, reason: '第' + q.item + '号の' + q.branch + 'の中に無い' };
+    }
     if (q.subitem != null) {
       const sub = subitemOf(it, q.subitem);
       if (sub === null || !verifyQuote(q.text, sub)) return { ok: false, reason: '第' + q.item + '号' + q.subitem + 'の中に無い' };
