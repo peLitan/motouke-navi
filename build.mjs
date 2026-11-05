@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { sourceVersion } from './src/source-version.mjs';
 import { parseRulesFile, tableCredit } from './src/rules-load.mjs';
+import { renderSafetyQuestions } from './src/ui/safety-view.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SHELL = path.join(ROOT, 'src', 'ui', 'shell.html');
@@ -118,7 +119,7 @@ export function wakayamaCreditHtml() {
 
 export function buildHtml() {
   const shell = fs.readFileSync(SHELL, 'utf8');
-  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}', '{{CHECKLIST_REFERENCE}}', '{{WAKAYAMA_CREDIT}}']) {
+  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}', '{{CHECKLIST_REFERENCE}}', '{{WAKAYAMA_CREDIT}}', '{{SAFETY_QUESTIONS}}']) {
     if (!shell.includes(key)) throw new Error('shell.html に ' + key + ' の場所が無い');
   }
   const withBody = shell
@@ -126,6 +127,7 @@ export function buildHtml() {
     .replace('{{SCOPE}}', () => scopeHtml())
     .replace('{{CHECKLIST_REFERENCE}}', () => checklistReferenceHtml())
     .replace('{{WAKAYAMA_CREDIT}}', () => wakayamaCreditHtml())
+    .replace('{{SAFETY_QUESTIONS}}', () => renderSafetyQuestions())
     .replace('{{SCRIPT}}', () => `<script>\n${bundle()}</script>`);
   return withBody.replace('{{CSP}}', () => makeCsp(withBody));
 }

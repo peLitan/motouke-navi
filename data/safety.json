@@ -1,39 +1,119 @@
 {
   "note": "労働安全衛生法の候補の規則表(F40a)。境目の数は書かず、measure の pattern で抜き書き(data/quotes.json)の漢数字から読む。「要らない」の結論は持たない。当てはまらない行は候補に出さない",
   "fields": {
-    "subcontract": "下請けを使うか",
-    "workers": "同じ場所で働く人の数",
+    "subcontract": "仕事の一部を他社(個人を含む)に請け負わせるか",
+    "workers": "同じ場所で常時働く人の数",
     "plan": "工事の中に次のものがあるか",
     "works": "行う作業"
   },
   "subLine": {
-    "text": "下請けのときは、元方事業者の措置・統括安全衛生責任者・計画の届出は元請けが行います(仕事を自ら行う発注者がいる工事は別です)。作業主任者の選任は条文が「事業者」に掛けているので、自社で行う作業があれば元請けか労働基準監督署に確かめてください",
-    "basis": [{ "quoteId": "q-anei-15-1-motokata" }, { "quoteId": "q-anei-88-5" }, { "quoteId": "q-anei-14-1" }]
+    "text": "下請けとして入る工事なので、元方事業者の措置・統括安全衛生責任者・法 第八十八条第二項から第四項の届出(数次の請負では、仕事を自ら行う発注者か元請負人に掛かります)は出していません(第三十条の指名があるときは別です)。下請けにも掛かるものを出します",
+    "basis": [
+      {
+        "quoteId": "q-anei-15-1-motokata"
+      },
+      {
+        "quoteId": "q-anei-15-1-sennin"
+      },
+      {
+        "quoteId": "q-anei-15-3"
+      },
+      {
+        "quoteId": "q-anei-88-5"
+      }
+    ]
   },
   "candidates": [
     {
       "id": "safety-motokata",
-      "label": "元方事業者の措置",
+      "label": "元方事業者(元請けの会社)の措置",
       "action": "下請け(関係請負人)とその作業従事者が、その仕事について労働安全衛生法とこれに基づく命令に違反しないよう必要な指導を行い、違反を認めたら是正のため必要な指示を行う",
-      "basis": [{ "quoteId": "q-anei-15-1-motokata" }, { "quoteId": "q-anei-29-1" }, { "quoteId": "q-anei-29-2" }]
+      "basis": [
+        {
+          "quoteId": "q-anei-15-1-motokata"
+        },
+        {
+          "quoteId": "q-anei-29-1"
+        },
+        {
+          "quoteId": "q-anei-29-2"
+        },
+        {
+          "quoteId": "q-anei-29_2"
+        },
+        {
+          "quoteId": "q-ansoku-634_2-1"
+        },
+        {
+          "quoteId": "q-ansoku-634_2-1_2"
+        },
+        {
+          "quoteId": "q-ansoku-634_2-2"
+        },
+        {
+          "quoteId": "q-ansoku-634_2-3"
+        },
+        {
+          "quoteId": "q-ansoku-634_2-4"
+        }
+      ],
+      "note": "建設業の元方事業者は、土砂等の崩壊や機械等の転倒のおそれのある場所などで下請けの作業従事者が作業するときは、下請けの措置が適正に講じられるよう技術上の指導などの措置も講じます(法 第二十九条の二)。場所は根拠の則 第六百三十四条の二で確かめてください"
     },
     {
       "id": "safety-tokutei",
-      "label": "特定元方事業者の措置",
-      "action": "協議組織の設置と運営、作業間の連絡と調整、作業場所の巡視、下請けが行う安全衛生教育の指導と援助などの措置を講じる",
+      "label": "特定元方事業者(建設業などの元方事業者)の措置",
+      "action": "協議組織(下請けも入る話し合いの場)の設置と運営、作業間の連絡と調整、作業場所の巡視(見て回ること)、下請けが行う安全衛生教育の指導と援助などの措置を講じる",
       "note": "工程と機械・設備の配置の計画は、第三十条第一項第五号の業種に当たるときの措置です(業種を定める省令の条は取り込んでいません)。発注者が仕事を分けて複数の請負人に請け負わせているときは、指名された事業者が措置を講じることがあります",
-      "basis": [{ "quoteId": "q-anei-15-1-tokutei" }, { "quoteId": "q-anei-30-1" }, { "quoteId": "q-anei-30-1-1" }, { "quoteId": "q-anei-30-1-2" }, { "quoteId": "q-anei-30-1-3" }, { "quoteId": "q-anei-30-1-4" }, { "quoteId": "q-anei-30-1-5" }, { "quoteId": "q-anei-30-4" }]
+      "basis": [
+        {
+          "quoteId": "q-anei-15-1-tokutei"
+        },
+        {
+          "quoteId": "q-anei-30-1"
+        },
+        {
+          "quoteId": "q-anei-30-1-1"
+        },
+        {
+          "quoteId": "q-anei-30-1-2"
+        },
+        {
+          "quoteId": "q-anei-30-1-3"
+        },
+        {
+          "quoteId": "q-anei-30-1-4"
+        },
+        {
+          "quoteId": "q-anei-30-1-5"
+        },
+        {
+          "quoteId": "q-anei-30-4"
+        }
+      ]
     }
   ],
   "supervisor": {
     "id": "safety-supervisor",
     "label": "統括安全衛生責任者の選任",
     "action": "統括安全衛生責任者を選任し、元方安全衛生管理者の指揮と、法 第三十条第一項各号の事項の統括管理をさせる",
-    "note": "第三十条の指名がされたときは、指名された事業者が選任します",
+    "note": "第三十条の指名がされ、全ての作業従事者の数が政令で定める数以上のときは、指名された事業者が選任します",
     "workersPattern": "常時(.+?)人$",
     "lowQuoteId": "q-anrei-7-2-1",
     "highQuoteId": "q-anrei-7-2-2",
-    "basis": [{ "quoteId": "q-anei-15-1-sennin" }, { "quoteId": "q-anei-15-3" }, { "quoteId": "q-anrei-7-2-1" }, { "quoteId": "q-anrei-7-2-2" }]
+    "basis": [
+      {
+        "quoteId": "q-anei-15-1-sennin"
+      },
+      {
+        "quoteId": "q-anei-15-3"
+      },
+      {
+        "quoteId": "q-anrei-7-2-1"
+      },
+      {
+        "quoteId": "q-anrei-7-2-2"
+      }
+    ]
   },
   "notice": {
     "id": "safety-notice",
@@ -41,39 +121,289 @@
     "note": "数次の請負で仕事を自ら行う発注者がいるときは、その発注者に掛かります",
     "scopeQuoteId": "q-anei-88-5",
     "daysPattern": "開始の日の(.+?)日前まで",
-    "minister": { "to": "厚生労働大臣", "quoteId": "q-anei-88-2" },
-    "office": { "to": "労働基準監督署長", "quoteId": "q-anei-88-3" }
+    "minister": {
+      "to": "厚生労働大臣",
+      "quoteId": "q-anei-88-2"
+    },
+    "office": {
+      "to": "労働基準監督署長",
+      "quoteId": "q-anei-88-3"
+    }
   },
   "planItems": [
-    { "id": "plan-tower", "route": "minister", "quoteId": "q-ansoku-89-1", "measure": { "field": "towerHeightM", "op": "gte", "pattern": "高さが(.+?)メートル以上の塔" } },
-    { "id": "plan-dam", "route": "minister", "quoteId": "q-ansoku-89-2", "measure": { "field": "damHeightM", "op": "gte", "pattern": "）が(.+?)メートル以上のダム" } },
-    { "id": "plan-bridge-large", "route": "minister", "quoteId": "q-ansoku-89-3", "measure": { "field": "bridgeSpanM", "op": "gte", "pattern": "最大支間(.+?)メートル（", "whenField": "bridgeSuspension", "whenPattern": "つり橋にあつては、(.+?)メートル" } },
-    { "id": "plan-tunnel-long", "route": "minister", "quoteId": "q-ansoku-89-4", "lowerWorkers": true, "measure": { "field": "tunnelLengthM", "op": "gte", "pattern": "長さが(.+?)メートル以上のずい道等" } },
-    { "id": "plan-tunnel-shaft", "route": "minister", "quoteId": "q-ansoku-89-5", "lowerWorkers": true },
-    { "id": "plan-pressure-high", "route": "minister", "quoteId": "q-ansoku-89-6", "lowerWorkers": true, "measure": { "field": "pressureMPa", "op": "gte", "pattern": "ゲージ圧力が(.+?)メガパスカル以上" } },
-    { "id": "plan-structure", "route": "office", "quoteId": "q-ansoku-90-1", "measure": { "field": "structureHeightM", "op": "gt", "pattern": "高さ(.+?)メートルを超える" } },
-    { "id": "plan-bridge", "route": "office", "quoteId": "q-ansoku-90-2", "measure": { "field": "bridgeSpanM", "op": "gte", "pattern": "最大支間(.+?)メートル以上" } },
-    { "id": "plan-bridge-place", "route": "office", "quoteId": "q-ansoku-90-2_2", "alsoQuoteId": "q-ansoku-18_2_2-1" },
-    { "id": "plan-tunnel", "route": "office", "quoteId": "q-ansoku-90-3", "caveat": "ずい道等の内部に労働者が立ち入らないものを除く", "lowerWorkers": true },
-    { "id": "plan-excavation", "route": "office", "quoteId": "q-ansoku-90-4", "caveat": "掘削機械を用いる作業で、掘削面の下方に労働者が立ち入らないものを除く", "measure": { "field": "excavationM", "op": "gte", "pattern": "高さ又は深さが(.+?)メートル以上である地山" } },
-    { "id": "plan-pressure", "route": "office", "quoteId": "q-ansoku-90-5", "lowerWorkers": true },
-    { "id": "plan-asbestos-spray", "route": "office", "quoteId": "q-ansoku-90-5_2" },
-    { "id": "plan-asbestos-cover", "route": "office", "quoteId": "q-ansoku-90-5_3" },
-    { "id": "plan-incinerator", "route": "office", "quoteId": "q-ansoku-90-5_4" },
-    { "id": "plan-quarry", "route": "office", "quoteId": "q-ansoku-90-6", "measure": { "field": "quarryDepthM", "op": "gte", "pattern": "高さ又は深さが(.+?)メートル以上の土石" } },
-    { "id": "plan-quarry-mine", "route": "office", "quoteId": "q-ansoku-90-7" },
-    { "id": "plan-bridge-narrow", "route": null, "quoteId": "q-anrei-7-2-1", "alsoQuoteId": "q-ansoku-18_2_2-1", "lowerWorkers": true }
+    {
+      "id": "plan-tower",
+      "route": "minister",
+      "quoteId": "q-ansoku-89-1",
+      "measure": {
+        "field": "towerHeightM",
+        "op": "gte",
+        "pattern": "高さが(.+?)メートル以上の塔"
+      }
+    },
+    {
+      "id": "plan-dam",
+      "route": "minister",
+      "quoteId": "q-ansoku-89-2",
+      "measure": {
+        "field": "damHeightM",
+        "op": "gte",
+        "pattern": "）が(.+?)メートル以上のダム"
+      }
+    },
+    {
+      "id": "plan-bridge-large",
+      "route": "minister",
+      "quoteId": "q-ansoku-89-3",
+      "measure": {
+        "field": "bridgeSpanM",
+        "op": "gte",
+        "pattern": "最大支間(.+?)メートル（",
+        "whenField": "bridgeSuspension",
+        "whenPattern": "つり橋にあつては、(.+?)メートル"
+      }
+    },
+    {
+      "id": "plan-tunnel-long",
+      "route": "minister",
+      "quoteId": "q-ansoku-89-4",
+      "lowerWorkers": true,
+      "measure": {
+        "field": "tunnelLengthM",
+        "op": "gte",
+        "pattern": "長さが(.+?)メートル以上のずい道等"
+      }
+    },
+    {
+      "id": "plan-tunnel-shaft",
+      "route": "minister",
+      "quoteId": "q-ansoku-89-5",
+      "lowerWorkers": true
+    },
+    {
+      "id": "plan-pressure-high",
+      "route": "minister",
+      "quoteId": "q-ansoku-89-6",
+      "lowerWorkers": true,
+      "measure": {
+        "field": "pressureMPa",
+        "op": "gte",
+        "pattern": "ゲージ圧力が(.+?)メガパスカル以上"
+      }
+    },
+    {
+      "id": "plan-structure",
+      "route": "office",
+      "quoteId": "q-ansoku-90-1",
+      "measure": {
+        "field": "structureHeightM",
+        "op": "gt",
+        "pattern": "高さ(.+?)メートルを超える"
+      }
+    },
+    {
+      "id": "plan-bridge",
+      "route": "office",
+      "quoteId": "q-ansoku-90-2",
+      "measure": {
+        "field": "bridgeSpanM",
+        "op": "gte",
+        "pattern": "最大支間(.+?)メートル以上"
+      }
+    },
+    {
+      "id": "plan-bridge-place",
+      "route": "office",
+      "quoteId": "q-ansoku-90-2_2",
+      "alsoQuoteId": "q-ansoku-18_2_2-1",
+      "lowerWorkers": true,
+      "measure": {
+        "field": "bridgeSpanM",
+        "op": "gte",
+        "pattern": "最大支間(.+?)メートル以上"
+      }
+    },
+    {
+      "id": "plan-tunnel",
+      "route": "office",
+      "quoteId": "q-ansoku-90-3",
+      "caveat": "ずい道等の内部に労働者が立ち入らないものを除く",
+      "lowerWorkers": true,
+      "measure": {
+        "excludedBy": "tunnelNoEntry"
+      }
+    },
+    {
+      "id": "plan-excavation",
+      "route": "office",
+      "quoteId": "q-ansoku-90-4",
+      "caveat": "掘削機械を用いる作業で、掘削面の下方に労働者が立ち入らないものを除く",
+      "measure": {
+        "field": "excavationM",
+        "op": "gte",
+        "pattern": "高さ又は深さが(.+?)メートル以上である地山",
+        "excludedBy": "excavationNoEntry"
+      }
+    },
+    {
+      "id": "plan-pressure",
+      "route": "office",
+      "quoteId": "q-ansoku-90-5",
+      "lowerWorkers": true
+    },
+    {
+      "id": "plan-asbestos-spray",
+      "route": "office",
+      "quoteId": "q-ansoku-90-5_2"
+    },
+    {
+      "id": "plan-asbestos-cover",
+      "route": "office",
+      "quoteId": "q-ansoku-90-5_3"
+    },
+    {
+      "id": "plan-incinerator",
+      "route": "office",
+      "quoteId": "q-ansoku-90-5_4"
+    },
+    {
+      "id": "plan-quarry",
+      "route": "office",
+      "quoteId": "q-ansoku-90-6",
+      "measure": {
+        "field": "quarryDepthM",
+        "op": "gte",
+        "pattern": "高さ又は深さが(.+?)メートル以上の土石"
+      }
+    },
+    {
+      "id": "plan-quarry-mine",
+      "route": "office",
+      "quoteId": "q-ansoku-90-7"
+    },
+    {
+      "id": "plan-bridge-narrow",
+      "route": null,
+      "quoteId": "q-anrei-7-2-1",
+      "alsoQuoteId": "q-ansoku-18_2_2-1",
+      "lowerWorkers": true
+    },
+    {
+      "id": "plan-tunnel-noentry",
+      "route": null,
+      "quoteId": "q-anrei-7-2-1",
+      "lowerWorkers": true,
+      "label": "ずい道等の建設の仕事で、内部に人が立ち入らないもの"
+    }
   ],
   "chief": {
     "label": "作業主任者の選任",
-    "action": "技能講習を修了した者などのうちから、作業の区分に応じて作業主任者を選任する",
-    "note": "第十四条の義務は「事業者」に掛かります。その作業を下請けが行うときに誰が選任するかは、労働基準監督署に確かめてください",
-    "basis": [{ "quoteId": "q-anei-14-1" }],
+    "action": "政令で定める作業ごとに、技能講習を修了した者などのうちから作業主任者(その作業の指揮などをする人)を選任する",
+    "note": "第十四条の義務は「事業者」に掛かります。下請けがその作業を行うときは、下請けにも掛かります",
+    "basis": [
+      {
+        "quoteId": "q-anei-14-1"
+      }
+    ],
     "works": [
-      { "id": "excavation", "label": "地山の掘削", "quoteId": "q-anrei-6-9", "caveat": "ずい道及びたて坑以外の坑の掘削を除く", "measure": { "field": "excavationFaceM", "op": "gte", "pattern": "掘削面の高さが(.+?)メートル以上" } },
-      { "id": "shoring", "label": "土止め支保工", "quoteId": "q-anrei-6-10" },
-      { "id": "formwork", "label": "型枠支保工", "quoteId": "q-anrei-6-14" },
-      { "id": "scaffold", "label": "足場", "quoteId": "q-anrei-6-15", "caveat": "ゴンドラのつり足場を除く", "measure": { "field": "scaffoldHeightM", "op": "gte", "pattern": "高さが(.+?)メートル以上の構造の足場", "unlessField": "scaffoldHungOrCantilever" } }
+      {
+        "id": "excavation",
+        "label": "地山の掘削",
+        "quoteId": "q-anrei-6-9",
+        "caveat": "ずい道及びたて坑以外の坑の掘削を除く",
+        "caveat2": "第十一号に掲げる作業を除く",
+        "measure": {
+          "field": "excavationFaceM",
+          "op": "gte",
+          "pattern": "掘削面の高さが(.+?)メートル以上",
+          "excludedBy": "excavationRock"
+        },
+        "alsoQuoteId": "q-anrei-6-11"
+      },
+      {
+        "id": "shoring",
+        "label": "土止め支保工",
+        "quoteId": "q-anrei-6-10"
+      },
+      {
+        "id": "formwork",
+        "label": "型枠支保工",
+        "quoteId": "q-anrei-6-14"
+      },
+      {
+        "id": "scaffold",
+        "label": "足場",
+        "quoteId": "q-anrei-6-15",
+        "caveat": "ゴンドラのつり足場を除く",
+        "measure": {
+          "field": "scaffoldHeightM",
+          "op": "gte",
+          "pattern": "高さが(.+?)メートル以上の構造の足場",
+          "unlessField": "scaffoldHungOrCantilever"
+        }
+      }
+    ]
+  },
+  "notOnList": "見ていないもの: 機械等の設置の届出(法 第八十八条第一項。足場・型枠支保工など。下請けにも掛かります)、計画への資格者の参画(同条第四項)、店社安全衛生管理者、救護の措置、この四つのほかの作業主任者の作業(ずい道・橋の上部構造・酸素欠乏の場所など)。別に確かめてください",
+  "manager": {
+    "id": "safety-manager",
+    "label": "元方安全衛生管理者の選任",
+    "action": "統括安全衛生責任者を選任した事業者で、建設業その他政令で定める業種に属する事業を行うものは、省令で定める資格を有する者のうちから元方安全衛生管理者を選任し、第三十条第一項各号の事項のうち技術的事項を管理させる",
+    "note": "統括安全衛生責任者と対で掛かります。資格を定める省令の条は取り込んでいません",
+    "basis": [
+      {
+        "quoteId": "q-anei-15_2-1"
+      },
+      {
+        "quoteId": "q-anei-15-1-sennin"
+      },
+      {
+        "quoteId": "q-anei-15-3"
+      },
+      {
+        "quoteId": "q-anrei-7-1"
+      }
+    ]
+  },
+  "responsible": {
+    "id": "safety-responsible",
+    "label": "安全衛生責任者の選任",
+    "action": "統括安全衛生責任者を選任すべき事業者以外の請負人で、その仕事を自ら行う場合に、安全衛生責任者を選任して統括安全衛生責任者との連絡などを行わせ、選任したことを遅滞なく通報する",
+    "note": "元請けが統括安全衛生責任者を選任すべき現場かどうかで決まります。元請けに確かめてください。行わせる事項を定める省令の条は取り込んでいません",
+    "basis": [
+      {
+        "quoteId": "q-anei-16-1"
+      },
+      {
+        "quoteId": "q-anei-16-2"
+      },
+      {
+        "quoteId": "q-anei-15-1-sennin"
+      },
+      {
+        "quoteId": "q-anei-15-3"
+      }
+    ]
+  },
+  "question": {
+    "main": [
+      "plan-tunnel",
+      "plan-tunnel-noentry",
+      "plan-pressure",
+      "plan-excavation",
+      "plan-structure"
+    ],
+    "more": [
+      "plan-tower",
+      "plan-dam",
+      "plan-tunnel-long",
+      "plan-tunnel-shaft",
+      "plan-pressure-high",
+      "plan-asbestos-spray",
+      "plan-asbestos-cover",
+      "plan-incinerator",
+      "plan-quarry",
+      "plan-quarry-mine"
     ]
   }
 }

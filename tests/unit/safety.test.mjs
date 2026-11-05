@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import safetyData from '../../data/safety.json' with { type: 'json' };
 import quotesData from '../../data/quotes.json' with { type: 'json' };
 import sourcesData from '../../data/sources/index.json' with { type: 'json' };
-import { safetyCandidates, workerThresholds, kanjiNumber, subcontractAnswer } from '../../src/safety.mjs';
+import { safetyCandidates, safetyQuestions, safetyInput, workerThresholds, kanjiNumber, subcontractAnswer } from '../../src/safety.mjs';
 import { checkQuote, paragraphOf, stripSpaces, filterVerifiedRules } from '../../src/quote-check.mjs';
 
 const texts = {};
@@ -30,8 +30,8 @@ test('人数の境目は令 第7条の原文の数', () => {
   assert.deepEqual(workerThresholds(), { low: 30, high: 50 });
 });
 
-test('安全の法令の原文: 取得した10の条がそろい、どの条にも抜き書きがあり、すべて原文と一致する', () => {
-  assert.equal(safetySourceIds.length, 10);
+test('安全の法令の原文: 取得した14の条がそろい、どの条にも抜き書きがあり、すべて原文と一致する', () => {
+  assert.equal(safetySourceIds.length, 14);
   for (const id of safetySourceIds) assert.ok(quotesData.quotes.some((q) => q.sourceId === id), id);
   for (const q of quotesData.quotes.filter((x) => safetySourceIds.includes(x.sourceId))) {
     const r = checkQuote(q, texts);
@@ -41,8 +41,8 @@ test('安全の法令の原文: 取得した10の条がそろい、どの条に�
 
 test('「二の二」のような号の枝は、その枝の行の中にある', () => {
   const branched = quotesData.quotes.filter((q) => q.branch);
-  assert.equal(branched.length, 4);
-  const kanji = { 2: '二', 3: '三', 4: '四', 5: '五' };
+  assert.equal(branched.length, 5);
+  const kanji = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五' };
   for (const q of branched) {
     const head = kanji[q.item] + 'の' + kanji[q.branch] + '　';
     const line = paragraphOf(texts[q.sourceId], q.paragraph).split('\n').find((l) => l.startsWith(head));
@@ -74,16 +74,140 @@ test('則 第89条・第90条の号は1つも落とさず問いの項目にあ�
   }
 });
 
-test('下請けとして入る: 候補は出さず1行だけ。作業主任者を元請けの仕事と言い切らない', () => {
+test('下請けとして入る: 元請けだけに掛かるものを出さず、下請けにも掛かるもの(安全衛生責任者・作業主任者)と1行の説明を出す', () => {
   const r = safetyCandidates({ direct: false, subcontract: 'yes', workers: 100, plan: ['plan-tunnel'], works: ['excavation'] });
   assert.equal(r.mode, 'sub');
-  assert.deepEqual(r.candidates, []);
-  assert.equal(r.counts.total, 0);
-  assert.match(r.line.text, /元請けが行います/);
-  assert.match(r.line.text, /作業主任者/);
+  assert.deepEqual(ids(r), ['safety-responsible', 'safety-chief-excavation']);
+  assert.equal(r.counts.total, 2);
+  assert.ok(r.candidates.find((c) => c.id === 'safety-responsible').basis.some((b) => b.article === '16' && b.paragraph === 1));
+  assert.match(r.line.text, /元方事業者の措置・統括安全衛生責任者・法 第八十八条第二項から第四項の届出.*出していません/);
   assert.doesNotMatch(r.line.text, /\n/);
-  assert.ok(r.line.basis.some((b) => b.article === '14'));
   assert.ok(r.line.basis.some((b) => b.article === '88' && b.paragraph === 5));
+  for (const id of ['safety-motokata', 'safety-tokutei', 'safety-supervisor', 'safety-manager', 'safety-notice']) assert.ok(!ids(r).includes(id), id);
+});
+
+test('下請けとして入る: 安全衛生責任者は統括の境目で決まる(境目の下は出ず、人数が分からなければ確認が要る)', () => {
+  const { high } = workerThresholds();
+  const r = (workers) => safetyCandidates({ direct: false, workers, plan: 'none', works: 'none' });
+  assert.deepEqual(ids(r(high - 1)), []);
+  assert.equal(r(high).candidates[0].status, 'required');
+  assert.equal(r('unknown').candidates[0].status, 'needs_check');
+  assert.equal(r(undefined).candidates[0].status, 'unanswered');
+});
+
+test('統括安全衛生責任者が出るときは、元方安全衛生管理者が同じ状態で対で出る(法 第15条の2)', () => {
+  for (const workers of [100, 'unknown', undefined]) {
+    const r = safetyCandidates({ direct: true, subcontract: 'yes', workers, plan: 'none', works: 'none' });
+    const [a, b] = ['safety-supervisor', 'safety-manager'].map((id) => r.candidates.find((c) => c.id === id));
+    assert.equal(a.status, b.status);
+    assert.deepEqual(a.needs, b.needs);
+    assert.ok(b.basis.some((x) => x.article === '15の2'));
+  }
+  const none = safetyCandidates({ direct: true, subcontract: 'yes', workers: 1, plan: 'none', works: 'none' });
+  assert.ok(!ids(none).includes('safety-manager'));
+});
+
+test('元方事業者の措置に 法 第29条の2 と場所の条(則 第634条の2)の原文が付く', () => {
+  const c = find(safetyCandidates(base), 'safety-motokata');
+  assert.ok(c.basis.some((b) => b.article === '29の2'));
+  assert.equal(c.basis.filter((b) => b.article === '634の2').length, 5);
+});
+
+// 精度監査の「静かに間違う入力」15件。法 第88条第1項(足場・型枠支保工の届出)は限界として判定しないので、7〜10 の届出は「届出の候補に出ないこと」と限界の文を確かめる
+const has = (r, id) => r.candidates.some((c) => c.id === id);
+const sup = (r) => has(r, 'safety-supervisor');
+const not = (r) => r.candidates.some((c) => c.id === 'safety-notice' && c.status === 'required');
+const one = (x) => safetyCandidates({ direct: true, subcontract: 'yes', plan: 'none', works: 'none', ...x });
+test('静かに間違う入力 1〜3: 令7条と則90条の橋・ずい道の条件が別々に効く', () => {
+  const c1 = one({ bridgeSpanM: 40, bridgePlace: false, workers: 35 });
+  assert.equal(not(c1), false);
+  assert.equal(sup(c1), false);
+  assert.equal(sup(one({ bridgeSpanM: 40, bridgePlace: false, workers: 50 })), true);
+  const c2 = one({ bridgeSpanM: 40, bridgePlace: true, workers: 30 });
+  assert.equal(not(c2), true);
+  assert.equal(sup(c2), true);
+  assert.equal(sup(one({ bridgeSpanM: 40, bridgePlace: true, workers: 29 })), false);
+  const c3 = one({ plan: ['plan-tunnel-noentry'], workers: 35 });
+  assert.equal(sup(c3), true);
+  assert.equal(not(c3), false);
+  const c3b = one({ plan: ['plan-tunnel'], tunnelNoEntry: true, workers: 35 });
+  assert.equal(not(c3b), false);
+});
+test('橋の支間が 50m 以上で場所に当たらない: 届出はあり、統括の境目は高い方のまま', () => {
+  const r = one({ bridgeSpanM: 60, bridgePlace: false, workers: 35 });
+  assert.equal(not(r), true);
+  assert.equal(sup(r), false);
+});
+test('橋の場所の答えが無いと、40m の橋は決めずに未回答にする(届出なしと言わない)', () => {
+  const c = one({ bridgeSpanM: 40 }).candidates.find((x) => x.id === 'safety-notice');
+  assert.equal(c.status, 'unanswered');
+  assert.equal(one({ bridgeSpanM: 40, bridgePlace: 'unknown' }).candidates.find((x) => x.id === 'safety-notice').status, 'needs_check');
+  assert.equal(one({ bridgeSpanM: 'unknown', bridgePlace: false }).candidates.find((x) => x.id === 'safety-notice').status, 'needs_check');
+});
+test('静かに間違う入力 4〜6: 掘削の届出の高さ・深さと作業主任者の高さは別々', () => {
+  const c4 = one({ excavationM: 9.9, excavationFaceM: 9.9 });
+  assert.equal(not(c4), false);
+  assert.ok(has(c4, 'safety-chief-excavation'));
+  assert.equal(not(one({ excavationM: 10 })), true);
+  assert.equal(not(one({ excavationM: 10, excavationNoEntry: true })), false);
+  assert.ok(!has(one({ excavationFaceM: 1.9 }), 'safety-chief-excavation'));
+  assert.ok(has(one({ excavationFaceM: 2 }), 'safety-chief-excavation'));
+});
+test('静かに間違う入力 7〜10: 足場・型枠支保工は作業主任者の境目だけを見て、法88条1項の届出は判定せず見ていないと書く', () => {
+  const c7 = one({ scaffoldHeightM: 9.9 });
+  assert.ok(has(c7, 'safety-chief-scaffold'));
+  assert.equal(not(c7), false);
+  assert.equal(not(one({ scaffoldHeightM: 10 })), false);
+  const c9 = one({ scaffoldHeightM: 3, scaffoldHungOrCantilever: true });
+  assert.ok(has(c9, 'safety-chief-scaffold'));
+  assert.ok(!has(one({ scaffoldHeightM: 3 }), 'safety-chief-scaffold'));
+  const c10 = one({ works: ['formwork'] });
+  assert.ok(has(c10, 'safety-chief-formwork'));
+  assert.equal(not(c10), false);
+  assert.match(c9.notOnList, /第八十八条第一項/);
+});
+test('静かに間違う入力 11〜13: 人数の境目(店社安全衛生管理者は見ていないと書く)', () => {
+  const c11 = one({ plan: ['plan-tunnel'], workers: 29 });
+  assert.equal(sup(c11), false);
+  assert.match(c11.notOnList, /店社安全衛生管理者/);
+  assert.equal(sup(one({ workers: 49 })), false);
+  assert.equal(sup(one({ workers: 50 })), true, '一人親方を含めた数');
+  assert.match(safetyQuestions().workers[0].label, /30人未満/);
+});
+test('静かに間違う入力 14・15: 岩石の採取の掘削は第九号から外し、ずい道 3,000m は厚生労働大臣', () => {
+  assert.ok(!has(one({ excavationFaceM: 3, excavationRock: true }), 'safety-chief-excavation'));
+  const ex = one({ works: ['excavation'] }).candidates.at(-1);
+  assert.match(ex.caveat, /第十一号/);
+  assert.ok(ex.basis.some((b) => b.quote.includes('岩石の採取')), '第十一号の中身を根拠で読める');
+  assert.equal(one({ tunnelLengthM: 3000 }).candidates.find((c) => c.id === 'safety-notice').to, '厚生労働大臣');
+  assert.equal(one({ tunnelLengthM: 2999 }).candidates.some((c) => c.id === 'safety-notice'), false);
+});
+
+test('画面の問い: 範囲と支間の選択肢は原文の境目から作り、数を規則表に書かない', () => {
+  const q = safetyQuestions();
+  assert.deepEqual(q.workers.map((x) => x.workers), [29, 30, 50, 'unknown']);
+  assert.deepEqual(q.bridge.filter((x) => typeof x.span === 'number').map((x) => x.span).slice(1), [50, 30, 0]);
+  assert.match(q.bridge[1].label, /500m.*つり橋.*1,000m/);
+  assert.match(q.bridge[2].label, /50m 以上で、上に当たらないもの.*つり橋の 500m 以上 1,000m 未満/, 'つり橋の 500〜999m は大臣の項目に入れない');
+  const ge = safetyCandidates({ ...safetyInput({ bridge: 'ge', bridgePlace: 'no', subcontract: 'no' }, { direct: true }), works: 'none' });
+  assert.equal(ge.candidates[0].to, '労働基準監督署長');
+  assert.equal(q.plan.length + q.planMore.length + 4, safetyData.planItems.length, '橋の4つの項目のほかは全部が問いにある');
+  assert.match(q.place, /人口が集中/);
+});
+
+test('safetyInput: 問いの答えと段1 の入力を判定の入力にする', () => {
+  const s1 = { direct: true, subcontractTotal: 0 };
+  assert.deepEqual(safetyInput({}, s1), { direct: true, subcontractTotal: 0 });
+  assert.equal(safetyInput({ subcontract: 'yes' }, s1).subcontract, 'yes');
+  assert.equal(safetyInput({ workers: 'mid' }, s1).workers, 30);
+  assert.equal(safetyInput({ plan: ['none'], works: ['unknown'] }, s1).plan, 'none');
+  assert.equal(safetyInput({ works: ['unknown', 'shoring'] }, s1).works, 'unknown');
+  const b = safetyInput({ bridge: 'mid', bridgePlace: 'no' }, s1);
+  assert.deepEqual([b.bridgeSpanM, b.bridgePlace, b.plan], [30, false, 'none']);
+  const large = safetyCandidates({ ...safetyInput({ bridge: 'large', bridgePlace: 'no', subcontract: 'no' }, s1), works: 'none' });
+  assert.equal(large.candidates[0].to, '厚生労働大臣');
+  assert.equal(safetyInput({ bridge: 'none' }, s1).plan, 'none');
+  assert.equal(safetyInput({ bridge: 'none', bridgePlace: 'yes' }, s1).bridgePlace, undefined);
 });
 
 test('下請けを使わない: 元方・特定元方・統括は出ない。届出と作業主任者は出る', () => {
@@ -104,7 +228,7 @@ test('下請けを使う: 元方と特定元方の措置が原文つきで出る
 test('下請けが分からない: 確認が要るにして欄の名前を返す。未回答とは分ける', () => {
   const u = find(safetyCandidates({ ...base, subcontract: 'unknown' }), 'safety-motokata');
   assert.equal(u.status, 'needs_check');
-  assert.deepEqual(u.needs, [{ field: 'subcontract', label: '下請けを使うか', state: 'unknown' }]);
+  assert.deepEqual(u.needs, [{ field: 'subcontract', label: safetyData.fields.subcontract, state: 'unknown' }]);
   const n = find(safetyCandidates({ direct: true, workers: 1, plan: 'none', works: 'none' }), 'safety-motokata');
   assert.equal(n.status, 'unanswered');
   assert.equal(n.needs[0].state, 'unanswered');
@@ -153,7 +277,7 @@ test('統括安全衛生責任者: 人数の未回答と分からないを分け
 });
 
 test('計画の届出: 支間の境目の前後、労働基準監督署長と厚生労働大臣の分かれ、つり橋の別の境目', () => {
-  assert.equal(notice({ bridgeSpanM: 49.9 }), undefined);
+  assert.equal(notice({ bridgeSpanM: 49.9, bridgePlace: false }), undefined);
   const office = notice({ bridgeSpanM: 50 });
   assert.equal(office.status, 'required');
   assert.equal(office.to, '労働基準監督署長');
@@ -265,6 +389,6 @@ test('掛かる先が変わる場合を添える: 発注者が自ら行う仕事
 
 test('件数は3つの札の内訳と合計を返す', () => {
   const r = safetyCandidates({ direct: true, subcontract: 'yes', workers: 'unknown', works: ['shoring'] });
-  assert.deepEqual(r.counts, { required: 3, unanswered: 1, needs_check: 1, total: 5 });
+  assert.deepEqual(r.counts, { required: 3, unanswered: 1, needs_check: 2, total: 6 });
   assert.equal(r.counts.total, r.candidates.length);
 });

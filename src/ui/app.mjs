@@ -1,8 +1,8 @@
 // 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
-import { readBidForm, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems, renderChecklist } from './view.mjs';
+import { readBidForm, readDirect, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
+import { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
@@ -11,7 +11,11 @@ import { addCrossCandidates } from '../cross-docs.mjs';
 import { addChecklistCandidates } from '../ledger-check.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
-import { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, toCsv } from '../export.mjs';
+import { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, safetyRows, toCsv } from '../export.mjs';
+import { safetyCandidates, safetyInput } from '../safety.mjs';
+import { SAFETY_IDS, readSafetyAnswers, renderSafetyResult, safetyAnswerRows, safetyBreakdown, safetyCountText, safetyTitle, stage1Line } from './safety-view.mjs';
+import { sourceVersion } from '../source-version.mjs';
+import sourcesData from '../../data/sources/index.json' with { type: 'json' };
 import { buildScheduleDetail } from '../schedule.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
 import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
@@ -48,6 +52,91 @@ function collect(doc) {
     values[id] = CHECKBOX_IDS.includes(id) ? el.checked === true : el.value;
   }
   return values;
+}
+
+// 労働安全衛生法の候補(F40b): 問いの欄を変えたらすぐ描き直す。段1 の「確認する」とは別に動き、段1 の値はそのときの欄から読む
+const SAFETY_ALL_IDS = Object.values(SAFETY_IDS).flat();
+function safetyChecked(doc) {
+  return Object.fromEntries(SAFETY_ALL_IDS.map((id) => [id, doc.getElementById(id)?.checked === true]));
+}
+function stage1Safe(values) {
+  return formErrors(values).length ? { direct: readDirect(values), subcontractTotal: null } : readBidForm(values);
+}
+function safetySnapshot(doc) {
+  const values = collect(doc);
+  const stage1 = stage1Safe(values);
+  const answers = readSafetyAnswers(safetyChecked(doc));
+  const result = safetyCandidates(safetyInput(answers, stage1));
+  return { values, stage1, answers, result, answerRows: safetyAnswerRows(answers, values, stage1) };
+}
+function setSafetyStatus(doc, text) {
+  const el = doc.getElementById('safety-status');
+  if (el) el.textContent = text;
+}
+function setSafetyVersion(doc) {
+  const el = doc.getElementById('safety-version');
+  const s = sourcesData.sources.find((x) => x.id === 'anei-15');
+  if (el && s) el.textContent = '見た条文: ' + sourceVersion(s) + '。取得日 ' + s.fetchedAt + '。取得のあとの改正は入っていません。';
+}
+// 問い1 の印: 自分で選んでいなければ段1 の答えに合わせる。段1 が空か「分からない」なら「まだ分からない」
+let safetySubcontractTouched = false;
+function syncSafetySubcontract(doc, stage1) {
+  if (safetySubcontractTouched) return;
+  const t = stage1.subcontractTotal;
+  const v = typeof t === 'number' ? (t > 0 ? 'yes' : 'no') : 'unknown';
+  for (const id of SAFETY_IDS.subcontract) {
+    const el = doc.getElementById(id);
+    if (el) el.checked = id === 'safety-sub-' + v;
+  }
+}
+export function renderSafety(doc) {
+  const stage1 = stage1Safe(collect(doc));
+  const untouched = !safetySubcontractTouched;
+  syncSafetySubcontract(doc, stage1);
+  const snap = safetySnapshot(doc);
+  // 段1 から当てた印は「問い1 の答え」に数えない(何も入れていないページで「始めた」にしない)
+  const r = untouched ? safetyCandidates(safetyInput({ ...snap.answers, subcontract: undefined }, stage1)) : snap.result;
+  const out = doc.getElementById('safety-result');
+  if (out) out.innerHTML = renderSafetyResult(r, snap.answerRows);
+  const title = doc.getElementById('safety-title');
+  if (title) title.textContent = safetyTitle(r);
+  const stage1El = doc.getElementById('safety-stage1');
+  if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">段1 で直す</a>';
+  const qSub = doc.getElementById('safety-q-subcontract');
+  if (qSub) qSub.hidden = r.mode === 'sub';
+  // 問い2 は下請けを使う・まだ分からないとき、下請けの道で出す
+  const qWorkers = doc.getElementById('safety-q-workers');
+  if (qWorkers) qWorkers.hidden = r.mode === 'prime' && r.subcontract === 'no';
+  const qPlace = doc.getElementById('safety-q-place');
+  if (qPlace) qPlace.hidden = !snap.answers.bridge || snap.answers.bridge === 'none';
+  const primeNote = doc.getElementById('safety-prime-note');
+  if (primeNote) primeNote.hidden = !(r.mode === 'prime' && r.assumedPrime);
+  summary.safety = { text: r.started ? esc(safetyCountText(r)) + (r.counts.total ? '(' + esc(safetyBreakdown(r)) + ')' : '') : '(条件を入れると出ます)', answerRows: r.started ? snap.answerRows : [] };
+  if (summaryShown) updateSummary(doc);
+  return r;
+}
+// 「分からない」「どれにも当たらない」は他の印と同時に選べない。外したことは知らせの行で伝える
+function exclusiveSafety(doc, id) {
+  const clear = (ids) => ids.filter((x) => doc.getElementById(x)?.checked === true && x !== id).map((x) => { doc.getElementById(x).checked = false; return x; }).length;
+  const group = SAFETY_IDS.plan.includes(id) ? SAFETY_IDS.plan : SAFETY_IDS.works.includes(id) ? SAFETY_IDS.works : null;
+  if (!group || doc.getElementById(id)?.checked !== true) return 0;
+  const solo = [/-none$/, /-unknown$/];
+  if (solo.some((re) => re.test(id))) return clear(group) + (group === SAFETY_IDS.plan ? clear(SAFETY_IDS.bridge) : 0);
+  return clear(group.filter((x) => solo.some((re) => re.test(x))));
+}
+export function changeSafety(doc, id) {
+  if (SAFETY_IDS.subcontract.includes(id)) safetySubcontractTouched = true;
+  if (SAFETY_IDS.bridge.includes(id) && id !== 'safety-bridge-none') {
+    for (const x of ['safety-plan-none', 'safety-plan-unknown']) { const el = doc.getElementById(x); if (el) el.checked = false; }
+  }
+  const cleared = exclusiveSafety(doc, id);
+  const r = renderSafety(doc);
+  setSafetyStatus(doc, (cleared ? '両立しない印を ' + cleared + 'つ外しました。' : '') + '候補を描き直しました(' + (r.started ? safetyCountText(r) : '条件を入れると出ます') + ')。');
+}
+function clearSafety(doc) {
+  safetySubcontractTouched = false;
+  for (const id of SAFETY_ALL_IDS) { const el = doc.getElementById(id); if (el) el.checked = false; }
+  setSafetyStatus(doc, '');
 }
 
 // 段の切り替え(F37a): #panel-1〜3 の hidden を付け外しして1つずつ見せる。段階の表示は今いる段だけ印を付け、入口を選んだあとは押せる。
@@ -132,6 +221,7 @@ export function runBid(doc) {
   const errors = formErrors(values);
   markAmountFields(doc, values);
   Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
+  renderSafety(doc);
   const openEl = doc.getElementById('open-items');
   if (errors.length) {
     last = null;
@@ -342,7 +432,8 @@ function today() {
 
 export function exportCsv(doc) {
   if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
-  const csv = toCsv(stage1Rows(last.bid, last.taicho, NOTICE));
+  const snap = safetySnapshot(doc);
+  const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE), ...safetyRows(snap.result, snap.answerRows)]);
   downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
   setExportStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
@@ -542,6 +633,10 @@ export function loadSample(doc) {
   put('sample-plan', SAMPLE.documents.planToc);
   const docs = doc.getElementById('sample-docs');
   if (docs) docs.hidden = false;
+  for (const id of SAMPLE.safetyWorks) {
+    const el = doc.getElementById('safety-work-' + id);
+    if (el) el.checked = true;
+  }
   const st = doc.getElementById('sample-status');
   if (st) st.textContent = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
   runBid(doc);
@@ -580,6 +675,8 @@ export function clearSample(doc) {
   setScheduleStatus(doc, '');
   setBidStatus(doc, '');
   markAmountFields(doc, {});
+  clearSafety(doc);
+  renderSafety(doc);
   for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
@@ -669,6 +766,9 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       setScheduleNote(t.getAttribute('data-note-key'), t.value);
       if (t.nextElementSibling) t.nextElementSibling.textContent = t.value;
     });
+    for (const id of SAFETY_ALL_IDS) doc.getElementById(id)?.addEventListener('change', () => changeSafety(doc, id));
+    setSafetyVersion(doc);
+    renderSafety(doc);
     on('rules-clear', () => clearRulesTable(doc));
     on('rules-national', () => clearRulesTable(doc));
     on('rules-wakayama', () => useWakayamaExample(doc));
@@ -718,6 +818,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       const changed = () => {
         if (last) { last = null; stale = true; setExportStatus(doc, STALE); }
         if (summaryShown && !summary.stale) { summary.stale = true; updateSummary(doc); if (!awardedAll) setBidStatus(doc, NOTICE_STALE); }
+        renderSafety(doc);
         // 全部の行(F37c)は条件から出していないので、条件を変えても古くならない
         if (lastSchedule && !awardedAll) { lastSchedule = null; setScheduleStatus(doc, '条件が変わりました。もう一度「確認する」を押してから、段取りを書き出してください。'); }
       };

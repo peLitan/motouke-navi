@@ -68,6 +68,18 @@ export function stage1Rows(bid, t, notice) {
   ];
 }
 
+// 労働安全衛生法の候補(F40b)。候補ごとに1行と、入れた条件・見ていないものの行。今の件数の行とは区分で分ける
+export function safetyRows(r, answerRows = []) {
+  const section = '安全の法令の候補';
+  if (!r || !r.started) return [];
+  return [
+    ...(r.line ? [row(section, '下請けの場合', '', r.line.text, r.line.basis, [])] : []),
+    ...r.candidates.map((c) => row(section, c.label + (c.work ? '(' + c.work + ')' : ''), BID_STATUS[c.status], [c.action, c.to ? '届出先: ' + c.to + '(' + c.daysBefore + '日前まで)' : null, ...(c.matched ?? []).map((m) => m.quote), c.caveat ? '原文の除外: ' + c.caveat : null, c.note, ...c.needs.map((n) => n.label + 'を入れると判断できます')].filter(Boolean).join('\n'), c.basis, [])),
+    ...answerRows.map(([k, v]) => row(section, '入れた条件: ' + k, '', v, [], [])),
+    row(section, '見ていないもの', '', r.notOnList, [], []),
+  ];
+}
+
 // 台帳の点検(checkTaicho の返り値): 見出しの行 + 候補ごとに1行 + 判断できないことごとに1行(F05b)
 export function checkRows(out, notice) {
   const item = (x) => [x.target, fieldLabel(x.field)].filter(Boolean).join(' — ');

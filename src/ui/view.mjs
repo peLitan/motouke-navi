@@ -25,7 +25,7 @@ export function basisLabel(b) {
   return b.law + ' ' + s;
 }
 
-function basisList(list = []) {
+export function basisList(list = []) {
   if (!list.length) return '<p class="basis-none">根拠: 無し</p>';
   // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
   return '<details class="basis"><summary>根拠: ' + esc([...new Set(list.map(basisLabel))].join('、')) + '</summary><ul>'
@@ -387,6 +387,8 @@ export function renderSummary(state = {}) {
   const rows = [];
   if (state.taicho) rows.push(['施工体制台帳が要るか', esc(TAICHO_STATUS[state.taicho.status] ?? state.taicho.status), 'taicho-result']);
   if (typeof state.scheduleCount === 'number') rows.push(['受注後の段取り', state.scheduleCount + '件', 'schedule-result']);
+  // 安全の法令の候補(F40b): 上の「受注したら要るもの」の件数には混ぜない
+  if (state.safety) rows.push(['安全の法令の候補', state.safety.text, 'safety-heading']);
   if (state.check) {
     const c = (state.check.candidates ?? []).length;
     const u = (state.check.undecidable ?? []).length;
@@ -401,7 +403,8 @@ export function renderSummary(state = {}) {
   // 入れた条件(項目名と値の一覧)
   const values = state.values ?? {};
   parts.push('<h4>入れた条件</h4><dl class="summary-list">'
-    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values, id)) + '</dd></div>').join('') + '</dl>');
+    + SUMMARY_FIELDS.map(([id, name, map]) => '<div class="summary-row"><dt>' + esc(name) + '</dt><dd>' + esc(summaryValue(values[id], map, values, id)) + '</dd></div>').join('')
+    + (state.safety?.answerRows ?? []).map(([k, v]) => '<div class="summary-row"><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl>');
   return '<h3 id="summary-title">まとめ</h3>' + parts.join('')
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }

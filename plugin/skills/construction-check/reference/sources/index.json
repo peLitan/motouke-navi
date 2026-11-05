@@ -106,6 +106,32 @@
       "file": "law-kisoku-14_2.txt"
     },
     {
+      "id": "anrei-6",
+      "kind": "law",
+      "law": "労働安全衛生法施行令",
+      "lawId": "347CO0000000318",
+      "article": "6",
+      "title": "労働安全衛生法施行令 第6条（作業主任者を選任すべき作業）",
+      "url": "https://laws.e-gov.go.jp/law/347CO0000000318",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347CO0000000318?response_format=xml",
+      "revisionId": "347CO0000000318_20261001_508CO0000000196",
+      "fetchedAt": "2026-11-05",
+      "file": "law-anrei-6.txt"
+    },
+    {
+      "id": "anrei-7",
+      "kind": "law",
+      "law": "労働安全衛生法施行令",
+      "lawId": "347CO0000000318",
+      "article": "7",
+      "title": "労働安全衛生法施行令 第7条（統括安全衛生責任者を選任すべき業種等）",
+      "url": "https://laws.e-gov.go.jp/law/347CO0000000318",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347CO0000000318?response_format=xml",
+      "revisionId": "347CO0000000318_20261001_508CO0000000196",
+      "fetchedAt": "2026-11-05",
+      "file": "law-anrei-7.txt"
+    },
+    {
       "id": "anei-14",
       "kind": "law",
       "law": "労働安全衛生法",
@@ -132,6 +158,32 @@
       "file": "law-anei-15.txt"
     },
     {
+      "id": "anei-15_2",
+      "kind": "law",
+      "law": "労働安全衛生法",
+      "lawId": "347AC0000000057",
+      "article": "15の2",
+      "title": "労働安全衛生法 第15条の2（元方安全衛生管理者）",
+      "url": "https://laws.e-gov.go.jp/law/347AC0000000057",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347AC0000000057?response_format=xml",
+      "revisionId": "347AC0000000057_20261001_507AC0000000033",
+      "fetchedAt": "2026-11-05",
+      "file": "law-anei-15_2.txt"
+    },
+    {
+      "id": "anei-16",
+      "kind": "law",
+      "law": "労働安全衛生法",
+      "lawId": "347AC0000000057",
+      "article": "16",
+      "title": "労働安全衛生法 第16条（安全衛生責任者）",
+      "url": "https://laws.e-gov.go.jp/law/347AC0000000057",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347AC0000000057?response_format=xml",
+      "revisionId": "347AC0000000057_20261001_507AC0000000033",
+      "fetchedAt": "2026-11-05",
+      "file": "law-anei-16.txt"
+    },
+    {
       "id": "anei-29",
       "kind": "law",
       "law": "労働安全衛生法",
@@ -143,6 +195,19 @@
       "revisionId": "347AC0000000057_20261001_507AC0000000033",
       "fetchedAt": "2026-11-05",
       "file": "law-anei-29.txt"
+    },
+    {
+      "id": "anei-29_2",
+      "kind": "law",
+      "law": "労働安全衛生法",
+      "lawId": "347AC0000000057",
+      "article": "29の2",
+      "title": "労働安全衛生法 第29条の2",
+      "url": "https://laws.e-gov.go.jp/law/347AC0000000057",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347AC0000000057?response_format=xml",
+      "revisionId": "347AC0000000057_20261001_507AC0000000033",
+      "fetchedAt": "2026-11-05",
+      "file": "law-anei-29_2.txt"
     },
     {
       "id": "anei-30",
@@ -169,32 +234,6 @@
       "revisionId": "347AC0000000057_20261001_507AC0000000033",
       "fetchedAt": "2026-11-05",
       "file": "law-anei-88.txt"
-    },
-    {
-      "id": "anrei-6",
-      "kind": "law",
-      "law": "労働安全衛生法施行令",
-      "lawId": "347CO0000000318",
-      "article": "6",
-      "title": "労働安全衛生法施行令 第6条（作業主任者を選任すべき作業）",
-      "url": "https://laws.e-gov.go.jp/law/347CO0000000318",
-      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347CO0000000318?response_format=xml",
-      "revisionId": "347CO0000000318_20261001_508CO0000000196",
-      "fetchedAt": "2026-11-05",
-      "file": "law-anrei-6.txt"
-    },
-    {
-      "id": "anrei-7",
-      "kind": "law",
-      "law": "労働安全衛生法施行令",
-      "lawId": "347CO0000000318",
-      "article": "7",
-      "title": "労働安全衛生法施行令 第7条（統括安全衛生責任者を選任すべき業種等）",
-      "url": "https://laws.e-gov.go.jp/law/347CO0000000318",
-      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347CO0000000318?response_format=xml",
-      "revisionId": "347CO0000000318_20261001_508CO0000000196",
-      "fetchedAt": "2026-11-05",
-      "file": "law-anrei-7.txt"
     },
     {
       "id": "ansoku-18_2_2",
@@ -234,6 +273,19 @@
       "revisionId": "347M50002000032_20261001_508M60000100116",
       "fetchedAt": "2026-11-05",
       "file": "law-ansoku-90.txt"
+    },
+    {
+      "id": "ansoku-634_2",
+      "kind": "law",
+      "law": "労働安全衛生規則",
+      "lawId": "347M50002000032",
+      "article": "634の2",
+      "title": "労働安全衛生規則 第634条の2（法第二十九条の二の厚生労働省令で定める場所）",
+      "url": "https://laws.e-gov.go.jp/law/347M50002000032",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/347M50002000032?response_format=xml",
+      "revisionId": "347M50002000032_20261001_508M60000100116",
+      "fetchedAt": "2026-11-05",
+      "file": "law-ansoku-634_2.txt"
     },
     {
       "id": "mlit-kyoka-guideline",
