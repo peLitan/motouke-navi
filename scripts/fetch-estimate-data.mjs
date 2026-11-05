@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 施工パッケージの標準単価表と公共工事設計労務単価を、使う人の手元に取って表の形にする(F42a)
-// 取ったものはリポジトリに入れない(既定の置き場 tmp/estimate-data/ は git の対象の外)
+// 取ったものはリポジトリに入れない(既定の置き場は今いるフォルダの tmp/estimate-data/。このリポジトリでは git の対象の外)
 // 使い方:
 //   node scripts/fetch-estimate-data.mjs                 … 国土交通省のサイトから取る
 //   node scripts/fetch-estimate-data.mjs --pdf-dir DIR   … 先に取った PDF(DIR/<ファイル名>)から作る
@@ -10,11 +10,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { pdfPages } from './pdf-text.mjs';
 import { parseUnitPrices, parseLaborRates } from './estimate-tables.mjs';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const FILES = {
   unitPrices: {
@@ -61,7 +59,7 @@ export function summarize(unit, labor, baseTokyo = {}) {
 async function main(argv) {
   const opt = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : null; };
   const dir = opt('--pdf-dir');
-  const out = path.resolve(opt('--out') ?? path.join(ROOT, 'tmp', 'estimate-data'));
+  const out = path.resolve(opt('--out') ?? path.join('tmp', 'estimate-data')) // 既定は今いるフォルダの下(plugin の写しから動かしても作業の場所に置く);
   const fetchedAt = opt('--fetched-at') ?? today();
   const meta = {};
   const pagesOf = {};

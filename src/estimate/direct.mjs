@@ -67,7 +67,8 @@ export function correctedPrice(row, { labor = null, manual = null } = {}) {
 export function directCost(lines, { labor = null } = {}) {
   const rows = [], excluded = [];
   for (const line of lines) {
-    const out = (reason) => excluded.push({ name: line.name, quantity: line.quantity, unit: line.unit, reason });
+    const ref = line.ref === undefined ? {} : { ref: line.ref }; // 呼ぶ側が自分の行と結び付けるための印
+    const out = (reason) => excluded.push({ ...ref, name: line.name, quantity: line.quantity, unit: line.unit, reason });
     if (!line.match) { out('施工パッケージに当てていない'); continue; }
     const { package: pkg, row } = line.match;
     if (!(typeof line.quantity === 'number' && line.quantity > 0)) { out('数量が読めない'); continue; }
@@ -77,7 +78,7 @@ export function directCost(lines, { labor = null } = {}) {
     // 内訳書の金額は 1円未満を切り捨てる(運用 PDF p.9)
     const amount = Math.floor(line.quantity * c.price + 1e-7);
     rows.push({
-      name: line.name, quantity: line.quantity, unit: line.unit, amount, ...c,
+      ...ref, name: line.name, quantity: line.quantity, unit: line.unit, amount, ...c,
       source: { document: '施工パッケージ型積算方式 標準単価表', no: pkg.no, package: pkg.name, condition: row.condition, pdfPage: row.page ?? null },
     });
   }

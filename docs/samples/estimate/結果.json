@@ -1,0 +1,343 @@
+{
+  "kind": "estimate-check",
+  "label": "参考の額",
+  "notice": "公開の資料の式で出した参考の額です。発注者の積算と同じ額にはなりません。会社の原価(自社の人件費・下請けの見積もり)は含みません",
+  "title": "架空の市道みほん線改良工事 数量総括表(見本)",
+  "amount": 15250000,
+  "direct": {
+    "total": 8255400,
+    "uncorrectedAmount": 6478140,
+    "uncorrectedPercent": 78.5
+  },
+  "rows": [
+    {
+      "ref": 0,
+      "name": "掘削",
+      "quantity": 1200,
+      "unit": "m3",
+      "amount": 609000,
+      "standard": 500,
+      "exact": 507.49999999999994,
+      "price": 507.5,
+      "applied": [
+        {
+          "key": "R1",
+          "name": "運転手（特殊）",
+          "share": 30,
+          "ratio": 1.05,
+          "from": "公共工事設計労務単価",
+          "base": 30000,
+          "local": 31500
+        }
+      ],
+      "humanFields": [
+        {
+          "key": "K1",
+          "name": "架空の機械B",
+          "share": 50,
+          "base": null,
+          "local": null
+        },
+        {
+          "key": "Z1",
+          "name": "架空の燃料B",
+          "share": 20,
+          "base": null,
+          "local": null
+        }
+      ],
+      "correctedPercent": 30,
+      "uncorrectedPercent": 70,
+      "source": {
+        "document": "施工パッケージ型積算方式 標準単価表",
+        "no": 1,
+        "package": "掘削",
+        "condition": "土砂 架空の方法A",
+        "pdfPage": 1
+      },
+      "quote": "| 掘削 | 土砂 | m3 | 1,200 |",
+      "file": "架空の数量総括表.md",
+      "tableQuote": "掘削 ｍ３ 土砂 架空の方法A",
+      "reason": "工種と土質が同じ。単位も同じ"
+    },
+    {
+      "ref": 1,
+      "name": "路体盛土",
+      "quantity": 800,
+      "unit": "m3",
+      "amount": 326400,
+      "standard": 400,
+      "exact": 408,
+      "price": 408,
+      "applied": [
+        {
+          "key": "R1",
+          "name": "運転手（特殊）",
+          "share": 40,
+          "ratio": 1.05,
+          "from": "公共工事設計労務単価",
+          "base": 30000,
+          "local": 31500
+        }
+      ],
+      "humanFields": [
+        {
+          "key": "K1",
+          "name": "架空の機械B",
+          "share": 50,
+          "base": null,
+          "local": null
+        },
+        {
+          "key": "Z1",
+          "name": "架空の燃料B",
+          "share": 10,
+          "base": null,
+          "local": null
+        }
+      ],
+      "correctedPercent": 40,
+      "uncorrectedPercent": 60,
+      "source": {
+        "document": "施工パッケージ型積算方式 標準単価表",
+        "no": 2,
+        "package": "路体盛土",
+        "condition": "流用土 架空の方法A",
+        "pdfPage": 1
+      },
+      "quote": "| 路体盛土 | 流用土 | m3 | 800 |",
+      "file": "架空の数量総括表.md",
+      "tableQuote": "路体盛土 ｍ３ 流用土 架空の方法A",
+      "reason": "工種と材料が同じ。単位も同じ"
+    },
+    {
+      "ref": 2,
+      "name": "上層路盤",
+      "quantity": 2400,
+      "unit": "m2",
+      "amount": 2424000,
+      "standard": 1000,
+      "exact": 1010,
+      "price": 1010,
+      "applied": [
+        {
+          "key": "R1",
+          "name": "運転手（特殊）",
+          "share": 20,
+          "ratio": 1.05,
+          "from": "公共工事設計労務単価",
+          "base": 30000,
+          "local": 31500
+        }
+      ],
+      "humanFields": [
+        {
+          "key": "K1",
+          "name": "架空の機械B",
+          "share": 20,
+          "base": null,
+          "local": null
+        },
+        {
+          "key": "Z1",
+          "name": "架空の燃料B",
+          "share": 60,
+          "base": null,
+          "local": null
+        }
+      ],
+      "correctedPercent": 20,
+      "uncorrectedPercent": 80,
+      "source": {
+        "document": "施工パッケージ型積算方式 標準単価表",
+        "no": 3,
+        "package": "上層路盤",
+        "condition": "粒度調整砕石 150mm",
+        "pdfPage": 1
+      },
+      "quote": "| 上層路盤 | 粒度調整砕石 厚150mm | m2 | 2,400 |",
+      "file": "架空の数量総括表.md",
+      "tableQuote": "上層路盤 ｍ２ 粒度調整砕石 150mm",
+      "reason": "材料と厚さが同じ。単位も同じ"
+    },
+    {
+      "ref": 3,
+      "name": "表層",
+      "quantity": 2400,
+      "unit": "m2",
+      "amount": 4896000,
+      "standard": 2000,
+      "exact": 2040,
+      "price": 2040,
+      "applied": [
+        {
+          "key": "R1",
+          "name": "普通作業員",
+          "share": 20,
+          "ratio": 1.1,
+          "from": "公共工事設計労務単価",
+          "base": 20000,
+          "local": 22000
+        }
+      ],
+      "humanFields": [
+        {
+          "key": "K1",
+          "name": "架空の機械A",
+          "share": 10,
+          "base": null,
+          "local": null
+        },
+        {
+          "key": "Z1",
+          "name": "架空の材料A",
+          "share": 70,
+          "base": null,
+          "local": null
+        }
+      ],
+      "correctedPercent": 20,
+      "uncorrectedPercent": 80,
+      "source": {
+        "document": "施工パッケージ型積算方式 標準単価表",
+        "no": 4,
+        "package": "表層",
+        "condition": "再生密粒度 50mm",
+        "pdfPage": 1
+      },
+      "quote": "| 表層 | 再生密粒度 厚50mm | m2 | 2,400 |",
+      "file": "架空の数量総括表.md",
+      "tableQuote": "表層 ｍ２ 再生密粒度 50mm",
+      "reason": "材料と厚さが同じ。単位も同じ"
+    }
+  ],
+  "notIncluded": [
+    {
+      "ref": 4,
+      "name": "側溝",
+      "quantity": 120,
+      "unit": "本",
+      "reason": "単位が合わない(数量の表 本 / 標準単価表 ｍ)",
+      "by": "機械",
+      "quote": "| 側溝 | プレキャストU形 | 本 | 120 |"
+    },
+    {
+      "ref": 5,
+      "name": "区画線",
+      "quantity": 1.2,
+      "unit": "km",
+      "reason": "単位が合わない(数量の表 km / 標準単価表 ｍ)",
+      "by": "機械",
+      "quote": "| 区画線 | 溶融式 | km | 1.2 |"
+    },
+    {
+      "ref": 6,
+      "by": "機械",
+      "name": "防護柵",
+      "quantity": 60,
+      "unit": "m",
+      "quote": "| 防護柵 | ガードレール | m | 60 |",
+      "reason": "抜き書きが標準単価表の番号 7(防護柵（材料費）)の行にありません"
+    },
+    {
+      "ref": 7,
+      "name": "法面工",
+      "quantity": 350,
+      "unit": "m2",
+      "reason": "この見本の標準単価表に当たる工種が無い。歩掛か市場単価で積む工種",
+      "by": "Claude",
+      "quote": "| 法面工 | 植生マット | m2 | 350 |"
+    }
+  ],
+  "notIncludedPercent": 50,
+  "lineCount": 8,
+  "uncovered": [
+    {
+      "file": "架空の数量総括表.md",
+      "text": "| 舗装版切断 | アスファルト | m | 40 |"
+    }
+  ],
+  "indirect": {
+    "kind": "道路改良工事",
+    "directCost": 8255400,
+    "target": 8255400,
+    "commonTemporary": {
+      "rate": 12.4,
+      "baseRate": 12.4,
+      "how": "A・P^b(A=57, b=-0.0958)",
+      "regionCoef": 1,
+      "rated": 1023000,
+      "stacked": 0,
+      "amount": 1023000,
+      "source": "別表第1 1表(PDF p.19)"
+    },
+    "pure": 9278400,
+    "siteManagement": {
+      "rate": 33.6,
+      "baseRate": 33.6,
+      "how": "A・P^b(A=76.4, b=-0.0512)",
+      "regionCoef": 1,
+      "addition": 0,
+      "amount": 3117000,
+      "source": "別表第2 1表(PDF p.43)"
+    },
+    "cost": 12395400,
+    "generalAdmin": {
+      "baseRate": 23.07,
+      "rate": 23.07,
+      "advancePercent": null,
+      "guarantee": "case3",
+      "computed": 2859618.78,
+      "amount": 2854600,
+      "workPrice": 15250000,
+      "source": "別表第3〜第5(PDF p.47)"
+    },
+    "workPrice": 15250000,
+    "warnings": [],
+    "assumptions": [
+      "共通仮設費の地域の補正係数は 1 で計算しました。当てはまる地域なら PDF p.17〜18 の表から選んで入れてください",
+      "現場管理費の地域の補正係数は 1 で計算しました。当てはまる地域なら PDF p.39〜40 の表から選んで入れてください",
+      "共通仮設費の積上げ額は 0 です。積み上げる費用があれば入れてください",
+      "前払金支出割合は 35% を超え 40% 以下として計算しました(PDF p.47)",
+      "契約保証の補正は入れていません(PDF p.47 のケース3)"
+    ],
+    "source": {
+      "id": "mlit-sekisan-unyou-r8",
+      "title": "土木工事工事費積算要領及び基準の運用(国官技第455号 令和8年2月27日)",
+      "url": "https://www.mlit.go.jp/tec/content/001987206.pdf",
+      "fetchedAt": "2026-11-05",
+      "applied": "2026-04-01",
+      "pageNote": "頁は PDF の頁。紙面の下の番号は PDF の頁から 1 を引いた数"
+    }
+  },
+  "assumptions": [
+    "工種区分「道路改良工事」は数量の表からの見立てです。人が確かめてください",
+    "共通仮設費の地域の補正係数は 1 で計算しました。当てはまる地域なら PDF p.17〜18 の表から選んで入れてください",
+    "現場管理費の地域の補正係数は 1 で計算しました。当てはまる地域なら PDF p.39〜40 の表から選んで入れてください",
+    "共通仮設費の積上げ額は 0 です。積み上げる費用があれば入れてください",
+    "前払金支出割合は 35% を超え 40% 以下として計算しました(PDF p.47)",
+    "契約保証の補正は入れていません(PDF p.47 のケース3)"
+  ],
+  "warnings": [],
+  "flags": [],
+  "claudeNotes": [
+    "舗装版切断の行は見本のためにわざと lines に入れていない。機械が拾っていない文の行として数える"
+  ],
+  "tablesUsed": [
+    {
+      "title": "架空の標準単価表(見本用。実在の表の値ではない)",
+      "url": null,
+      "fetchedAt": "2026-11-05"
+    },
+    {
+      "title": "架空の労務単価(見本用。実在の表の値ではない)",
+      "url": null,
+      "fetchedAt": "2026-11-05"
+    },
+    {
+      "title": "架空の労務単価(基準)(見本用)",
+      "url": null,
+      "fetchedAt": "2026-11-05"
+    }
+  ]
+}

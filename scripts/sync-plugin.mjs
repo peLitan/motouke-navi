@@ -31,6 +31,16 @@ export const PLUGIN_COPIES = [
   ['src/quote-check.mjs', 'plugin/skills/spec-to-rules/scripts/lib/quote-check.mjs'],
   // F41a: 公告から条件を拾う Skill の照合
   ['src/quote-check.mjs', 'plugin/skills/bid-intake/scripts/lib/quote-check.mjs'],
+  // F42b: 参考の積算額の Skill の照合と計算。indirect.mjs が読む率の表は ../../data/ の位置に置く
+  ['src/quote-check.mjs', 'plugin/skills/estimate/scripts/lib/quote-check.mjs'],
+  ['src/estimate/direct.mjs', 'plugin/skills/estimate/scripts/lib/estimate/direct.mjs'],
+  ['src/estimate/indirect.mjs', 'plugin/skills/estimate/scripts/lib/estimate/indirect.mjs'],
+  ['src/estimate/estimate.mjs', 'plugin/skills/estimate/scripts/lib/estimate/estimate.mjs'],
+  ['data/estimate-rates.json', 'plugin/skills/estimate/scripts/data/estimate-rates.json'],
+  // F42b: 標準単価表と労務単価を手元に取る道具(plugin を入れた人も使えるように)
+  ['scripts/fetch-estimate-data.mjs', 'plugin/skills/estimate/scripts/fetch-estimate-data.mjs'],
+  ['scripts/estimate-tables.mjs', 'plugin/skills/estimate/scripts/estimate-tables.mjs'],
+  ['scripts/pdf-text.mjs', 'plugin/skills/estimate/scripts/pdf-text.mjs'],
   ...['kensetsu-3', 'kensetsu-24_8', 'kensetsu-26', 'rei-2', 'rei-7_4', 'rei-27', 'nyukei-15', 'kisoku-14_2']
     .map((id) => [`data/sources/law-${id}.txt`, `plugin/skills/construction-check/reference/sources/law-${id}.txt`]),
 ];

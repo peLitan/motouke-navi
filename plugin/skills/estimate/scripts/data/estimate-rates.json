@@ -1,0 +1,506 @@
+{
+ "source": {
+  "id": "mlit-sekisan-unyou-r8",
+  "title": "土木工事工事費積算要領及び基準の運用(国官技第455号 令和8年2月27日)",
+  "url": "https://www.mlit.go.jp/tec/content/001987206.pdf",
+  "fetchedAt": "2026-11-05",
+  "applied": "2026-04-01",
+  "pageNote": "頁は PDF の頁。紙面の下の番号は PDF の頁から 1 を引いた数"
+ },
+ "commonTemporary": {
+  "河川工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 12.53,
+   "A": 238.6,
+   "b": -0.1888,
+   "rateHigh": 4.77
+  },
+  "河川・道路構造物工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 20.77,
+   "A": 1228.3,
+   "b": -0.2614,
+   "rateHigh": 5.45
+  },
+  "海岸工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 13.08,
+   "A": 407.9,
+   "b": -0.2204,
+   "rateHigh": 4.24
+  },
+  "道路改良工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 12.78,
+   "A": 57.0,
+   "b": -0.0958,
+   "rateHigh": 7.83
+  },
+  "鋼橋架設工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 38.36,
+   "A": 10668.4,
+   "b": -0.3606,
+   "rateHigh": 6.06
+  },
+  "PC橋工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 27.04,
+   "A": 1636.8,
+   "b": -0.2629,
+   "rateHigh": 7.05
+  },
+  "舗装工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 17.09,
+   "A": 435.1,
+   "b": -0.2074,
+   "rateHigh": 5.92
+  },
+  "砂防・地すべり等工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 15.19,
+   "A": 624.5,
+   "b": -0.2381,
+   "rateHigh": 4.49
+  },
+  "公園工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 10.8,
+   "A": 48.0,
+   "b": -0.0956,
+   "rateHigh": 6.62
+  },
+  "電線共同溝工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 9.96,
+   "A": 40.0,
+   "b": -0.0891,
+   "rateHigh": 6.31
+  },
+  "情報ボックス工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 18.93,
+   "A": 494.9,
+   "b": -0.2091,
+   "rateHigh": 6.5
+  },
+  "下水道(4)工事": {
+   "table": "kr1",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 1000000000,
+   "rateLow": 10.24,
+   "A": 330.0,
+   "b": -0.2225,
+   "rateHigh": 3.28
+  },
+  "橋梁保全工事": {
+   "table": "kr2",
+   "pdfPage": 19,
+   "lower": 6000000,
+   "upper": 300000000,
+   "rateLow": 27.32,
+   "A": 7050.2,
+   "b": -0.3558,
+   "rateHigh": 6.79
+  },
+  "道路維持工事": {
+   "table": "kr3",
+   "pdfPage": 19,
+   "lower": 2000000,
+   "upper": 100000000,
+   "rateLow": 23.94,
+   "A": 4118.1,
+   "b": -0.3548,
+   "rateHigh": 5.97
+  },
+  "河川維持工事": {
+   "table": "kr3",
+   "pdfPage": 19,
+   "lower": 2000000,
+   "upper": 100000000,
+   "rateLow": 9.05,
+   "A": 26.8,
+   "b": -0.0748,
+   "rateHigh": 6.76
+  },
+  "共同溝等工事(1)": {
+   "table": "kr4",
+   "pdfPage": 20,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 8.86,
+   "A": 68.3,
+   "b": -0.1267,
+   "rateHigh": 4.53
+  },
+  "共同溝等工事(2)": {
+   "table": "kr4",
+   "pdfPage": 20,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 13.79,
+   "A": 92.5,
+   "b": -0.1181,
+   "rateHigh": 7.37
+  },
+  "トンネル工事": {
+   "table": "kr4",
+   "pdfPage": 20,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 28.71,
+   "A": 4164.9,
+   "b": -0.3088,
+   "rateHigh": 5.59
+  },
+  "下水道工事(1)": {
+   "table": "kr4",
+   "pdfPage": 20,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 12.85,
+   "A": 422.4,
+   "b": -0.2167,
+   "rateHigh": 4.08
+  },
+  "下水道工事(2)": {
+   "table": "kr4",
+   "pdfPage": 20,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 13.32,
+   "A": 485.4,
+   "b": -0.2231,
+   "rateHigh": 4.08
+  },
+  "下水道工事(3)": {
+   "table": "kr4",
+   "pdfPage": 20,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 7.64,
+   "A": 13.5,
+   "b": -0.0353,
+   "rateHigh": 6.34
+  },
+  "コンクリートダム": {
+   "table": "kr5",
+   "pdfPage": 20,
+   "lower": 300000000,
+   "upper": 5000000000,
+   "rateLow": 13.77,
+   "A": 3064.8,
+   "b": -0.2769,
+   "rateHigh": 6.32
+  },
+  "フィルダム": {
+   "table": "kr5",
+   "pdfPage": 20,
+   "lower": 300000000,
+   "upper": 5000000000,
+   "rateLow": 7.57,
+   "A": 43.7,
+   "b": -0.0898,
+   "rateHigh": 5.88
+  }
+ },
+ "siteManagement": {
+  "河川工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 44.05,
+   "A": 1118.2,
+   "b": -0.2052,
+   "rateHigh": 15.91
+  },
+  "河川・道路構造物工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 43.11,
+   "A": 402.3,
+   "b": -0.1417,
+   "rateHigh": 21.34
+  },
+  "海岸工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 28.11,
+   "A": 100.3,
+   "b": -0.0807,
+   "rateHigh": 18.84
+  },
+  "道路改良工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 34.09,
+   "A": 76.4,
+   "b": -0.0512,
+   "rateHigh": 26.44
+  },
+  "鋼橋架設工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 48.86,
+   "A": 265.1,
+   "b": -0.1073,
+   "rateHigh": 28.69
+  },
+  "PC橋工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 31.06,
+   "A": 111.0,
+   "b": -0.0808,
+   "rateHigh": 20.8
+  },
+  "舗装工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 40.83,
+   "A": 598.0,
+   "b": -0.1703,
+   "rateHigh": 17.54
+  },
+  "砂防・地すべり等工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 46.27,
+   "A": 1229.5,
+   "b": -0.2081,
+   "rateHigh": 16.48
+  },
+  "公園工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 43.09,
+   "A": 347.3,
+   "b": -0.1324,
+   "rateHigh": 22.34
+  },
+  "電線共同溝工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 61.19,
+   "A": 2132.5,
+   "b": -0.2253,
+   "rateHigh": 20.01
+  },
+  "情報ボックス工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 54.6,
+   "A": 1528.4,
+   "b": -0.2114,
+   "rateHigh": 19.13
+  },
+  "下水道(4)工事": {
+   "table": "jo1",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 1000000000,
+   "rateLow": 35.56,
+   "A": 178.6,
+   "b": -0.1024,
+   "rateHigh": 21.39
+  },
+  "橋梁保全工事": {
+   "table": "jo2",
+   "pdfPage": 43,
+   "lower": 7000000,
+   "upper": 300000000,
+   "rateLow": 65.88,
+   "A": 1465.2,
+   "b": -0.1968,
+   "rateHigh": 31.45
+  },
+  "道路維持工事": {
+   "table": "jo3",
+   "pdfPage": 43,
+   "lower": 2000000,
+   "upper": 100000000,
+   "rateLow": 60.33,
+   "A": 613,
+   "b": -0.1598,
+   "rateHigh": 32.29
+  },
+  "河川維持工事": {
+   "table": "jo3",
+   "pdfPage": 43,
+   "lower": 2000000,
+   "upper": 100000000,
+   "rateLow": 42.35,
+   "A": 167.1,
+   "b": -0.0946,
+   "rateHigh": 29.25
+  },
+  "共同溝等工事(1)": {
+   "table": "jo4",
+   "pdfPage": 44,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 50.57,
+   "A": 351.0,
+   "b": -0.1202,
+   "rateHigh": 26.75
+  },
+  "共同溝等工事(2)": {
+   "table": "jo4",
+   "pdfPage": 44,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 38.78,
+   "A": 103.5,
+   "b": -0.0609,
+   "rateHigh": 28.09
+  },
+  "トンネル工事": {
+   "table": "jo4",
+   "pdfPage": 44,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 45.56,
+   "A": 189.4,
+   "b": -0.0884,
+   "rateHigh": 28.52
+  },
+  "下水道工事(1)": {
+   "table": "jo4",
+   "pdfPage": 44,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 34.99,
+   "A": 49.0,
+   "b": -0.0209,
+   "rateHigh": 31.32
+  },
+  "下水道工事(2)": {
+   "table": "jo4",
+   "pdfPage": 44,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 38.21,
+   "A": 202.3,
+   "b": -0.1034,
+   "rateHigh": 22.09
+  },
+  "下水道工事(3)": {
+   "table": "jo4",
+   "pdfPage": 44,
+   "lower": 10000000,
+   "upper": 2000000000,
+   "rateLow": 32.72,
+   "A": 46.8,
+   "b": -0.0222,
+   "rateHigh": 29.09
+  },
+  "コンクリートダム": {
+   "table": "jo5",
+   "pdfPage": 44,
+   "lower": 300000000,
+   "upper": 5000000000,
+   "rateLow": 31.19,
+   "A": 35.0,
+   "b": -0.0059,
+   "rateHigh": 30.68
+  },
+  "フィルダム": {
+   "table": "jo5",
+   "pdfPage": 44,
+   "lower": 300000000,
+   "upper": 5000000000,
+   "rateLow": 34.59,
+   "A": 154.9,
+   "b": -0.0768,
+   "rateHigh": 27.87
+  }
+ },
+ "generalAdmin": {
+  "pdfPage": 47,
+  "lower": 5000000,
+  "upper": 3000000000,
+  "rateLow": 25.13,
+  "rateHigh": 10.63,
+  "slope": -5.21826,
+  "intercept": 60.08343
+ },
+ "advancePayment": [
+  {
+   "max": 5,
+   "coef": 1.05
+  },
+  {
+   "max": 15,
+   "coef": 1.04
+  },
+  {
+   "max": 25,
+   "coef": 1.03
+  },
+  {
+   "max": 35,
+   "coef": 1.01
+  }
+ ],
+ "guarantee": {
+  "case1": 0.04,
+  "case2": 0.09,
+  "case3": 0
+ }
+}

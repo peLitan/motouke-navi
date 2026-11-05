@@ -1,0 +1,275 @@
+{
+ "meta": {
+  "title": "架空の標準単価表(見本用。実在の表の値ではない)",
+  "fetchedAt": "2026-11-05"
+ },
+ "packages": [
+  {
+   "no": 1,
+   "name": "掘削",
+   "unit": "ｍ３",
+   "pages": [
+    1
+   ],
+   "header": [
+    "土質",
+    "施工方法"
+   ],
+   "rows": [
+    {
+     "condition": "土砂 架空の方法A",
+     "price": 500,
+     "K1": 50,
+     "K2": null,
+     "K3": null,
+     "R1": 30,
+     "R2": null,
+     "R3": null,
+     "R4": null,
+     "Z1": 20,
+     "Z2": null,
+     "Z3": null,
+     "Z4": null,
+     "K": 50,
+     "R": 30,
+     "Z": 20,
+     "S": null,
+     "names": {
+      "K1": "架空の機械B",
+      "R1": "運転手（特殊）",
+      "Z1": "架空の燃料B"
+     },
+     "page": 1
+    },
+    {
+     "condition": "岩塊 架空の方法B",
+     "price": 1500,
+     "K1": 60,
+     "K2": null,
+     "K3": null,
+     "R1": 30,
+     "R2": null,
+     "R3": null,
+     "R4": null,
+     "Z1": 10,
+     "Z2": null,
+     "Z3": null,
+     "Z4": null,
+     "K": 60,
+     "R": 30,
+     "Z": 10,
+     "S": null,
+     "names": {
+      "K1": "架空の機械B",
+      "R1": "運転手（特殊）",
+      "Z1": "架空の燃料B"
+     },
+     "page": 1
+    }
+   ]
+  },
+  {
+   "no": 2,
+   "name": "路体盛土",
+   "unit": "ｍ３",
+   "pages": [
+    1
+   ],
+   "header": [
+    "条件"
+   ],
+   "rows": [
+    {
+     "condition": "流用土 架空の方法A",
+     "price": 400,
+     "K1": 50,
+     "K2": null,
+     "K3": null,
+     "R1": 40,
+     "R2": null,
+     "R3": null,
+     "R4": null,
+     "Z1": 10,
+     "Z2": null,
+     "Z3": null,
+     "Z4": null,
+     "K": 50,
+     "R": 40,
+     "Z": 10,
+     "S": null,
+     "names": {
+      "K1": "架空の機械B",
+      "R1": "運転手（特殊）",
+      "Z1": "架空の燃料B"
+     },
+     "page": 1
+    }
+   ]
+  },
+  {
+   "no": 3,
+   "name": "上層路盤",
+   "unit": "ｍ２",
+   "pages": [
+    1
+   ],
+   "header": [
+    "材料",
+    "厚さ"
+   ],
+   "rows": [
+    {
+     "condition": "粒度調整砕石 150mm",
+     "price": 1000,
+     "K1": 20,
+     "K2": null,
+     "K3": null,
+     "R1": 20,
+     "R2": null,
+     "R3": null,
+     "R4": null,
+     "Z1": 60,
+     "Z2": null,
+     "Z3": null,
+     "Z4": null,
+     "K": 20,
+     "R": 20,
+     "Z": 60,
+     "S": null,
+     "names": {
+      "K1": "架空の機械B",
+      "R1": "運転手（特殊）",
+      "Z1": "架空の燃料B"
+     },
+     "page": 1
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "name": "表層",
+   "unit": "ｍ２",
+   "pages": [
+    1
+   ],
+   "header": [
+    "材料",
+    "厚さ"
+   ],
+   "rows": [
+    {
+     "condition": "再生密粒度 50mm",
+     "price": 2000,
+     "K1": 10,
+     "K2": null,
+     "K3": null,
+     "R1": 20,
+     "R2": null,
+     "R3": null,
+     "R4": null,
+     "Z1": 70,
+     "Z2": null,
+     "Z3": null,
+     "Z4": null,
+     "K": 10,
+     "R": 20,
+     "Z": 70,
+     "S": null,
+     "names": {
+      "K1": "架空の機械A",
+      "R1": "普通作業員",
+      "Z1": "架空の材料A"
+     },
+     "page": 1
+    }
+   ]
+  },
+  {
+   "no": 5,
+   "name": "プレキャストＵ形側溝",
+   "unit": "ｍ",
+   "pages": [
+    1
+   ],
+   "header": [
+    "条件"
+   ],
+   "rows": [
+    {
+     "condition": "架空の規格A",
+     "price": 8000,
+     "K1": 10,
+     "K2": null,
+     "K3": null,
+     "R1": 30,
+     "R2": null,
+     "R3": null,
+     "R4": null,
+     "Z1": 60,
+     "Z2": null,
+     "Z3": null,
+     "Z4": null,
+     "K": 10,
+     "R": 30,
+     "Z": 60,
+     "S": null,
+     "names": {
+      "K1": "架空の機械A",
+      "R1": "普通作業員",
+      "Z1": "架空の材料A"
+     },
+     "page": 1
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "name": "区画線",
+   "unit": "ｍ",
+   "pages": [
+    1
+   ],
+   "header": [
+    "条件"
+   ],
+   "rows": [
+    {
+     "condition": "溶融式 架空の規格A",
+     "price": 300,
+     "K1": 0,
+     "K2": null,
+     "K3": null,
+     "R1": 50,
+     "R2": null,
+     "R3": null,
+     "R4": null,
+     "Z1": 50,
+     "Z2": null,
+     "Z3": null,
+     "Z4": null,
+     "K": 0,
+     "R": 50,
+     "Z": 50,
+     "S": null,
+     "names": {
+      "K1": "架空の機械A",
+      "R1": "普通作業員",
+      "Z1": "架空の材料A"
+     },
+     "page": 1
+    }
+   ]
+  },
+  {
+   "no": 7,
+   "name": "防護柵（材料費）",
+   "unit": null,
+   "pages": [
+    1
+   ],
+   "header": [],
+   "rows": []
+  }
+ ],
+ "skipped": []
+}
