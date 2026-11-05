@@ -101,12 +101,12 @@ test('条件: 下請が無ければ下請の行を出さず、分からなけれ
   assert.ok(buildScheduleDetail({ workKind: 'kenchiku', orderer: 'private' }).notes[0].includes('国の官庁営繕の例'));
 });
 
-test('出典の表示。段取りだけ切り替わり、目次と積算はまだ「見ていない」', () => {
+test('出典の表示。段取りと目次の語が切り替わり、積算はまだ「見ていない」', () => {
   assert.equal(kindSource('kenchiku', 'schedule').title, '公共建築工事標準仕様書(建築工事編)令和7年版');
   const line = kindSourceText('kenchiku', 'schedule');
   assert.ok(line.includes('公共建築工事標準仕様書') && line.includes('取得日 2026-11-05') && line.includes('令和7年5月12日'));
   assert.ok(!line.includes(NOT_READ));
-  assert.ok(kindSourceText('kenchiku', 'plan').includes(NOT_READ));
+  assert.ok(!kindSourceText('kenchiku', 'plan').includes(NOT_READ));
   assert.ok(kindSourceText('kenchiku', 'estimate').includes(NOT_READ));
 });
 
@@ -127,7 +127,7 @@ test('画面: 建築に変えて確認すると、段取りと出典・注記が
   const csv = await page.blobs.at(-1).text();
   assert.ok(csv.includes('建築') && csv.includes('公共建築工事標準仕様書') && !csv.includes('共通仕様書 '));
   await page.click('plan-run');
-  assert.ok(page.text('plan-result').includes(NOT_READ), '目次はまだ見ていない');
+  assert.ok(!page.text('plan-result').includes(NOT_READ), '目次は 1.2.2 の語で見る');
 });
 
 test('画面: もう受注した人の知らせも建築の例の名前になる', async () => {

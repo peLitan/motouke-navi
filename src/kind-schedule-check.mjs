@@ -26,6 +26,46 @@ function itemText(sec, n) {
   return rest.slice(0, next ? next.index : rest.length);
 }
 
+// 建築系の施工計画書の語の表の点検(F44d)。語は抜き書きの中にあり、抜き書きは箇所の号の中にある1文で、ページは原文の印と合う
+// 抜き書きの始まりの頁。頁の印を除いた本文で探してから、印までの字数で頁を決める(文が頁をまたいでも見つかる)
+function pageOf(text, quote) {
+  const parts = text.split(/^--- PDF の (\d+) ページ ---\n/m);
+  const at = strip(parts.filter((_, i) => i % 2 === 0).join('')).indexOf(strip(quote));
+  if (at < 0) return null;
+  let seen = strip(parts[0]).length;
+  for (let i = 1; i < parts.length; i += 2) {
+    seen += strip(parts[i + 1]).length;
+    if (at < seen) return Number(parts[i]);
+  }
+  return null;
+}
+
+export function checkKindPlan(data, text) {
+  if (!text) return ['原文が無い: ' + data.sourceId];
+  const secs = sections(text);
+  const errors = [];
+  if (data.items.length !== 3) errors.push('語の数が3でない: ' + data.items.length);
+  for (const it of data.items) {
+    const err = (m) => errors.push(it.id + ': ' + m);
+    const m = /^(\d+\.\d+\.\d+)\((\d+)\)$/.exec(it.section);
+    if (!m) { err('箇所の番号の形が違う: ' + it.section); continue; }
+    if (Number(m[2]) !== it.no) err('号の番号と no が違う');
+    const sec = secs.get(m[1]);
+    if (!sec) { err('箇所の見出しが原文に無い: ' + m[1]); continue; }
+    if (strip(sec.title) !== strip(data.sectionTitle)) err('題名が原文の見出しと違う: ' + sec.title);
+    const scope = itemText(sec, it.no);
+    if (scope === null) { err('号が原文に無い: ' + it.section); continue; }
+    for (const q of [it.quote, it.provisoQuote].filter(Boolean)) {
+      if (!strip(scope).includes(strip(q))) err('抜き書きが箇所の中に無い: ' + q);
+      if ((q.match(/。/g) ?? []).length > 1) err('抜き書きが1文を超える');
+    }
+    if (!strip(it.quote).includes(strip(it.label))) err('語が抜き書きに無い: ' + it.label);
+    const page = pageOf(text, it.quote);
+    if (page !== it.page) err('ページが違う: ' + page);
+  }
+  return errors;
+}
+
 export function checkKindSchedule(data, text) {
   if (!text) return ['原文が無い: ' + data.sourceId];
   const secs = sections(text);

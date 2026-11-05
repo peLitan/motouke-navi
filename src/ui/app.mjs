@@ -683,7 +683,7 @@ export function runPlanCheck(doc) {
     shownKind.planItems = workKind;
     applyRulesSides(doc);
     const out = checkPlanToc(text, { workType: form.workType ?? undefined, workKind, table: tableFor(workKind) });
-    if (!form.workType && !out.notRead) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
+    if (!form.workType && !out.notRead && !out.wordsOnly) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
     summary.plan = out;

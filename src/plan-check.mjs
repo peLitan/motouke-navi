@@ -7,6 +7,7 @@ import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { sourceVersion } from './source-version.mjs';
 import { tableName } from './rules-load.mjs';
 import { NOT_READ, ALWAYS_SHOWN, DEFAULT_WORK_KIND, hasKindTable, workKindLabel } from './work-kinds.mjs';
+import { kindTable } from './work-kind-tables.mjs';
 
 const source = sourcesData.sources.find((s) => s.id === planData.sourceId);
 if (!source) throw new Error('施工計画書の記載項目: 出典が無い: ' + planData.sourceId);
@@ -52,13 +53,48 @@ function loadedBasis(it, table) {
 
 export const PLAN_ITEMS = planData.items;
 
+// 建築系の語の有無(F44d)。1.2.2 に記載事項の列挙は無いので、土木の16項目を流用せず、語が目次の行にあるかだけを見る。
+// かっこの中も見る(「施工計画書(総合施工計画書)」のように語がかっこに入るため)。目次に無い語は書類が別のこともあるので候補にとどめる
+function checkKindWords(data, lines) {
+  const source = sourcesData.sources.find((s) => s.id === data.sourceId);
+  if (!source) throw new Error('施工計画書の語: 出典が無い: ' + data.sourceId);
+  const norm = lines.map(normalizeLine);
+  const used = new Set();
+  const found = [];
+  const candidates = [];
+  for (const it of data.items) {
+    let hit = norm.findIndex((l) => l.includes(normalizeLine(it.label)));
+    const byAlias = hit < 0;
+    if (byAlias) hit = norm.findIndex((l) => it.aliases.some((a) => l.includes(normalizeLine(a))));
+    if (hit >= 0) {
+      used.add(hit);
+      found.push({ item: it.label, no: it.no, line: lines[hit], byAlias });
+      continue;
+    }
+    const proviso = it.provisoQuote ? '原文には「' + it.provisoQuote + '」ともあります。' : '';
+    candidates.push({
+      item: it.label,
+      no: it.no,
+      message: data.doc + ' ' + it.section + ' に「' + it.label + '」があります。目次にその語が見当たりません。' + proviso + it.hint,
+      basis: {
+        doc: data.doc, section: it.section, sectionTitle: data.sectionTitle, page: it.page, quote: it.quote,
+        sourceId: data.sourceId, url: source.pdfUrl ?? source.url, fetchedAt: source.fetchedAt, version: sourceVersion(source),
+      },
+    });
+  }
+  const extra = lines.filter((l, i) => !used.has(i) && !TITLE_RE.test(tocHeading(l)));
+  const notes = ['目次の見出しの言葉だけで比べています。本文に書いてあるか、書いた中身が足りているかは見ていません', ...data.notes];
+  if (found.some((f) => f.byAlias)) notes.push('「書き方が違う」と出た項目は、原文の語と違う言葉で見つけたものです。その見出しが当たるかを確かめてください');
+  return { candidates, found, extra, undecidable: [], notes, wordsOnly: true, scope: data.doc + ' ' + data.section };
+}
+
 // 1-1-1-6 は国の直轄の土木工事の共通仕様書の条。建築一式工事の施工計画書には対応する記載項目が無い(critic の指摘4)
 export const KENCHIKU_UNDECIDABLE = '建築一式工事なので、国の直轄の土木の共通仕様書 ' + planData.section + ' の記載項目は当てはまりません。対応する記載項目が無いので、目次の抜けは判断できません。発注者の仕様書(公共建築工事標準仕様書など)の記載事項で確かめてください';
 
 // text: 施工計画書の目次の文(1行に1つの見出し)
 // opts.workType: 'kenchiku-ikkatsu'(建築一式)|'other'|未指定。建築一式なら照合せず「判断できない」を返す
 // opts.table: 読み込んだ表(F26b)。記載項目の行があれば、国の直轄の例の代わりにその行と比べる
-// opts.workKind: 工種(F44a。無ければ土木)。読み込んだ表が無く工種の記載項目も無ければ、土木の項目を流用せず notRead: true を返す
+// opts.workKind: 工種(F44a。無ければ土木)。読み込んだ表が無く工種の記載項目も無ければ、土木の項目を流用せず notRead: true を返す。建築系は語の有無だけを見て wordsOnly: true を返す(F44d)
 // 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], undecidable: [{message}], notes: [文] }
 export const OTHER_NOTE = '(16)は受け皿の項目なので、見出しが無くても抜けとは限らない。監督職員が求めた項目があれば書く';
 
@@ -73,6 +109,8 @@ export function checkPlanToc(text, opts = {}) {
       undecidable: [{ message: NOT_READ + '(工種: ' + workKindLabel(workKind) + ')ので、目次を比べていません。発注者の仕様書で確かめてください。' + ALWAYS_SHOWN + '。' }],
     };
   }
+  const kindWords = table ? null : kindTable(workKind, 'plan');
+  if (kindWords?.wordsOnly) return checkKindWords(kindWords, lines);
   if (opts.workType === 'kenchiku-ikkatsu' && table) {
     return {
       candidates: [], found: [], extra: [], scope: tableName(table),

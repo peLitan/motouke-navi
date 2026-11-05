@@ -84,11 +84,11 @@ for (const k of KINDS) {
     assert.ok(buildScheduleDetail({ workKind: k.id, orderer: 'private' }).notes[0].includes('国の官庁営繕の例'));
   });
 
-  test(k.label + ': 出典の表示。段取りだけ切り替わり、目次と積算はまだ「見ていない」', () => {
+  test(k.label + ': 出典の表示。段取りと目次の語が切り替わり、積算はまだ「見ていない」', () => {
     assert.ok(kindSource(k.id, 'schedule').title.includes(k.word));
     const line = kindSourceText(k.id, 'schedule');
     assert.ok(line.includes(k.word) && line.includes('取得日 2026-11-06') && !line.includes(NOT_READ), line);
-    assert.ok(kindSourceText(k.id, 'plan').includes(NOT_READ));
+    assert.ok(!kindSourceText(k.id, 'plan').includes(NOT_READ));
     assert.ok(kindSourceText(k.id, 'estimate').includes(NOT_READ));
   });
 
@@ -107,7 +107,7 @@ for (const k of KINDS) {
     const csv = await page.blobs.at(-1).text();
     assert.ok(csv.includes(k.label) && csv.includes(k.word));
     await page.click('plan-run');
-    assert.ok(page.text('plan-result').includes(NOT_READ), '目次はまだ見ていない');
+    assert.ok(!page.text('plan-result').includes(NOT_READ), '目次は 1.2.2 の語で見る');
   });
 
   test(k.label + ': 置いた原文は第1編 第1章だけで、毎ページの見出しが混ざらない', () => {

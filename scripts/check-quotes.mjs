@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkQuote } from '../src/quote-check.mjs';
-import { checkKindSchedule } from '../src/kind-schedule-check.mjs';
+import { checkKindSchedule, checkKindPlan } from '../src/kind-schedule-check.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
@@ -34,6 +34,18 @@ for (const table of kindTables) {
   }
   for (const e of errors.filter((x) => !table.rules.some((r) => x.startsWith(r.id + ':')))) console.log('不一致\t' + e);
   ng += new Set(errors.map((e) => e.split(':')[0])).size;
+}
+// 建築系の施工計画書の語の表(F44d): 語ごとに、抜き書きが箇所の号の中にあるかを見る
+const kindPlans = ['data/plan-items-kenchiku.json', 'data/plan-items-denki.json', 'data/plan-items-kan.json'].map(readJson);
+for (const table of kindPlans) {
+  const errors = checkKindPlan(table, texts[table.sourceId]);
+  kindRows += table.items.length;
+  for (const it of table.items) {
+    const own = errors.filter((e) => e.startsWith(it.id + ':'));
+    console.log(`${own.length ? '不一致' : '一致'}\t${it.id}\t${table.sourceId} ${it.section}${own.length ? '\t' + own.join(' / ') : ''}`);
+    if (own.length) ng++;
+  }
+  for (const e of errors.filter((x) => !table.items.some((it) => x.startsWith(it.id + ':')))) { console.log('不一致\t' + e); ng++; }
 }
 const noQuote = sources.filter((s) => s.kind === 'law' && !quotes.some((q) => q.sourceId === s.id)).map((s) => s.id);
 if (noQuote.length) console.log('抜き書きの無い条: ' + noQuote.join(', '));

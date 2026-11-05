@@ -24,6 +24,7 @@ const { quotes } = readJson('data/quotes.json');
 const rules = readJson('data/rules.json');
 const schedule = readJson('data/schedule.json');
 const plan = readJson('data/plan-items.json');
+const kindPlans = ['data/plan-items-kenchiku.json', 'data/plan-items-denki.json', 'data/plan-items-kan.json'].map((name) => [name, readJson(name)]);
 const kindTables = ['data/schedule-kenchiku.json', 'data/schedule-denki.json', 'data/schedule-kan.json'].map((name) => [name, readJson(name)]);
 
 const ng = [];
@@ -48,6 +49,7 @@ const rows = [
     const main = inSource(table.sourceId, r.quote);
     return main.ok && r.deadline ? inSource(table.sourceId, r.deadline.quote) : main;
   })),
+  ...kindPlans.map(([name, table]) => count(name, table.items, (it) => inSource(table.sourceId, it.quote))),
 ];
 const filtered = filterVerifiedRules(rules.rules, quotes, texts);
 const abQuotes = (rules.amountBasis?.basis ?? []).map((b) => b.quoteId);

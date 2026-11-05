@@ -328,19 +328,21 @@ export function renderPlanResult(out = {}) {
   const found = out.found ?? [];
   const extra = out.extra ?? [];
   const undecidable = out.undecidable ?? [];
+  // 建築系(F44d)は記載事項の列挙が無いので、語の有無の言い方にする
+  const word = out.wordsOnly ? '語' : '記載項目';
   const pageText = (b) => (b.page ? ' PDF ' + b.page + 'ページ' : '') + (b.printedPage ? '(紙面 ' + b.printedPage + ')' : '');
   const candHtml = undecidable.length
     ? '<h3>判断できない(' + undecidable.length + '件)</h3><ul class="undecidable">' + undecidable.map((u) => '<li>' + esc(u.message) + '</li>').join('') + '</ul>'
     : cands.length
-    ? '<h3>記載項目の抜けの候補(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
+    ? '<h3>' + (out.wordsOnly ? '見当たらない語の候補' : '記載項目の抜けの候補') + '(' + cands.length + '件)</h3><ul class="candidates">' + cands.map((c) => '<li class="candidate"><h4>' + esc(c.item) + '</h4>'
       + (c.message ? '<p>' + esc(c.message) + '</p>' : '')
       + '<details class="basis"><summary>根拠: ' + esc(c.basis.section) + ' ' + esc(c.basis.sectionTitle ?? '') + esc(pageText(c.basis)) + '</summary><p>' + esc(c.basis.doc) + '(' + esc(versionText(c.basis)) + ')' + '</p><blockquote>' + esc(c.basis.quote) + '</blockquote></details></li>').join('') + '</ul>'
-    : '<h3>記載項目の抜けの候補</h3><p>目次の見出しでは、' + esc(out.scope ?? '国の直轄の土木の共通仕様書 1-1-1-6') + ' の記載項目はすべて見つかりました(中身が足りているかは見ていません)。</p>';
+    : '<h3>' + (out.wordsOnly ? '見当たらない語の候補' : '記載項目の抜けの候補') + '</h3><p>目次の見出しでは、' + esc(out.scope ?? '国の直轄の土木の共通仕様書 1-1-1-6') + ' の' + word + 'はすべて見つかりました(中身が足りているかは見ていません)。</p>';
   const foundHtml = found.length
-    ? '<details class="found"><summary>目次で見つけた記載項目(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
+    ? '<details class="found"><summary>目次で見つけた' + word + '(' + found.length + '件)</summary><ul>' + found.map((f) => '<li>(' + esc(f.no) + ')' + esc(f.item) + ' — 目次の行「' + esc(f.line) + '」' + (f.byAlias ? '(書き方が違う)' : '') + '</li>').join('') + '</ul></details>'
     : '';
   const extraHtml = extra.length
-    ? '<details class="extra"><summary>記載項目に当たらなかった目次の行(' + extra.length + '件)</summary><ul>' + extra.map((l) => '<li>' + esc(l) + '</li>').join('') + '</ul></details>'
+    ? '<details class="extra"><summary>' + word + 'に当たらなかった目次の行(' + extra.length + '件)</summary><ul>' + extra.map((l) => '<li>' + esc(l) + '</li>').join('') + '</ul></details>'
     : '';
   const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   return candHtml + foundHtml + extraHtml + notes
@@ -442,7 +444,7 @@ export function renderSummary(state = {}) {
   } else rows.push(['施工体制台帳の点検', NOT_YET('台帳を点検する'), 'check-result']);
   if (state.plan) {
     const und = (state.plan.undecidable ?? []).length;
-    rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : '記載項目の抜けの候補 <strong>' + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
+    rows.push(['施工計画書の目次の点検', und ? '判断できない ' + und + '件' : (state.plan.wordsOnly ? '見当たらない語の候補 <strong>' : '記載項目の抜けの候補 <strong>') + (state.plan.candidates ?? []).length + '</strong>件', 'plan-result']);
   } else rows.push(['施工計画書の目次の点検', NOT_YET('目次を点検する'), 'plan-result']);
   const docCount = state.check || state.plan ? ((state.check?.candidates ?? []).length + (state.plan?.candidates ?? []).length) + '件' : 'まだ';
   parts.push(openCard('summary-docs', '台帳と目次の点検の候補', docCount, scrollTable('書類と段取りの表', '<table class="summary-table"><tbody>'
