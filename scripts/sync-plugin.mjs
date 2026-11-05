@@ -37,6 +37,8 @@ export const PLUGIN_COPIES = [
   ['src/estimate/indirect.mjs', 'plugin/skills/estimate/scripts/lib/estimate/indirect.mjs'],
   ['src/estimate/estimate.mjs', 'plugin/skills/estimate/scripts/lib/estimate/estimate.mjs'],
   ['data/estimate-rates.json', 'plugin/skills/estimate/scripts/data/estimate-rates.json'],
+  // F44a: 工種の一覧(積算の表がある工種か)
+  ['src/work-kinds.mjs', 'plugin/skills/estimate/scripts/lib/work-kinds.mjs'],
   // F42b: 標準単価表と労務単価を手元に取る道具(plugin を入れた人も使えるように)
   ['scripts/fetch-estimate-data.mjs', 'plugin/skills/estimate/scripts/fetch-estimate-data.mjs'],
   ['scripts/estimate-tables.mjs', 'plugin/skills/estimate/scripts/estimate-tables.mjs'],

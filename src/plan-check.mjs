@@ -6,6 +6,7 @@ import planData from '../data/plan-items.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { sourceVersion } from './source-version.mjs';
 import { tableName } from './rules-load.mjs';
+import { NOT_READ, ALWAYS_SHOWN, DEFAULT_WORK_KIND, hasKindTable, workKindLabel } from './work-kinds.mjs';
 
 const source = sourcesData.sources.find((s) => s.id === planData.sourceId);
 if (!source) throw new Error('施工計画書の記載項目: 出典が無い: ' + planData.sourceId);
@@ -57,6 +58,7 @@ export const KENCHIKU_UNDECIDABLE = '建築一式工事なので、国の直轄�
 // text: 施工計画書の目次の文(1行に1つの見出し)
 // opts.workType: 'kenchiku-ikkatsu'(建築一式)|'other'|未指定。建築一式なら照合せず「判断できない」を返す
 // opts.table: 読み込んだ表(F26b)。記載項目の行があれば、国の直轄の例の代わりにその行と比べる
+// opts.workKind: 工種(F44a。無ければ土木)。読み込んだ表が無く工種の記載項目も無ければ、土木の項目を流用せず notRead: true を返す
 // 返す値: { candidates: [{item, no, message, basis}], found: [{item, no, line, byAlias}], extra: [行], undecidable: [{message}], notes: [文] }
 export const OTHER_NOTE = '(16)は受け皿の項目なので、見出しが無くても抜けとは限らない。監督職員が求めた項目があれば書く';
 
@@ -64,6 +66,13 @@ export function checkPlanToc(text, opts = {}) {
   const lines = String(text ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
   if (lines.length === 0) throw new Error('目次が空です');
   const table = opts.table?.planItems?.length ? opts.table : null;
+  const workKind = opts.workKind ?? DEFAULT_WORK_KIND;
+  if (!table && !hasKindTable(workKind, 'plan')) {
+    return {
+      candidates: [], found: [], extra: [], notes: [], notRead: true, workKind,
+      undecidable: [{ message: NOT_READ + '(工種: ' + workKindLabel(workKind) + ')ので、目次を比べていません。発注者の仕様書で確かめてください。' + ALWAYS_SHOWN + '。' }],
+    };
+  }
   if (opts.workType === 'kenchiku-ikkatsu' && table) {
     return {
       candidates: [], found: [], extra: [], scope: tableName(table),

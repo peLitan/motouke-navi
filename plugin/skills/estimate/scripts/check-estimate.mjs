@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { verifyQuote, stripSpaces } from './lib/quote-check.mjs';
 import { estimate, NOTICE } from './lib/estimate/estimate.mjs';
 import { KINDS } from './lib/estimate/indirect.mjs';
+import { DEFAULT_WORK_KIND, NOT_READ, hasKindTable, isWorkKind, workKindLabel } from './lib/work-kinds.mjs';
 
 const CONDITION_KEYS = ['supplied', 'lossPrevention', 'disposal', 'stacked', 'regionCoef', 'addition', 'advancePercent', 'guarantee'];
 const WORDS_NOT_USED = /予定価格|この額で入札/;
@@ -86,8 +87,29 @@ function laborOf(tables, prefecture) {
   return { base: tables.laborBase.tokyo, local };
 }
 
+// 工種に積算の表が無いとき(F44a): 土木の表で積まず、どの行も合計に入れない
+function notReadResult(data, sources, workKind) {
+  const lines = Array.isArray(data?.lines) ? data.lines : [];
+  const message = `${NOT_READ}(工種: ${workKindLabel(workKind)})`;
+  return {
+    kind: 'estimate-check', label: '参考の額', notice: NOTICE, title: data?.source?.title ?? '', workKindNote: message,
+    amount: null,
+    direct: { total: 0, uncorrectedAmount: 0, uncorrectedPercent: 0 },
+    rows: [],
+    notIncluded: lines.map((line, ref) => ({ ref, by: '機械', name: line.name, quantity: line.quantity, unit: line.unit, quote: line.quote ?? '', reason: message })),
+    notIncludedPercent: percent(lines.length, lines.length),
+    lineCount: lines.length,
+    uncovered: [], indirect: null, assumptions: [], warnings: [], flags: [],
+    claudeNotes: (Array.isArray(data?.notes) ? data.notes : []).map((n) => safeText(n?.text ?? n)),
+    tablesUsed: [],
+  };
+}
+
 export function checkEstimate(data, sources, tables) {
   const c = data?.conditions ?? {};
+  const workKind = c.workKind ?? DEFAULT_WORK_KIND;
+  if (!isWorkKind(workKind)) throw new RangeError(`conditions.workKind が分かりません: ${workKind}`);
+  if (!hasKindTable(workKind, 'estimate')) return notReadResult(data, sources, workKind);
   if (!KINDS.includes(c.kind)) throw new RangeError(`conditions.kind は次のどれか: ${KINDS.join('、')}`);
   const lines = Array.isArray(data?.lines) ? data.lines : [];
   const notIncluded = [];
@@ -149,7 +171,7 @@ const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 
 // 人が読む結果(Markdown)
 export function renderMarkdown(r) {
-  const s = [`# 参考の額: ${r.title || '(題名なし)'}`, '', r.notice + '。', ''];
+  const s = [`# 参考の額: ${r.title || '(題名なし)'}`, '', r.notice + '。', '', ...(r.workKindNote ? [r.workKindNote + '。積算の表が無いので額を出していません。', ''] : [])];
   s.push('| 項目 | 額 | 割合 |', '|---|---|---|');
   s.push(`| 参考の額(工事価格・税抜き) | ${r.amount === null ? '出せません(合計に入った行がありません)' : yen(r.amount)} | |`);
   s.push(`| 直接工事費(合計に入った行の積み上げ) | ${yen(r.direct.total)} | |`);

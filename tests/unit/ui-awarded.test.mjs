@@ -77,7 +77,7 @@ test('全部の行は CSV に書き出せる。条件の欄を変えても止め
   await page.click('schedule-csv-btn');
   assert.equal(page.blobs.length, 1, page.el('schedule-status').textContent);
   const csv = await page.blobs[0].text();
-  assert.equal(csv.trim().split('\r\n').length, COUNT + 1);
+  assert.equal(csv.trim().split('\r\n').length, COUNT + 2); // 見出し + 全部の行 + 工種の行(F44a)
   assert.ok(csv.includes('確かめる'));
   await page.click('next-step-3');
   page.el('ledger-input').value = '工事名: 架空の工事';

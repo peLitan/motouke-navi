@@ -3,6 +3,7 @@
 import { readDirect } from './form.mjs';
 import { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } from '../checklist.mjs';
 import { sourceVersion, versionText } from '../source-version.mjs';
+import { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } from '../work-kinds.mjs';
 import { displayStatus, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
@@ -232,6 +233,7 @@ export const SCHEDULE_NOTE_WARNING = '「' + SCHEDULE_NOTE_LABEL + '」の欄に
 export const scheduleNoteKey = (r) => r.id || r.basis.section + '|' + r.what;
 // notes は 鍵 → 書いた文 の Map。画面のメモリ(app.mjs)にだけ持ち、ブラウザに保存しない
 export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
+  if (detail.notRead) return '<p class="human"><strong>' + NOT_READ + '</strong>(工種: ' + esc(workKindLabel(detail.workKind)) + ')ので、段取りの行は出していません。発注者の仕様書で確かめてください。' + ALWAYS_SHOWN + '。</p>';
   const noteList = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
   const sectionText = (b) => (esc(b.section) + ' ' + esc(b.sectionTitle ?? '')).trim();
@@ -352,6 +354,7 @@ export const SUMMARY_FIELDS = [
   ['orderer', '発注者', { public: '公共', private: '民間' }],
   ['direct', '元請けか下請けか', (values) => (values['direct-unknown'] === true ? '分からない' : readDirect(values) === true ? '元請け(発注者から直接請け負う)' : readDirect(values) === false ? '下請け' : '選んでいません')],
   ['work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }],
+  ['work-kind', '工種', Object.fromEntries(WORK_KINDS.map((k) => [k.id, k.label]))],
   ['contract-amount', '請負代金の見込み(税込み)', null],
   ['subcontract-total', '下請けの総額(税込み)', null],
   ['license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }],
@@ -429,6 +432,7 @@ export function renderSummary(state = {}) {
   const rows = [];
   if (state.taicho) rows.push(['施工体制台帳が要るか', esc(TAICHO_STATUS[state.taicho.status] ?? state.taicho.status), 'taicho-result']);
   if (typeof state.scheduleCount === 'number') rows.push(['受注後の段取り', state.scheduleCount + '件', 'schedule-result']);
+  if (state.scheduleNotRead) rows.push(['受注後の段取り', NOT_READ, 'schedule-result']);
   // 安全の法令の候補(F40b): 上の「受注したら要るもの」の件数には混ぜない
   if (state.safety) rows.push(['安全の法令の候補', state.safety.text, 'safety-heading']);
   if (state.check) {

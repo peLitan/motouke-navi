@@ -24,15 +24,15 @@ const INTAKE = JSON.stringify({
   form: { orderer: 'public', 'work-type': 'other', 'contract-amount': '82500000' },
 });
 
-test('行の数: 判定に使う条件を全部(8行)並べ、行ごとに「変更」のボタンがあり、文は欄の選択肢と同じ', () => {
-  assert.equal(CONFIRM_ROWS.length, 8);
-  assert.equal(section.match(/class="confirm-row"/g).length, 8);
+test('行の数: 判定に使う条件を全部(9行)並べ、行ごとに「変更」のボタンがあり、文は欄の選択肢と同じ', () => {
+  assert.equal(CONFIRM_ROWS.length, 9);
+  assert.equal(section.match(/class="confirm-row"/g).length, 9);
   for (const r of CONFIRM_ROWS) {
     assert.ok(section.includes('<dt>' + r.label + '</dt>'), r.label);
     assert.match(section, new RegExp('id="confirm-value-' + r.key + '"'));
     assert.match(section, new RegExp('<button type="button" id="confirm-change-' + r.key + '" aria-label="' + r.label + 'を変更">変更</button>'));
     // 選ぶ欄の語は入力欄の語と食い違わない(発注者は括弧の説明を除く)
-    for (const [v, text] of Object.entries(r.options ?? {})) assert.match(body, new RegExp('<option value="' + v + '">' + text), v);
+    for (const [v, text] of Object.entries(r.options ?? {})) assert.ok(body.includes('<option value="' + v + '">' + text), v);
   }
   // 手で入れる欄は読み取りの対象に全部入っている(抜けた条件が結果にだけ効くことがない)
   assert.deepEqual(confirmRows({}).map((r) => r.key), CONFIRM_ROWS.map((r) => r.key));

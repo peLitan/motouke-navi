@@ -2,6 +2,7 @@
 // DOM には触らない。行の枠と「変更」のボタンは shell.html に静的にあり、ここは行の中身の文を作る。
 import { parseYen } from './form.mjs';
 import { esc } from './view.mjs';
+import { WORK_KINDS } from '../work-kinds.mjs';
 
 const select = (key, label, options) => ({ key, label, kind: 'select', field: key, options });
 const amount = (key, label) => ({ key, label, kind: 'amount', field: key });
@@ -9,6 +10,7 @@ export const CONFIRM_ROWS = [
   select('orderer', '発注者', { public: '公共', private: '民間' }),
   { key: 'role', label: '元請けか下請けか', kind: 'role' },
   select('work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }),
+  select('work-kind', '工種', Object.fromEntries(WORK_KINDS.map((k) => [k.id, k.label]))),
   amount('contract-amount', '請負代金の見込み'),
   amount('subcontract-total', '下請けの総額'),
   select('license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }),

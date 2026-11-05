@@ -1,5 +1,6 @@
 // 画面の入力欄の値を、判定(src/bid-check.mjs・src/taicho.mjs)の入力の形にする(F05a)
 // DOM には触らない。画面からは欄の id をキーにした値の入れ物を渡す(チェックの欄は true / false)。
+import { DEFAULT_WORK_KIND, isWorkKind } from '../work-kinds.mjs';
 
 // 全角の数字・桁区切り・空白・「円」を許して、0 以上の整数の円にする。
 // 返り値: { value: 数 | null, error: 文 | null }。空なら value は null で error も null(入力が無い)
@@ -32,6 +33,9 @@ export function readDirect(values = {}) {
   if (flag(values['direct-sub'])) return false;
   return null;
 }
+
+// 工種の欄(F44a)。欄が無い・知らない値は既定の土木
+export const readWorkKind = (values = {}) => (isWorkKind(values['work-kind']) ? values['work-kind'] : DEFAULT_WORK_KIND);
 
 // 欄の値の入れ物 → 判定の入力。下請けの総額が 0 なら下請契約は無い、空なら有無は分からない(null)
 export function readBidForm(values = {}) {
@@ -67,5 +71,5 @@ export function amountValidity(values = {}) {
   return AMOUNT_FIELDS.map(([key]) => [key, Boolean(amountError(values, key))]);
 }
 
-export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];
+export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'work-kind', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure'];
 export const CHECKBOX_IDS = ['direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'contract-amount-unknown', 'subcontract-total-unknown', 'ict-measure'];

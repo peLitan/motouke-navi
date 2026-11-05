@@ -84,6 +84,7 @@ export const SAMPLE = {
     'direct-sub': false,
     'direct-unknown': false,
     'work-type': 'other',
+    'work-kind': 'doboku',
     'contract-amount': '286,000,000',
     'contract-amount-unknown': false,
     'subcontract-total': '77,000,000',

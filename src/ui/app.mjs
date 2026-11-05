@@ -1,7 +1,7 @@
 // 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
-import { readBidForm, readDirect, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
+import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -11,12 +11,14 @@ import { addCrossCandidates } from '../cross-docs.mjs';
 import { addChecklistCandidates } from '../ledger-check.mjs';
 import { bidCheck } from '../bid-check.mjs';
 import { judgeTaicho } from '../taicho.mjs';
-import { stage1Rows, checkRows, scheduleRows, planRows, checklistRows, safetyRows, toCsv } from '../export.mjs';
+import { stage1Rows, workKindRows, checkRows, scheduleRows, planRows, checklistRows, safetyRows, toCsv } from '../export.mjs';
 import { safetyCandidates, safetyInput } from '../safety.mjs';
 import { SAFETY_IDS, readSafetyAnswers, renderSafetyResult, safetyAnswerRows, safetyBreakdown, safetyCountText, safetyTitle, stage1Line } from './safety-view.mjs';
 import { sourceVersion } from '../source-version.mjs';
 import sourcesData from '../../data/sources/index.json' with { type: 'json' };
 import { buildScheduleDetail } from '../schedule.mjs';
+import { kindSourceText } from '../work-kind-tables.mjs';
+import { DEFAULT_WORK_KIND, NOT_READ, ALWAYS_SHOWN, hasKindTable } from '../work-kinds.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
 import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
 import { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } from '../intake-load.mjs';
@@ -36,7 +38,7 @@ const STALE = '条件が変わりました。もう一度「確認する」を�
 let stale = false; // 結果を出したあとに条件を変えたか
 
 // まとめの枠(F14b): 最後に出した各結果を持ち、結果が出るたびに枠を書き直す(ページを閉じれば消える)
-const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, check: null, plan: null, stale: false };
+const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, scheduleNotRead: false, check: null, plan: null, stale: false };
 let summaryShown = false;
 const SUMMARY_FOLDS = ['summary-docs', 'summary-conditions']; // 描き直しても開いたままにするカード
 function updateSummary(doc) {
@@ -272,7 +274,7 @@ export function runBid(doc) {
   const values = collect(doc);
   const errors = formErrors(values);
   markAmountFields(doc, values);
-  Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, stale: false });
+  Object.assign(summary, { values, errors, bid: null, taicho: null, scheduleCount: null, scheduleNotRead: false, stale: false });
   renderSafety(doc);
   const openEl = doc.getElementById('open-items');
   if (errors.length) {
@@ -286,7 +288,7 @@ export function runBid(doc) {
   }
   last = null;
   const input = readBidForm(values);
-  runSchedule(doc, input);
+  runSchedule(doc, { ...input, workKind: readWorkKind(values) });
   try {
     const bid = bidCheck(input);
     const taicho = judgeTaicho(input);
@@ -314,6 +316,10 @@ let lastScheduleInput = null;
 let rulesTable = null;
 // 「発注者の仕様書では」の書き込み(F37e)。行の鍵 → 書いた文。メモリだけに持ち、描き直し・表の切り替え・見本の入れ直しでは消さない
 const scheduleNotes = new Map();
+// 今の結果を出した工種(F44a)。欄を変えただけでは変えない(注記と結果が食い違わないように、結果を出すときに変える)
+const shownKind = { schedule: DEFAULT_WORK_KIND, planItems: DEFAULT_WORK_KIND };
+// 和歌山県の例は土木の表なので、土木のときだけ使う。読み込んだ表は利用者が選んだ発注者の表なので工種を問わず使う
+const tableFor = (kind) => (kind === DEFAULT_WORK_KIND || !rulesTable?.label ? rulesTable : null);
 export function setScheduleNote(key, text) {
   if (text) scheduleNotes.set(key, text);
   else scheduleNotes.delete(key);
@@ -330,12 +336,15 @@ function runSchedule(doc, input, errors = []) {
   if (!out) return;
   if (!input) { out.innerHTML = renderErrors(errors); return; }
   try {
-    const detail = buildScheduleDetail(input, rulesTable, { all: awardedAll });
+    shownKind.schedule = input.workKind ?? DEFAULT_WORK_KIND;
+    applyRulesSides(doc);
+    const detail = buildScheduleDetail(input, tableFor(shownKind.schedule), { all: awardedAll });
     out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
     // 全部の行(F37c)は条件から出した件数ではないので、まとめには載せない
-    summary.scheduleCount = awardedAll ? null : detail.rows.length;
+    summary.scheduleCount = awardedAll || detail.notRead ? null : detail.rows.length;
+    summary.scheduleNotRead = Boolean(detail.notRead);
   } catch (e) {
     out.innerHTML = renderErrors(['段取りを出す途中で止まりました(段取りの規則表の誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
   }
@@ -344,7 +353,8 @@ function runSchedule(doc, input, errors = []) {
 // 「もう受注した」(F37c): 条件をまだ入れていない人には、全部の行を「確かめる」で出す。
 // 読み込んだ表と和歌山県の例は条件で行が分かれないので、国の例と同じ文にしない
 let awardedAll = false;
-export function awardedNotice(table) {
+export function awardedNotice(table, notRead = false) {
+  if (notRead) return NOT_READ + 'ので、段取りの行はありません。' + ALWAYS_SHOWN + '。工事の条件を入れて『確認する』を押すと出ます。';
   const custom = Boolean(table?.schedule?.length);
   const name = custom ? table.label ?? '読み込んだ表' : '国の直轄の例';
   return '条件を入れていないので、' + name + 'の全部の行を出しています。'
@@ -352,7 +362,8 @@ export function awardedNotice(table) {
 }
 function setAwardedText(doc) {
   const text = doc.getElementById('awarded-notice-text');
-  if (text) text.textContent = awardedNotice(rulesTable);
+  const table = tableFor(shownKind.schedule);
+  if (text) text.textContent = awardedNotice(table, !table?.schedule?.length && !hasKindTable(shownKind.schedule, 'schedule'));
 }
 function setAwardedView(doc, on) {
   awardedAll = on;
@@ -367,10 +378,10 @@ function setAwardedView(doc, on) {
 // 条件から出した結果(入力の誤りの知らせを含む)があれば、全部の行で上書きせず、そのまま見せる
 export function enterAwarded(doc) {
   if (!awardedAll && !lastScheduleInput && !summary.errors.length) setAwardedView(doc, true);
-  if (awardedAll) runSchedule(doc, {});
+  if (awardedAll) runSchedule(doc, { workKind: readWorkKind(collect(doc)) });
   // 全部の行のときは知らせの行のすぐ下に段取りがあるので、知らせの行まで動かす(段取りの見出しまで動かすと知らせが画面の上へ隠れる)
   openPanel(doc, 2, awardedAll ? 'bid-status' : 'schedule-heading');
-  setBidStatus(doc, awardedAll ? AWARDED_NOTICE_ALL : bidNotice(AWARDED_NOTICE_DONE));
+  setBidStatus(doc, awardedAll ? (summary.scheduleNotRead ? '✓ ' + NOT_READ + 'ので、段取りの行はありません。' : AWARDED_NOTICE_ALL) : bidNotice(AWARDED_NOTICE_DONE));
 }
 
 const NATIONAL_NOTICE = {
@@ -378,21 +389,36 @@ const NATIONAL_NOTICE = {
   'plan-notice': '国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください',
 };
 const RULES_SIDES = [
-  ['schedule-notice', 'schedule-about', 'schedule'],
-  ['plan-notice', 'plan-about', 'planItems'],
+  ['schedule-notice', 'schedule-about', 'schedule', 'work-kind-schedule', 'schedule'],
+  ['plan-notice', 'plan-about', 'planItems', 'work-kind-plan', 'plan'],
 ];
-// 表が変わったら、前の表で出した結果を残さない(注記と結果が食い違わないように)
-function applyRulesTable(doc) {
-  for (const [noticeId, aboutId, key] of RULES_SIDES) {
-    const custom = Boolean(rulesTable?.[key].length);
+// 今の工種と表に合わせて、注記・説明・出典の行・切り替えのボタンを直す(結果は描き直さない)
+function applyRulesSides(doc) {
+  for (const [noticeId, aboutId, key, kindLineId, part] of RULES_SIDES) {
+    const kind = shownKind[key];
+    const table = tableFor(kind);
+    const custom = Boolean(table?.[key].length);
+    const notRead = !custom && !hasKindTable(kind, part);
     const notice = doc.getElementById(noticeId);
-    if (notice) notice.textContent = !custom ? NATIONAL_NOTICE[noticeId] : rulesTable.label ? exampleNotice(rulesTable) : tableNotice(rulesTable);
+    if (notice) notice.textContent = notRead ? NOT_READ + '。発注者の仕様書で確かめてください' : !custom ? NATIONAL_NOTICE[noticeId] : table.label ? exampleNotice(table) : tableNotice(table);
     const about = doc.getElementById(aboutId);
-    if (about) about.hidden = custom;
+    if (about) about.hidden = custom || notRead;
     // 説明の折りたたみ(F37b)は中身が隠れると空になるので、見出しごと隠す
     const fold = about?.closest?.('details');
-    if (fold) fold.hidden = custom;
+    if (fold) fold.hidden = custom || notRead;
+    const kindLine = doc.getElementById(kindLineId);
+    if (kindLine) kindLine.textContent = kindSourceText(kind, part);
   }
+  // 2つの例は土木の表なので、ほかの工種では押せるようにしない
+  for (const id of ['rules-national', 'rules-wakayama']) {
+    const el = doc.getElementById(id);
+    if (el) el.hidden = shownKind.schedule !== DEFAULT_WORK_KIND;
+  }
+  setAwardedText(doc);
+}
+// 表が変わったら、前の表で出した結果を残さない(注記と結果が食い違わないように)
+function applyRulesTable(doc) {
+  applyRulesSides(doc);
   // 読み込んだ表のときは、2つの例のどちらも押されていない形にして、その旨を出す
   doc.getElementById('rules-national')?.setAttribute?.('aria-pressed', String(!rulesTable));
   doc.getElementById('rules-wakayama')?.setAttribute?.('aria-pressed', String(Boolean(rulesTable?.label)));
@@ -401,7 +427,6 @@ function applyRulesTable(doc) {
     const el = doc.getElementById(id);
     if (el) el.hidden = !fromFile;
   }
-  setAwardedText(doc);
   if (lastSchedule && lastScheduleInput) {
     runSchedule(doc, lastScheduleInput);
     if (summaryShown) updateSummary(doc);
@@ -453,7 +478,7 @@ export function clearRulesTable(doc) {
 
 export function exportScheduleCsv(doc) {
   if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
-  downloadText(doc, toCsv(scheduleRows(lastSchedule, scheduleNotes)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
+  downloadText(doc, toCsv(scheduleRows(lastSchedule, scheduleNotes, shownKind.schedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
   setScheduleStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
@@ -485,7 +510,7 @@ function today() {
 export function exportCsv(doc) {
   if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
   const snap = safetySnapshot(doc);
-  const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE), ...safetyRows(snap.result, snap.answerRows)]);
+  const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE), ...workKindRows(shownKind.schedule), ...safetyRows(snap.result, snap.answerRows)]);
   downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
   setExportStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
@@ -652,8 +677,11 @@ export function runPlanCheck(doc) {
   if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。']); return; }
   try {
     const form = readBidForm(collect(doc));
-    const out = checkPlanToc(text, { workType: form.workType ?? undefined, table: rulesTable });
-    if (!form.workType) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
+    const workKind = readWorkKind(collect(doc));
+    shownKind.planItems = workKind;
+    applyRulesSides(doc);
+    const out = checkPlanToc(text, { workType: form.workType ?? undefined, workKind, table: tableFor(workKind) });
+    if (!form.workType && !out.notRead) out.notes.push('上の欄の「工事の種類」が選ばれていないので、土木の工事として比べました。建築一式工事なら「建築一式工事」を選んでください');
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
     summary.plan = out;
@@ -665,7 +693,7 @@ export function runPlanCheck(doc) {
 
 export function exportPlanCsv(doc) {
   if (!lastPlan) { setPlanStatus(doc, '先に「目次を点検する」を押して結果を出してください。'); return; }
-  downloadText(doc, toCsv(planRows(lastPlan)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
+  downloadText(doc, toCsv(planRows(lastPlan, shownKind.planItems)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
   setPlanStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
@@ -755,7 +783,7 @@ export function clearSample(doc) {
   lastSchedule = null;
   lastScheduleInput = null;
   summaryShown = false;
-  Object.assign(summary, { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, stale: false });
+  Object.assign(summary, { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, scheduleNotRead: false, stale: false });
   setExportStatus(doc, '');
   setScheduleStatus(doc, '');
   setBidStatus(doc, '');
@@ -809,6 +837,7 @@ export function clearSample(doc) {
 }
 
 export function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis) {
+  applyRulesSides(doc);
   const start = () => {
     const on = (id, f) => {
       const btn = doc.getElementById(id);

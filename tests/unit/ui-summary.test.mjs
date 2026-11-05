@@ -97,12 +97,13 @@ test('renderSummary: 件数・一覧・台帳の候補・目次の抜け・入�
   const dl = out.match(/<dl class="summary-list">([\s\S]*?)<\/dl>/);
   assert.ok(dl, '入れた条件の一覧が無い');
   const pairs = [...dl[1].matchAll(/<dt>([^<]*)<\/dt><dd>([^<]*)<\/dd>/g)].map((m) => [m[1], m[2]]);
-  assert.equal(pairs.length, 8);
+  assert.equal(pairs.length, 9);
   assert.deepEqual(pairs[0], ['発注者', '民間']);
   assert.deepEqual(pairs[1], ['元請けか下請けか', '下請け']);
   assert.deepEqual(pairs[2], ['工事の種類', '選んでいません']);
-  assert.deepEqual(pairs[3], ['請負代金の見込み(税込み)', '1,000 円']);
-  assert.deepEqual(pairs[4], ['下請けの総額(税込み)', '入れていません']);
+  assert.deepEqual(pairs[3][0], '工種');
+  assert.deepEqual(pairs[4], ['請負代金の見込み(税込み)', '1,000 円']);
+  assert.deepEqual(pairs[5], ['下請けの総額(税込み)', '入れていません']);
 });
 
 test('renderSummary: まだ出していない結果は「まだ出していません」、入力の誤り・条件の変更はそう出す', () => {

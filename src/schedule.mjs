@@ -6,6 +6,8 @@ import scheduleData from '../data/schedule.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { sourceVersion } from './source-version.mjs';
 import { tableName, UNDETERMINED } from './rules-load.mjs';
+import { kindTable } from './work-kind-tables.mjs';
+import { DEFAULT_WORK_KIND } from './work-kinds.mjs';
 
 const FIELD_LABEL = {
   hasSubcontract: '下請契約があるか',
@@ -34,14 +36,14 @@ function sourceOf(id) {
   return s;
 }
 
-function basisOf(rule) {
-  const s = sourceOf(scheduleData.sourceId);
+function basisOf(rule, data) {
+  const s = sourceOf(data.sourceId);
   return {
-    doc: scheduleData.doc,
-    title: scheduleData.doc,
+    doc: data.doc,
+    title: data.doc,
     section: rule.section,
     sectionTitle: rule.title,
-    sourceId: scheduleData.sourceId,
+    sourceId: data.sourceId,
     quote: rule.quote,
     url: s.url,
     fetchedAt: s.fetchedAt,
@@ -96,25 +98,29 @@ function loadedDetail(input, table) {
   return { rows, skipped, notes, docLabel: label, custom: true };
 }
 
-// 段取りの行と、出さなかった行の理由を返す。table は読み込んだ表(無ければ国の直轄の例)。段取りの行が無い表は国の例のまま。
+// 段取りの行と、出さなかった行の理由を返す。table は読み込んだ表(無ければ工種の表)。段取りの行が無い表は工種の表のまま。
+// input.workKind は工種(F44a。無ければ土木)。工種の表が無ければ行を出さず notRead: true を返す(別の工種の表で埋めない)
 // all: true(F37c)は、条件を入れていない人に全部の行を出す。入力は見ず、どの行も状態は「確かめる」(「行う」と言い切らない)
 export function buildScheduleDetail(input = {}, table = null, { all = false } = {}) {
-  return all ? { ...scheduleDetail({}, table, true), all: true } : scheduleDetail(input, table, false);
+  return all ? { ...scheduleDetail({ workKind: input.workKind }, table, true), all: true } : scheduleDetail(input, table, false);
 }
 
 function scheduleDetail(input, table, all) {
   if (table?.schedule?.length) return loadedDetail(input, table);
+  const workKind = input.workKind ?? DEFAULT_WORK_KIND;
+  const data = kindTable(workKind, 'schedule');
+  if (!data) return { rows: [], skipped: [], notes: [], notRead: true, workKind };
   const rows = [];
   const skipped = [];
   const notes = [];
   if (input.direct === false) {
     notes.push('この段取りは発注者から直接請け負った受注者(元請け)の例です。下請けとして請け負う場合は、元請けの指示と契約書で確かめてください');
-    return { rows, skipped: scheduleData.rules.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes };
+    return { rows, skipped: data.rules.map((r) => ({ id: r.id, what: r.what, reason: '発注者から直接請け負う場合の行なので出していません' })), notes };
   }
   if (input.orderer === 'private') notes.push('民間工事です。この一覧は国の直轄の例なので、発注者の仕様書・契約書で置き換えてください');
   notes.push(HANDOVER_NOTE);
   const order = Object.keys(PHASES);
-  const rules = [...scheduleData.rules].sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
+  const rules = [...data.rules].sort((a, b) => order.indexOf(a.phase) - order.indexOf(b.phase));
   for (const rule of rules) {
     const r = apply(rule, input);
     if (!r.show) { skipped.push({ id: rule.id, phase: rule.phase, what: rule.what, section: rule.section, reason: r.skip }); continue; }
@@ -127,7 +133,7 @@ function scheduleDetail(input, table, all) {
       status: all || r.checks.length ? 'needs_check' : 'applies',
       checks: r.checks,
       note: rule.note ?? '',
-      basis: basisOf(rule),
+      basis: basisOf(rule, data),
     });
   }
   return { rows, skipped, notes };

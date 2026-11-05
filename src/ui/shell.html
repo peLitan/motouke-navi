@@ -355,6 +355,7 @@
 <li>工事の契約書・請負契約約款</li>
 <li>発注者の特記仕様書・現場説明書・質問回答書</li>
 <li>自治体・民間の発注者の共通仕様書・要領(段取りは国の直轄の例)</li>
+<li>工種の欄で「この工種の仕様書は見ていない」と出る工種の仕様書</li>
 <li>国土交通省令(建設業法施行規則など。発注者が確認できる措置の中身など。施行規則 第14条の2 第1項(台帳の記載事項)は取り込み、台帳の記載事項の表に使っています。第2項〜第4項は見ていません)</li>
 <li>取り込んだ条より外の条(労働安全衛生法のほかの条を含む)と、ほかの法令(建築基準法など)</li>
 </ul></div>
@@ -419,6 +420,17 @@
 <option value="unknown">分からない</option>
 </select>
 <details class="fold hint-fold"><summary aria-label="工事の種類の説明">説明</summary><p id="work-type-hint" class="hint">自分が請け負う工事の種類です。下請けで請け負う(上で「下請け」を選んだ)ときは、元請けの工事全体ではなく、自分が請け負う下請工事の種類を選びます(施行令 第27条第1項の「当該建設工事」)。</p></details></div>
+<div class="row"><label for="work-kind">工種</label>
+<select id="work-kind" name="work-kind" aria-describedby="work-kind-hint">
+<option value="doboku">土木(建設機械施工を含む)</option>
+<option value="kenchiku">建築</option>
+<option value="denki">電気工事</option>
+<option value="kan">管工事</option>
+<option value="tsushin">電気通信工事</option>
+<option value="zoen">造園</option>
+<option value="other">その他</option>
+</select>
+<details class="fold hint-fold"><summary aria-label="工種の説明">説明</summary><p id="work-kind-hint" class="hint">建設業法施行令 第37条の技術検定の種目で選びます。段取りと目次の点検に使う表と、その出典が切り替わります。仕様書を読んでいない工種は「この工種の仕様書は見ていない」と出します。法令の判定・安全の法令の候補・公告の読みは工種を問わず出します。</p></details></div>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-hint">
 <span class="unknown-check"><input type="checkbox" id="contract-amount-unknown" name="contract-amount-unknown"><label for="contract-amount-unknown">分からない</label></span>
@@ -456,6 +468,7 @@
 <div class="confirm-row"><dt>発注者</dt><dd id="confirm-value-orderer"></dd><dd class="confirm-change"><button type="button" id="confirm-change-orderer" aria-label="発注者を変更">変更</button></dd></div>
 <div class="confirm-row"><dt>元請けか下請けか</dt><dd id="confirm-value-role"></dd><dd class="confirm-change"><button type="button" id="confirm-change-role" aria-label="元請けか下請けかを変更">変更</button></dd></div>
 <div class="confirm-row"><dt>工事の種類</dt><dd id="confirm-value-work-type"></dd><dd class="confirm-change"><button type="button" id="confirm-change-work-type" aria-label="工事の種類を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>工種</dt><dd id="confirm-value-work-kind"></dd><dd class="confirm-change"><button type="button" id="confirm-change-work-kind" aria-label="工種を変更">変更</button></dd></div>
 <div class="confirm-row"><dt>請負代金の見込み</dt><dd id="confirm-value-contract-amount"></dd><dd class="confirm-change"><button type="button" id="confirm-change-contract-amount" aria-label="請負代金の見込みを変更">変更</button></dd></div>
 <div class="confirm-row"><dt>下請けの総額</dt><dd id="confirm-value-subcontract-total"></dd><dd class="confirm-change"><button type="button" id="confirm-change-subcontract-total" aria-label="下請けの総額を変更">変更</button></dd></div>
 <div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd><dd class="confirm-change"><button type="button" id="confirm-change-license" aria-label="元請けの許可の種類を変更">変更</button></dd></div>
@@ -480,6 +493,7 @@
 <div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
 </details>
 <h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
+<p id="work-kind-schedule"></p>
 <div id="awarded-notice" class="note" hidden>
 <p id="awarded-notice-text">条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて『確認する』を押すと、要る・要らないが分かれます。</p>
 <button type="button" id="awarded-conditions">条件を入れる</button>
@@ -598,6 +612,7 @@
 <details class="fold" id="plan-about-fold"><summary>点検のしかたと範囲</summary>
 <p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。段階の「1 条件を入れる」の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
 </details>
+<p id="work-kind-plan"></p>
 <p class="schedule-notice note" id="plan-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>

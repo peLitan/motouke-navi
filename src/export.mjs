@@ -4,6 +4,8 @@
 import { CHECKLIST_NOTICE, CHECKLIST_SCOPE, checklistReferenceText } from './ui/view.mjs';
 import { CHECKLIST_LAW } from './checklist.mjs';
 import { sourceVersion, NO_VERSION } from './source-version.mjs';
+import { kindSource, kindSourceText } from './work-kind-tables.mjs';
+import { NOT_READ, workKindLabel } from './work-kinds.mjs';
 import { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, scheduleNoteKey } from './ui/view.mjs';
 
 // すべての結果で共通の列
@@ -56,6 +58,11 @@ export function amountBasisRows(ab, section) {
   return [row(section, '金額の比べ方', tax, ab.note, ab.basis, [])];
 }
 
+// 工種の行(F44a)。共通の列で1行
+export function workKindRows(kind) {
+  return [row('工種', workKindLabel(kind), '', '', [], [])];
+}
+
 // 1段目(入札前と台帳)の書き出しの行。最後に、候補であって最後は人が判断する旨を入れる
 export function stage1Rows(bid, t, notice) {
   return [
@@ -94,23 +101,28 @@ export function checkRows(out, notice) {
 // 段取りの一覧(F06a)の行。段取りは「いつ・何を・誰に」が要なので、共通の列とは別の列にする(見出しの行 + 1行ずつ)
 export const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', '根拠の箇所', '根拠の原文(抜き書き)', '取得日', '版', '注意', SCHEDULE_NOTE_LABEL];
 // notes は画面の書き込み(F37e)。鍵 → 書いた文 の Map
-export function scheduleRows(rows = [], notes = new Map()) {
+// kind を渡すと、最後に工種と表の出典の行を足す(F44a。ほかの行は変えない)
+export function scheduleRows(rows = [], notes = new Map(), kind = null) {
+  const s = kind && kindSource(kind, 'schedule');
+  const kindRow = kind ? [['工種', '', workKindLabel(kind), '', '', s?.title ?? '', '', s?.fetchedAt ?? '', s?.version ?? '', s ? '' : NOT_READ, '']] : [];
   return [SCHEDULE_COLUMNS.slice(), ...rows.map((r) => [
     SCHEDULE_PHASE[r.phase] ?? r.phase, r.when, r.what, r.to, SCHEDULE_STATUS[r.status] ?? r.status ?? '',
     r.basis.doc + ' ' + r.basis.section + (r.basis.sectionTitle ? ' ' + r.basis.sectionTitle : ''), r.basis.quote, r.basis.fetchedAt, r.basis.version || NO_VERSION,
     [r.note, ...(r.checks ?? [])].filter(Boolean).join('\n'), notes.get(scheduleNoteKey(r)) ?? '',
-  ])];
+  ]), ...kindRow];
 }
 
 // 施工計画書の目次の点検(F07)の行。見出しの行 + 抜けの候補1件ごとに1行
 export const PLAN_COLUMNS = ['項目', '状態', '説明', '根拠の箇所', 'ページ', '根拠の原文(抜き書き)', '取得日', '版'];
-export function planRows(out = {}) {
+// kind を渡すと、最後に工種と表の出典の行を足す(F44a)
+export function planRows(out = {}, kind = null) {
   return [PLAN_COLUMNS.slice(), ...(out.candidates ?? []).map((c) => [
     c.item, '抜けの候補', c.message ?? '',
     c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
     c.basis.page ? 'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : '') : '',
     c.basis.quote, c.basis.fetchedAt ?? '', c.basis.version || NO_VERSION,
-  ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', '', ''])];
+  ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', '', '']),
+  ...(kind ? [['工種', '', kindSourceText(kind, 'plan'), kindSource(kind, 'plan')?.title ?? '', '', '', kindSource(kind, 'plan')?.fetchedAt ?? '', kindSource(kind, 'plan')?.version ?? '']] : [])];
 }
 
 // 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする
