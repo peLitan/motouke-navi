@@ -190,6 +190,9 @@ export function summaryLine(r) {
   return `${head}。合計に入った行 ${r.rows.length}・入っていない行 ${r.notIncluded.length}・補正していない部分 ${yen(r.direct.uncorrectedAmount)}(${r.direct.uncorrectedPercent}%)・拾っていない文の行 ${r.uncovered.length}・確かめが要る ${r.flags.length}`;
 }
 
+// 機械が入れなかった行があれば 1(人が理由を見る)
+export const exitCodeOf = (r) => (r.notIncluded.some((x) => x.by === '機械') ? 1 : 0);
+
 export function loadTables(dir) {
   const read = (name) => JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
   return { unitPrices: read('unit-prices.json'), labor: read('labor-rates.json'), laborBase: read('labor-base.json') };
@@ -213,7 +216,7 @@ if (isMain) {
     console.log(summaryLine(r));
     if (out) fs.writeFileSync(out, JSON.stringify(r, null, 2) + '\n');
     if (md) fs.writeFileSync(md, renderMarkdown(r));
-    process.exit(r.notIncluded.some((x) => x.by === '機械') ? 1 : 0);
+    process.exit(exitCodeOf(r));
   } catch (e) {
     console.error(e.message);
     process.exit(2);

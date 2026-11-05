@@ -2,12 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { checkEstimate, renderMarkdown, summaryLine, loadTables, numbersIn, hasUnit, quantityProblem, findRow, uncoveredLines } from '../../plugin/skills/estimate/scripts/check-estimate.mjs';
+import { checkEstimate, renderMarkdown, summaryLine, exitCodeOf, loadTables, numbersIn, hasUnit, quantityProblem, findRow, uncoveredLines } from '../../plugin/skills/estimate/scripts/check-estimate.mjs';
 import { searchPackages, rowsOf } from '../../plugin/skills/estimate/scripts/find-packages.mjs';
 
 const SKILL = 'plugin/skills/estimate';
-const CHECK = `${SKILL}/scripts/check-estimate.mjs`;
 const SAMPLE = 'docs/samples/estimate';
 const tables = loadTables(`${SAMPLE}/架空の標準単価表`);
 const file = '数量.md';
@@ -167,10 +165,11 @@ test('架空の数量の表の見本: 結果の文書が今の出力と同じで
   assert.match(tables.unitPrices.meta.title, /実在の表の値ではない/);
 });
 
-test('コマンド: 機械が外した行があれば終了コード 1 で、最後の行に参考の額と割合を出す', () => {
-  const r = spawnSync(process.execPath, [CHECK, `${SAMPLE}/当てた結果.json`, `${SAMPLE}/架空の数量総括表.md`, '--tables', `${SAMPLE}/架空の標準単価表`], { encoding: 'utf8' });
-  assert.equal(r.status, 1);
-  assert.match(r.stdout, /参考の額 [\d,]+円。合計に入った行 4・入っていない行 4・補正していない部分/);
+test('終了コード: 機械が入れなかった行があれば 1、Claude が当てなかった行だけなら 0。最後の行に額と割合を出す', () => {
+  const r = run([line(), line({ quantity: 1300 })]);
+  assert.equal(exitCodeOf(r), 1);
+  assert.equal(exitCodeOf(run([line(), line({ match: null, reason: '当たらない' })])), 0);
+  assert.match(summaryLine(r), /参考の額 [\d,]+円。合計に入った行 1・入っていない行 1・補正していない部分/);
 });
 
 test('Skill の文書: 名前と手順があり、照合と計算のスクリプトは AI と通信を使わない', () => {
