@@ -1,0 +1,25 @@
+{ "source": { "publisher": "こころみ町 建設課", "title": "町営みほん団地 給水管修繕 見積合わせのお知らせ", "date": "令和9年5月10日" },
+  "conditions": [
+    { "key": "orderer-name", "value": "こころみ町 建設課", "quote": "こころみ町 建設課", "form": { "orderer": "public" } },
+    { "key": "work-name", "value": "町営みほん団地 給水管修繕", "quote": "件名: 町営みほん団地 給水管修繕" },
+    { "key": "site", "value": "こころみ町みほん 団地内", "quote": "履行場所: こころみ町みほん 団地内" },
+    { "key": "period", "value": "令和9年6月1日から令和9年9月30日まで", "quote": "契約期間: 令和9年6月1日から令和9年9月30日まで" },
+    { "key": "bid-date", "value": "令和9年5月24日 正午まで", "quote": "見積書の受付: 令和9年5月24日 正午まで" },
+    { "key": "budget", "value": "3,960円", "quote": "見積の上限額: 金 3,960円(税込み)" },
+    { "key": "low-limit", "absent": true },
+    { "key": "work-class", "absent": true },
+    { "key": "work-content", "value": "給水管の取替え 延長 60m", "quote": "内容: 給水管の取替え 延長 60m" },
+    { "key": "grade", "absent": true },
+    { "key": "license-req", "value": "管工事業の許可", "quote": "参加できる方: 管工事業の許可があり、町内に事業所がある方。" },
+    { "key": "region", "value": "町内に事業所がある方", "quote": "参加できる方: 管工事業の許可があり、町内に事業所がある方。" },
+    { "key": "past-work", "absent": true },
+    { "key": "engineer", "absent": true },
+    { "key": "subcontract", "absent": true }
+  ],
+  "notes": [
+    { "text": "見積の上限額が 3,960円 で、給水管 60m の取替えとしては小さすぎるように見える。桁や単位(千円など)の抜けの可能性がある。値は原文のままにした。発注者に確かめたい。", "quote": "見積の上限額: 金 3,960円(税込み)" },
+    { "text": "「予定価格」の語は無い。見積の上限額を budget に入れた。同じものとして扱ってよいかは人が確かめる。" },
+    { "text": "入札ではなく見積合わせ。bid-date には見積書の受付の期限を入れ、period には契約期間を入れた。" },
+    { "text": "工事の種類の明記が無いので work-class は absent にした。管工事業の許可を求めているので管工事の可能性はあるが、推測では埋めない。" },
+    { "text": "参加の申し込みの方法と期限が書いていない。確かめたい。", "quote": "次の修繕について、参加を希望する方は申し込んでください。" }
+  ] }

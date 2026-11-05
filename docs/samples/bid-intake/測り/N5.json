@@ -1,0 +1,23 @@
+{ "source": { "publisher": "株式会社みほん不動産 開発部", "title": "みほんビル新築工事 御見積依頼書", "date": "令和9年3月3日" },
+  "conditions": [
+    { "key": "orderer-name", "value": "株式会社みほん不動産", "quote": "株式会社みほん不動産 開発部", "form": { "orderer": "private" } },
+    { "key": "work-name", "value": "みほんビル新築工事", "quote": "工事名: みほんビル新築工事" },
+    { "key": "site", "value": "架空県ためし市みほん町1丁目 地内", "quote": "工事場所: 架空県ためし市みほん町1丁目 地内" },
+    { "key": "period", "value": "令和9年7月1日から令和10年3月31日まで", "quote": "工期: 令和9年7月1日から令和10年3月31日まで" },
+    { "key": "bid-date", "value": "令和9年3月31日", "quote": "提出期限: 令和9年3月31日" },
+    { "key": "budget", "absent": true },
+    { "key": "low-limit", "absent": true },
+    { "key": "work-class", "value": "建築一式工事", "quote": "工事の種類: 建築一式工事", "form": { "work-type": "kenchiku-ikkatsu" } },
+    { "key": "work-content", "value": "鉄骨造 地上4階建 延べ面積 1,650m2", "quote": "工事の内容: 鉄骨造 地上4階建 延べ面積 1,650m2" },
+    { "key": "grade", "absent": true },
+    { "key": "license-req", "absent": true },
+    { "key": "region", "absent": true },
+    { "key": "past-work", "absent": true },
+    { "key": "engineer", "absent": true },
+    { "key": "subcontract", "absent": true }
+  ],
+  "notes": [
+    { "text": "民間の見積依頼で、入札ではない。bid-date には見積の提出期限を入れた。" },
+    { "text": "支払条件が書いてある(欄に無いので notes に書く)。", "quote": "支払条件: 出来高払い(月末締め翌月末払い)" },
+    { "text": "図面は別途で、ここには無い。見積の前に受け取る必要がある。", "quote": "図面は別途お渡しします。" }
+  ] }
