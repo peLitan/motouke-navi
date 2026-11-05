@@ -17,7 +17,7 @@ const basisOf = (...ids) => resolveQuoteIds(ids.map((quoteId) => ({ quoteId })),
 
 // 漢数字の金額(「四千五百万円」「九千万円」「一億二千万円」)を円の数にする。読めなければ例外
 const DIGIT = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
-function kanjiUnder10000(s) {
+export function kanjiUnder10000(s) {
   if (s === '') return 0;
   let total = 0;
   let rest = s;
