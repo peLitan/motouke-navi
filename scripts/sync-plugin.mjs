@@ -37,6 +37,9 @@ export const PLUGIN_COPIES = [
   ['src/estimate/indirect.mjs', 'plugin/skills/estimate/scripts/lib/estimate/indirect.mjs'],
   ['src/estimate/estimate.mjs', 'plugin/skills/estimate/scripts/lib/estimate/estimate.mjs'],
   ['data/estimate-rates.json', 'plugin/skills/estimate/scripts/data/estimate-rates.json'],
+  // F44e: 建築系の共通費の計算と、原文から読んだ率の表
+  ['src/estimate/kyotsuhi.mjs', 'plugin/skills/estimate/scripts/lib/estimate/kyotsuhi.mjs'],
+  ['data/kyotsuhi-rates.json', 'plugin/skills/estimate/scripts/data/kyotsuhi-rates.json'],
   // F44a: 工種の一覧(積算の表がある工種か)
   ['src/work-kinds.mjs', 'plugin/skills/estimate/scripts/lib/work-kinds.mjs'],
   // F42b: 標準単価表と労務単価を手元に取る道具(plugin を入れた人も使えるように)

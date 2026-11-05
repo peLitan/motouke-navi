@@ -84,12 +84,12 @@ for (const k of KINDS) {
     assert.ok(buildScheduleDetail({ workKind: k.id, orderer: 'private' }).notes[0].includes('国の官庁営繕の例'));
   });
 
-  test(k.label + ': 出典の表示。段取りと目次の語が切り替わり、積算はまだ「見ていない」', () => {
+  test(k.label + ': 出典の表示。段取りと目次の語と積算の表が切り替わる', () => {
     assert.ok(kindSource(k.id, 'schedule').title.includes(k.word));
     const line = kindSourceText(k.id, 'schedule');
     assert.ok(line.includes(k.word) && line.includes('取得日 2026-11-06') && !line.includes(NOT_READ), line);
     assert.ok(!kindSourceText(k.id, 'plan').includes(NOT_READ));
-    assert.ok(kindSourceText(k.id, 'estimate').includes(NOT_READ));
+    assert.ok(kindSourceText(k.id, 'estimate').includes('公共建築工事共通費積算基準'));
   });
 
   test(k.label + ': 画面で選ぶと段取りと出典・注記が切り替わり、CSV も通る', async () => {

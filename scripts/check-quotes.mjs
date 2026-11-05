@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkQuote } from '../src/quote-check.mjs';
 import { checkKindSchedule, checkKindPlan } from '../src/kind-schedule-check.mjs';
+import { checkKyotsuhi } from './kyotsuhi-tables.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
@@ -47,6 +48,13 @@ for (const table of kindPlans) {
   }
   for (const e of errors.filter((x) => !table.items.some((it) => x.startsWith(it.id + ':')))) { console.log('不一致\t' + e); ng++; }
 }
+// 建築系の共通費の表(F44e): 原文から読み直して、式・係数・範囲・前提の文が全部同じかを見る
+const kyotsuhi = readJson('data/kyotsuhi-rates.json');
+const kyotsuhiErrors = checkKyotsuhi(kyotsuhi, texts[kyotsuhi.sourceId]);
+kindRows += kyotsuhi.tables.length + 1 + kyotsuhi.notes.length;
+for (const e of kyotsuhiErrors) console.log('不一致\t' + e);
+console.log(`${kyotsuhiErrors.length ? '不一致' : '一致'}\tkyotsuhi\t${kyotsuhi.sourceId} 別表 ${kyotsuhi.tables.length + 1} 件・前提の文 ${kyotsuhi.notes.length} 件`);
+ng += kyotsuhiErrors.length;
 const noQuote = sources.filter((s) => s.kind === 'law' && !quotes.some((q) => q.sourceId === s.id)).map((s) => s.id);
 if (noQuote.length) console.log('抜き書きの無い条: ' + noQuote.join(', '));
 console.log(`抜き書き ${quotes.length + kindRows} 件のうち 不一致 ${ng} 件`);

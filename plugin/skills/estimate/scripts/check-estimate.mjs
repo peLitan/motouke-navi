@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { verifyQuote, stripSpaces } from './lib/quote-check.mjs';
 import { estimate, NOTICE } from './lib/estimate/estimate.mjs';
 import { KINDS } from './lib/estimate/indirect.mjs';
+import { kyotsuhiCosts, isKyotsuhiKind, SEPARATE } from './lib/estimate/kyotsuhi.mjs';
 import { DEFAULT_WORK_KIND, NOT_READ, hasKindTable, isWorkKind, workKindLabel } from './lib/work-kinds.mjs';
 
 const CONDITION_KEYS = ['supplied', 'lossPrevention', 'disposal', 'stacked', 'regionCoef', 'addition', 'advancePercent', 'guarantee'];
@@ -105,10 +106,33 @@ function notReadResult(data, sources, workKind) {
   };
 }
 
+// 建築系(F44e): 施工パッケージは土木の表なので行を積まない。人が入れた直接工事費と工期から共通費を出す
+function kyotsuhiResult(data, workKind) {
+  const c = data?.conditions ?? {};
+  if (c.directCost === undefined || c.months === undefined) throw new RangeError('建築系は conditions.directCost(直接工事費・円)と conditions.months(工期・か月)を入れてください');
+  const result = kyotsuhiCosts({ workKind, directCost: c.directCost, months: c.months, workClass: c.workClass, disposal: c.disposal, stacked: c.stacked });
+  const lines = Array.isArray(data?.lines) ? data.lines : [];
+  const reason = '施工パッケージは土木の表なので、建築系の行は積みません。直接工事費は conditions.directCost に人が入れてください';
+  return {
+    kind: 'estimate-check', label: '参考の額', notice: NOTICE, title: data?.source?.title ?? '', workKindNote: `工種: ${workKindLabel(workKind)}`,
+    kyotsuhi: result,
+    amount: result.workPrice,
+    direct: { total: c.directCost, uncorrectedAmount: 0, uncorrectedPercent: 0 },
+    rows: [],
+    notIncluded: lines.map((line, ref) => ({ ref, by: '機械', name: line.name, quantity: line.quantity, unit: line.unit, quote: line.quote ?? '', reason })),
+    notIncludedPercent: percent(lines.length, lines.length),
+    lineCount: lines.length,
+    uncovered: [], indirect: null, assumptions: result.assumptions, warnings: result.separate, flags: [],
+    claudeNotes: (Array.isArray(data?.notes) ? data.notes : []).map((n) => safeText(n?.text ?? n)),
+    tablesUsed: [result.source],
+  };
+}
+
 export function checkEstimate(data, sources, tables) {
   const c = data?.conditions ?? {};
   const workKind = c.workKind ?? DEFAULT_WORK_KIND;
   if (!isWorkKind(workKind)) throw new RangeError(`conditions.workKind が分かりません: ${workKind}`);
+  if (isKyotsuhiKind(workKind)) return kyotsuhiResult(data, workKind);
   if (!hasKindTable(workKind, 'estimate')) return notReadResult(data, sources, workKind);
   if (!KINDS.includes(c.kind)) throw new RangeError(`conditions.kind は次のどれか: ${KINDS.join('、')}`);
   const lines = Array.isArray(data?.lines) ? data.lines : [];
@@ -169,8 +193,31 @@ export function checkEstimate(data, sources, tables) {
 
 const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
 
+// 建築系の結果(F44e)。行の積み上げが無いので、段の表と前提だけを出す
+function renderKyotsuhi(r) {
+  const k = r.kyotsuhi;
+  const amountOf = (x) => (x.separate ? SEPARATE : yen(x.amount));
+  const how = (x, symbol) => (x.separate ? x.reason : `率 ${x.rate}%(${x.formula}。${symbol})`);
+  const s = [`# 参考の額: ${r.title || '(題名なし)'}`, '', r.notice + '。', '', `${r.workKindNote}。${k.work}の共通費を、公共建築工事共通費積算基準の別表の式で計算しました。直接工事費は人が入れた額で、この道具は確かめていません。`, ''];
+  s.push('| 段 | 額 | 率と式 | 出どころ |', '|---|---|---|---|');
+  s.push(`| 直接工事費(入れた額) | ${yen(k.directCost)} | | |`);
+  if (k.disposal) s.push(`| うち処分費(率の計算から除く) | ${yen(k.disposal)} | | 公共建築工事共通費積算基準 2(1)・3(1) |`);
+  s.push(`| 共通仮設費 | ${amountOf(k.commonTemporary)} | ${how(k.commonTemporary, `P=${k.commonTemporary.value}千円、T=${k.months}か月`)} | ${k.commonTemporary.source} |`);
+  s.push(`| 現場管理費 | ${amountOf(k.siteManagement)} | ${how(k.siteManagement, `Np=${k.siteManagement.value}千円、T=${k.months}か月`)} | ${k.siteManagement.source} |`);
+  s.push(`| 一般管理費等 | ${amountOf(k.generalAdmin)} | ${how(k.generalAdmin, `Cp=${(k.cost ?? 0) / 1000}千円`)} | ${k.generalAdmin.source} |`);
+  s.push(`| 参考の額(工事価格・税抜き) | ${k.workPrice === null ? SEPARATE : yen(k.workPrice)} | | |`, '');
+  const section = (title, items) => s.push(`## ${title}`, '', ...(items.length ? items.map((x) => '- ' + x) : ['- なし']), '');
+  section('別途になった段', r.warnings);
+  section('前提(人が確かめる)', r.assumptions);
+  section('合計に入っていない行', r.notIncluded.map((x) => `${x.name} ${x.quantity ?? ''} ${x.unit ?? ''}: ${x.reason}`));
+  section('Claude が気づいたこと(機械の確かめではない)', r.claudeNotes);
+  section('使った表', r.tablesUsed.map((m) => `${m.title} ${m.url}(取得日 ${m.fetchedAt})`));
+  return s.join('\n');
+}
+
 // 人が読む結果(Markdown)
 export function renderMarkdown(r) {
+  if (r.kyotsuhi) return renderKyotsuhi(r);
   const s = [`# 参考の額: ${r.title || '(題名なし)'}`, '', r.notice + '。', '', ...(r.workKindNote ? [r.workKindNote + '。積算の表が無いので額を出していません。', ''] : [])];
   s.push('| 項目 | 額 | 割合 |', '|---|---|---|');
   s.push(`| 参考の額(工事価格・税抜き) | ${r.amount === null ? '出せません(合計に入った行がありません)' : yen(r.amount)} | |`);
@@ -208,6 +255,7 @@ export function renderMarkdown(r) {
 }
 
 export function summaryLine(r) {
+  if (r.kyotsuhi) return `${r.amount === null ? `参考の額は${SEPARATE}です(率の範囲の外)` : `参考の額 ${yen(r.amount)}`}。${r.workKindNote}・直接工事費 ${yen(r.direct.total)}・工期 ${r.kyotsuhi.months} か月`;
   const head = r.amount === null ? '参考の額は出せません' : `参考の額 ${yen(r.amount)}`;
   return `${head}。合計に入った行 ${r.rows.length}・入っていない行 ${r.notIncluded.length}・補正していない部分 ${yen(r.direct.uncorrectedAmount)}(${r.direct.uncorrectedPercent}%)・拾っていない文の行 ${r.uncovered.length}・確かめが要る ${r.flags.length}`;
 }
@@ -228,11 +276,14 @@ if (isMain) {
   const md = take('--md');
   const dir = take('--tables') ?? path.join('tmp', 'estimate-data');
   const [dataFile, ...files] = args;
-  if (!dataFile || !files.length) { console.error('使い方: node check-estimate.mjs <当てた結果.json> <数量の表のファイル ...> [--tables <表の置き場>] [--out <結果.json>] [--md <結果.md>]'); process.exit(2); }
+  if (!dataFile) { console.error('使い方: node check-estimate.mjs <当てた結果.json> <数量の表のファイル ...> [--tables <表の置き場>] [--out <結果.json>] [--md <結果.md>]'); process.exit(2); }
   try {
     const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
     const sources = files.map((f) => ({ file: path.basename(f), text: fs.readFileSync(f, 'utf8') }));
-    const r = checkEstimate(data, sources, loadTables(dir));
+    // 建築系は単価表を使わない。土木は数量の表の文が要る
+    const building = isKyotsuhiKind(data?.conditions?.workKind);
+    if (!building && !files.length) throw new RangeError('数量の表のファイルを渡してください');
+    const r = checkEstimate(data, sources, building ? null : loadTables(dir));
     for (const x of r.notIncluded) console.log(['入らない', x.by, x.name, x.reason].join('\t'));
     for (const x of r.flags) console.log('確かめ\t' + x);
     console.log(summaryLine(r));

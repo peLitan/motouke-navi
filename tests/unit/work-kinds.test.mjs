@@ -105,11 +105,11 @@ test('積算: 表の無い工種は額を出さず、どの行も合計に入れ
   const file = '数量.md';
   const quote = '| 掘削 | 土砂 | m3 | 1,200 |';
   const data = (workKind) => ({ source: { title: '架空' }, conditions: { workKind }, lines: [{ name: '掘削', quantity: 1200, unit: 'm3', quote, file, match: { no: 1, tableQuote: '掘削 ｍ３ 土砂 架空の方法A' } }] });
-  const r = checkEstimate(data('kenchiku'), [{ file, text: quote }], tables);
+  const r = checkEstimate(data('tsushin'), [{ file, text: quote }], tables);
   assert.equal(r.amount, null);
   assert.equal(r.notIncluded.length, 1);
   assert.equal(exitCodeOf(r), 1);
-  assert.ok(renderMarkdown(r).includes(NOT_READ) && renderMarkdown(r).includes(workKindLabel('kenchiku')));
+  assert.ok(renderMarkdown(r).includes(NOT_READ) && renderMarkdown(r).includes(workKindLabel('tsushin')));
   assert.throws(() => checkEstimate(data('x'), [], tables), RangeError);
 });
 

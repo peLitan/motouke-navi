@@ -28,7 +28,7 @@ function itemText(sec, n) {
 
 // 建築系の施工計画書の語の表の点検(F44d)。語は抜き書きの中にあり、抜き書きは箇所の号の中にある1文で、ページは原文の印と合う
 // 抜き書きの始まりの頁。頁の印を除いた本文で探してから、印までの字数で頁を決める(文が頁をまたいでも見つかる)
-function pageOf(text, quote) {
+export function pageOf(text, quote) {
   const parts = text.split(/^--- PDF の (\d+) ページ ---\n/m);
   const at = strip(parts.filter((_, i) => i % 2 === 0).join('')).indexOf(strip(quote));
   if (at < 0) return null;

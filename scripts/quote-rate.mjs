@@ -27,6 +27,8 @@ const plan = readJson('data/plan-items.json');
 const kindPlans = ['data/plan-items-kenchiku.json', 'data/plan-items-denki.json', 'data/plan-items-kan.json'].map((name) => [name, readJson(name)]);
 const kindTables = ['data/schedule-kenchiku.json', 'data/schedule-denki.json', 'data/schedule-kan.json'].map((name) => [name, readJson(name)]);
 
+const kyotsuhi = readJson('data/kyotsuhi-rates.json');
+
 const ng = [];
 const count = (name, list, test) => {
   let ok = 0;
@@ -50,6 +52,13 @@ const rows = [
     return main.ok && r.deadline ? inSource(table.sourceId, r.deadline.quote) : main;
   })),
   ...kindPlans.map(([name, table]) => count(name, table.items, (it) => inSource(table.sourceId, it.quote))),
+  count('data/kyotsuhi-rates.json', [...kyotsuhi.tables.map((t) => ({ id: '別表-' + t.no, ...t })), { id: '別表-15', ...kyotsuhi.generalAdmin }, ...kyotsuhi.notes], (x) => {
+    for (const q of [x.quote, x.rangeQuote, x.rateQuote].filter(Boolean)) {
+      const r = inSource(kyotsuhi.sourceId, q);
+      if (!r.ok) return r;
+    }
+    return { ok: true };
+  }),
 ];
 const filtered = filterVerifiedRules(rules.rules, quotes, texts);
 const abQuotes = (rules.amountBasis?.basis ?? []).map((b) => b.quoteId);

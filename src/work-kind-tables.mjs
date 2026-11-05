@@ -8,6 +8,7 @@ import kenchikuPlan from '../data/plan-items-kenchiku.json' with { type: 'json' 
 import denkiPlan from '../data/plan-items-denki.json' with { type: 'json' };
 import kanPlan from '../data/plan-items-kan.json' with { type: 'json' };
 import estimateRates from '../data/estimate-rates.json' with { type: 'json' };
+import kyotsuhiRates from '../data/kyotsuhi-rates.json' with { type: 'json' };
 import sourcesData from '../data/sources/index.json' with { type: 'json' };
 import { sourceVersion } from './source-version.mjs';
 import { NOT_READ, ALWAYS_SHOWN, hasKindTable, workKindOf, workKindLabel } from './work-kinds.mjs';
@@ -19,6 +20,7 @@ const TABLES = {
   'mlit-denki-spec-r7': { schedule: denkiSchedule, plan: denkiPlan },
   'mlit-kikai-spec-r7': { schedule: kanSchedule, plan: kanPlan },
   'mlit-sekisan-unyou-r8': { estimate: estimateRates },
+  'mlit-kyotsuhi-r8': { estimate: kyotsuhiRates },
 };
 const PART_LABEL = { schedule: '段取りの表', plan: '施工計画書の記載項目', estimate: '積算の表' };
 
@@ -28,7 +30,7 @@ export const kindTable = (id, part) => (hasKindTable(id, part) ? TABLES[workKind
 export function kindSource(id, part) {
   const table = kindTable(id, part);
   if (!table) return null;
-  if (part === 'estimate') {
+  if (part === 'estimate' && table.source) {
     const s = table.source;
     return { title: s.title, version: sourceVersion({ edition: s.applied + ' から適用' }), fetchedAt: s.fetchedAt, url: s.url };
   }

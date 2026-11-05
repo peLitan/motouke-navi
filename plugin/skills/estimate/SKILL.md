@@ -35,6 +35,7 @@ description: 金抜き設計書・数量総括表などの数量の表の各行�
 
 4. 下の形で `tmp/当てた結果.json` に書く。数量の表の全部の行を `lines` に入れる(当てない行も消さない)
 5. 工事が土木(建設機械施工を含む)でないときは `conditions.workKind` に工種の id(`kenchiku`・`denki`・`kan`・`tsushin`・`zoen`・`other`)を書く。積算の表が無い工種は額を出さず「この工種の仕様書は見ていない」と出る。土木の表で積み直さない。`conditions.kind` は `check-estimate.mjs` が受け付ける工種区分から選ぶ。`prefecture` は工事場所の都道府県。どちらも数量の表に無ければ利用者に聞く。補正係数などは利用者が値を言ったときだけ入れる
+   - `kenchiku`・`denki`・`kan` は、施工パッケージが土木の表なので行を当てない。利用者に直接工事費(円)と工期(か月)を聞き、`conditions` に `directCost`・`months` を書く(推測で埋めない)。改修なら `workClass: "kaishu"`、処分費があれば `disposal`、積み上げがあれば `stacked`。手順 2〜4 は要らず、手順 6 の数量の表のファイルも省ける。率の範囲の外は「別途」と出て額は出ない
 6. 照らして計算する:
 
    ```
@@ -59,7 +60,7 @@ description: 金抜き設計書・数量総括表などの数量の表の各行�
   "notes": [ { "text": "気づいたこと" } ] }
 ```
 
-`manual` は利用者が機械・材料の単価を言ったときだけ付ける。`conditions` に足せるのは `supplied`・`lossPrevention`・`disposal`・`stacked`・`regionCoef`・`addition`・`advancePercent`・`guarantee`。
+`manual` は利用者が機械・材料の単価を言ったときだけ付ける。`conditions` に足せるのは `supplied`・`lossPrevention`・`disposal`・`stacked`・`regionCoef`・`addition`・`advancePercent`・`guarantee`。建築系で使うのは `directCost`・`months`・`workClass`・`disposal`・`stacked` だけ。
 
 ## 機械が見ること
 
