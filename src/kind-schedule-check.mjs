@@ -5,7 +5,8 @@ import { FIELD_LABEL, PHASE_LABEL, deadlineText } from './schedule.mjs';
 const strip = (s) => String(s).replace(/[\s　]+/g, '');
 // 取り出すときに足した頁の印は原文ではないので除く(文が頁をまたいでも見つかる)
 const bodyOf = (text) => text.replace(/^--- PDF の \d+ ページ ---\n/gm, '');
-const HEAD = /^(\d+\.\d+\.\d+) (.+)$/gm;
+// 見出しは番号と空白の無い題名の行。機械設備工事編の 1.5.6.1 のように4段の番号もある。表の行(番号 名前 試験項目)は空白があるので見出しにしない
+const HEAD = /^(\d+\.\d+\.\d+(?:\.\d+)?) (\S+)$/gm;
 // 期限の語は、抜き書きに無ければ when に書かない
 const TIME_WORDS = ['遅滞なく', '直ちに', 'あらかじめ', '先立ち', '適時', 'ごと'];
 const HAND_PERIOD = /[0-9０-９]+\s*(日|か月|ヶ月|箇月|週|時間)/;
@@ -37,7 +38,7 @@ export function checkKindSchedule(data, text) {
     for (const k of ['when', 'what', 'to', 'section', 'title', 'quote']) if (!String(r[k] ?? '').trim()) err(k + ' が空');
     if (!PHASE_LABEL[r.phase]) err('phase が分からない: ' + r.phase);
     for (const k of Object.keys(r.condition ?? {})) if (!FIELD_LABEL[k]) err('分からない条件: ' + k);
-    const m = /^(\d+\.\d+\.\d+)(?:\((\d+)\))?$/.exec(r.section);
+    const m = /^(\d+\.\d+\.\d+(?:\.\d+)?)(?:\((\d+)\))?$/.exec(r.section);
     if (!m) { err('箇所の番号の形が違う: ' + r.section); continue; }
     const sec = secs.get(m[1]);
     if (!sec) { err('箇所の見出しが原文に無い: ' + m[1]); continue; }

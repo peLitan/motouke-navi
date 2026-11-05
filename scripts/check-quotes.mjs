@@ -22,8 +22,8 @@ for (const q of quotes) {
   console.log(`${r.ok ? '一致' : '不一致'}\t${q.id}\t${where}${r.ok ? '' : '\t' + r.reason}`);
   if (!r.ok) ng++;
 }
-// 工種の段取りの表(F44b): 行ごとに、抜き書きが箇所の号の中にあるか、期日が抜き書きから読めるかを見る
-const kindTables = ['data/schedule-kenchiku.json'].map(readJson);
+// 工種の段取りの表(F44b・F44c): 行ごとに、抜き書きが箇所の号の中にあるか、期日が抜き書きから読めるかを見る
+const kindTables = ['data/schedule-kenchiku.json', 'data/schedule-denki.json', 'data/schedule-kan.json'].map(readJson);
 let kindRows = 0;
 for (const table of kindTables) {
   const errors = checkKindSchedule(table, texts[table.sourceId]);

@@ -4,7 +4,7 @@
 //   data/rules.json(施工体制台帳の規則。根拠の抜き書きが1つでも合わなければ外す = filterVerifiedRules)
 //   data/schedule.json(段取り。共通仕様書の原文に抜き書きがあるか)
 //   data/plan-items.json(施工計画書の記載項目。共通仕様書の原文に抜き書きがあるか)
-//   data/schedule-kenchiku.json(建築の段取り。標準仕様書の1章の原文に抜き書きがあるか。期日の抜き書きも見る)
+//   data/schedule-kenchiku.json・schedule-denki.json・schedule-kan.json(工種の段取り。標準仕様書の章の原文に抜き書きがあるか。期日の抜き書きも見る)
 // 許す違いは空白だけ(quote-check.mjs の verifyQuote)。
 // 使い方: node scripts/quote-rate.mjs        … 表を出す
 //         node scripts/quote-rate.mjs --json … JSON で出す
@@ -24,7 +24,7 @@ const { quotes } = readJson('data/quotes.json');
 const rules = readJson('data/rules.json');
 const schedule = readJson('data/schedule.json');
 const plan = readJson('data/plan-items.json');
-const kenchiku = readJson('data/schedule-kenchiku.json');
+const kindTables = ['data/schedule-kenchiku.json', 'data/schedule-denki.json', 'data/schedule-kan.json'].map((name) => [name, readJson(name)]);
 
 const ng = [];
 const count = (name, list, test) => {
@@ -44,10 +44,10 @@ const rows = [
   count('data/quotes.json', quotes, (q) => checkQuote(q, texts)),
   count('data/schedule.json', schedule.rules, (r) => inSource(schedule.sourceId, r.quote)),
   count('data/plan-items.json', plan.items, (it) => inSource(plan.sourceId, it.quote)),
-  count('data/schedule-kenchiku.json', kenchiku.rules, (r) => {
-    const main = inSource(kenchiku.sourceId, r.quote);
-    return main.ok && r.deadline ? inSource(kenchiku.sourceId, r.deadline.quote) : main;
-  }),
+  ...kindTables.map(([name, table]) => count(name, table.rules, (r) => {
+    const main = inSource(table.sourceId, r.quote);
+    return main.ok && r.deadline ? inSource(table.sourceId, r.deadline.quote) : main;
+  })),
 ];
 const filtered = filterVerifiedRules(rules.rules, quotes, texts);
 const abQuotes = (rules.amountBasis?.basis ?? []).map((b) => b.quoteId);
