@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dyIDqG/G4vnBFtVPNWPRdr2xjfW3ryhweK8mfQQE04U='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-8wl33JB8J3LBIWmOrfvgIUHSIx9H3m4YniU7yJi4u7M='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -113,8 +113,8 @@
   .entry-link { min-height: 44px; margin: 0; padding: 0.25rem 0; color: var(--primary); background: var(--paper); border: none; text-decoration: underline; cursor: pointer; }
   .entry-link:hover, .entry-link:active { color: var(--primary-dark); background: var(--paper); }
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
-  #bid-run, #ledger-run, #plan-run, #next-step-3, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
-  #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
+  #bid-run, #ledger-run, #plan-run, #next-step-3, #confirm-go, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
+  #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, #confirm-go:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, #confirm-go:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
   /* 進み具合(F43a): 番号の丸を線でつなぎ、全部の段の名前を出す。段の切り替えはボタンのまま。
      入口を選ぶまでは丸を破線にして押せない形、今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色。線は枠線で描く(印刷で黒く残り、3:1 の検査に掛かる) */
   .steps { display: flex; align-items: center; list-style: none; padding: 0; margin: 1rem 0 0; }
@@ -131,6 +131,14 @@
   #entry-back { margin: 0.5rem 0 0; color: var(--ink); border-color: var(--line); }
   #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--ink-2); }
   /* 見本の帯(F38c): 白地に主の色の枠 */
+  /* 入力の確かめ(F43d): 1枚のカードに行を並べる。狭い幅では項目名を上の行へ置き、変更のボタンは右に残す */
+  .confirm { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); margin: 0 0 1rem; }
+  .confirm-row { display: grid; grid-template-columns: minmax(8rem, 16rem) minmax(0, 1fr) auto; gap: 0.5rem 1rem; align-items: center; padding: 0.75rem 1.5rem; border-top: 1px solid var(--line); }
+  .confirm-row:first-child { border-top: none; }
+  .confirm-row dt { color: var(--ink-2); }
+  .confirm-row dd { margin: 0; overflow-wrap: anywhere; }
+  .confirm-row small { display: block; font-size: 1rem; color: var(--ink-2); }
+  .confirm-change button { margin: 0; }
   .sample-banner { border: 1px solid var(--primary); border-radius: 8px; background: var(--paper); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .sample-banner p { margin: 0.25rem 0; }
   /* 知らせ(F38d): 押したあとの文は太字に主の色の左線で見せる。#bid-status の頭の印(✓ か ＊)は文の中に書く。注記と見本の帯の文は太字にしない */
@@ -270,7 +278,9 @@
     .next-card { padding: 0.75rem 1rem; }
     /* 下に止まる帯(F43c)は「次へ」の1つだけ。流れの中の行なので、下まで動かせば本文は隠れない */
     .step-next { position: sticky; bottom: 0; margin: 1rem 0 0; padding: 0.5rem 0; background: var(--paper); border-top: 1px solid var(--line); }
-    #next-step-3 { width: 100%; margin: 0; }
+    #next-step-3, #confirm-go { width: 100%; margin: 0; }
+    .confirm-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .confirm-row dt { grid-column: 1 / -1; }
     /* 進み具合(F43a): 字は 16px のまま3つの段を等しい幅に分け、丸の下に名前を全部出す(長い名前は2行に折り返す)。線は丸と丸の間に描く */
     .steps { align-items: flex-start; }
     .steps li { position: relative; flex: 1 1 0; min-width: 0; justify-content: center; }
@@ -399,7 +409,7 @@
 <section id="panel-1" hidden>
 <section id="bid">
 <h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
-<p>案件の条件を入れて「確認する」を押すと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
+<p>案件の条件を入れて「確認する」を押すと、入れた内容を確かめたあと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
 <p class="form-lead" id="form-lead">分からなければ「分からない」を選べます。</p>
 <details class="fold" id="form-lead-more"><summary>選び方の詳しい説明</summary>
@@ -464,6 +474,22 @@
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
 </section>
+</section>
+<section id="panel-confirm" class="no-print" hidden>
+<h2 id="confirm-title" tabindex="-1">入れた条件を確かめてください</h2>
+<p>発注者や金額の1つの違いで、要るものが変わります。違う所は「変更」で直せます。「分からない」のままでも結果は出ます(その項目は「確認が要る」になります)。</p>
+<dl class="confirm" id="confirm-rows">
+<div class="confirm-row"><dt>発注者</dt><dd id="confirm-value-orderer"></dd><dd class="confirm-change"><button type="button" id="confirm-change-orderer" aria-label="発注者を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>元請けか下請けか</dt><dd id="confirm-value-role"></dd><dd class="confirm-change"><button type="button" id="confirm-change-role" aria-label="元請けか下請けかを変更">変更</button></dd></div>
+<div class="confirm-row"><dt>工事の種類</dt><dd id="confirm-value-work-type"></dd><dd class="confirm-change"><button type="button" id="confirm-change-work-type" aria-label="工事の種類を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>請負代金の見込み</dt><dd id="confirm-value-contract-amount"></dd><dd class="confirm-change"><button type="button" id="confirm-change-contract-amount" aria-label="請負代金の見込みを変更">変更</button></dd></div>
+<div class="confirm-row"><dt>下請けの総額</dt><dd id="confirm-value-subcontract-total"></dd><dd class="confirm-change"><button type="button" id="confirm-change-subcontract-total" aria-label="下請けの総額を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd><dd class="confirm-change"><button type="button" id="confirm-change-license" aria-label="元請けの許可の種類を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd><dd class="confirm-change"><button type="button" id="confirm-change-engineer-qualification" aria-label="置ける技術者の資格を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd><dd class="confirm-change"><button type="button" id="confirm-change-ict-measure" aria-label="発注者が台帳を閲覧できる措置を変更">変更</button></dd></div>
+</dl>
+<div class="row"><button type="button" id="confirm-back">条件の画面に戻る</button></div>
+<div class="row step-next"><button type="button" id="confirm-go">この内容で結果を見る</button></div>
 </section>
 <section id="panel-2" hidden>
 <h2>結果</h2>
@@ -4445,7 +4471,9 @@ function parseIntakeFile(text) {
     if (!rows.some((r) => r?.key === f.row && r.status === OK)) throw new Error('欄 ' + id + ' の元の値が「' + OK + '」ではありません');
     form[id] = value;
   }
-  return { title, form, rows, skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
+  // 入力の確かめ(F43d)に出す、欄の値の元の抜き書き
+  const quotes = Object.fromEntries(Object.keys(form).map((id) => [id, String(rows.find((r) => r?.key === FIELDS[id].row && r.status === OK)?.quote ?? '')]));
+  return { title, form, quotes, rows, skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
 }
 
 // 読み込んだあとに人が見る行
@@ -4567,6 +4595,86 @@ const SAMPLE = {
 };
 
 return { SAMPLE };
+})();
+__m["src/ui/confirm.mjs"] = (function () {
+// 入力の確かめ(F43d): 結果の前に、入れた条件を全部の行で並べる。行ごとに値・出どころ(公告・見本・手入力)を出し、公告から推定した値には「推定」を付ける。
+// DOM には触らない。行の枠と「変更」のボタンは shell.html に静的にあり、ここは行の中身の文を作る。
+const { parseYen } = __m["src/ui/form.mjs"];
+const { esc } = __m["src/ui/view.mjs"];
+
+const select = (key, label, options) => ({ key, label, kind: 'select', field: key, options });
+const amount = (key, label) => ({ key, label, kind: 'amount', field: key });
+const CONFIRM_ROWS = [
+  select('orderer', '発注者', { public: '公共', private: '民間' }),
+  { key: 'role', label: '元請けか下請けか', kind: 'role' },
+  select('work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }),
+  amount('contract-amount', '請負代金の見込み'),
+  amount('subcontract-total', '下請けの総額'),
+  select('license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }),
+  select('engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }),
+  { key: 'ict-measure', label: '発注者が台帳を閲覧できる措置', kind: 'check', field: 'ict-measure' },
+];
+
+const ROLES = [['direct', '元請け'], ['direct-sub', '下請け'], ['direct-unknown', '分からない']];
+const UNKNOWN = '分からない';
+const UNSET = 'まだ選んでいません(未回答)';
+const on = (v) => v === true;
+
+// 行の答え。raw は出どころの突き合わせに使う(読み込んだときと同じ値なら、その出どころのまま)
+function answer(row, values) {
+  if (row.kind === 'role') {
+    const hit = ROLES.find(([id]) => on(values[id]));
+    return hit ? { text: hit[1], raw: hit[0], state: hit[0] === 'direct-unknown' ? 'unknown' : 'set' } : { text: UNSET, raw: '', state: 'unset' };
+  }
+  if (row.kind === 'check') return on(values[row.field]) ? { text: '講じる', raw: true, state: 'set' } : { text: '講じない(印なし)', raw: false, state: 'set' };
+  if (row.kind === 'amount') {
+    if (on(values[row.field + '-unknown'])) return { text: UNKNOWN, raw: 'unknown', state: 'unknown' };
+    const raw = String(values[row.field] ?? '');
+    const { value, error } = parseYen(raw);
+    if (error) return { text: raw, raw, state: 'bad' };
+    if (value === null) return { text: 'まだ入れていません(未回答)', raw: '', state: 'unset' };
+    return { text: value.toLocaleString('ja-JP') + '円(税込み)', raw: value, state: 'set' };
+  }
+  const raw = String(values[row.field] ?? '');
+  if (raw === 'unknown') return { text: UNKNOWN, raw, state: 'unknown' };
+  return Object.hasOwn(row.options, raw) ? { text: row.options[raw], raw, state: 'set' } : { text: UNSET, raw: '', state: 'unset' };
+}
+
+// 読み込んだ値の出どころを覚える形。fields を渡すと、その欄の行だけ
+function markSources(values, kind, quotes = {}, fields = null) {
+  const out = {};
+  for (const row of CONFIRM_ROWS) {
+    if (fields && !fields.includes(row.field)) continue;
+    out[row.key] = { kind, raw: answer(row, values).raw, quote: quotes[row.field] ?? '' };
+  }
+  return out;
+}
+
+// 画面の1行の中身。読み込んだあとに値を変えた行は手入力になる
+function confirmRows(values = {}, sources = {}) {
+  return CONFIRM_ROWS.map((row) => {
+    const a = answer(row, values);
+    const s = sources[row.key];
+    const kept = s && s.raw === a.raw ? s : null;
+    const source = a.state === 'unset' ? '未入力' : kept ? kept.kind : '手入力';
+    return { key: row.key, label: row.label, field: row.field ?? null, text: a.text, state: a.state, source, quote: kept?.quote ?? '', estimated: source === '公告' };
+  });
+}
+
+const QUOTE_MAX = 80;
+const SOURCE_TEXT = { 未入力: '入れていません', 手入力: '手入力', 見本: '見本(架空の工事)' };
+const AMOUNT_NOTE = '予定価格は上限の見込みで、請負代金そのものではありません。';
+function renderConfirmRow(r) {
+  const quote = r.quote.length > QUOTE_MAX ? r.quote.slice(0, QUOTE_MAX) + '…' : r.quote;
+  const source = r.source === '公告' ? '公告' + (quote ? '「' + quote + '」' : '') : SOURCE_TEXT[r.source];
+  const value = r.state === 'bad' ? '<span class="errors">読めない値: ' + esc(r.text) + '。「変更」で直してください</span>' : esc(r.text);
+  const estimated = r.estimated
+    ? '<small class="confirm-est"><span class="badge badge-needs_check"><span class="mark" aria-hidden="true">!</span> 推定</span> 公告から推定した値です。確認が要ります。原文で確かめてください。' + (r.key === 'contract-amount' ? AMOUNT_NOTE : '') + '</small>'
+    : '';
+  return '<strong>' + value + '</strong><small>出どころ: ' + esc(source) + '</small>' + estimated;
+}
+
+return { CONFIRM_ROWS, markSources, confirmRows, renderConfirmRow };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -7196,6 +7304,7 @@ const { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } = __m["src
 const { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } = __m["src/intake-load.mjs"];
 const wakayamaRows = __m["data/specs/wakayama_r0711_rows.json"];
 const { SAMPLE } = __m["src/sample.mjs"];
+const { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow } = __m["src/ui/confirm.mjs"];
 const { startMask } = __m["src/ui/mask-app.mjs"];
 const { startAi } = __m["src/ui/ai-app.mjs"];
 const { downloadText } = __m["src/ui/download.mjs"];
@@ -7322,15 +7431,19 @@ function clearSafety(doc) {
 
 // 段の切り替え(F37a): #panel-1〜3 の hidden を付け外しして1つずつ見せる。段階の表示は今いる段だけ印を付け、入口を選んだあとは押せる。
 // 要素はすべて静的な HTML にあり、ここでは作らない。結果は隠れた段にも書く
+// 入力の確かめ(F43d)は結果の前の画面で、段階の表示では「1 条件を入れる」の中に数える(案D のとおり)
 const PANELS = [1, 2, 3];
 function showPanel(doc, n) {
+  const confirm = doc.getElementById('panel-confirm');
+  if (confirm) confirm.hidden = n !== 'confirm';
+  const current = n === 'confirm' ? 1 : n;
   for (const i of PANELS) {
     const panel = doc.getElementById('panel-' + i);
     if (panel) panel.hidden = i !== n;
     const step = doc.getElementById('step-' + i);
     if (!step) continue;
     step.disabled = false;
-    if (i === n) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
+    if (i === current) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
   }
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = true;
@@ -7339,6 +7452,8 @@ function showPanel(doc, n) {
 }
 // 入口に戻す: タイルを見せ、段を隠し、段階の表示を押せない形にする。入れた値と結果は消さない
 function showEntry(doc) {
+  const confirm = doc.getElementById('panel-confirm');
+  if (confirm) confirm.hidden = true;
   for (const i of PANELS) {
     const panel = doc.getElementById('panel-' + i);
     if (panel) panel.hidden = true;
@@ -7359,6 +7474,34 @@ function openPanel(doc, n, scrollId = 'steps') {
   showPanel(doc, n);
   doc.getElementById('step-' + n)?.focus?.({ preventScroll: true });
   doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
+}
+// 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
+let fieldSources = {};
+function openConfirm(doc) {
+  for (const r of confirmRows(collect(doc), fieldSources)) {
+    const el = doc.getElementById('confirm-value-' + r.key);
+    if (el) el.innerHTML = renderConfirmRow(r);
+  }
+  showPanel(doc, 'confirm');
+  doc.getElementById('steps')?.scrollIntoView?.({ block: 'start' });
+  doc.getElementById('confirm-title')?.focus?.({ preventScroll: true });
+}
+// 「変更」: 段1 の入れ直す欄へ戻す。金額の欄が「分からない」のときは、その印へ戻す
+function changeTarget(doc, row) {
+  if (row.key === 'role') return ['direct', 'direct-sub', 'direct-unknown'].find((id) => doc.getElementById(id)?.checked === true) ?? 'direct-unset';
+  return doc.getElementById(row.field + '-unknown')?.checked === true ? row.field + '-unknown' : row.field;
+}
+function changeField(doc, key) {
+  showPanel(doc, 1);
+  const el = doc.getElementById(changeTarget(doc, CONFIRM_ROWS.find((r) => r.key === key)));
+  (el?.closest?.('.row') ?? el)?.scrollIntoView?.({ block: 'center' });
+  el?.focus?.({ preventScroll: true });
+}
+// 「この内容で結果を見る」: 確かめた値で出し直して、段2 を開く
+function confirmGo(doc) {
+  runBid(doc);
+  openPanel(doc, 2);
+  setBidStatus(doc, bidNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
 }
 // 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
@@ -7833,11 +7976,12 @@ function loadSample(doc) {
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
-  // 見本のあとは、段2 を開いて結論の枠(まとめ)を画面に出す
+  fieldSources = markSources(collect(doc), '見本');
+  // 見本のあとも入力の確かめを通る(F43d)。結果は隠れた段に書いておき、「この内容で結果を見る」で開く
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
-  openPanel(doc, 2);
   setBidStatus(doc, bidNotice(SAMPLE_NOTICE_DONE));
+  openConfirm(doc);
 }
 
 // 公告から拾った条件のファイルを読み、入れてよい欄だけ入れる(F41a)。壊れたファイルは何も変えない
@@ -7867,7 +8011,8 @@ function loadIntakeFile(doc, text) {
     }
     if (typeof Event === 'function') el.dispatchEvent?.(new Event('input', { bubbles: true }));
   }
-  setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。', intakeLines(t));
+  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, Object.keys(t.form)) };
+  setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
   return true;
 }
 
@@ -7941,6 +8086,7 @@ function clearSample(doc) {
   if (st) st.textContent = '';
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = true;
+  fieldSources = {};
   openPanel(doc, 1);
 }
 
@@ -7956,7 +8102,10 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (el) initialResult.set(id, el.innerHTML);
     }
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
-    on('bid-run', () => { runBid(doc); openPanel(doc, 2); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); });
+    on('bid-run', () => { runBid(doc); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); openConfirm(doc); });
+    on('confirm-go', () => confirmGo(doc));
+    on('confirm-back', () => openPanel(doc, 1));
+    for (const r of CONFIRM_ROWS) on('confirm-change-' + r.key, () => changeField(doc, r.key));
     on('sample-load', () => loadSample(doc));
     on('sample-reenter', () => clearSample(doc));
     on('entry-bid', () => openPanel(doc, 1));
@@ -8068,7 +8217,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { renderSafety, changeSafety, showPanel, showEntry, openPanelForLink, runBid, setScheduleNote, awardedNotice, enterAwarded, loadRulesFile, useWakayamaExample, clearRulesTable, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, loadIntakeFile, clearSample, startApp };
+return { renderSafety, changeSafety, showPanel, showEntry, openConfirm, changeField, openPanelForLink, runBid, setScheduleNote, awardedNotice, enterAwarded, loadRulesFile, useWakayamaExample, clearRulesTable, exportScheduleCsv, openDetailsForPrint, restoreDetailsAfterPrint, exportCsv, printResult, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, loadIntakeFile, clearSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

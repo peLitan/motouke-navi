@@ -113,8 +113,8 @@
   .entry-link { min-height: 44px; margin: 0; padding: 0.25rem 0; color: var(--primary); background: var(--paper); border: none; text-decoration: underline; cursor: pointer; }
   .entry-link:hover, .entry-link:active { color: var(--primary-dark); background: var(--paper); }
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
-  #bid-run, #ledger-run, #plan-run, #next-step-3, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
-  #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
+  #bid-run, #ledger-run, #plan-run, #next-step-3, #confirm-go, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
+  #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, #confirm-go:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, #confirm-go:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
   /* 進み具合(F43a): 番号の丸を線でつなぎ、全部の段の名前を出す。段の切り替えはボタンのまま。
      入口を選ぶまでは丸を破線にして押せない形、今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色。線は枠線で描く(印刷で黒く残り、3:1 の検査に掛かる) */
   .steps { display: flex; align-items: center; list-style: none; padding: 0; margin: 1rem 0 0; }
@@ -131,6 +131,14 @@
   #entry-back { margin: 0.5rem 0 0; color: var(--ink); border-color: var(--line); }
   #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--ink-2); }
   /* 見本の帯(F38c): 白地に主の色の枠 */
+  /* 入力の確かめ(F43d): 1枚のカードに行を並べる。狭い幅では項目名を上の行へ置き、変更のボタンは右に残す */
+  .confirm { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); margin: 0 0 1rem; }
+  .confirm-row { display: grid; grid-template-columns: minmax(8rem, 16rem) minmax(0, 1fr) auto; gap: 0.5rem 1rem; align-items: center; padding: 0.75rem 1.5rem; border-top: 1px solid var(--line); }
+  .confirm-row:first-child { border-top: none; }
+  .confirm-row dt { color: var(--ink-2); }
+  .confirm-row dd { margin: 0; overflow-wrap: anywhere; }
+  .confirm-row small { display: block; font-size: 1rem; color: var(--ink-2); }
+  .confirm-change button { margin: 0; }
   .sample-banner { border: 1px solid var(--primary); border-radius: 8px; background: var(--paper); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .sample-banner p { margin: 0.25rem 0; }
   /* 知らせ(F38d): 押したあとの文は太字に主の色の左線で見せる。#bid-status の頭の印(✓ か ＊)は文の中に書く。注記と見本の帯の文は太字にしない */
@@ -270,7 +278,9 @@
     .next-card { padding: 0.75rem 1rem; }
     /* 下に止まる帯(F43c)は「次へ」の1つだけ。流れの中の行なので、下まで動かせば本文は隠れない */
     .step-next { position: sticky; bottom: 0; margin: 1rem 0 0; padding: 0.5rem 0; background: var(--paper); border-top: 1px solid var(--line); }
-    #next-step-3 { width: 100%; margin: 0; }
+    #next-step-3, #confirm-go { width: 100%; margin: 0; }
+    .confirm-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .confirm-row dt { grid-column: 1 / -1; }
     /* 進み具合(F43a): 字は 16px のまま3つの段を等しい幅に分け、丸の下に名前を全部出す(長い名前は2行に折り返す)。線は丸と丸の間に描く */
     .steps { align-items: flex-start; }
     .steps li { position: relative; flex: 1 1 0; min-width: 0; justify-content: center; }
@@ -373,7 +383,7 @@
 <section id="panel-1" hidden>
 <section id="bid">
 <h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
-<p>案件の条件を入れて「確認する」を押すと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
+<p>案件の条件を入れて「確認する」を押すと、入れた内容を確かめたあと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
 <p class="form-lead" id="form-lead">分からなければ「分からない」を選べます。</p>
 <details class="fold" id="form-lead-more"><summary>選び方の詳しい説明</summary>
@@ -438,6 +448,22 @@
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
 </section>
+</section>
+<section id="panel-confirm" class="no-print" hidden>
+<h2 id="confirm-title" tabindex="-1">入れた条件を確かめてください</h2>
+<p>発注者や金額の1つの違いで、要るものが変わります。違う所は「変更」で直せます。「分からない」のままでも結果は出ます(その項目は「確認が要る」になります)。</p>
+<dl class="confirm" id="confirm-rows">
+<div class="confirm-row"><dt>発注者</dt><dd id="confirm-value-orderer"></dd><dd class="confirm-change"><button type="button" id="confirm-change-orderer" aria-label="発注者を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>元請けか下請けか</dt><dd id="confirm-value-role"></dd><dd class="confirm-change"><button type="button" id="confirm-change-role" aria-label="元請けか下請けかを変更">変更</button></dd></div>
+<div class="confirm-row"><dt>工事の種類</dt><dd id="confirm-value-work-type"></dd><dd class="confirm-change"><button type="button" id="confirm-change-work-type" aria-label="工事の種類を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>請負代金の見込み</dt><dd id="confirm-value-contract-amount"></dd><dd class="confirm-change"><button type="button" id="confirm-change-contract-amount" aria-label="請負代金の見込みを変更">変更</button></dd></div>
+<div class="confirm-row"><dt>下請けの総額</dt><dd id="confirm-value-subcontract-total"></dd><dd class="confirm-change"><button type="button" id="confirm-change-subcontract-total" aria-label="下請けの総額を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd><dd class="confirm-change"><button type="button" id="confirm-change-license" aria-label="元請けの許可の種類を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd><dd class="confirm-change"><button type="button" id="confirm-change-engineer-qualification" aria-label="置ける技術者の資格を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd><dd class="confirm-change"><button type="button" id="confirm-change-ict-measure" aria-label="発注者が台帳を閲覧できる措置を変更">変更</button></dd></div>
+</dl>
+<div class="row"><button type="button" id="confirm-back">条件の画面に戻る</button></div>
+<div class="row step-next"><button type="button" id="confirm-go">この内容で結果を見る</button></div>
 </section>
 <section id="panel-2" hidden>
 <h2>結果</h2>

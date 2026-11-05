@@ -25,6 +25,14 @@ function assertOn(page, n) {
   assert.equal(page.el('entry-back').hidden, false);
 }
 
+// 入力の確かめ: 段の1つではなく段1 の中の画面。段階の印は 1 のまま
+function assertOnConfirm(page) {
+  assert.deepEqual(shown(page), []);
+  assert.equal(page.el('panel-confirm').hidden, false);
+  assert.deepEqual(current(page), ['step-1']);
+  assert.equal(page.el('entry').hidden, true, 'タイルが残っている');
+}
+
 test('開いた直後: 段は全部隠れ、段階は塗らず押せない。タイルが見える', () => {
   for (const id of PANELS) assert.match(body, new RegExp('<section id="' + id + '" hidden>'), id);
   for (const id of STEPS) assert.match(body, new RegExp('<button type="button" id="' + id + '" disabled[ >]'), id);
@@ -82,13 +90,17 @@ test('入口の選び方: それぞれの段が開き、1つだけ見える。�
   assertOn(page, 2);
   page = runPage();
   await page.click('sample-load');
+  assertOnConfirm(page);
+  await page.click('confirm-go');
   assertOn(page, 2);
 });
 
-test('段の移り方: 確認する→段2、次へ→段3、段階のボタンで行き来でき、入口に戻ると選ぶ前の形になる', async () => {
+test('段の移り方: 確認する→確かめ→段2、次へ→段3、段階のボタンで行き来でき、入口に戻ると選ぶ前の形になる', async () => {
   const page = runPage();
   await page.click('entry-bid');
   await page.click('bid-run');
+  assertOnConfirm(page);
+  await page.click('confirm-go');
   assertOn(page, 2);
   assert.ok(page.text('bid-result').length > 0, '結果が書かれない');
   await page.click('next-step-3');
@@ -198,6 +210,8 @@ test('入れ直したあと、もう一度見本を読み込める', async () =>
   await page.click('sample-reenter');
   await page.click('entry-back');
   await page.click('sample-load');
+  assertOnConfirm(page);
+  await page.click('confirm-go');
   assertOn(page, 2);
   assert.equal(page.el('sample-banner').hidden, false);
   assert.equal(page.el('summary').hidden, false);
@@ -212,6 +226,7 @@ test('印刷: 隠れた段も紙に出す(CSS)。段を切り替えずに印刷�
   assert.match(body, /<div class="row no-print step-next"><button type="button" id="next-step-3">/);
   const page = runPage();
   await page.click('sample-load');
+  await page.click('confirm-go');
   await page.click('print-btn');
   assert.equal(page.printed.count, 1);
   assertOn(page, 2);

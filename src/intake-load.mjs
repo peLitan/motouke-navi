@@ -30,7 +30,9 @@ export function parseIntakeFile(text) {
     if (!rows.some((r) => r?.key === f.row && r.status === OK)) throw new Error('欄 ' + id + ' の元の値が「' + OK + '」ではありません');
     form[id] = value;
   }
-  return { title, form, rows, skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
+  // 入力の確かめ(F43d)に出す、欄の値の元の抜き書き
+  const quotes = Object.fromEntries(Object.keys(form).map((id) => [id, String(rows.find((r) => r?.key === FIELDS[id].row && r.status === OK)?.quote ?? '')]));
+  return { title, form, quotes, rows, skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
 }
 
 // 読み込んだあとに人が見る行

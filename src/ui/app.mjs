@@ -22,6 +22,7 @@ import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../
 import { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } from '../intake-load.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
+import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow } from './confirm.mjs';
 import { startMask } from './mask-app.mjs';
 import { startAi } from './ai-app.mjs';
 import { downloadText } from './download.mjs';
@@ -148,15 +149,19 @@ function clearSafety(doc) {
 
 // 段の切り替え(F37a): #panel-1〜3 の hidden を付け外しして1つずつ見せる。段階の表示は今いる段だけ印を付け、入口を選んだあとは押せる。
 // 要素はすべて静的な HTML にあり、ここでは作らない。結果は隠れた段にも書く
+// 入力の確かめ(F43d)は結果の前の画面で、段階の表示では「1 条件を入れる」の中に数える(案D のとおり)
 const PANELS = [1, 2, 3];
 export function showPanel(doc, n) {
+  const confirm = doc.getElementById('panel-confirm');
+  if (confirm) confirm.hidden = n !== 'confirm';
+  const current = n === 'confirm' ? 1 : n;
   for (const i of PANELS) {
     const panel = doc.getElementById('panel-' + i);
     if (panel) panel.hidden = i !== n;
     const step = doc.getElementById('step-' + i);
     if (!step) continue;
     step.disabled = false;
-    if (i === n) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
+    if (i === current) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
   }
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = true;
@@ -165,6 +170,8 @@ export function showPanel(doc, n) {
 }
 // 入口に戻す: タイルを見せ、段を隠し、段階の表示を押せない形にする。入れた値と結果は消さない
 export function showEntry(doc) {
+  const confirm = doc.getElementById('panel-confirm');
+  if (confirm) confirm.hidden = true;
   for (const i of PANELS) {
     const panel = doc.getElementById('panel-' + i);
     if (panel) panel.hidden = true;
@@ -185,6 +192,34 @@ function openPanel(doc, n, scrollId = 'steps') {
   showPanel(doc, n);
   doc.getElementById('step-' + n)?.focus?.({ preventScroll: true });
   doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
+}
+// 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
+let fieldSources = {};
+export function openConfirm(doc) {
+  for (const r of confirmRows(collect(doc), fieldSources)) {
+    const el = doc.getElementById('confirm-value-' + r.key);
+    if (el) el.innerHTML = renderConfirmRow(r);
+  }
+  showPanel(doc, 'confirm');
+  doc.getElementById('steps')?.scrollIntoView?.({ block: 'start' });
+  doc.getElementById('confirm-title')?.focus?.({ preventScroll: true });
+}
+// 「変更」: 段1 の入れ直す欄へ戻す。金額の欄が「分からない」のときは、その印へ戻す
+function changeTarget(doc, row) {
+  if (row.key === 'role') return ['direct', 'direct-sub', 'direct-unknown'].find((id) => doc.getElementById(id)?.checked === true) ?? 'direct-unset';
+  return doc.getElementById(row.field + '-unknown')?.checked === true ? row.field + '-unknown' : row.field;
+}
+export function changeField(doc, key) {
+  showPanel(doc, 1);
+  const el = doc.getElementById(changeTarget(doc, CONFIRM_ROWS.find((r) => r.key === key)));
+  (el?.closest?.('.row') ?? el)?.scrollIntoView?.({ block: 'center' });
+  el?.focus?.({ preventScroll: true });
+}
+// 「この内容で結果を見る」: 確かめた値で出し直して、段2 を開く
+function confirmGo(doc) {
+  runBid(doc);
+  openPanel(doc, 2);
+  setBidStatus(doc, bidNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
 }
 // 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
@@ -659,11 +694,12 @@ export function loadSample(doc) {
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
-  // 見本のあとは、段2 を開いて結論の枠(まとめ)を画面に出す
+  fieldSources = markSources(collect(doc), '見本');
+  // 見本のあとも入力の確かめを通る(F43d)。結果は隠れた段に書いておき、「この内容で結果を見る」で開く
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
-  openPanel(doc, 2);
   setBidStatus(doc, bidNotice(SAMPLE_NOTICE_DONE));
+  openConfirm(doc);
 }
 
 // 公告から拾った条件のファイルを読み、入れてよい欄だけ入れる(F41a)。壊れたファイルは何も変えない
@@ -693,7 +729,8 @@ export function loadIntakeFile(doc, text) {
     }
     if (typeof Event === 'function') el.dispatchEvent?.(new Event('input', { bubbles: true }));
   }
-  setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。', intakeLines(t));
+  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, Object.keys(t.form)) };
+  setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
   return true;
 }
 
@@ -767,6 +804,7 @@ export function clearSample(doc) {
   if (st) st.textContent = '';
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = true;
+  fieldSources = {};
   openPanel(doc, 1);
 }
 
@@ -782,7 +820,10 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (el) initialResult.set(id, el.innerHTML);
     }
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
-    on('bid-run', () => { runBid(doc); openPanel(doc, 2); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); });
+    on('bid-run', () => { runBid(doc); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); openConfirm(doc); });
+    on('confirm-go', () => confirmGo(doc));
+    on('confirm-back', () => openPanel(doc, 1));
+    for (const r of CONFIRM_ROWS) on('confirm-change-' + r.key, () => changeField(doc, r.key));
     on('sample-load', () => loadSample(doc));
     on('sample-reenter', () => clearSample(doc));
     on('entry-bid', () => openPanel(doc, 1));

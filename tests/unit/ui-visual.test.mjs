@@ -38,7 +38,7 @@ const atLeast = (fg, bg, min, label) => {
   assert.ok(r >= min, label + ': ' + fg + ' と ' + bg + ' の比 ' + r.toFixed(2) + ' < ' + min);
 };
 
-const PRIMARY_IDS = ['bid-run', 'ledger-run', 'plan-run', 'next-step-3'];
+const PRIMARY_IDS = ['bid-run', 'ledger-run', 'plan-run', 'next-step-3', 'confirm-go'];
 const primarySel = (suffix) => [...PRIMARY_IDS.map((id) => '#' + id + suffix), '.sample-button' + suffix];
 // :not( の中のカンマでは分けない
 const selectors = (sel) => sel.split(/,(?![^(]*\))/).map((s) => s.trim());
@@ -50,7 +50,7 @@ const groundOf = (r) => {
   if (bg && bg !== 'transparent') return color(bg);
   return vars['--paper'];
 };
-const isButton = (sel) => /button|#bid-run|#ledger-run|#plan-run|#next-step-3|\.next-go/.test(sel);
+const isButton = (sel) => /button|#bid-run|#ledger-run|#plan-run|#next-step-3|#confirm-go|\.next-go/.test(sel);
 
 test('焦点: 全部の部品が同じ2重の輪で、輪の2色は白地でも主の色の塗りの上でも見える', () => {
   const body = ruleWith('button:focus-visible');
@@ -190,7 +190,7 @@ test('進み具合: 番号の丸と線で、全部の段の名前を出す。段
   assert.ok(toPx(prop(ruleOf('.step-dot'), 'height')) + toPx('0.25rem') * 2 <= 44);
 });
 
-test('ボタンの形: 既定は副、主の5つだけ塗り、押せない・選んでいるは形で分かる', () => {
+test('ボタンの形: 既定は副、主の6つだけ塗り、押せない・選んでいるは形で分かる', () => {
   // 副: 白地に主の色の枠と字
   const base = ruleOf('button');
   assert.equal(color(prop(base, 'color')), vars['--primary']);
