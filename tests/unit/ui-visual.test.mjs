@@ -2,6 +2,7 @@
 // ボタンの形(主・副・押せない・選んでいる)、入力欄の枠、押す所の高さ 44px 以上、角の丸み 4px の1種、焦点の2重の輪、入口に戻るの置き場所
 // F38c: 札・表・枠。札が色だけに頼らないこと、枠の色と地の比、選んでいる印の字、まとめと表の線
 // F38e: 決まりを総なめにした文字の比・線の比・押す所の大きさと、印刷の決まり
+// F43a: 上の帯、印つきの1行の断り書き、角の丸いカードと薄い影、文字と余白の段階、番号と線の進み具合
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -43,12 +44,11 @@ const primarySel = (suffix) => [...PRIMARY_IDS.map((id) => '#' + id + suffix), '
 const selectors = (sel) => sel.split(/,(?![^(]*\))/).map((s) => s.trim());
 const ruleWith = (sel) => rules.find((r) => selectors(r.sel).includes(sel))?.body;
 
-// 文字か線が乗る地の色。決まりに地が無い(か透明)ときは、外側の地を使う。段の列は入口の薄い青の枠の中にある
-const isInStart = (sel) => /\.start\b|\.steps\b/.test(sel);
+// 文字か線が乗る地の色。決まりに地が無い(か透明)ときは、外側の地を使う。ページの地は全部 白(F43a で入口の薄い青の枠をやめた)
 const groundOf = (r) => {
   const bg = prop(r.body, 'background');
   if (bg && bg !== 'transparent') return color(bg);
-  return isInStart(r.sel) ? vars['--primary-bg'] : vars['--paper'];
+  return vars['--paper'];
 };
 const isButton = (sel) => /button|#bid-run|#ledger-run|#plan-run|#next-step-3/.test(sel);
 
@@ -98,12 +98,96 @@ test('押す所: ボタン・入力欄・ファイルの欄・折りたたみの
   assert.ok((body.match(/<input type="file"/g) ?? []).length >= 5, 'ファイルの欄が少ない');
 });
 
-test('角の丸みは 4px の1種', () => {
+test('角の丸み: 部品は 8px、カードは 12px、番号の丸は 50% の3種', () => {
   const values = new Set(rules.map((r) => prop(r.body, 'border-radius')).filter(Boolean));
-  assert.deepEqual([...values], ['4px']);
-  for (const sel of ['button', '.entry-button', 'input[type="text"], select', 'textarea', '.badge', '.result', '.start', '.radio-group']) assert.equal(prop(ruleOf(sel), 'border-radius'), '4px', sel);
+  assert.deepEqual([...values].sort(), ['12px', '50%', '8px']);
+  for (const sel of ['button', 'input[type="text"], select', 'textarea', '.badge', '.radio-group', '.sample-banner', '.warning-box']) assert.equal(prop(ruleOf(sel), 'border-radius'), '8px', sel);
+  for (const sel of ['.result', '.form', '.summary', '.other-tools', '.entry-button']) assert.equal(prop(ruleOf(sel), 'border-radius'), '12px', sel);
+  assert.deepEqual(rules.filter((r) => prop(r.body, 'border-radius') === '50%').map((r) => r.sel), ['.step-dot']);
   // 段階の表示も既定のボタンの丸みのまま
   assert.equal(prop(ruleOf('.steps button'), 'border-radius'), undefined);
+});
+
+test('カード: 白地に --line の縁(3:1)と薄い影。影は1種で、印刷では消える', () => {
+  for (const sel of ['.result', '.form', '.summary', '.other-tools']) {
+    const r = ruleOf(sel);
+    assert.equal(prop(r, 'border'), '1px solid var(--line)', sel);
+    assert.equal(color(prop(r, 'background')), vars['--paper'], sel);
+    assert.equal(prop(r, 'box-shadow'), 'var(--shadow)', sel);
+  }
+  assert.equal(prop(ruleOf('.entry-button'), 'box-shadow'), 'var(--shadow)');
+  assert.equal(vars['--shadow'], '0 1px 2px rgba(0, 0, 0, .12)');
+  // 焦点の輪のほかに、影を直に書かない
+  const raw = rules.filter((r) => prop(r.body, 'box-shadow') && prop(r.body, 'box-shadow') !== 'var(--shadow)' && !r.sel.includes(':focus-visible'));
+  assert.deepEqual(raw.map((r) => r.sel), []);
+  atLeast(vars['--line'], vars['--paper'], 3, 'カードの縁');
+  assert.equal(printVars['--shadow'], 'none');
+  assert.match(body, /<form id="bid-form" class="form"/);
+});
+
+test('文字と余白の段階: 文字は 16・19・24・32px、余白は 4・8・12・16・24・32・40px だけ', () => {
+  const sizes = new Set(rules.filter((r) => r.sel !== 'html').map((r) => prop(r.body, 'font-size')).filter(Boolean));
+  assert.deepEqual([...sizes].sort(), ['1.1875rem', '1.5rem', '1rem', '2rem']);
+  const scale = new Set([4, 8, 12, 16, 24, 32, 40]);
+  let seen = 0;
+  for (const r of rules) {
+    for (const m of r.body.matchAll(/(?:^|;)\s*((?:margin|padding|gap|column-gap|row-gap)(?:-[a-z]+)*)\s*:\s*([^;]+)/g)) {
+      for (const v of m[2].trim().split(/\s+/)) {
+        if (v === '0' || v === 'auto') continue;
+        seen += 1;
+        assert.ok(scale.has(toPx(v)), r.sel + ' の ' + m[1] + ' が段階の外: ' + v);
+      }
+    }
+  }
+  assert.ok(seen >= 80, '見た余白が少ない: ' + seen);
+});
+
+test('上の帯: 作品名を端まで塗った帯に置き、字と地は 4.5:1 以上、印刷では白地に黒', () => {
+  assert.match(body, /^\s*<header class="topbar"><div class="wrap">/);
+  const bar = ruleOf('.topbar');
+  atLeast(color(prop(bar, 'color')), color(prop(bar, 'background')), 4.5, '帯の字');
+  assert.equal(prop(ruleOf('body'), 'max-width'), undefined, '帯が端まで塗れない');
+  assert.equal(prop(ruleOf('.wrap'), 'max-width'), '60rem');
+  assert.match(body, /<\/header>\s*<div class="wrap page">/);
+  assert.match(body.match(/<header[\s\S]*?<\/header>/)[0], /<svg [^>]*aria-hidden="true"/);
+  assert.equal(printVars['--bar-bg'], '#fff');
+  assert.equal(printVars['--bar-ink'], '#000');
+});
+
+test('断り書き: 帯のすぐ下の印つきの1行。文はそのままで、閉じた中にも隠れた段の中にも無い', () => {
+  const p = body.match(/<\/header>\s*<div class="wrap page">\s*<p class="disclaimer" id="disclaimer">([\s\S]*?)<\/p>/);
+  assert.ok(p, '断り書きが帯のすぐ下に無い');
+  assert.match(p[1], /^<svg [^>]*aria-hidden="true"[\s\S]*?<\/svg><span>/, '印が無い');
+  assert.equal(p[1].replace(/<[^>]+>/g, ''), '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください');
+  const before = body.slice(0, body.indexOf('id="disclaimer"'));
+  assert.equal((before.match(/<details\b/g) ?? []).length, 0, '断り書きが閉じた中にある');
+  assert.ok(!/\shidden[\s>=]/.test(before), '断り書きが隠れる物の中にある');
+  // 枠はやめても弱くしない: 濃い字の太字。消す決まりが無い(画面でも紙でも)
+  const r = ruleOf('.disclaimer');
+  assert.equal(prop(r, 'border'), undefined);
+  assert.equal(color(prop(r, 'color')), vars['--ink']);
+  assert.equal(prop(r, 'font-weight'), 'bold');
+  assert.ok(!/visibility|opacity/.test(r), '断り書きを消せる決まりがある');
+  assert.ok(!rules.some((x) => x.sel.includes('.disclaimer') && /display: none/.test(x.body)));
+});
+
+test('進み具合: 番号の丸と線で、全部の段の名前を出す。段の切り替えはボタンのまま', () => {
+  const ol = body.match(/<ol class="steps"[\s\S]*?<\/ol>/)[0];
+  const li = [...ol.matchAll(/<li><button type="button" id="step-(\d)" disabled aria-label="(\d) ([^"]+)"><span class="step-dot">(\d)<\/span><span class="step-name">([^<]+)<\/span><\/button><\/li>/g)];
+  assert.equal(li.length, 3);
+  for (const m of li) { assert.equal(m[1], m[2]); assert.equal(m[1], m[4]); assert.equal(m[3], m[5], '読み上げと見える名前が違う'); }
+  // 線は枠線で描くので、総なめの 3:1 と印刷の黒の検査に掛かる
+  assert.equal(prop(ruleOf('.steps li + li::before'), 'border-top'), '2px solid var(--line)');
+  assert.equal(prop(ruleOf('.steps li:has(~ li > button[aria-current="step"]) + li::before'), 'border-top-color'), 'var(--primary)');
+  // 3つの状態が塗りと線の形で分かる: 押せない=破線の丸、押せる=実線の丸、今の段=塗った丸
+  assert.equal(prop(ruleOf('.steps button:disabled .step-dot'), 'border'), '2px dashed var(--ink-2)');
+  assert.equal(prop(ruleOf('.step-dot'), 'border'), '2px solid var(--primary)');
+  const on = ruleOf('.steps button[aria-current="step"] .step-dot');
+  assert.equal(color(prop(on, 'background')), vars['--primary']);
+  atLeast(color(prop(on, 'color')), vars['--primary'], 4.5, '今の段の番号');
+  assert.equal(prop(ruleOf('.steps button[aria-current="step"]'), 'font-weight'), 'bold');
+  // 丸が 44px の押す所の中に収まる
+  assert.ok(toPx(prop(ruleOf('.step-dot'), 'height')) + toPx('0.25rem') * 2 <= 44);
 });
 
 test('ボタンの形: 既定は副、主の5つだけ塗り、押せない・選んでいるは形で分かる', () => {
@@ -180,7 +264,7 @@ test('結果の中のリンクは縦に余白を足した形', () => {
   const r = ruleWith('.summary a');
   assert.equal(r, ruleWith('.result a'));
   assert.equal(prop(r, 'display'), 'inline-block');
-  assert.equal(prop(r, 'padding'), '0.2rem 0');
+  assert.equal(prop(r, 'padding'), '0.25rem 0');
 });
 
 test('札: 色を抜いても、印と言葉で4つの状態が見分けられる', () => {
@@ -233,20 +317,20 @@ test('選んでいる印: 3か所とも「✓ 選択中」の字が出る。CSS 
   assert.match(body, /<button type="button" id="rules-national" aria-pressed="true">国の直轄の例/);
 });
 
-test('まとめ・見本の帯・断り書き: 黒い目立つ枠は断り書きと対応表の警告だけ', () => {
+test('まとめ・見本の帯・対応表の警告: 黒い太枠は対応表の警告の1つだけ', () => {
   const sum = ruleOf('.summary');
   assert.equal(prop(sum, 'border'), '1px solid var(--line)');
-  assert.equal(prop(sum, 'border-left-width'), '6px');
-  assert.equal(prop(sum, 'border-radius'), '4px');
+  assert.equal(prop(sum, 'border-left-width'), undefined);
   const banner = ruleOf('.sample-banner');
   assert.equal(prop(banner, 'border'), '1px solid var(--primary)');
   assert.equal(color(prop(banner, 'background')), vars['--paper']);
-  assert.equal(prop(ruleOf('.disclaimer'), 'border'), '3px solid var(--line-strong)');
-  assert.equal(color(prop(ruleOf('.disclaimer'), 'background')), vars['--paper'], 'クリーム色に戻っている');
-  // --line-strong の太い枠(全周)は断り書きの1つの決まりだけ。その class が付くのは2か所
+  assert.equal(prop(ruleOf('.warning-box'), 'border'), '3px solid var(--line-strong)');
+  assert.equal(color(prop(ruleOf('.warning-box'), 'background')), vars['--paper'], 'クリーム色に戻っている');
+  // --line-strong の太い枠(全周)は1つの決まりだけで、その class が付くのは対応表の警告の1か所
   const heavy = rules.filter((r) => /(?:^|;)\s*border: *[2-9]px solid var\(--line-strong\)/.test(r.body)).map((r) => r.sel);
-  assert.deepEqual(heavy, ['.disclaimer']);
-  assert.deepEqual([...body.matchAll(/class="disclaimer[^"]*"(?: id="([^"]+)")?/g)].map((m) => m[1]).sort(), ['disclaimer', 'map-warning']);
+  assert.deepEqual(heavy, ['.warning-box']);
+  assert.deepEqual([...body.matchAll(/class="warning-box[^"]*"(?: id="([^"]+)")?/g)].map((m) => m[1]), ['map-warning']);
+  assert.deepEqual([...body.matchAll(/class="disclaimer[^"]*"(?: id="([^"]+)")?/g)].map((m) => m[1]), ['disclaimer']);
 });
 
 test('表: 見出しの下は黒い 2px、行は灰色の 1px、回数の列は右寄せ。カードでは行の線を消す', () => {
@@ -269,9 +353,6 @@ test('まとめの項目は札と名前を1行に並べる', () => {
 });
 
 test('文字の比: 色か地を決めた決まりは、どれも文字と地が 4.5:1 以上', () => {
-  // 下の総なめが正しい地を使う前提を確かめる
-  const start = body.match(/<[a-z]+ [^>]*class="start[ "][\s\S]*?<ol class="steps"/);
-  assert.ok(start, '段の列が入口の枠の中にない');
   const seen = [];
   for (const r of rules) {
     if (r.sel === ':root') continue;
@@ -322,6 +403,8 @@ test('印刷: 余白があり、文字と線はどれも黒、塗りは白(ボ�
       if (m[1] === 'background') {
         // 語の印のほかに、紙に塗りが残らない
         if (!isButton(r.sel) && name !== '--mark-weak') assert.equal(printVars[name], '#fff', r.sel + ' の地: ' + name);
+      } else if (m[1] === 'box-shadow' && !r.sel.includes(':focus-visible')) {
+        assert.equal(printVars[name], 'none', r.sel + ' の影が紙に残る');
       } else if (m[1] !== 'accent-color' && !r.sel.includes(':focus-visible') && !(name === '--paper' && isButton(r.sel))) {
         assert.equal(printVars[name], '#000', r.sel + ' の ' + m[1] + ': ' + name);
         lines += 1;
@@ -332,8 +415,13 @@ test('印刷: 余白があり、文字と線はどれも黒、塗りは白(ボ�
   // 見る決まりの外に色の直書きが無い(あれば変数の置き換えが効かない)
   for (const r of rules) if (r.sel !== ':root') assert.ok(!/#[0-9a-f]{3,6}\b(?![^(]*\))/i.test(r.body), r.sel + ' に色の直書きがある');
   for (const r of printRules) if (r.sel !== ':root') assert.ok(!/#[0-9a-f]{3,6}\b/i.test(r.body), '印刷の ' + r.sel + ' に色の直書きがある');
-  // 紙の塗りは語の印のほか白なので、断り書きの枠も黒のまま残る
-  assert.equal(prop(ruleOf('.disclaimer'), 'border'), '3px solid var(--line-strong)');
+  // 断り書きの字は紙でも黒、対応表の警告の枠も黒のまま残る
+  assert.equal(printVars[prop(ruleOf('.disclaimer'), 'color').match(/--[\w-]+/)[0]], '#000');
+  assert.equal(prop(ruleOf('.warning-box'), 'border'), '3px solid var(--line-strong)');
+});
+
+test('印刷: 幅の枠は紙の幅いっぱいになる', () => {
+  assert.equal(prop(printRules.find((r) => selectors(r.sel).includes('.wrap')).body, 'max-width'), 'none');
 });
 
 test('印刷: 札は黒の枠で残り、未回答の札は破線で見分ける', () => {

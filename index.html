@@ -15,7 +15,7 @@
     --paper: #fff;           /* 地 */
     --paper-2: #f2f2f2;      /* 整形済みの文の地 */
     --line: #949494;         /* 罫線(文字以外の 3:1 を白地で満たす) */
-    --line-strong: #1a1a1a;  /* 断り書きの枠・署名の表 */
+    --line-strong: #1a1a1a;  /* 対応表の警告の枠・署名の表・表の見出しの線 */
     --primary: #0017c1;      /* 主の色 */
     --primary-dark: #000f8a; /* 主の色に触れたとき */
     --primary-bg: #e8f1fe;   /* 主の色の薄い地 */
@@ -27,17 +27,24 @@
     --ok-line: #259d63;      /* 要らない: 枠 */
     --focus-ring: #ffd43d;   /* 焦点の内の輪。白地では見えないので外の輪 --ink と組にする */
     --mark-weak: #fde68a;    /* 確信の弱い語の地 */
+    --bar-bg: #0017c1;       /* 上の帯の地。主の色と同じ値だが、印刷では白にするので別の名にする */
+    --bar-ink: #fff;         /* 上の帯の字 */
+    --shadow: 0 1px 2px rgba(0, 0, 0, .12); /* カードの薄い影。縁取りは --line のまま(線の 3:1 は影に頼らない) */
   }
-  /* 文字(F14d・F38a): 本文 16px・行間 1.7。段階は h1 1.75 / h2 1.5 / h3 1.25 / h4 1 太字(rem)で、1rem より小さい字は作らない。余白の段階は 0.5 / 1 / 1.5 / 2.5 rem。
+  /* 文字(F14d・F38a・F43a): 本文 16px・行間 1.7。大きさの段階は 1 / 1.1875 / 1.5 / 2 rem(16・19・24・32px)の4つで、1rem より小さい字は作らない。
+     余白の段階は 0.25 / 0.5 / 0.75 / 1 / 1.5 / 2 / 2.5 rem(4〜40px)。角は 8px(部品)と 12px(カード)で、丸は 50%。
      外の書体は読まず、端末にある書体を名前で順に選ぶ。文字と地の色のコントラストは 4.5:1 以上(単体の試験で計算して確かめる) */
   html { font-size: 100%; }
-  body { font-family: "BIZ UDPGothic", "BIZ UDPゴシック", "Yu Gothic", "游ゴシック", Meiryo, "メイリオ", sans-serif; font-size: 1rem; margin: 0 auto; max-width: 60rem; padding: 1rem; line-height: 1.7; color: var(--ink); background: var(--paper); overflow-wrap: break-word; }
+  body { font-family: "BIZ UDPGothic", "BIZ UDPゴシック", "Yu Gothic", "游ゴシック", Meiryo, "メイリオ", sans-serif; font-size: 1rem; margin: 0; line-height: 1.7; color: var(--ink); background: var(--paper); overflow-wrap: break-word; }
+  /* 幅の枠(F43a): 上の帯は端まで塗るので、body ではなくこの枠で幅を決める */
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 0 1rem; }
+  .page { padding-bottom: 1.5rem; }
   /* 入力欄・ボタン・整形済みの文も本文と同じ大きさにする(ブラウザの既定は 13px 前後になるため) */
   button, input, select, textarea { font: inherit; }
   pre, code { font-family: "BIZ UDGothic", "BIZ UDゴシック", ui-monospace, Consolas, monospace; font-size: 1rem; }
   /* 見出しは4種だけ */
-  h2 { font-size: 1.5rem; line-height: 1.4; margin: 1.5rem 0 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--line); }
-  h3 { font-size: 1.25rem; line-height: 1.4; margin: 1rem 0 0.5rem; }
+  h2 { font-size: 1.5rem; line-height: 1.4; margin: 1.5rem 0 0.5rem; }
+  h3 { font-size: 1.1875rem; line-height: 1.4; margin: 1rem 0 0.5rem; }
   h4 { font-size: 1rem; line-height: 1.4; margin: 0.75rem 0 0.25rem; }
   a { color: var(--primary); }
   /* 焦点(F38b): どの部品でも同じ2重の輪。内の黄は濃い地で、外の黒は白地で見える。outline は焦点のためだけに使う */
@@ -46,22 +53,27 @@
   button:hover { background: var(--primary-bg); }
   button:active { background: var(--primary-bg); border-color: var(--primary-dark); }
   button:disabled, button:disabled:hover { color: var(--ink-2); background: var(--paper-2); border-color: var(--line); cursor: not-allowed; }
-  /* 目立つ枠は2つだけ: 冒頭の必須の断り書き(#disclaimer)と、対応表の警告(#map-warning)。ほかの注意は灰色の左線の注記(.note) */
-  .disclaimer { border: 3px solid var(--line-strong); background: var(--paper); color: var(--ink); padding: 0.75rem 1rem; font-weight: bold; }
-  .note { border-left: 4px solid var(--line); padding: 0.1rem 0 0.1rem 0.75rem; margin: 0.5rem 0; color: var(--ink-2); }
+  /* 断り書き(F43a): 帯のすぐ下に、印つきの1行として常に出す。文はそのまま。太字と濃い字で弱くならないようにする(黒い太枠はやめた。作者の承認 2026-11-05) */
+  .disclaimer { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.75rem 0 0.5rem; color: var(--ink); font-weight: bold; }
+  .disclaimer svg { flex: none; width: 1.25rem; height: 1.25rem; margin-top: 0.25rem; }
+  /* 太い黒の枠は、対応表の警告(元の名前が入ったファイル)の1つだけ。ほかの注意は灰色の左線の注記(.note) */
+  .warning-box { border: 3px solid var(--line-strong); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 0.75rem 1rem; font-weight: bold; }
+  .note { border-left: 4px solid var(--line); padding: 0.25rem 0 0.25rem 0.75rem; margin: 0.5rem 0; color: var(--ink-2); }
   .req { font-size: 1rem; font-weight: bold; margin-left: 0.25rem; white-space: nowrap; }
   .req-must { color: var(--need); }
   .req-optional { color: var(--ink-2); }
   .form-lead { margin: 0.25rem 0 0.75rem; }
-  .row { margin: 0.4rem 0; }
-  .hint { margin: 0.1rem 0 0; font-size: 1rem; color: var(--ink-2); }
-  .radio-group { border: 1px solid var(--line); border-radius: 4px; padding: 0.4rem 0.8rem; }
-  .radio-group legend { font-weight: bold; padding: 0 0.3rem; }
-  .radio-group div { margin: 0.2rem 0; display: flex; align-items: center; min-height: 2.75rem; }
+  .row { margin: 0.5rem 0; }
+  .hint { margin: 0.25rem 0 0; font-size: 1rem; color: var(--ink-2); }
+  .radio-group { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
+  .radio-group legend { font-weight: bold; padding: 0 0.25rem; }
+  .radio-group div { margin: 0.25rem 0; display: flex; align-items: center; min-height: 2.75rem; }
   .row label { margin-right: 0.5rem; }
-  .result { border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 1rem; margin-bottom: 1rem; }
+  /* カード(F43a): 角の丸い 12px の枠に薄い影。縁は --line(白地で 3:1)のまま */
+  .result { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 1rem 1.5rem; margin-bottom: 1rem; }
+  .form { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 1rem 1.5rem; }
   /* 結果の中のリンクは縦に余白を足し、指で押しやすくする(F38b) */
-  .summary a, .result a { display: inline-block; padding: 0.2rem 0; }
+  .summary a, .result a { display: inline-block; padding: 0.25rem 0; }
   .human { font-weight: bold; }
   .errors { color: var(--need); }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 0.75rem; }
@@ -69,13 +81,13 @@
   .export { margin: 0.5rem 0 1rem; }
   .mask-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
   #mask-map table { border-collapse: collapse; }
-  #mask-map td, #mask-map th { border: 1px solid var(--line); padding: 0.2rem 0.5rem; }
+  #mask-map td, #mask-map th { border: 1px solid var(--line); padding: 0.25rem 0.5rem; }
   /* 確信の弱い語(F17c): 後の欄で印を付ける。未確認は太い下線と枠、選んだ後は薄い地 */
-  mark.mask-weak { color: var(--ink); background: var(--mark-weak); padding: 0 0.1em; }
+  mark.mask-weak { color: var(--ink); background: var(--mark-weak); padding: 0 0.25rem; }
   mark.mask-unchecked { outline: 2px solid var(--check); text-decoration: underline; text-decoration-thickness: 2px; }
   mark.mask-replace { color: var(--ink); background: var(--paper-2); }
   mark.mask-keep { color: var(--ink); background: var(--primary-bg); }
-  #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid var(--line); padding: 0.2rem 0.5rem; }
+  #mask-review td, #mask-review th, #mask-candidates td, #mask-candidates th { border: 1px solid var(--line); padding: 0.25rem 0.5rem; }
   #mask-review button[aria-pressed="true"], #mask-candidates button[aria-pressed="true"], .rules-switch button[aria-pressed="true"] { color: var(--ink); background: var(--primary-bg); border: 2px solid var(--primary); font-weight: bold; }
   /* 選んでいる方は字でも示す(F38c)。白黒でも分かる。読み上げには aria-pressed があるので、対応するブラウザでは2つ目の content で字を読ませない */
   #mask-review button[aria-pressed="true"]::before, #mask-candidates button[aria-pressed="true"]::before, .rules-switch button[aria-pressed="true"]::before { content: "✓ 選択中 "; content: "✓ 選択中 " / ""; }
@@ -84,28 +96,33 @@
   /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
   .lead { margin: 0.5rem 0 0; }
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
-  .start { border: 2px solid var(--primary); border-radius: 4px; background: var(--primary-bg); padding: 0.75rem 1rem; margin: 1rem 0; }
-  .start h2 { margin: 0 0 0.5rem; font-size: 1.25rem; border: none; padding: 0; }
-  /* 入口の3択(F37a): 同じ大きさのボタンを1つの枠に並べ、見本だけ色を濃くする */
-  .entry-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
-  .entry-button { display: block; width: 100%; margin: 0; font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1rem; min-height: 3rem; color: var(--primary); background: var(--paper); border: 2px solid var(--primary); border-radius: 4px; cursor: pointer; text-align: left; }
+  .start { margin: 0.5rem 0 1rem; }
+  .start h2 { margin: 1rem 0 0.75rem; font-size: 2rem; line-height: 1.3; }
+  /* 入口の3択(F37a・F43a): 同じ大きさのカードのボタンを並べ、見本だけ色を濃くする */
+  .entry-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+  .entry-button { display: block; width: 100%; margin: 0; font-size: 1.1875rem; font-weight: bold; padding: 1rem 1.5rem; min-height: 3rem; color: var(--primary); background: var(--paper); border: 2px solid var(--primary); border-radius: 12px; box-shadow: var(--shadow); cursor: pointer; text-align: left; }
   .entry-button:hover { background: var(--primary-bg); }
   .entry-button .btn-sub { display: block; font-size: 1rem; font-weight: normal; }
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
   #bid-run, #ledger-run, #plan-run, #next-step-3, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
   #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
-  .steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0.75rem 0 0; }
+  /* 進み具合(F43a): 番号の丸を線でつなぎ、全部の段の名前を出す。段の切り替えはボタンのまま。
+     入口を選ぶまでは丸を破線にして押せない形、今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色。線は枠線で描く(印刷で黒く残り、3:1 の検査に掛かる) */
+  .steps { display: flex; align-items: center; list-style: none; padding: 0; margin: 1rem 0 0; }
   .steps li { display: flex; align-items: center; }
-  .steps li + li::before { content: "→"; margin-right: 0.5rem; color: var(--primary); }
-  /* 段階の表示(F37a): 入口を選ぶまでは塗らず、押せない形。選んだあとは今いる段だけ塗る */
-  .steps button { margin: 0; padding: 0.2rem 0.75rem; }
-  .steps button:disabled { color: var(--ink-2); background: transparent; border: 1px dashed var(--ink-2); cursor: not-allowed; }
-  .steps button[aria-current="step"] { color: var(--paper); background: var(--primary); font-weight: bold; }
+  .steps li + li::before { content: ""; display: block; width: 3rem; margin: 0 0.5rem; border-top: 2px solid var(--line); }
+  .steps li:has(~ li > button[aria-current="step"]) + li::before { border-top-color: var(--primary); }
+  .steps button { display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0.25rem 0.5rem; border: none; }
+  .step-dot { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 2rem; height: 2rem; color: var(--primary); background: var(--paper); border: 2px solid var(--primary); border-radius: 50%; font-weight: bold; }
+  .steps button:disabled { color: var(--ink-2); background: transparent; border: none; cursor: not-allowed; }
+  .steps button:disabled .step-dot { color: var(--ink-2); background: var(--paper); border: 2px dashed var(--ink-2); }
+  .steps button[aria-current="step"] { color: var(--ink); font-weight: bold; }
+  .steps button[aria-current="step"] .step-dot { color: var(--paper); background: var(--primary); }
   /* 入口に戻る(F38b): 4つ目の段に見えないよう、段の列の下の行に灰色の枠で置く。hidden で隠すので display は決めない */
   #entry-back { margin: 0.5rem 0 0; color: var(--ink); border-color: var(--line); }
   #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--ink-2); }
-  /* 見本の帯(F38c): 白地に主の色の枠。薄い青の地は入口の枠だけにする */
-  .sample-banner { border: 1px solid var(--primary); border-left-width: 6px; border-radius: 4px; background: var(--paper); padding: 0.25rem 1rem; margin: 0.5rem 0; }
+  /* 見本の帯(F38c): 白地に主の色の枠 */
+  .sample-banner { border: 1px solid var(--primary); border-radius: 8px; background: var(--paper); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .sample-banner p { margin: 0.25rem 0; }
   /* 知らせ(F38d): 押したあとの文は太字に主の色の左線で見せる。#bid-status の頭の印(✓ か ＊)は文の中に書く。注記と見本の帯の文は太字にしない */
   p[aria-live]:not(:empty) { border-left: 4px solid var(--primary); padding: 0.25rem 0 0.25rem 0.75rem; margin: 0.5rem 0; font-weight: bold; }
@@ -114,7 +131,7 @@
   /* 空の状態の文(F38d): 結果と見分ける */
   .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
-  .badge { display: inline-block; border: 2px solid; border-radius: 4px; padding: 0 0.4rem; font-weight: bold; white-space: nowrap; }
+  .badge { display: inline-block; border: 2px solid; border-radius: 8px; padding: 0 0.5rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
   .badge-required { color: var(--need); background: var(--paper); border-color: var(--need-line); }
   .badge-needs_check { color: var(--check); background: var(--paper); border-color: var(--check-line); }
@@ -127,44 +144,47 @@
   .item h4 { margin: 0.25rem 0; }
   .item .part { font-weight: bold; }
   .ans-unknown, .ans-unanswered { font-weight: bold; text-decoration: underline; }
-  .provisional { border-left: 4px solid var(--line); padding: 0.1rem 0 0.1rem 0.75rem; color: var(--ink); }
+  .provisional { border-left: 4px solid var(--line); padding: 0.25rem 0 0.25rem 0.75rem; color: var(--ink); }
   .unknown-check { display: inline-flex; align-items: center; min-height: 2.75rem; margin-left: 0.5rem; }
+  /* 上の帯(F43a): 作品名の帯。地は端まで塗り、中身は .wrap の幅にそろえる */
+  .topbar { color: var(--bar-ink); background: var(--bar-bg); }
+  .topbar .wrap { display: flex; align-items: center; gap: 0.5rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .topbar svg { flex: none; width: 2rem; height: 2rem; }
+  h1 { font-size: 1.1875rem; margin: 0; line-height: 1.4; }
+  .topbar-sub { display: block; font-size: 1rem; font-weight: normal; }
   /* 最初の1画面(F14g): 法令の2つの一覧は閉じた折りたたみにし、「見ていない」があることは1行で常に見せる */
-  h1 { font-size: 1.75rem; margin: 0.25rem 0 0.5rem; line-height: 1.4; }
-  .disclaimer { margin: 0.5rem 0; }
   .lead p { margin: 0; }
   .scope-not-line { margin: 0.5rem 0 0; }
   details.scope { margin: 0 0 0.5rem; }
   .scope-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 0 1.5rem; }
   .scope-cols ul { margin-top: 0; }
   #bid > h2 { margin: 0.75rem 0 0.5rem; }
-  .start { margin: 0.5rem 0 1rem; }
   .start p { margin: 0.25rem 0; }
   .print-only { display: none; }
   .sign-table { border-collapse: collapse; width: 100%; }
   .sign-table th, .sign-table td { border: 1px solid var(--line-strong); padding: 0.5rem; height: 2.5rem; text-align: left; }
   .sign-table th { width: 8rem; }
-  /* まとめの枠は通常の線。黒い目立つ枠は断り書きと対応表の警告だけ */
-  .summary { border: 1px solid var(--line); border-left-width: 6px; border-radius: 4px; background: var(--paper); padding: 0.5rem 1rem 0.75rem; margin: 1rem 0 1.5rem; }
-  .summary h3 { margin: 0.25rem 0 0.5rem; font-size: 1.25rem; }
+  /* まとめも同じカード */
+  .summary { border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); background: var(--paper); padding: 1rem 1.5rem; margin: 1rem 0 1.5rem; }
+  .summary h3 { margin: 0 0 0.5rem; font-size: 1.1875rem; }
   .summary h4 { margin: 0.75rem 0 0.25rem; }
   .summary-counts, .summary-items { list-style: none; padding: 0; margin: 0.25rem 0; }
-  .summary-counts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
-  .summary-items li { margin: 0.2rem 0; display: flex; gap: 0.5rem; align-items: baseline; }
+  .summary-counts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .summary-items li { margin: 0.25rem 0; display: flex; gap: 0.5rem; align-items: baseline; }
   .summary-table { border-collapse: collapse; }
-  .summary-table th, .summary-table td { text-align: left; vertical-align: top; padding: 0.2rem 1rem 0.2rem 0; border-bottom: 1px solid var(--line); }
+  .summary-table th, .summary-table td { text-align: left; vertical-align: top; padding: 0.25rem 1rem 0.25rem 0; border-bottom: 1px solid var(--line); }
   .summary-list { margin: 0.25rem 0; }
-  .summary-row { display: grid; grid-template-columns: minmax(8rem, 18rem) 1fr; gap: 0 1rem; border-bottom: 1px solid var(--line); padding: 0.15rem 0; }
+  .summary-row { display: grid; grid-template-columns: minmax(8rem, 18rem) 1fr; gap: 0 1rem; border-bottom: 1px solid var(--line); padding: 0.25rem 0; }
   .summary-row dt { font-weight: bold; }
   .summary-row dd { margin: 0; overflow-wrap: anywhere; }
   .summary-stale, .summary-error { border: 2px solid var(--need-line); background: var(--paper); color: var(--need); padding: 0.25rem 0.5rem; font-weight: bold; }
   .not-yet { color: var(--ink-2); }
   @media (max-width: 30rem) { .summary-row { grid-template-columns: 1fr; } }
   /* 折りたたみ(F14c): 根拠の原文と段取りの表は閉じておく。見出しは中身が分かる言葉にし、押せることが分かる形にする */
-  details > summary { cursor: pointer; padding: 0.55rem 0; min-height: 2.75rem; }
+  details > summary { cursor: pointer; padding: 0.75rem 0; min-height: 2.75rem; }
   details.basis > summary { color: var(--primary); }
   details.schedule-table { margin: 0.5rem 0; }
-  details.schedule-table > summary { font-weight: bold; font-size: 1.25rem; }
+  details.schedule-table > summary { font-weight: bold; font-size: 1.1875rem; }
   details.safety-fold { margin: 0.5rem 0; }
   details.safety-fold > summary { font-weight: bold; }
   .safety-item { margin: 0.75rem 0; }
@@ -174,29 +194,29 @@
   .schedule-lead { margin: 0.25rem 0 0.5rem; }
   .schedule-note { min-width: 10rem; }
   .schedule-note-print { white-space: pre-wrap; }
-  .other-tools { margin-top: 2.5rem; border-top: 4px double var(--line); padding-top: 0.5rem; }
-  .other-tools > summary h2 { display: inline; margin: 0; border: none; padding: 0; }
+  .other-tools { margin-top: 2.5rem; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0.5rem 1.5rem; }
+  .other-tools > summary h2 { display: inline; margin: 0; }
   .other-tools-sub { display: block; }
   /* 説明の折りたたみ(F37b): 押す物の隣は1行にし、2行目からはここへ。文字は本文と同じ大きさのまま */
-  details.fold { margin: 0.1rem 0; }
+  details.fold { margin: 0.25rem 0; }
   details.fold > summary { color: var(--primary); }
   /* 狭い画面(F14e): 幅320〜400px でもページ全体は横に動かない。入力欄は枠の幅まで、表は枠(.table-scroll)の中だけで横に動く。
      ボタン・入力欄・折りたたみの見出しは指で押せる高さ(44px = 2.75rem)にする */
   *, *::before, *::after { box-sizing: border-box; }
   input, select, textarea { max-width: 100%; }
-  textarea { width: 100%; min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
-  input[type="text"], select { min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  textarea { width: 100%; min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+  input[type="text"], select { min-height: 2.75rem; padding: 0.25rem 0.5rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
   input[type="text"][aria-invalid="true"] { border: 2px solid var(--need); }
-  input[type="file"] { min-height: 2.75rem; padding: 0.4rem 0; }
-  button { min-height: 2.75rem; padding: 0.4rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 4px; }
+  input[type="file"] { min-height: 2.75rem; padding: 0.5rem 0; }
+  button { min-height: 2.75rem; padding: 0.5rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 8px; }
   input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; accent-color: var(--primary); }
   /* 四角の印とラベルの行も、押せる高さにする */
   .check-row { display: flex; align-items: center; min-height: 2.75rem; }
   .check-row > input { flex: none; }
   /* 表(F38c): 見出しの下は黒い 2px、行は灰色の 1px。数の列(.num)は右寄せ。幅 40rem 以下の段取りの表はカード */
   table { border-collapse: collapse; }
-  th { text-align: left; vertical-align: bottom; padding: 0.4rem 0.6rem; border-bottom: 2px solid var(--line-strong); }
-  td { vertical-align: top; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); }
+  th { text-align: left; vertical-align: bottom; padding: 0.5rem 0.5rem; border-bottom: 2px solid var(--line-strong); }
+  td { vertical-align: top; padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--line); }
   th.num, td.num { text-align: right; }
   .table-scroll { max-width: 100%; overflow-x: auto; margin: 0.25rem 0 0.75rem; }
   .table-scroll:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
@@ -207,21 +227,21 @@
   .checklist-table tr.cl-empty .cl-status { font-weight: 700; }
   .checklist-notice { font-weight: 700; }
   @media (max-width: 40rem) {
-    body { padding: 0.75rem; }
-    h1 { font-size: 1.5rem; }
+    .wrap { padding: 0 0.75rem; }
+    .start h2 { font-size: 1.5rem; }
+    .result, .form, .summary, .other-tools { padding: 0.75rem 1rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
     .entry-choices { grid-template-columns: minmax(0, 1fr); }
-    /* 段階の表示は1行に収める(F37f)。字は 16px のまま、名前の後ろを隠し(「1 条件」)、順は番号で分かるので矢印を外す */
-    .steps { flex-wrap: nowrap; gap: 0.25rem; }
-    .steps li { flex: 1 1 auto; min-width: 0; }
-    .steps li + li::before { content: none; }
-    .steps button { width: 100%; padding: 0.2rem 0.5rem; }
-    .step-more { display: none; }
+    /* 進み具合(F43a): 字は 16px のまま3つの段を等しい幅に分け、丸の下に名前を全部出す(長い名前は2行に折り返す)。線は丸と丸の間に描く */
+    .steps { align-items: flex-start; }
+    .steps li { position: relative; flex: 1 1 0; min-width: 0; justify-content: center; }
+    .steps li + li::before { position: absolute; top: 1.25rem; right: calc(50% + 1.25rem); width: calc(100% - 2.5rem); margin: 0; }
+    .steps button { flex-direction: column; gap: 0.25rem; width: 100%; padding: 0.25rem; }
     /* 段取りの表は行ごとのカードにする(F37f)。列の見出しの代わりに、各欄の前に data-label を出す */
     table.schedule, table.schedule tbody, table.schedule tr, table.schedule td { display: block; width: 100%; }
     table.schedule thead { display: none; }
-    table.schedule tr { border: 1px solid var(--line); border-radius: 4px; padding: 0.25rem 0.75rem; margin: 0 0 0.75rem; }
-    table.schedule td { padding: 0.2rem 0; border-bottom: none; }
+    table.schedule tr { border: 1px solid var(--line); border-radius: 8px; padding: 0.25rem 0.75rem; margin: 0 0 0.75rem; }
+    table.schedule td { padding: 0.25rem 0; border-bottom: none; }
     table.schedule td:empty { display: none; }
     table.schedule td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
   }
@@ -229,13 +249,14 @@
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
   @media print {
     @page { margin: 15mm; }
-    :root { --ink: #000; --ink-2: #000; --paper-2: #fff; --line: #000; --line-strong: #000; --primary: #000; --primary-dark: #000; --primary-bg: #fff; --need: #000; --need-line: #000; --check: #000; --check-line: #000; --ok: #000; --ok-line: #000; }
-    body { max-width: none; padding: 0; font-size: 10.5pt; }
+    :root { --ink: #000; --ink-2: #000; --paper-2: #fff; --line: #000; --line-strong: #000; --primary: #000; --primary-dark: #000; --primary-bg: #fff; --need: #000; --need-line: #000; --check: #000; --check-line: #000; --ok: #000; --ok-line: #000; --bar-bg: #fff; --bar-ink: #000; --shadow: none; }
+    body { font-size: 10.5pt; }
+    .wrap, .topbar .wrap { max-width: none; padding: 0; }
     button, .export, .no-print { display: none !important; }
     p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status) { display: none !important; }
     /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
     #panel-1[hidden], #panel-2[hidden], #panel-3[hidden] { display: block; }
-    .result { border: none; padding: 0; }
+    .result, .form { border: none; padding: 0; }
     .table-scroll { overflow: visible; }
     .table-scroll table.checklist-table { min-width: 0; }
     .item, .reasons li { break-inside: avoid; }
@@ -253,9 +274,12 @@
 </style>
 </head>
 <body>
-<header>
-<h1>Motouke Navi(はじめての元請けの確認ツール)</h1>
-<p class="disclaimer" id="disclaimer">指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</p>
+<header class="topbar"><div class="wrap">
+<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="3" y="24" width="26" height="4" rx="1" fill="currentColor"/><path d="M6 24V13l10-8 10 8v11" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
+<h1><span class="topbar-name">Motouke Navi</span><span class="topbar-sub">(はじめての元請けの確認ツール)</span></h1>
+</div></header>
+<div class="wrap page">
+<p class="disclaimer" id="disclaimer"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 5.5v6M10 14v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</span></p>
 <div class="lead" id="lead">
 <p>工事の条件から要るものと段取りを、台帳・目次から抜けの候補を、根拠の条つきで出します。</p>
 <details id="can-do-more"><summary>このツールでできること</summary>
@@ -309,7 +333,6 @@
 </ul></div>
 </div>
 </details>
-</header>
 <main id="main">
 <div class="start no-print" id="start">
 <div id="entry">
@@ -321,9 +344,9 @@
 </div>
 </div>
 <ol class="steps" id="steps" aria-label="使う順番">
-<li><button type="button" id="step-1" disabled aria-label="1 条件を入れる">1 条件<span class="step-more">を入れる</span></button></li>
-<li><button type="button" id="step-2" disabled aria-label="2 結果を見る">2 結果<span class="step-more">を見る</span></button></li>
-<li><button type="button" id="step-3" disabled aria-label="3 書類を確かめる">3 書類<span class="step-more">を確かめる</span></button></li>
+<li><button type="button" id="step-1" disabled aria-label="1 条件を入れる"><span class="step-dot">1</span><span class="step-name">条件を入れる</span></button></li>
+<li><button type="button" id="step-2" disabled aria-label="2 結果を見る"><span class="step-dot">2</span><span class="step-name">結果を見る</span></button></li>
+<li><button type="button" id="step-3" disabled aria-label="3 書類を確かめる"><span class="step-dot">3</span><span class="step-name">書類を確かめる</span></button></li>
 </ol>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </div>
@@ -615,7 +638,7 @@
 <div class="row"><button type="button" id="unmask-run">元に戻す</button></div>
 <pre id="unmask-output"></pre>
 <h3>対応表の書き出しと読み込み</h3>
-<p class="disclaimer" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この PC に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
+<p class="warning-box" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この PC に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
 <div class="row"><button type="button" id="map-export">対応表を書き出す</button>
 <label for="map-import">対応表を読み込む</label>
 <input type="file" id="map-import" name="map-import" accept=".json,application/json"></div>
@@ -676,6 +699,7 @@
 <p id="credit-wakayama">段取りと記載項目の「和歌山県の例」には、和歌山県「土木請負工事必携(令和7年11月)」(https://www.pref.wakayama.lg.jp/prefg/081100/hikkei/k-hikkei-r0711/20251115.html。取得日 2026-11-04)の 1-1-1-6〜12 を使っています。和歌山県ホームページ公開情報利用規約(https://www.pref.wakayama.lg.jp/prefg/000200/opendata/hpopendatakiyaku.html)に従って利用しています。加工: 上の節の文を抜き出し、行の形に言い換えました。加工者はこの作品の作者です。和歌山県「土木請負工事必携(令和7年11月)」を加工して作成。この出力は和歌山県が作成したものではありません。</p>
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 </footer>
+</div>
 <div id="sign-off" class="print-only sign-off" aria-hidden="true">
 <p><strong>確認の記録</strong>(印刷した紙に書き込みます)</p>
 <table class="sign-table"><tbody>

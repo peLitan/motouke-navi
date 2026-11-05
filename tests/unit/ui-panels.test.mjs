@@ -37,7 +37,7 @@ test('開いた直後: 段は全部隠れ、段階は塗らず押せない。3�
   for (const id of STEPS) assert.equal(page.el(id).disabled, true);
   // 押せない形は色でも分かる(塗らない)
   assert.match(css, /\.steps button:disabled \{[^}]*background: transparent/);
-  assert.match(css, /\.steps button\[aria-current="step"\] \{[^}]*background: var\(--primary\)/);
+  assert.match(css, /\.steps button\[aria-current="step"\] \.step-dot \{[^}]*background: var\(--primary\)/);
 });
 
 test('段の中身: 既存の id はそれぞれの段にあり、1つだけ。断り書き・出典・取得日は段の外で常に見える', () => {

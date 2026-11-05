@@ -32,7 +32,7 @@ test('入口の枠「どこから始めますか」に3択が同じ形で並び�
   assert.ok(btns[0][3].includes('まず見本で試す') && btns[0][3].includes('初めての方はこちら') && btns[0][3].includes('見本を読み込む'));
   assert.ok(btns[1][3].includes('これから入札する'));
   assert.ok(btns[2][3].includes('もう受注した'));
-  assert.match(html, /\.entry-button \{[^}]*font-size: 1\.25rem/, 'ボタンの文字が大きくない');
+  assert.match(html, /\.entry-button \{[^}]*font-size: 1\.1875rem/, 'ボタンの文字が大きくない');
   assert.equal((body.match(/id="sample-load"/g) || []).length, 1, '見本のボタンが2つある');
   assert.ok(body.indexOf('id="start"') < body.indexOf('id="bid-form"'));
 });
@@ -40,9 +40,9 @@ test('入口の枠「どこから始めますか」に3択が同じ形で並び�
 test('段階の表示が 1 条件を入れる → 2 結果を見る → 3 書類を確かめる の順にある', () => {
   const ol = body.match(/<ol class="steps" id="steps"[^>]*>([\s\S]*?)<\/ol>/);
   assert.ok(ol, '段階の表示が無い');
-  // 狭い画面では名前の後ろを span ごと隠す(F37f)ので、タグを除いた文字で比べる
-  const items = [...ol[1].matchAll(/<li><button [^>]*>(.*?)<\/button><\/li>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
-  assert.deepEqual(items, ['1 条件を入れる', '2 結果を見る', '3 書類を確かめる']);
+  // 番号は丸、名前は別の span(F43a)。見える字は「番号+名前」、読み上げは aria-label で渡す
+  const items = [...ol[1].matchAll(/<li><button [^>]*aria-label="([^"]+)">(.*?)<\/button><\/li>/g)].map((m) => [m[1], m[2].replace(/<[^>]+>/g, '')]);
+  assert.deepEqual(items, [['1 条件を入れる', '1条件を入れる'], ['2 結果を見る', '2結果を見る'], ['3 書類を確かめる', '3書類を確かめる']]);
 });
 
 test('節の番号は 1・2・3、そのあと「ここからは別の道具」の下に A・B', () => {

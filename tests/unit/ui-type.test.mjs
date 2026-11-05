@@ -1,5 +1,5 @@
 // F14d・F38a: 文字・色・注意の枠・言葉。本文16px以上・行間1.7・端末にある書体を順に選ぶ。色は :root の変数。文字と地のコントラスト 4.5:1 以上。
-// 目立つ枠は冒頭の断り書きと対応表の警告だけにし、ほかは灰色の左線の注記にする。入力欄に ※必須/※任意 と1行の補足。CSV の説明
+// 太い黒の枠は対応表の警告だけにし(冒頭の断り書きは F43a で印つきの1行にした)、ほかは灰色の左線の注記にする。入力欄に ※必須/※任意 と1行の補足。CSV の説明
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -81,10 +81,10 @@ test('合わせて使う色の組も 4.5:1 以上(入口の薄い地に載る字
   assert.equal(prop(badge, 'background'), 'var(--paper)');
 });
 
-test('見出しの段階は 28/24/20/16px の4種。折りたたみの見出しも同じ段にそろえる', () => {
-  const sizes = { h1: '1.75rem', h2: '1.5rem', h3: '1.25rem', h4: '1rem', '.start h2': '1.25rem', '.summary h3': '1.25rem', 'details.schedule-table > summary': '1.25rem' };
+test('文字の段階は 32/24/19/16px の4種。帯の作品名と折りたたみの見出しも同じ段にそろえる', () => {
+  const sizes = { h1: '1.1875rem', h2: '1.5rem', h3: '1.1875rem', h4: '1rem', '.start h2': '2rem', '.summary h3': '1.1875rem', 'details.schedule-table > summary': '1.1875rem', '.entry-button': '1.1875rem' };
   for (const [sel, size] of Object.entries(sizes)) assert.equal(prop(rules.find((r) => r.sel === sel).body, 'font-size'), size, sel);
-  const allowed = new Set(['1rem', '1.25rem', '1.5rem', '1.75rem']);
+  const allowed = new Set(['1rem', '1.1875rem', '1.5rem', '2rem']);
   for (const r of rules) {
     const v = prop(r.body, 'font-size');
     if (r.sel === 'html' || !v) continue;
@@ -92,17 +92,18 @@ test('見出しの段階は 28/24/20/16px の4種。折りたたみの見出し�
   }
 });
 
-test('目立つ枠は冒頭の必須の断り書きと対応表の警告の2つだけ。ほかの注意は灰色の左線の注記', () => {
-  const boxed = [...body.matchAll(/<[a-z]+\b[^>]*class="[^"]*\bdisclaimer\b[^"]*"[^>]*>/g)].map((m) => m[0].match(/id="([^"]+)"/)?.[1]);
-  assert.deepEqual(boxed, ['disclaimer', 'map-warning']);
+test('太い枠は対応表の警告の1つだけ。断り書きは枠のない印つきの1行で、ほかの注意は灰色の左線の注記', () => {
+  const boxed = [...body.matchAll(/<[a-z]+\b[^>]*class="[^"]*\bwarning-box\b[^"]*"[^>]*>/g)].map((m) => m[0].match(/id="([^"]+)"/)?.[1]);
+  assert.deepEqual(boxed, ['map-warning']);
+  assert.equal((body.match(/class="disclaimer"/g) ?? []).length, 1);
   for (const id of ['ledger-file-note', 'mask-warning', 'mask-limits', 'mask-file-note', 'ai-note', 'schedule-notice']) {
     assert.match(body, new RegExp('<p class="[^"]*\\bnote\\b[^"]*" id="' + id + '"'), id + ' が注記になっていない');
   }
   const note = rules.find((r) => r.sel === '.note').body;
   assert.match(note, /border-left: 4px solid var\(--line\)/);
   assert.ok(!prop(note, 'background'), '注記に地の色が付いている(枠に見える)');
-  const disc = rules.find((r) => r.sel === '.disclaimer').body;
-  assert.match(disc, /border: 3px solid/);
+  assert.match(rules.find((r) => r.sel === '.warning-box').body, /border: 3px solid/);
+  assert.equal(prop(rules.find((r) => r.sel === '.disclaimer').body, 'border'), undefined);
 });
 
 test('入札前の確認の入力欄に ※必須/※任意 と1行の補足がある', () => {

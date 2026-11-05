@@ -88,24 +88,23 @@ test('CSS: 幅 40rem 以下で行ごとのカードになり、列の名前を d
   assert.equal(css.replace(narrow, '').includes('attr(data-label)'), false);
 });
 
-test('段階の表示は幅 320px で1行に入る。字は 16px のまま、名前の全部は読み上げに渡す', () => {
-  assert.match(narrowRule('.steps'), /flex-wrap: nowrap/);
-  assert.match(narrowRule('.steps li + li::before'), /content: none/);
-  assert.match(narrowRule('.step-more'), /display: none/);
+test('進み具合は幅 320px でも3つの段が横に並び、全部の名前が字の大きさを変えずに読める(F43a)', () => {
+  assert.match(narrowRule('.steps li'), /flex: 1 1 0/);
+  assert.match(narrowRule('.steps li'), /min-width: 0/);
+  assert.match(narrowRule('.steps button'), /flex-direction: column/);
   assert.ok(!/font-size/.test(narrowRule('.steps button')), '段階の字を小さくしている');
+  assert.ok(!/step-name|step-more/.test(css.match(/@media \(max-width: 40rem\) \{[\s\S]*?\n {2}\}/)[0]), '狭い画面で名前を隠している');
   const btns = [...shell.matchAll(/<button type="button" id="step-(\d)" disabled aria-label="([^"]+)">([\s\S]*?)<\/button>/g)];
   assert.equal(btns.length, 3);
-  // 広い画面の名前は今までと同じ。隠した部分をつなぐと aria-label になる
-  for (const b of btns) assert.equal(b[3].replace(/<[^>]+>/g, ''), b[2]);
-  // 見積もり: 和文は1字1em、英数字と空白は多めに0.6em。枠の内側 = 320 - 本文の左右の余白 - 入口の枠の余白と枠線
-  const short = btns.map((b) => b[3].replace(/<span class="step-more">[\s\S]*?<\/span>/, ''));
-  assert.deepEqual(short, ['1 条件', '2 結果', '3 書類']);
-  const ems = (s) => [...s].reduce((n, c) => n + (c.charCodeAt(0) < 128 ? 0.6 : 1), 0);
-  const padX = parseFloat(narrowRule('.steps button').match(/padding: [\d.]+rem ([\d.]+)rem/)[1]) * REM;
-  const gap = parseFloat(narrowRule('.steps').match(/gap: ([\d.]+)rem/)[1]) * REM;
-  const used = short.reduce((n, s) => n + ems(s) * REM + padX * 2 + 2, 0) + gap * 2;
-  const inner = 320 - 0.75 * REM * 2 - 1 * REM * 2 - 2 * 2;
-  assert.ok(used <= inner, '段階の表示が1行に入らない: ' + used + ' / ' + inner);
+  // 見積もり: 和文は1字1em。1段の幅 = (320 - 本文の左右の余白) / 3 - ボタンの内側。名前は折り返しても2行に収まる
+  const padX = parseFloat(narrowRule('.steps button').match(/padding: ([\d.]+)rem/)[1]) * REM;
+  const inner = (320 - 0.75 * REM * 2) / 3 - padX * 2;
+  assert.ok(inner >= 32, '丸が1段の幅に入らない: ' + inner);
+  for (const b of btns) {
+    const name = b[3].match(/<span class="step-name">([^<]+)<\/span>/)[1];
+    const perLine = Math.floor(inner / REM);
+    assert.ok(Math.ceil([...name].length / perLine) <= 2, name + ' が2行に入らない');
+  }
 });
 
 test('07 の決まり: 外部の読み込み・通信・保存が無く、断り書きと PDL を出し、index.html が今の src と同じ', () => {

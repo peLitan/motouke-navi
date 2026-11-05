@@ -49,22 +49,21 @@ function lines(s, fontPx, widthPx) {
 const block = (s, fontPx, lh, widthPx) => lines(s, fontPx, widthPx) * fontPx * lh;
 
 function estimate() {
-  const bodyMax = px(cssValue('body', 'max-width'));
-  const pad = px(cssValue('body', 'padding'));
-  const W = Math.min(bodyMax, VIEW_W - SCROLLBAR) - pad * 2;
+  // 幅は .wrap で決まる(F43a。上の帯を端まで塗るため body の幅は決めない)
+  const wrapMax = px(cssValue('.wrap', 'max-width'));
+  const W = Math.min(wrapMax, VIEW_W - SCROLLBAR) - px(cssValue('.wrap', 'padding').split(/\s+/)[1]) * 2;
   const LH = Number(cssValue('body', 'line-height'));
   const parts = [];
   const add = (name, h) => parts.push({ name, h });
-  add('body の上の余白', pad);
+  // 上の帯: 作品名の1行と説明の1行(内側の上下 0.5rem)
+  const h1Lh = Number(cssValue('h1', 'line-height'));
+  const barName = text(body.match(/<span class="topbar-name">([\s\S]*?)<\/span>/)[1]);
+  const barSub = text(body.match(/<span class="topbar-sub">([\s\S]*?)<\/span>/)[1]);
+  add('上の帯', block(barName, px(cssValue('h1', 'font-size')), h1Lh, W) + block(barSub, REM, h1Lh, W) + 0.5 * REM * 2);
 
-  // 題
-  const h1 = text(body.match(/<h1>([\s\S]*?)<\/h1>/)[1]);
-  const h1Font = px(cssValue('h1', 'font-size'));
-  add('題', block(h1, h1Font, Number(cssValue('h1', 'line-height')), W) + marginTB('h1'));
-
-  // 断り書き(枠 3px・内側 0.75rem 1rem)
+  // 断り書き(印の幅 1.25rem と間 0.5rem のぶん、文の幅が狭い)
   const disc = text(body.match(/<p class="disclaimer" id="disclaimer">([\s\S]*?)<\/p>/)[1]);
-  add('断り書き', block(disc, REM, LH, W - 2 * REM - 6) + 0.75 * REM * 2 + 6 + marginTB('.disclaimer'));
+  add('断り書き', block(disc, REM, LH, W - 1.75 * REM) + marginTB('.disclaimer'));
 
   // できること(1行と、閉じた details の見出し。3つの箇条は畳んだ: F37b)
   const lead = body.match(/<div class="lead" id="lead">([\s\S]*?)<\/div>/)[1];
@@ -80,22 +79,22 @@ function estimate() {
   const between = body.slice(body.indexOf('</details>', body.indexOf('id="scope"')), body.indexOf('<div class="start no-print" id="start">'));
   assert.equal(text(between), '', '法令の一覧と入口の枠の間に、見積もっていない文がある: ' + text(between));
 
-  // 入口の枠(枠 2px・内側 0.75rem 1rem): 見出しと、同じ大きさの3択と、段階の表示
+  // 入口(枠なし): 見出しと、同じ大きさの3択と、段階の表示
   const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="entry-back"'));
-  const inner = W - 2 * REM - 4;
-  let h = marginTB('.start') + 0.75 * REM * 2 + 4;
+  const inner = W;
+  let h = marginTB('.start');
   h += block(text(start.match(/<h2>([\s\S]*?)<\/h2>/)[1]), px(cssValue('.start h2', 'font-size')), LH, inner) + marginTB('.start h2');
-  // 3択は横に3つ並ぶ(間は 0.75rem)。一番高いボタンの高さが列の高さ
+  // 3択は横に3つ並ぶ(間は 1rem)。一番高いボタンの高さが列の高さ
   const btns = [...start.matchAll(/<button type="button" id="(?:sample-load|entry-bid|entry-awarded)"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => m[1]);
   assert.equal(btns.length, 3);
-  const btnW = (inner - 0.75 * REM * 2) / 3 - 1 * REM * 2 - 4;
-  h += Math.max(...btns.map((b) => 0.75 * REM * 2 + 4
-    + block(text(b.match(/<span class="btn-main">([\s\S]*?)<\/span>/)[1]), 1.25 * REM, LH, btnW)
+  const btnW = (inner - 1 * REM * 2) / 3 - 1.5 * REM * 2 - 4;
+  h += Math.max(...btns.map((b) => 1 * REM * 2 + 4
+    + block(text(b.match(/<span class="btn-main">([\s\S]*?)<\/span>/)[1]), px(cssValue('.entry-button', 'font-size')), LH, btnW)
     + block(text(b.match(/<span class="btn-sub">([\s\S]*?)<\/span>/)[1]), REM, LH, btnW)));
   const steps = [...start.matchAll(/<button type="button" id="step-\d"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => text(m[1]));
   assert.equal(steps.length, 3);
-  // 段階は横に並ぶ。全部の幅が枠に入らなければ2行と数える(ボタンの高さは 2.75rem)
-  const stepsW = steps.reduce((n, s) => n + (ems(s) + 2) * REM + 1.5 * REM + 2 + 0.5 * REM, 0);
+  // 段階は横に並ぶ(丸 2rem・間 0.5rem・左右の内側 0.5rem ずつ・線 3rem と両脇 0.5rem)。全部の幅が枠に入らなければ2行と数える(ボタンの高さは 2.75rem)
+  const stepsW = steps.reduce((n, s) => n + ems(s) * REM + 3.5 * REM + 4 * REM, 0);
   const rows = Math.ceil(stepsW / inner);
   h += marginTB('.steps') + rows * 2.75 * REM + (rows - 1) * 0.5 * REM;
   add('入口の枠(3択と段階の表示まで)', h);
@@ -131,6 +130,11 @@ test('法令の2つの一覧は、題の分かる閉じた details の中にあ�
   assert.match(text(line[1]), /^見ていない法令・資料があります/);
   assert.ok(text(line[1]).length <= 55, '1行に収まらない長さ: ' + text(line[1]).length);
   assert.ok(!/no-print/.test(body.match(/<p class="scope-not-line"[^>]*>/)[0]), '印刷で消える');
+});
+
+test('作品名の帯 → 断り書きの順で始まる', () => {
+  assert.ok(body.indexOf('<h1>') < body.indexOf('</header>'));
+  assert.ok(body.indexOf('</header>') < body.indexOf('id="disclaimer"'));
 });
 
 test('題は作品名「Motouke Navi」に何のツールかの説明を添えたもの。<title> も同じ', () => {
