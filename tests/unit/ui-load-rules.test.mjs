@@ -94,8 +94,8 @@ test('片方の行しか無い表では、無い側は国の例のまま(空の�
 test('壊れたファイル・形の違うファイルは理由を出して拒む', () => {
   const cases = [
     ['{ "rows": [', /JSON/],
-    ['[]', /rows/],
-    [JSON.stringify({ map: {} }), /rows/],
+    ['[]', /行の一覧/],
+    [JSON.stringify({ map: {} }), /行の一覧/],
     [JSON.stringify({ source: SOURCE, rows: [] }), /行が1つも/],
     [JSON.stringify({ rows: [SCHED] }), /出典/],
     [JSON.stringify({ source: { ...SOURCE, edition: ' ' }, rows: [SCHED] }), /版/],

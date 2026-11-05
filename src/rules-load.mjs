@@ -29,10 +29,10 @@ export function parseRulesFile(fileText) {
   } catch {
     throw new Error('JSON のファイルとして読めません');
   }
-  if (!data || typeof data !== 'object' || !Array.isArray(data.rows)) throw new Error('行の一覧(rows)がありません。spec-to-rules の check-rows.mjs --out で書いたファイルを選んでください');
+  if (!data || typeof data !== 'object' || !Array.isArray(data.rows)) throw new Error('行の一覧がありません。発注者の仕様書から作った行のファイルを選んでください');
   if (data.rows.length === 0) throw new Error('行が1つもありません');
   const s = data.source;
-  if (!s || typeof s !== 'object') throw new Error('出典(source)がありません。出典の分からない表は読み込みません');
+  if (!s || typeof s !== 'object') throw new Error('出典がありません。出典の分からない表は読み込みません');
   for (const [k, label] of [['publisher', '発注者'], ['title', '題名'], ['edition', '版']]) {
     if (!text(s[k])) throw new Error('出典の' + label + '(source.' + k + ')がありません');
   }

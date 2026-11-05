@@ -157,7 +157,7 @@ export function showPanel(doc, n) {
   const back = doc.getElementById('entry-back');
   if (back) back.hidden = false;
 }
-// 入口に戻す: 3択を見せ、段を隠し、段階の表示を押せない形にする。入れた値と結果は消さない
+// 入口に戻す: タイルを見せ、段を隠し、段階の表示を押せない形にする。入れた値と結果は消さない
 export function showEntry(doc) {
   for (const i of PANELS) {
     const panel = doc.getElementById('panel-' + i);
@@ -179,6 +179,13 @@ function openPanel(doc, n, scrollId = 'steps') {
   showPanel(doc, n);
   doc.getElementById('step-' + n)?.focus?.({ preventScroll: true });
   doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
+}
+// 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
+function openIntake(doc) {
+  const more = doc.getElementById('intake-more');
+  if (more) more.open = true;
+  openPanel(doc, 1, 'intake-more');
+  doc.getElementById('intake-load')?.focus?.({ preventScroll: true });
 }
 // 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開く。動くのはリンクの既定の動きに任せる
 export function openPanelForLink(doc, href) {
@@ -768,6 +775,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('sample-load', () => loadSample(doc));
     on('sample-reenter', () => clearSample(doc));
     on('entry-bid', () => openPanel(doc, 1));
+    on('entry-intake', () => openIntake(doc));
     on('entry-awarded', () => enterAwarded(doc));
     on('awarded-conditions', () => openPanel(doc, 1));
     on('entry-back', () => showEntry(doc));

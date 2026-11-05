@@ -1,4 +1,4 @@
-// F37a: 入口の3択と段の切り替え。段は hidden で1つずつ見せ、段階の表示は入口を選ぶまで押せない。印刷は段をまたいで全部出す
+// F37a: 入口のタイルと段の切り替え。段は hidden で1つずつ見せ、段階の表示は入口を選ぶまで押せない。印刷は段をまたいで全部出す
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -21,15 +21,15 @@ function assertOn(page, n) {
   assert.deepEqual(shown(page), ['panel-' + n]);
   assert.deepEqual(current(page), ['step-' + n]);
   for (const id of STEPS) assert.equal(page.el(id).disabled, false, id + ' が押せない');
-  assert.equal(page.el('entry').hidden, true, '3択が残っている');
+  assert.equal(page.el('entry').hidden, true, 'タイルが残っている');
   assert.equal(page.el('entry-back').hidden, false);
 }
 
-test('開いた直後: 段は全部隠れ、段階は塗らず押せない。3択が見える', () => {
+test('開いた直後: 段は全部隠れ、段階は塗らず押せない。タイルが見える', () => {
   for (const id of PANELS) assert.match(body, new RegExp('<section id="' + id + '" hidden>'), id);
   for (const id of STEPS) assert.match(body, new RegExp('<button type="button" id="' + id + '" disabled[ >]'), id);
   assert.ok(!/<ol class="steps"[\s\S]*?<\/ol>/.exec(body)[0].includes('aria-current'), '選ぶ前から印が付いている');
-  assert.match(body, /<div id="entry">/, '3択が最初から隠れている');
+  assert.match(body, /<div id="entry">/, 'タイルが最初から隠れている');
   assert.match(body, /<button type="button" id="entry-back" hidden>/);
   const page = runPage();
   assert.deepEqual(shown(page), []);
@@ -61,7 +61,19 @@ test('段の中身: 既存の id はそれぞれの段にあり、1つだけ。�
   assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), [], 'id が重なっている');
 });
 
-test('3択: それぞれの段が開き、1つだけ見える。段階は押せるようになる', async () => {
+test('公告のタイル: 段1 を開き、読み込みの折りたたみを開いて、ファイルの欄へ焦点を移す(動く入口で、準備中ではない)', async () => {
+  const page = runPage();
+  assert.ok(!page.el('intake-more').open);
+  let focused = 0;
+  page.el('intake-load').focus = () => { focused += 1; };
+  await page.click('entry-intake');
+  assertOn(page, 1);
+  assert.equal(page.el('intake-more').open, true);
+  assert.equal(focused, 1);
+  assert.ok(!html.slice(html.indexOf('id="entry-intake"'), html.indexOf('id="entry-awarded"')).includes('準備中'));
+});
+
+test('入口の選び方: それぞれの段が開き、1つだけ見える。段階は押せるようになる', async () => {
   let page = runPage();
   await page.click('entry-bid');
   assertOn(page, 1);

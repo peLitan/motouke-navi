@@ -79,25 +79,30 @@ function estimate() {
   const between = body.slice(body.indexOf('</details>', body.indexOf('id="scope"')), body.indexOf('<div class="start no-print" id="start">'));
   assert.equal(text(between), '', '法令の一覧と入口の枠の間に、見積もっていない文がある: ' + text(between));
 
-  // 入口(枠なし): 見出しと、同じ大きさの3択と、段階の表示
+  // 入口(枠なし): 見出しと、用意するものの1行と、同じ大きさの3つのタイルと、もう受注した方のリンクと、段階の表示
   const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="entry-back"'));
   const inner = W;
   let h = marginTB('.start');
   h += block(text(start.match(/<h2>([\s\S]*?)<\/h2>/)[1]), px(cssValue('.start h2', 'font-size')), LH, inner) + marginTB('.start h2');
-  // 3択は横に3つ並ぶ(間は 1rem)。一番高いボタンの高さが列の高さ
-  const btns = [...start.matchAll(/<button type="button" id="(?:sample-load|entry-bid|entry-awarded)"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => m[1]);
+  // 用意するもの: 4つの語の間ごとに 1rem の間が入るので、そのぶん狭い幅で数える
+  const prep = start.match(/<div class="entry-prep" id="entry-prep">([\s\S]*?)<\/div>/)[1];
+  h += block(text(prep), REM, LH, inner - 5 * REM) + marginTB('.entry-prep');
+  // タイルは横に3つ並ぶ(間は 1rem)。一番高いボタンの高さが列の高さ。印の絵は 2rem と下の 0.5rem
+  const btns = [...start.matchAll(/<button type="button" id="(?:sample-load|entry-bid|entry-intake)"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => m[1]);
   assert.equal(btns.length, 3);
   const btnW = (inner - 1 * REM * 2) / 3 - 1.5 * REM * 2 - 4;
-  h += Math.max(...btns.map((b) => 1 * REM * 2 + 4
+  h += Math.max(...btns.map((b) => 1 * REM * 2 + 4 + 2.5 * REM
     + block(text(b.match(/<span class="btn-main">([\s\S]*?)<\/span>/)[1]), px(cssValue('.entry-button', 'font-size')), LH, btnW)
     + block(text(b.match(/<span class="btn-sub">([\s\S]*?)<\/span>/)[1]), REM, LH, btnW)));
+  // もう受注した方のリンク: 押す所 44px と上の余白
+  h += 44 + marginTB('.start .entry-aside');
   const steps = [...start.matchAll(/<button type="button" id="step-\d"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => text(m[1]));
   assert.equal(steps.length, 3);
   // 段階は横に並ぶ(丸 2rem・間 0.5rem・左右の内側 0.5rem ずつ・線 3rem と両脇 0.5rem)。全部の幅が枠に入らなければ2行と数える(ボタンの高さは 2.75rem)
   const stepsW = steps.reduce((n, s) => n + ems(s) * REM + 3.5 * REM + 4 * REM, 0);
   const rows = Math.ceil(stepsW / inner);
   h += marginTB('.steps') + rows * 2.75 * REM + (rows - 1) * 0.5 * REM;
-  add('入口の枠(3択と段階の表示まで)', h);
+  add('入口の枠(タイルと段階の表示まで)', h);
   return { parts, total: parts.reduce((n, p) => n + p.h, 0), W };
 }
 
@@ -109,7 +114,7 @@ test('幅1280・高さ900の最初の1画面に、題・断り書き・できる
 });
 
 test('並び: 題 → 断り書き → できること → 見ていない法令の1行 → 法令の一覧(閉じた details) → 入口の3択 → 段階の表示', () => {
-  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="scope-not-line"', '<details class="scope" id="scope">', 'id="sample-load"', 'id="entry-bid"', 'id="entry-awarded"', 'id="steps"'].map((k) => body.indexOf(k));
+  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="scope-not-line"', '<details class="scope" id="scope">', 'id="sample-load"', 'id="entry-bid"', 'id="entry-intake"', 'id="entry-awarded"', 'id="steps"'].map((k) => body.indexOf(k));
   assert.ok(order.every((n) => n >= 0), '冒頭のどれかが無い: ' + order);
   for (let i = 1; i < order.length; i++) assert.ok(order[i - 1] < order[i], '並びが違う: ' + i);
 });

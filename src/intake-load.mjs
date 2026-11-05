@@ -18,9 +18,9 @@ const list = (v, name) => {
 export function parseIntakeFile(text) {
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('JSON として読めません'); }
-  if (data?.kind !== 'bid-intake') throw new Error('公告から拾った条件のファイルではありません(check-conditions.mjs --out の出力を選んでください)');
+  if (data?.kind !== 'bid-intake') throw new Error('公告から拾った条件のファイルではありません(公告を読んだ AI がまとめた条件のファイルを選んでください)');
   const title = data.source?.title;
-  if (typeof title !== 'string' || !title.trim()) throw new Error('公告の題名(source.title)がありません');
+  if (typeof title !== 'string' || !title.trim()) throw new Error('公告の題名がありません');
   const rows = list(data.rows, 'rows');
   const form = {};
   for (const [id, value] of Object.entries(data.form ?? {})) {

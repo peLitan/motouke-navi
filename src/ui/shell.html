@@ -98,11 +98,20 @@
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
   .start { margin: 0.5rem 0 1rem; }
   .start h2 { margin: 1rem 0 0.75rem; font-size: 2rem; line-height: 1.3; }
-  /* 入口の3択(F37a・F43a): 同じ大きさのカードのボタンを並べ、見本だけ色を濃くする */
+  /* 用意するもの(F43b): 押せる印に見えないよう、枠も地も四角の印も付けない文にする */
+  .entry-prep { display: flex; flex-wrap: wrap; gap: 0 1rem; margin: 0 0 1rem; }
+  .entry-prep ul { display: flex; flex-wrap: wrap; gap: 0 1rem; list-style: none; margin: 0; padding: 0; }
+  .entry-prep li::before { content: "・"; }
+  /* 入口のタイル(F37a・F43a・F43b): 同じ大きさのカードのボタンを並べ、見本だけ色を濃くする */
   .entry-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
   .entry-button { display: block; width: 100%; margin: 0; font-size: 1.1875rem; font-weight: bold; padding: 1rem 1.5rem; min-height: 3rem; color: var(--primary); background: var(--paper); border: 2px solid var(--primary); border-radius: 12px; box-shadow: var(--shadow); cursor: pointer; text-align: left; }
   .entry-button:hover { background: var(--primary-bg); }
   .entry-button .btn-sub { display: block; font-size: 1rem; font-weight: normal; }
+  .entry-icon { display: block; width: 2rem; height: 2rem; margin: 0 0 0.5rem; }
+  /* もう受注した方の小さなリンク(F43b): 下線の字だけ。押す所の高さは 44px を保つ */
+  .start .entry-aside { margin: 0.5rem 0 0; }
+  .entry-link { min-height: 44px; margin: 0; padding: 0.25rem 0; color: var(--primary); background: var(--paper); border: none; text-decoration: underline; cursor: pointer; }
+  .entry-link:hover, .entry-link:active { color: var(--primary-dark); background: var(--paper); }
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
   #bid-run, #ledger-run, #plan-run, #next-step-3, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
   #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
@@ -310,12 +319,14 @@
 <main id="main">
 <div class="start no-print" id="start">
 <div id="entry">
-<h2>どこから始めますか</h2>
+<h2>まず、どう始めますか</h2>
+<div class="entry-prep" id="entry-prep"><strong>用意するもの</strong><ul><li>公告</li><li>許可の種類</li><li>技術者の資格</li><li>下請けの総額</li></ul><span>無くても「分からない」で進めます</span></div>
 <div class="entry-choices">
-<button type="button" id="sample-load" class="entry-button sample-button"><span class="btn-main">まず見本で試す</span><span class="btn-sub">初めての方はこちら。架空の工事の見本を読み込む</span></button>
-<button type="button" id="entry-bid" class="entry-button"><span class="btn-main">これから入札する</span><span class="btn-sub">工事の条件を入れて、要るものを確かめる</span></button>
-<button type="button" id="entry-awarded" class="entry-button"><span class="btn-main">もう受注した</span><span class="btn-sub">受注後の段取りの一覧から見る</span></button>
+<button type="button" id="sample-load" class="entry-button sample-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 4l3.6 7.6 8.4 1.2-6 5.9 1.4 8.3-7.4-4-7.4 4 1.4-8.3-6-5.9 8.4-1.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">まず見本で試す</span><span class="btn-sub">初めての方はこちら。架空の工事の見本を読み込む</span></button>
+<button type="button" id="entry-bid" class="entry-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M6 26l1.5-6L22 5.5l4.5 4.5L12 24.5zM19 8.5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">条件を入れる</span><span class="btn-sub">工事の条件を手で入れる</span></button>
+<button type="button" id="entry-intake" class="entry-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4h11l6 6v18H8zM19 4v6h6M16.5 14v9M12.5 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">公告から拾った条件を読み込む</span><span class="btn-sub">公告を読んだ AI がまとめた条件のファイルを選ぶ</span></button>
 </div>
+<p class="entry-aside"><button type="button" id="entry-awarded" class="entry-link">もう受注した方は段取りの一覧へ</button></p>
 </div>
 <ol class="steps" id="steps" aria-label="使う順番">
 <li><button type="button" id="step-1" disabled aria-label="1 条件を入れる"><span class="step-dot">1</span><span class="step-name">条件を入れる</span></button></li>
@@ -335,7 +346,7 @@
 <p>「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
 </details>
 <details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
-<p class="hint">Claude Code の Skill <code>bid-intake</code> が書いたファイルを選ぶと、確かめが要らなかった値だけを入れます。通信も保存もしません。</p>
+<p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。通信も保存もしません。</p>
 <div class="row"><label for="intake-load">拾った条件のファイル(.json)</label>
 <input type="file" id="intake-load" name="intake-load" accept=".json,application/json"></div>
 <p id="intake-status" aria-live="polite"></p>
@@ -623,7 +634,7 @@
 <p>手元のプログラムが書き出した結果のファイルを読み込むと、AI の候補を下の欄に出します。</p>
 <p class="note" id="ai-note">ここに出るのは AI の候補です。上の「1.」〜「3.」の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
 <details class="fold"><summary>結果のファイルの作り方</summary>
-<p>この画面は外へ通信しません。Claude での点検は、手元のプログラム <code>node tools/claude-check.mjs</code> が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。</p>
+<p>この画面は外へ通信しません。Claude での点検は、手元で動かす別のプログラム(動かし方は説明書にあります)が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。</p>
 </details>
 <div class="row"><label for="ai-load">AI の候補を読み込む</label>
 <input type="file" id="ai-load" name="ai-load" accept=".json,application/json"></div>

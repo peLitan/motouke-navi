@@ -109,7 +109,7 @@ test('置き換えの前と後の2列は、狭い画面(400px を含む幅)で1�
   const one = narrowMedia().filter((m) => m.width >= 400 && m.rules.some((r) => r.sel === '.mask-cols' && prop(r.body, 'grid-template-columns') === 'minmax(0, 1fr)'));
   assert.ok(one.length, '狭い画面で1列にする決まりが無い');
   assert.match(body, /<div class="mask-cols">\s*<div><h3>前<\/h3><pre id="mask-before"><\/pre><\/div>\s*<div><h3>後<\/h3><pre id="mask-after"><\/pre><\/div>/);
-  // 入口の3択も狭い画面では1列にして幅いっぱい
+  // 入口のタイルも狭い画面では1列にして幅いっぱい
   assert.ok(one.some((m) => m.rules.some((r) => r.sel === '.entry-choices' && prop(r.body, 'grid-template-columns') === 'minmax(0, 1fr)')));
   assert.equal(prop(ruleOf('.entry-button'), 'width'), '100%');
 });

@@ -22,19 +22,51 @@ test('h1 のすぐ後に「このツールでできること」と3つの箇条�
   assert.equal((ul[1].match(/<li>/g) || []).length, 3);
 });
 
-test('入口の枠「どこから始めますか」に3択が同じ形で並び、見本が先頭(見本を読み込むボタン)', () => {
+test('入口の題「まず、どう始めますか」に3つのタイルが同じ形で並び、見本が先頭で主の形(見本を読み込むボタン)', () => {
   const start = body.slice(body.indexOf('<div class="start no-print" id="start">'), body.indexOf('id="entry-back"'));
-  assert.ok(start.includes('<h2>どこから始めますか</h2>'));
-  const btns = [...start.matchAll(/<button type="button" id="(sample-load|entry-bid|entry-awarded)" class="([^"]*)">([\s\S]*?)<\/button>/g)];
-  assert.deepEqual(btns.map((m) => m[1]), ['sample-load', 'entry-bid', 'entry-awarded']);
-  for (const m of btns) assert.ok(m[2].split(' ').includes('entry-button'), m[1] + ' が同じ形でない');
+  assert.ok(start.includes('<h2>まず、どう始めますか</h2>'));
+  const btns = [...start.matchAll(/<button type="button" id="(sample-load|entry-bid|entry-intake)" class="([^"]*)">([\s\S]*?)<\/button>/g)];
+  assert.deepEqual(btns.map((m) => m[1]), ['sample-load', 'entry-bid', 'entry-intake']);
+  for (const m of btns) {
+    assert.ok(m[2].split(' ').includes('entry-button'), m[1] + ' が同じ形でない');
+    assert.match(m[3], /<svg class="entry-icon"[^>]*aria-hidden="true"/, m[1] + ' の印の絵');
+  }
   assert.ok(btns[0][2].split(' ').includes('sample-button'), '見本だけ色を濃くする印が無い');
+  assert.equal(btns.filter((m) => m[2].includes('sample-button')).length, 1);
   assert.ok(btns[0][3].includes('まず見本で試す') && btns[0][3].includes('初めての方はこちら') && btns[0][3].includes('見本を読み込む'));
-  assert.ok(btns[1][3].includes('これから入札する'));
-  assert.ok(btns[2][3].includes('もう受注した'));
+  assert.ok(btns[1][3].includes('条件を入れる'));
+  assert.ok(btns[2][3].includes('公告から拾った条件を読み込む') && btns[2][3].includes('公告を読んだ AI がまとめた条件のファイル'));
   assert.match(html, /\.entry-button \{[^}]*font-size: 1\.1875rem/, 'ボタンの文字が大きくない');
   assert.equal((body.match(/id="sample-load"/g) || []).length, 1, '見本のボタンが2つある');
   assert.ok(body.indexOf('id="start"') < body.indexOf('id="bid-form"'));
+});
+
+test('もう受注した人は、タイルより小さな下線の字のボタン。押す所は 44px', () => {
+  const m = body.match(/<button type="button" id="entry-awarded" class="([^"]*)">([^<]*)<\/button>/);
+  assert.ok(m, 'entry-awarded が無い');
+  assert.equal(m[1], 'entry-link');
+  assert.ok(m[2].includes('もう受注した'));
+  assert.ok(body.indexOf('id="entry-intake"') < body.indexOf('id="entry-awarded"'));
+  const css = html.match(/\.entry-link \{([^}]*)\}/)[1];
+  assert.match(css, /min-height: 44px/);
+  assert.match(css, /text-decoration: underline/);
+  assert.match(css, /border: none/);
+  assert.ok(!/font-size/.test(css), 'タイルと同じ大きさにしない(既定の 16px のまま)');
+});
+
+test('用意するものは短い語の並びで、押せる印に見えない(ボタン・枠・影・地・四角の印が無い)', () => {
+  const prep = body.match(/<div class="entry-prep" id="entry-prep">([\s\S]*?)<\/div>/)[1];
+  assert.ok(prep.includes('用意するもの') && prep.includes('分からない'));
+  assert.ok((prep.match(/<li>/g) || []).length >= 3);
+  assert.ok(!/<button|<a\b|<input|☐/.test(prep));
+  const rules = [...html.matchAll(/\.entry-prep[^{]*\{([^}]*)\}/g)].map((m) => m[1]).join(' ');
+  assert.ok(!/border|box-shadow|background|cursor|☐/.test(rules), rules);
+  assert.ok(rules.includes('"・"'));
+});
+
+test('画面の文に作る側の語(Skill・ファイル名・機能の番号)が出ない', () => {
+  const visible = body.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' ');
+  assert.ok(!/Skill|bid-intake|check-conditions|check-rows|spec-to-rules|\.mjs|\bF\d{2}[a-z]?\b/.test(visible), (visible.match(/.{0,20}(Skill|bid-intake|check-conditions|check-rows|spec-to-rules|\.mjs|\bF\d{2}[a-z]?\b).{0,20}/) || [])[0]);
 });
 
 test('段階の表示が 1 条件を入れる → 2 結果を見る → 3 書類を確かめる の順にある', () => {
