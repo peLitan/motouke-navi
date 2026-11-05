@@ -739,6 +739,18 @@ function setIntakeStatus(doc, text, lines = []) {
   const out = doc.getElementById('intake-result');
   if (out) out.innerHTML = lines.length ? '<ul>' + lines.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
 }
+// 読んでいる途中のファイル(F52a)。読み終わる前に押された「確認する」は、読み終わってから動かす。
+// 先に動かすと、空の欄で結果が出て、知らせが出ないまま欄だけがあとから入る
+let intakeReading = null;
+const afterIntake = (f) => (intakeReading ? intakeReading.then(f) : f());
+async function readIntake(doc, f) {
+  if (f.size > INTAKE_MAX_BYTES) { setIntakeStatus(doc, '読み込めませんでした: ファイルが大きすぎます(1MB まで)。入力欄はそのままです。'); return; }
+  try {
+    loadIntakeFile(doc, await f.text());
+  } catch {
+    setIntakeStatus(doc, '読み込めませんでした: ファイルを読めません。入力欄はそのままです。');
+  }
+}
 export function loadIntakeFile(doc, text) {
   let t;
   try {
@@ -858,8 +870,8 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (el) initialResult.set(id, el.innerHTML);
     }
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
-    on('bid-run', () => { runBid(doc); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); openConfirm(doc); });
-    on('confirm-go', () => confirmGo(doc));
+    on('bid-run', () => afterIntake(() => { runBid(doc); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); openConfirm(doc); }));
+    on('confirm-go', () => afterIntake(() => confirmGo(doc)));
     on('confirm-back', () => openPanel(doc, 1));
     for (const r of CONFIRM_ROWS) on('confirm-change-' + r.key, () => changeField(doc, r.key));
     on('sample-load', () => loadSample(doc));
@@ -911,12 +923,14 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       rulesFile.value = '';
     });
     const intakeFile = doc.getElementById('intake-load');
-    if (intakeFile) intakeFile.addEventListener('change', async () => {
+    if (intakeFile) intakeFile.addEventListener('change', () => {
       const f = intakeFile.files && intakeFile.files[0];
       if (!f) return;
-      if (f.size > INTAKE_MAX_BYTES) setIntakeStatus(doc, '読み込めませんでした: ファイルが大きすぎます(1MB まで)。入力欄はそのままです。');
-      else loadIntakeFile(doc, await f.text());
-      intakeFile.value = '';
+      const reading = (intakeReading ?? Promise.resolve()).then(() => readIntake(doc, f)).then(() => {
+        intakeFile.value = '';
+        if (intakeReading === reading) intakeReading = null;
+      });
+      intakeReading = reading;
     });
     on('plan-run', () => runPlanCheck(doc));
     on('plan-csv-btn', () => exportPlanCsv(doc));
