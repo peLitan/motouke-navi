@@ -160,6 +160,59 @@ test('公告: 画面で読み込んだあとも確認すると確かめの画面
   assert.match(value(page, 'license'), /未回答/);
 });
 
+// F65a: 読み込んだときの知らせの予定価格の注意は、請負代金の欄に値が入るときだけ出す。
+// 値なしは、予定価格を確かめが要るとして欄に入れなかった条件の形(撮る公告の予行で見つかった形)
+const NO_AMOUNT = JSON.stringify({
+  kind: 'bid-intake',
+  source: { title: '架空の公告' },
+  rows: [
+    { key: 'orderer-name', label: '発注者', status: '拾えた', quote: '発注者 架空町長' },
+    { key: 'work-class', label: '工事の種類', status: '拾えた', quote: '工事の種類 土木一式工事' },
+    { key: 'budget', label: '予定価格', status: '確かめが要る', quote: '', flags: ['書いていないとされたが、語がある'] },
+  ],
+  form: { orderer: 'public', 'work-type': 'other' },
+  formSkipped: [{ id: 'contract-amount', label: '請負代金の見込み', reason: '確かめが要る' }],
+});
+const STATUS_TAIL = '原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。';
+async function readIntake(page, name, text) {
+  page.el('intake-load').files = [{ name, size: text.length, text: async () => text }];
+  await page.set('intake-load', '');
+  await new Promise((r) => setImmediate(r));
+}
+async function intakePage() {
+  const page = runPage();
+  await page.click('entry-intake');
+  return page;
+}
+
+test('F65a: 請負代金の欄の値が無い条件は、知らせに予定価格の注意を出さず、残りの文は同じ', async () => {
+  const page = await intakePage();
+  await readIntake(page, '条件.json', NO_AMOUNT);
+  assert.equal(page.el('intake-status').textContent, '条件.json を読みました。「架空の公告」から 2 欄を入れました。' + STATUS_TAIL);
+  assert.equal(page.el('contract-amount').value, '');
+  await page.click('bid-run');
+  assert.doesNotMatch(value(page, 'contract-amount'), /上限の見込み/);
+});
+
+test('F65a: 請負代金の欄の値がある条件は、知らせに今までと同じ文を出し、確かめの画面の注記も今のまま', async () => {
+  const page = await intakePage();
+  await readIntake(page, '条件.json', INTAKE);
+  assert.equal(page.el('intake-status').textContent, '条件.json を読みました。「架空の公告」から 3 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。' + STATUS_TAIL);
+  assert.equal(page.el('contract-amount').value, '82500000');
+  await page.click('bid-run');
+  assert.match(value(page, 'contract-amount'), /予定価格は上限の見込みで、請負代金そのものではありません。/);
+});
+
+test('F65a: 続けて読むと、知らせはそのとき読んだ条件で決まる', async () => {
+  const page = await intakePage();
+  await readIntake(page, '値なし.json', NO_AMOUNT);
+  assert.doesNotMatch(page.text('intake-status'), /上限の見込み/);
+  await readIntake(page, '値あり.json', INTAKE);
+  assert.match(page.text('intake-status'), /^値あり\.json を読みました。.*予定価格は上限の見込み/);
+  await readIntake(page, '値なし.json', NO_AMOUNT);
+  assert.doesNotMatch(page.text('intake-status'), /上限の見込み/);
+});
+
 test('抜き書きの文は HTML にせず、長い文は切る', () => {
   const r = { key: 'orderer', text: '公共', state: 'set', source: '公告', estimated: true, quote: '<img src=x>' + 'あ'.repeat(100) };
   const h = renderConfirmRow(r);

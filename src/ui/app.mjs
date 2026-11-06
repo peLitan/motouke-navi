@@ -794,7 +794,9 @@ export function loadIntakeFile(doc, text, name) {
   }
   const filled = t.participation ? [...Object.keys(t.form), 'participation-conditions'] : Object.keys(t.form);
   fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, filled) };
-  setIntakeStatus(doc, (typeof name === 'string' ? name + ' を読みました。' : '') + '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
+  // 予定価格の注意は、請負代金の欄へ値を入れたときだけ(F65a)。入れていないのに言うと、どの値の話か分からない
+  const amountNote = Object.hasOwn(t.form, 'contract-amount') ? '予定価格は上限の見込みで、請負代金そのものではありません。' : '';
+  setIntakeStatus(doc, (typeof name === 'string' ? name + ' を読みました。' : '') + '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。' + amountNote + '原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
   return true;
 }
 
