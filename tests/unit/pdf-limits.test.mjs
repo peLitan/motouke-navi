@@ -203,9 +203,10 @@ test('普通の RunLength と ASCII85 はそのまま読める', async () => {
   const r1 = await readPdf(new Uint8Array(onePage(stream(rl, { dict: '/Filter /RunLengthDecode' }))));
   assert.equal(r1.text, 'fictional works');
   // 同じ字の並び(257 - n 回)も戻る
-  const spaced = Buffer.concat([Buffer.from([254, 0x20]), rl]);
-  const r2 = await readPdf(new Uint8Array(onePage(stream(spaced, { dict: '/Filter /RunLengthDecode' }))));
-  assert.equal(r2.text, 'fictional works');
+  const literal = (t) => Buffer.concat([...latin(t)].map((c) => Buffer.from([0, c])));
+  const repeated = Buffer.concat([literal('BT /F1 12 Tf 72 700 Td ('), Buffer.from([252, 0x61]), literal(') Tj ET'), Buffer.from([128])]);
+  const r2 = await readPdf(new Uint8Array(onePage(stream(repeated, { dict: '/Filter /RunLengthDecode' }))));
+  assert.equal(r2.text, 'aaaaa');
   const r3 = await readPdf(new Uint8Array(onePage(stream(a85Encode(latin(TEXT)), { dict: '/Filter /ASCII85Decode' }))));
   assert.equal(r3.text, 'fictional works');
 });
@@ -260,6 +261,20 @@ test('経過時間の上限を越えると too-big', async () => {
   const pdf = onePage(stream(Buffer.from('q Q '.repeat(2 * MB))));
   assert.equal((await guarded(pdf, { ms: 1 })).status, 'too-big');
   assert.equal((await guarded(pdf)).status, 'no-text');
+});
+
+// 目次が無いので、時計が効かなければ読み終えて broken になる
+test('経過時間の上限は、頁を読む前の obj の並びでも効く', async () => {
+  const pdf = Buffer.concat([latin('%PDF-1.7\n'), latin('1 0 obj 1 endobj\n'.repeat(1000000)), latin('%%EOF\n')]);
+  assert.equal((await guarded(pdf, { ms: 1 })).status, 'too-big');
+  assert.equal((await guarded(pdf)).status, 'broken');
+});
+
+test('経過時間の上限は、ObjStm の組ごとの読みでも効く', async () => {
+  const head = '9 0 '.repeat(200);
+  const pdf = build([stream(`${head}[${'1 '.repeat(50000)}]`, { dict: `/Type /ObjStm /N 200 /First ${head.length}` })]);
+  assert.equal((await guarded(pdf, { ms: 1, values: 1e12 })).status, 'too-big');
+  assert.equal((await guarded(pdf, { values: 1e12 })).status, 'broken');
 });
 
 test('too-big は途中の文を返さない', async () => {
