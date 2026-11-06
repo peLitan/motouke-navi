@@ -1,4 +1,4 @@
-// ファイルをドラッグして置いて読み込む(F54c)の試験。runPage は使わず、偽物の要素で組む。値はすべて架空
+// ファイルをドラッグして置いて読み込む(F54c・F54d)の試験。runPage は使わず、偽物の要素で組む。値はすべて架空
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,6 +16,8 @@ function el(id, attrs = {}, parentNode = null) {
   const listeners = {};
   return {
     id, parentNode, value: '', textContent: '', innerHTML: '', hidden: false, checked: false, files: [],
+    open: false,
+    setAttribute() {}, removeAttribute() {},
     getAttribute: (k) => attrs[k] ?? null,
     classList: { add: (c) => set.add(c), remove: (c) => set.delete(c), has: (c) => set.has(c) },
     listeners,
@@ -33,6 +35,10 @@ function fakeDoc() {
     docListeners,
   };
   doc.getElementById('sample-banner').hidden = true;
+  doc.getElementById('other-tools');
+  for (const [id, label] of [['intake-more', '公告から拾った条件を読み込む'], ['rules-more', '直轄とは・例の違い・自分の表を読み込む']]) {
+    doc.getElementById(id).querySelector = (sel) => (sel === 'summary' ? { textContent: label } : null);
+  }
   const port = (id, accept, label) => {
     const frame = el('', { 'data-drop': id });
     const hint = el(''); const lab = el(''); lab.textContent = label;
@@ -46,8 +52,17 @@ function fakeDoc() {
     'rules-load': port('rules-load', JSON_ACCEPT, '自分の発注者の表を読み込む(発注者の仕様書から作った行のファイル .json)'),
     'ledger-file': port('ledger-file', XLSX_ACCEPT, '台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)'),
     'dict-import': port('dict-import', JSON_ACCEPT, '辞書を読み込む'),
+    'mask-file': port('mask-file', '.txt,.docx,.xlsx,text/plain', 'ファイルから読む(.txt・.docx・.xlsx)'),
+    'map-import': port('map-import', JSON_ACCEPT, '対応表を読み込む'),
+    'ai-load': port('ai-load', JSON_ACCEPT, 'AI の候補を読み込む'),
   };
+  doc.tile = el('entry-intake', { 'data-drop': 'intake-load' });
+  showStep(doc, 'entry');
   return doc;
+}
+// 今見えている画面だけ hidden を外す
+function showStep(doc, shown) {
+  for (const id of ['entry', 'panel-confirm', 'panel-1', 'panel-2', 'panel-3']) doc.getElementById(id).hidden = id !== shown;
 }
 const text = (name, body) => ({ name, size: body.length, text: async () => body });
 const bytesFile = (name, bytes) => ({ name, size: bytes.length, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
@@ -188,10 +203,187 @@ test('dropPortName: 括弧の前を取り、読む動きの語を外す', () => 
   assert.equal(dropPortName(undefined), '');
 });
 
-test('まだつないでいない枠に置くと、読まないことを知らせる', async () => {
+const DICT = JSON.stringify({ format: 'mask-dict', version: 1, terms: [{ word: '架空一郎', kind: 'person' }] });
+const MAP = JSON.stringify({ format: 'mask-map', version: 1, entries: [{ token: '〔人名1〕', original: '架空二郎', kind: 'person' }], terms: [] });
+const AI = JSON.stringify({ format: 'ai-candidates', candidates: [{ message: '架空の指摘', basis: '架空の根拠' }] });
+
+test('(F54d-1) 残り4つの口も、置くと読み、知らせにファイル名が入る', async () => {
   const doc = fakeDoc();
-  await handleFileDrop(doc, dropEv(doc.frames['dict-import'], [text('辞書.json', '{}')]));
-  assert.match(status(doc, 'dict-file-status'), /^読み込んでいません。/);
+  const on = async (id, file) => { await handleFileDrop(doc, dropEv(doc.frames[id], [file])); };
+  await on('dict-import', text('置換の辞書.json', DICT));
+  assert.match(status(doc, 'dict-file-status'), /^置換の辞書\.json を読みました\(読んだ語 1・/);
+  await on('map-import', text('置換の対応表.json', MAP));
+  assert.match(status(doc, 'map-status'), /^置換の対応表\.json を読みました\(対応表 1 行・/);
+  await on('ai-load', text('候補.json', AI));
+  assert.match(status(doc, 'ai-status'), /^候補\.json を読みました\(AI の候補 1 件\)。/);
+  await on('mask-file', bytesFile('現場の文.txt', new TextEncoder().encode('架空の文')));
+  assert.match(status(doc, 'mask-file-status'), /^「現場の文\.txt」から文字を取り出しました/);
+  assert.equal(doc.getElementById('mask-input').value, '架空の文');
+});
+
+test('(F54d-1b) ボタンで選んでも、同じ知らせになる。違う種類の文も同じで、選び直せるよう value を空にする', async () => {
+  const doc = startedDoc();
+  const dict = await change(doc, 'dict-import', text('置換の辞書.json', DICT));
+  assert.match(status(doc, 'dict-file-status'), /^置換の辞書\.json を読みました\(/);
+  assert.equal(dict.value, '');
+  await change(doc, 'map-import', text('置換の対応表.json', MAP));
+  assert.match(status(doc, 'map-status'), /^置換の対応表\.json を読みました\(/);
+  await change(doc, 'ai-load', text('候補.json', AI));
+  assert.match(status(doc, 'ai-status'), /^候補\.json を読みました\(/);
+  await change(doc, 'mask-file', bytesFile('現場の文.txt', new TextEncoder().encode('架空の文')));
+  assert.match(status(doc, 'mask-file-status'), /現場の文\.txt/);
+  await change(doc, 'mask-file', text('写真.png', 'x'));
+  assert.equal(status(doc, 'mask-file-status'), '選んだファイルは .txt・.docx・.xlsx にしてください(今のファイル: 写真.png)。');
+});
+
+test('(F54d-1c) 名前の無い File は、今までの知らせのまま読み、読めないファイルは理由を出す', async () => {
+  const doc = startedDoc();
+  await change(doc, 'dict-import', { size: DICT.length, text: async () => DICT });
+  assert.match(status(doc, 'dict-file-status'), /^辞書を読み込みました\(/);
+  await change(doc, 'map-import', { size: MAP.length, text: async () => MAP });
+  assert.match(status(doc, 'map-status'), /^対応表を読み込みました\(/);
+  await change(doc, 'ai-load', { size: AI.length, text: async () => AI });
+  assert.match(status(doc, 'ai-status'), /^AI の候補を 1 件読み込みました。/);
+  const broken = { name: 'a.json', size: 1, text: async () => { throw new Error('x'); } };
+  for (const [id, st] of [['dict-import', 'dict-file-status'], ['map-import', 'map-status'], ['ai-load', 'ai-status']]) {
+    await handleFileDrop(doc, dropEv(doc.frames[id], [broken]));
+    assert.match(status(doc, st), /^読み込めませんでした: ファイルを読めません。/);
+  }
+  await handleFileDrop(doc, dropEv(doc.frames['dict-import'], [{ name: 'a.json', size: 2 * 1024 * 1024, text: async () => DICT }]));
+  assert.match(status(doc, 'dict-file-status'), /大きすぎます\(1MB まで\)/);
+});
+
+test('(F54d-2) タイルに .json を置くと、段1へ移って折りたたみを開き、読む', async () => {
+  const doc = fakeDoc();
+  await handleFileDrop(doc, dropEv(doc.tile, [text('拾った条件.json', INTAKE)]));
+  assert.equal(doc.getElementById('entry').hidden, true);
+  assert.equal(doc.getElementById('panel-1').hidden, false);
+  assert.equal(doc.getElementById('intake-more').open, true);
+  assert.ok(status(doc, 'intake-status').startsWith('拾った条件.json を読みました。'));
+  assert.equal(doc.getElementById('contract-amount').value, '100');
+  assert.equal(status(doc, 'drop-status'), '');
+});
+
+test('(F54d-2b) タイルに違う種類を置くと入口に留まり、.pdf は専用の文を出す', async () => {
+  const doc = fakeDoc();
+  await handleFileDrop(doc, dropEv(doc.tile, [text('公告.pdf', 'x')]));
+  assert.equal(doc.getElementById('entry').hidden, false);
+  assert.equal(doc.getElementById('intake-more').open, false);
+  assert.match(status(doc, 'drop-status'), /^公告の PDF はこの画面では読めません。パソコンの Claude Code\(Skill bid-intake\)で/);
+  assert.equal(status(doc, 'intake-status'), '');
+  await handleFileDrop(doc, dropEv(doc.tile, [text('台帳.xlsx', 'x')]));
+  assert.equal(status(doc, 'drop-status'), '選んだファイルは .json にしてください(今のファイル: 台帳.xlsx)。');
+  assert.equal(doc.getElementById('entry').hidden, false);
+  await handleFileDrop(doc, dropEv(doc.tile, [text('a.json', INTAKE), text('b.json', INTAKE)]));
+  assert.equal(status(doc, 'drop-status'), '一度に読めるファイルは1つです。どれも読み込んでいません。');
+  assert.equal(doc.getElementById('entry').hidden, false);
+  // 段1の枠でも同じ文。ほかの口の PDF は違う種類の文のまま
+  await handleFileDrop(doc, dropEv(doc.frames['intake-load'], [text('公告.pdf', 'x')]));
+  assert.match(status(doc, 'intake-status'), /^公告の PDF はこの画面では読めません。/);
+  await handleFileDrop(doc, dropEv(doc.frames['rules-load'], [text('公告.pdf', 'x')]));
+  assert.equal(status(doc, 'rules-status'), '選んだファイルは .json にしてください(今のファイル: 公告.pdf)。');
+});
+
+test('(F54d-3) 枠の外に置くと、今見えている段の欄に書き、見える所に出す', async () => {
+  const outside = (doc) => handleFileDrop(doc, dropEv(el(''), [text('a.json', INTAKE)]));
+  // 段3
+  let doc = fakeDoc();
+  showStep(doc, 'panel-3');
+  const body = doc.getElementById('ledger-input');
+  body.value = '元の文';
+  let moved = null;
+  doc.getElementById('ledger-file-status').scrollIntoView = (o) => { moved = o; };
+  await outside(doc);
+  assert.equal(status(doc, 'ledger-file-status'), '読み込んでいません。ファイルは点線の枠にドラッグしてください。この段の枠: 台帳の Excel。');
+  assert.deepEqual(moved, { block: 'nearest' });
+  assert.equal(status(doc, 'drop-status'), '');
+  assert.equal(body.value, '元の文');
+  // 入口
+  doc = fakeDoc();
+  await outside(doc);
+  assert.match(status(doc, 'drop-status'), /^読み込んでいません。条件のファイル\(\.json\)は「公告から拾った条件を読み込む」のタイルに/);
+  // 段1: scrollIntoView の無い要素でも落ちない
+  doc = fakeDoc();
+  showStep(doc, 'panel-1');
+  await outside(doc);
+  assert.equal(doc.getElementById('intake-more').open, true);
+  assert.equal(status(doc, 'intake-status'), '読み込んでいません。ファイルは点線の枠にドラッグしてください。この段の枠: 拾った条件のファイル(.json)。「公告から拾った条件を読み込む」を開きました。');
+  assert.equal(status(doc, 'drop-status'), '');
+  // 段2。もう開いている折りたたみは「開きました」と言わない
+  doc = fakeDoc();
+  showStep(doc, 'panel-2');
+  await outside(doc);
+  assert.equal(doc.getElementById('rules-more').open, true);
+  assert.equal(status(doc, 'rules-status'), '読み込んでいません。ファイルは点線の枠にドラッグしてください。この段の枠: 自分の発注者の表(「直轄とは・例の違い・自分の表を読み込む」を開きました)。');
+  await outside(doc);
+  assert.equal(status(doc, 'rules-status'), '読み込んでいません。ファイルは点線の枠にドラッグしてください。この段の枠: 自分の発注者の表。');
+  // 別の道具が開いているとき
+  doc = fakeDoc();
+  showStep(doc, 'panel-3');
+  doc.getElementById('other-tools').open = true;
+  await outside(doc);
+  assert.equal(status(doc, 'dict-file-status'), '読み込んでいません。ファイルは点線の枠にドラッグしてください。この道具の枠: 辞書・ファイル・対応表・AI の候補。');
+  assert.equal(status(doc, 'ledger-file-status'), '');
+  // 入力の確かめの画面には枠が無い
+  doc = fakeDoc();
+  showStep(doc, 'panel-confirm');
+  await outside(doc);
+  assert.match(status(doc, 'drop-status'), /^読み込んでいません。この画面にはファイルの枠がありません。/);
+});
+
+test('(F54d-3b) 次に置いたとき、入口の欄の古い知らせを残さない', async () => {
+  const doc = fakeDoc();
+  await handleFileDrop(doc, dropEv(el(''), [text('a.json', INTAKE)]));
+  assert.notEqual(status(doc, 'drop-status'), '');
+  await handleFileDrop(doc, dropEv(doc.tile, [text('拾った条件.json', INTAKE)]));
+  assert.equal(status(doc, 'drop-status'), '');
+});
+
+test('(F54d-4) 違う口の .json は読まず、行き先の段と折りたたみの名前を言う', async () => {
+  const doc = fakeDoc();
+  const put = (id, file) => handleFileDrop(doc, dropEv(doc.frames[id], [file]));
+  await put('rules-load', text('拾った条件.json', INTAKE));
+  assert.equal(status(doc, 'rules-status'), 'これは公告から拾った条件のファイルです。段1「条件を入れる」の「公告から拾った条件を読み込む」を開き、その枠にドラッグしてください。');
+  await put('intake-load', text('県の表.json', RULES));
+  assert.match(status(doc, 'intake-status'), /^これは発注者の表のファイルです。段2「結果を見る」の「直轄とは・例の違い・自分の表を読み込む」を開き/);
+  assert.equal(doc.getElementById('contract-amount').value, '');
+  await put('dict-import', text('置換の対応表.json', MAP));
+  assert.match(status(doc, 'dict-file-status'), /^これは対応表のファイルです。「ここからは別の道具」を開き、「対応表を読み込む」の枠に/);
+  await put('map-import', text('置換の辞書.json', '\uFEFF' + DICT));
+  assert.match(status(doc, 'map-status'), /^これは辞書のファイルです。/);
+  await put('intake-load', text('候補.json', AI));
+  assert.match(status(doc, 'intake-status'), /^これは AI の候補のファイルです。/);
+  // 中身で分からないものは、今の誤りの文のまま
+  await put('ai-load', text('別物.json', '{}'));
+  assert.equal(status(doc, 'ai-status'), '読み込めませんでした: このファイルは AI の候補の形ではありません。');
+});
+
+test('(F54d-5) 画面の文に作る側の語を出さない。固定の文は仕様のとおり', async () => {
+  assert.ok(!html.includes('(source.'));
+  assert.ok(!html.includes('format が違います'));
+  const doc = fakeDoc();
+  await handleFileDrop(doc, dropEv(doc.frames['rules-load'], [text('表.json', JSON.stringify({ source: { publisher: '架空県', title: '架空の仕様書' }, rows: [{ kind: 'schedule' }] }))]));
+  assert.equal(status(doc, 'rules-status'), '読み込めませんでした: 表のファイルに出典の版がありません(発注者・題名・版が要ります)。今の表はそのままです。');
+});
+
+test('(F54d-6) タイルは枠の印を持ち、破線を当てず、案内の1行は DOM の文にしない', () => {
+  assert.ok(html.includes('<button type="button" id="entry-intake" class="entry-button drop-tile" data-drop="intake-load">'));
+  const tile = html.slice(html.indexOf('id="entry-intake"'), html.indexOf('</button>', html.indexOf('id="entry-intake"')));
+  assert.ok(!tile.includes('ドラッグ'));
+  const fine = shell.slice(shell.indexOf('@media (any-pointer: fine)'), shell.indexOf('@media print'));
+  assert.ok(fine.includes('.entry-button.drop-tile::after { content: "条件のファイル(.json)をここにドラッグして置いても読み込めます"; content: "条件のファイル(.json)をここにドラッグして置いても読み込めます" / "";'));
+  assert.ok(fine.includes('.entry-button.drop-over { background: var(--primary-bg); }'));
+  assert.ok(shell.slice(shell.indexOf('@media print')).includes('.entry-button.drop-tile::after { content: none; }'));
+  assert.ok(!html.includes('PENDING_PORTS'));
+});
+
+test('(F54d-6b) タイルの上のドラッグは地だけ変え、ほかの枠の .drop-ready は付けない', async () => {
+  const doc = fakeDoc();
+  handleDragMove(doc, dropEv(doc.tile, []));
+  assert.ok(doc.tile.classList.has('drop-over') && !doc.tile.classList.has('drop-ready'));
+  handleDragMove(doc, dropEv(el(''), []));
+  assert.ok(!doc.tile.classList.has('drop-over'));
+  await handleFileDrop(doc, dropEv(doc.frames['rules-load'], []));
 });
 
 // ボタンで選ぶ道: startApp が input に付けた change を動かす

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-afuWqTaLESzTaO84iXw/UEVPUWbXfbd30elsgyxATzw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-vKJ7TKJQSHxDY8BAPV0nQ8T9+PGCABURuSe1iy+ebBQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -321,6 +321,8 @@
     .drop-hint { display: block; color: var(--ink-2); }
     .drop.drop-ready { border-style: solid; }
     .drop.drop-over { border-color: var(--primary); background: var(--primary-bg); }
+    .entry-button.drop-tile::after { content: "条件のファイル(.json)をここにドラッグして置いても読み込めます"; content: "条件のファイル(.json)をここにドラッグして置いても読み込めます" / ""; display: block; margin: 0.5rem 0 0; font-size: 1rem; font-weight: normal; }
+    .entry-button.drop-over { background: var(--primary-bg); }
   }
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
@@ -333,6 +335,7 @@
     .phone-only { display: none !important; }
     .drop-hint { display: none !important; }
     .drop { border: none; padding: 0; }
+    .entry-button.drop-tile::after { content: none; }
     p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status) { display: none !important; }
     /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
     #panel-1[hidden], #panel-2[hidden], #panel-3[hidden] { display: block; }
@@ -436,7 +439,7 @@
 <div class="entry-choices">
 <button type="button" id="sample-load" class="entry-button sample-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 4l3.6 7.6 8.4 1.2-6 5.9 1.4 8.3-7.4-4-7.4 4 1.4-8.3-6-5.9 8.4-1.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">まず見本で試す</span><span class="btn-sub">初めての方はこちら。架空の工事の見本を読み込む</span></button>
 <button type="button" id="entry-bid" class="entry-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M6 26l1.5-6L22 5.5l4.5 4.5L12 24.5zM19 8.5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">条件を入れる</span><span class="btn-sub">工事の条件を手で入れる</span></button>
-<button type="button" id="entry-intake" class="entry-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4h11l6 6v18H8zM19 4v6h6M16.5 14v9M12.5 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">公告から拾った条件を読み込む</span><span class="btn-sub">公告を読んだ AI がまとめた条件のファイルを選ぶ</span></button>
+<button type="button" id="entry-intake" class="entry-button drop-tile" data-drop="intake-load"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4h11l6 6v18H8zM19 4v6h6M16.5 14v9M12.5 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">公告から拾った条件を読み込む</span><span class="btn-sub">公告を読んだ AI がまとめた条件のファイルを選ぶ</span></button>
 </div>
 <p class="entry-aside"><button type="button" id="entry-awarded" class="entry-link">もう受注した方は段取りの一覧へ</button></p>
 </div>
@@ -2216,6 +2219,1114 @@ function renderSummary(state = {}) {
 }
 
 return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
+})();
+__m["src/mask/company-types.mjs"] = (function () {
+// 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
+// 語を足すときは、このファイルの一覧に足す(規則のファイルは直さない)。出典の無い語は「慣用」の一覧に分けて置く。
+
+// ---- 法人の種類(法人格) ----
+// 出典: 国税庁 法人番号公表サイト「法人種別」 https://www.houjin-bangou.nta.go.jp/documents/k-resource-dl-ver4.pdf
+//       法務局「商業・法人登記の申請書様式」 https://houmukyoku.moj.go.jp/homu/COMMERCE_11-1.html
+// 「医療法人社団」「医療法人財団」は医療法人の名前の書き方(社団・財団)。「NPO法人」は特定非営利活動法人の通称。「協同組合」は事業協同組合などの名前に付く形
+const CORPORATE_TYPES = [
+  '株式会社', '有限会社', '合名会社', '合資会社', '合同会社',
+  '一般社団法人', '一般財団法人', '公益社団法人', '公益財団法人',
+  '特定非営利活動法人', 'NPO法人', 'ＮＰＯ法人',
+  '医療法人社団', '医療法人財団', '医療法人', '社会医療法人', '社会福祉法人', '学校法人', '宗教法人',
+  '独立行政法人', '地方独立行政法人', '国立大学法人', '公立大学法人',
+  '事業協同組合', '農業協同組合', '生活協同組合', '協同組合', '農事組合法人', '管理組合法人',
+  '有限責任事業組合', '投資事業有限責任組合',
+  '弁護士法人', '税理士法人', '司法書士法人', '行政書士法人', '社会保険労務士法人', '監査法人', '特許業務法人', '土地家屋調査士法人',
+  '相互会社', '更生保護法人',
+];
+
+// ---- 法人の種類の略し方(慣用。公式の一覧は無い) ----
+// 括弧(半角・全角)の中に書く。「(株)」「（一社）」など
+const CORPORATE_ABBREVIATIONS = ['株', '有', '合', '医', '福', '学', '宗', '一社', '一財', '公社', '公財', '特非', '独'];
+// 上のうち、様式の欄の印と同じ形になる略し方(「資格(有)」「指導医(医)」「学籍(学)番号」)。
+// 名前の字が続くだけでは会社名と決めない。決め方は rules-company.mjs の abbrBefore・abbrAfter
+const AMBIGUOUS_ABBREVIATIONS = ['有', '合', '医', '福', '学', '宗', '独'];
+
+// ---- 囲み文字 ----
+// 出典: Unicode「Enclosed CJK Letters and Months」 https://www.unicode.org/Public/18.0.0/charts/PDF/U3200.pdf
+//       「CJK Compatibility」(㍿ U+337F) https://www.unicode.org/charts/PDF/U3300.pdf
+// 囲み文字は NFKC で正規化すると「(株)」「株」「株式会社」などになる。ここでは字の一覧を手で書かず、
+// U+3200〜U+33FF の字を NFKC にして、下の字(括弧を外した形)か CORPORATE_TYPES の語になる字を拾う(rules-company.mjs)。
+// 「㈹」(代表)は法人の種類ではないので入れない
+const ENCLOSED_CORPORATE_CHARS = ['株', '有', '社', '名', '特', '財', '学', '監', '企', '資', '協', '医', '宗', '労'];
+
+// ---- 法令で名前が決まっている施設 ----
+// 学校教育法 第1条 https://laws.e-gov.go.jp/law/322AC0000000026
+// 医療法 第1条の5 https://laws.e-gov.go.jp/law/323AC0000000205
+// 老人福祉法 第5条の3 https://laws.e-gov.go.jp/law/338AC0000000133
+// 介護保険法 第8条 https://laws.e-gov.go.jp/law/409AC0000000123
+const FACILITY_SUFFIXES_LAW = [
+  '幼稚園', '小学校', '中学校', '義務教育学校', '高等学校', '中等教育学校', '特別支援学校', '大学', '高等専門学校',
+  '病院', '診療所',
+  '老人デイサービスセンター', '養護老人ホーム', '特別養護老人ホーム', '軽費老人ホーム', '老人福祉センター',
+  '介護老人保健施設', '介護医療院',
+];
+
+// ---- 慣用の語尾(法令の定義は無い) ----
+// 法人格の無い会社・団体・役所の名前の終わりに付く語
+const ORG_SUFFIXES_CUSTOM = [
+  '組', '建設', '工務店', '商店', '商会', '製作所', '工業', '興業', '産業',
+  '事務所', '設計事務所', '法律事務所', '会計事務所',
+  'クリニック', '医院', '歯科', '薬局', '訪問看護ステーション',
+  '協会', '連合会', '組合',
+  '役場', '市役所', '区役所', '町役場', '村役場', '県庁',
+  '自治会', '町内会',
+  'デイサービスセンター', 'グループホーム',
+];
+
+// ---- 種類の語が名前の前に来る施設(「特別養護老人ホームさくらの里」「グループホーム甲野」) ----
+// 法令の語は FACILITY_SUFFIXES_LAW の老人福祉法・介護保険法の語。残りは慣用
+const FACILITY_HEAD_WORDS = [
+  '老人デイサービスセンター', '養護老人ホーム', '特別養護老人ホーム', '軽費老人ホーム', '老人福祉センター', '介護老人保健施設', '介護医療院',
+  'デイサービスセンター', 'デイサービス', 'グループホーム', '有料老人ホーム', '老人ホーム', '老人保健施設', 'ケアハウス',
+];
+// 種類の語のすぐ後ろに来ても名前ではない語(この語で始まれば取らない)。姓の頭にもなる1字の語は FACILITY_HEAD_TAIL_CHARS に分ける
+const FACILITY_HEAD_TAIL_WORDS = [
+  '利用', '入所', '入居', '退所', '退居', '通所', '職員', '施設', '事業', '運営', '経営', '開設', '新築', '増築', '改築', '改修', '建設', '工事', '整備', '計画',
+  '費用', '料金', '定員', '担当', '管理', '協会', '連絡', '協議', '指定', '基準', '規程', '規定', '契約', '加算', '報酬', '以外', '以上', '以下', '向け', '関係',
+  '入浴', '送迎', '食事', '嘱託', '併設', '形式', '種別', '本体', '全体', '全般', '一覧', '名簿', 'サービス', 'センター', 'ホーム',
+];
+// この1字だけなら名前ではない語
+const FACILITY_HEAD_TAIL_CHARS = ['費', '料', '代', '内', '間', '部', '課', '室', '棟', '等', '長', '側', '分', '用', '型', '系'];
+// 語尾が「園」などの短い施設名は、一般の語が多いので、次の法人の名前のすぐ後ろ(空白のあと)だけで取る(「社会福祉法人みほん会 ためし園」)
+const FACILITY_OPERATOR_TYPES = [
+  '社会福祉法人', '医療法人社団', '医療法人財団', '医療法人', '社会医療法人', '学校法人', '宗教法人', '特定非営利活動法人', 'NPO法人', 'ＮＰＯ法人',
+  '一般社団法人', '一般財団法人', '公益社団法人', '公益財団法人',
+];
+const FACILITY_OPERATOR_ABBREVIATIONS = ['福', '医', '学', '宗', '特非', '一社', '一財', '公社', '公財'];
+const FACILITY_SHORT_SUFFIXES = ['学園', '園', '苑', '荘', '寮', 'の里', 'の郷', 'の家', 'ホーム', 'ハウス', 'センター', '館'];
+// 「園」などで終わるが施設の名前ではない語
+const FACILITY_SHORT_NON_NAMES = ['公園', '農園', '庭園', '霊園', '田園', '菜園', '動物園', '植物園', '保育園', '幼稚園', 'こども園', '老人ホーム', 'グループホーム', '遊園', '楽園', '造園', '入園', '卒園', '開園', '閉園', '本館', '別館', '新館', '旧館'];
+
+// ---- 名前の部分から除く一般の語(置き換えすぎを減らす) ----
+// 語尾の前の名前から、これらの語と数・「第」を除いて2字より短く残る語は、団体・施設の名前にしない
+// (「県立高等学校」「現場事務所」「建設産業」「第一小学校」「本組合」は置き換えない)。業界を問わず文に出る語だけを入れる
+const ORG_GENERIC_WORDS = [
+  // 設置の形・種類
+  '国立', '公立', '私立', '県立', '市立', '町立', '村立', '都立', '府立', '道立', '区立', '組合立', '総合', '大学', '短期', '附属', '付属',
+  '地域', '一般', '専門', '特定', '共同', '協同', '民間', '公共', '公益', '関係', '関連', '業界', '全国', '日本',
+  // 指し方
+  '当', '本', '同', '各', '全', '他', '前', '元', '新', '旧', '貴', '弊', '御', '上記', '下記', '前記', '後記', '該当', '当該', '所属', '最寄り', '最寄',
+  '近隣', '近く', '地元', '自社', '他社', '自', '某',
+  // 場所・役所の区分
+  '国', '県', '市', '町', '村', '都', '府', '区', '郡', '北', '南', '東', '西', '中央',
+  // 事務所・組合などの前に来る、名前ではない語
+  '現場', '本社', '本店', '支店', '支社', '営業所', '出張所', '工場', '設計', '建築', '法律', '会計', '税理士', '弁護士', '司法書士', '行政書士',
+  '労働', '事業', '管理', '健康保険', '保険', '共済', '取組', '仕', '番', '労務', '班', '作業', '施工', '下請', '元請', '協力',
+  // 産業・工業・建設の前に来る、名前ではない語
+  '建設', '土木', '住宅', '道路', '公共事業', '農業', '林業', '漁業', '水産', '製造', '観光', '情報', '通信', '自動車', '化学', '重', '軽',
+  '機械', '電気', '電子', '食品', '繊維', '鉄鋼', '第一次', '第二次', '第三次', '地場', '基幹', '先端', '新規', '中小', '大手', '小規模',
+  '大規模', '国内', '海外', '工事', '整備', '開発', '再開発',
+  // 医療・介護の前に来る、名前ではない語
+  '医療', '歯科', '調剤', '保健', '介護', '老人', '福祉', '小児', '内科', '外科', '眼科', '皮膚科', '整形外科', '在宅', '訪問', '看護',
+];
+
+// 語尾の規則(法人格の無い名前)のときだけ、名前の部分から除く語。法人格のある名前(「ダム株式会社」)には使わない。
+// 1字の語(「橋」「局」)は入れない(「高橋建設」の名前まで消えて、漏れになる)
+const ORG_SUFFIX_GENERIC_WORDS = [
+  // 工事・事業の対象(「鉄道建設」「学校建設」)
+  '橋梁', '鉄道', 'ダム', '学校', '校舎', 'トンネル', '河川', '港湾', '空港', '発電所', '発電', '上水道', '下水道', '水道', '国道', '県道', '市道', '高速道路',
+  // 産業の言い方(「成長産業」「石油化学工業」)
+  '石油', '成長', '衰退', '造船', '製薬', '製鉄', '精密', '航空', '半導体',
+  // 役所・立場の言い方(「監督員事務所」「振興局事務所」)
+  '監督員', '監督職員', '監督', '振興局', '整備局', '地方', '発注者', '受注者',
+  // 診療の種類(「矯正歯科」「動物病院」)
+  '矯正', '審美', '予防', '動物', '救急', '療養', '精神',
+  // 施設の種類の言い方(「認知症グループホーム」「高齢者デイサービスセンター」)
+  '認知症', '高齢者', '障害者', '障がい者', '通所', '併設', '共同生活',
+];
+
+// 語尾が「県庁」のとき、前の語が実在の県の名前なら一般の言い方として扱う(「和歌山県庁」。「ためし県庁」は置き換える)
+const PREFECTURE_NAMES_KEN = [
+  '青森', '岩手', '宮城', '秋田', '山形', '福島', '茨城', '栃木', '群馬', '埼玉', '千葉', '神奈川', '新潟', '富山', '石川', '福井', '山梨', '長野', '岐阜', '静岡', '愛知',
+  '三重', '滋賀', '兵庫', '奈良', '和歌山', '鳥取', '島根', '岡山', '広島', '山口', '徳島', '香川', '愛媛', '高知', '福岡', '佐賀', '長崎', '熊本', '大分', '宮崎', '鹿児島', '沖縄',
+];
+
+// 法人格のすぐ後ろに来ても会社の名前ではない語(文の続きと、法人格の制度を言う語)
+const CORP_TAIL_SENTENCE_WORDS = [
+  'です', 'ですが', 'ですか', 'ですので', 'である', 'であり', 'であって', 'であった', 'であれば', 'でした', 'でない', 'ではない', 'でも', 'とは', 'には',
+  'だ', 'だった', 'か', 'かどうか', 'とする', 'とした', 'にする', 'にした', 'になる', 'になった', 'なら', 'ならば',
+];
+const CORP_TAIL_SYSTEM_WORDS = ['法律', '法令', '化', '制度', '形態', '形式', '組織', '設立', '登記', '定款', '規定', '会計基準', '会計', '通則法'];
+
+// 法人格の前に名前があるとき、その名前を欄名として扱う語(「代表者 株式会社甲野」の「代表者」を会社名にしない)
+const COMPANY_LABEL_WORDS = [
+  '会社名', '商号', '名称', '社名', '法人名', '団体名', '事業者名', '施設名', '学校名', '氏名', '宛先', '宛名', '所属', '勤務先', '取引先',
+  '発注者', '受注者', '請負者', '注文者', '元請', '下請', '代表者', '申請者', '届出者', '提出者', '事業者', '相手方', '委託先', '契約先', '甲', '乙',
+];
+
+// 法人格のあとに空白を挟んで来ても、会社の名前ではない語(「甲野建設株式会社 代表取締役」の「代表取締役」)
+const COMPANY_ROLE_WORDS = [
+  '代表取締役', '代表社員', '代表理事', '代表者', '代表', '取締役', '理事長', '理事', '社長', '会長', '専務', '常務', '支店長', '所長',
+  '御中', '殿', '様', '支店', '支社', '営業所', '本社', '本店', '工場', '事業所', '出張所', '担当', '担当者', '印',
+];
+
+// ---- 辞書に足す候補(F36b)。慣用の語で、法令の定義は無い。使う所は src/mask/company-candidates.mjs ----
+// 候補は自動で置き換えないので、語尾の一覧は置き換えの一覧(ORG_SUFFIXES_CUSTOM)より広くしてよい。ただし文の中に普通に出る語尾は入れない
+// 会社・団体の名前が値になる欄の名前(業界を問わない語)
+const CANDIDATE_FIELD_LABELS = [
+  '商号', '商号又は名称', '商号・名称', '名称又は商号', '名称・商号', '会社名', '会社名称', '社名', '法人名', '団体名', '企業名', '事業者名', '事業所名', '業者名',
+  '取引先', '取引先名', '委託先', '委託先名', '契約先', '契約相手方', '勤務先', '所属会社', '所属会社名', '受託者', '受託事業者',
+];
+// 置き換えの法人格の一覧に無い、法人の種類に近い語(前の法人の種類の旧い書き方など)。名前の前にも後ろにも付く
+const NEAR_CORPORATE_TYPES = ['社団法人', '財団法人', '企業組合', '協業組合', '国立研究開発法人'];
+// 括弧の略し方のうち、置き換えの一覧に無いもの(「(同)」は合同会社、「(資)」は合資会社)。「人数(同)」のように同上の意味でも出るが、候補は選べるので出す
+const NEAR_CORPORATE_ABBREVIATIONS = ['同', '資'];
+// 会社・団体の名前の終わりに付く、慣用の語尾(業界を問わない語)
+const CANDIDATE_SUFFIXES = [
+  '商事', '物産', '通商', '運輸', '運送', '不動産', '地所', '電機', '電鉄', '工機', '精機', '鉄工', '鉄工所', '工業所', '木材', '化成',
+  'ホールディングス', 'コーポレーション', 'カンパニー', 'コンサルタント', 'コンサルタンツ', 'コンサルティング', 'エンジニアリング', 'ソリューションズ', 'システムズ', 'リース',
+  '公社', '事業団', '振興会',
+];
+// 欄の値に来ても名前ではない語(空欄の印・指し方・表の見出しの語)
+const CANDIDATE_VALUE_STOP_WORDS = [
+  'なし', '無し', '無', '有', 'あり', '有り', '空欄', '未定', '未記入', '未記載', '記載なし', '該当なし', '該当無し', '不明', '同上', '別紙', '別途', '別添', 'その他', '上記', '下記', '当社', '自社',
+  '一覧', '一覧表', '名簿', '住所', '所在地', '本店所在地', '電話', '電話番号', '代表者', '代表者名', '代表者氏名', '担当者', '氏名', '項目', '内容', '備考', '番号', '金額', '合計', '小計', '総計', '日付', '契約日',
+  '工事', '工事名', '工事内容', '工種', '次数', '許可番号', '区分', '種別', '種類', '役割', '業種', '名称', '会社', '業者',
+];
+
+return { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, AMBIGUOUS_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, FACILITY_HEAD_WORDS, FACILITY_HEAD_TAIL_WORDS, FACILITY_HEAD_TAIL_CHARS, FACILITY_OPERATOR_TYPES, FACILITY_OPERATOR_ABBREVIATIONS, FACILITY_SHORT_SUFFIXES, FACILITY_SHORT_NON_NAMES, ORG_GENERIC_WORDS, ORG_SUFFIX_GENERIC_WORDS, PREFECTURE_NAMES_KEN, CORP_TAIL_SENTENCE_WORDS, CORP_TAIL_SYSTEM_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS, CANDIDATE_FIELD_LABELS, NEAR_CORPORATE_TYPES, NEAR_CORPORATE_ABBREVIATIONS, CANDIDATE_SUFFIXES, CANDIDATE_VALUE_STOP_WORDS };
+})();
+__m["src/mask/rules-company.mjs"] = (function () {
+// 会社・団体の名前の規則(F24a)。業界を問わない。語の一覧は src/mask/company-types.mjs(出典つき)から読む。
+// 置き換えの部品(core.mjs)が使う。規則は3つ:
+//   company-before: 名前 +(空白)+ 法人格。例「みほん建設株式会社」「甲野建設 株式会社」「甲野建設㈱」「甲野建設(株)」
+//   company-after:  法人格 +(空白)+ 名前。例「株式会社さくら」「社会福祉法人 みほん会」「㈲甲野」
+//   org-suffix:     法人格の無い団体・施設の名前(名前 + 語尾)。例「甲野工務店」「ひまわり幼稚園」「みほん町役場」。確信の弱い語として扱う
+// 名前の部分には、漢字・カタカナ・英数字のほかにひらがなも入れてよい。ただし、文の中のひらがな(「は」「として」「した」など)の所で切る:
+//   法人格の前の名前は、漢字・カタカナのすぐ後ろの「は・が・を・に・で・と・の・へ・も・や」などより前を捨てる(「当社はみほん建設株式会社」→「みほん建設株式会社」)
+//   法人格の後ろの名前は、ひらがなが続かない所の「は・が・の・と・として」などから後ろを捨てる(「株式会社さくらは」→「株式会社さくら」)
+// 法人格と名前のあいだの空白は1字(半角・全角)まで許す。空白を挟むときは、どちらの側の名前かを次のように決める:
+//   「名前 空白 法人格」は、法人格のすぐ後ろに名前の字が続かないときだけ取る。前の名前が欄名(「代表者」「会社名」など)なら取らない
+//   「法人格 空白 名前」は、法人格のすぐ前に名前の字が無いとき、または前の語が欄名のときだけ取る。後ろの語が役職など(「代表取締役」「御中」)なら取らない
+//   括弧の略し方(「(有)」など)は、様式の「有・無」の欄と紛れるので、空白を挟む形では取らない
+// 「(有)」「(医)」「(学)」など様式の印と同じ形の略し方(AMBIGUOUS_ABBREVIATIONS)は、隣に字があるだけでは会社名と決めない。
+//   前の語 + 略し方: 語が団体の語尾で終わる・前に欄名がある・後ろが「御中」「と契約」などのときだけ取る(abbrBefore)
+//   略し方 + 後ろの語: 前に字が無い・前が欄名か助詞・後ろの語が団体の語尾で終わるときだけ取る(abbrAfter)
+// 法人格だけの一般の文(「当社は株式会社です」「株式会社又は合同会社」「株式会社法」)は取らない(CORP_TAIL_*)
+// 施設の名前(F31c):
+//   org-suffix: 施設の語尾なら、名前の途中のひらがなも入れる(「さくら市立ひまわり幼稚園」「甲野ひまわり幼稚園」)。ひらがなは3字以上で、活用の字で終わらないもの(「大きな病院」「通っている幼稚園」は取らない)
+//   facility-head: 施設の種類の語 + 名前(「デイサービスセンターひまわり」「特別養護老人ホームさくらの里」)。種類の語も合わせて1つに置き換える
+//   facility-operator: 福祉・医療・学校などの法人の名前の空白の後ろの、「園」などで終わる短い名前(「社会福祉法人みほん会 ためし園」)
+
+const { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, ORG_GENERIC_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS, AMBIGUOUS_ABBREVIATIONS, ORG_SUFFIX_GENERIC_WORDS, PREFECTURE_NAMES_KEN, CORP_TAIL_SENTENCE_WORDS, CORP_TAIL_SYSTEM_WORDS, FACILITY_HEAD_WORDS, FACILITY_HEAD_TAIL_WORDS, FACILITY_HEAD_TAIL_CHARS, FACILITY_OPERATOR_TYPES, FACILITY_OPERATOR_ABBREVIATIONS, FACILITY_SHORT_SUFFIXES, FACILITY_SHORT_NON_NAMES } = __m["src/mask/company-types.mjs"];
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const alt = (words) => [...new Set(words)].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
+
+// 名前の字(ひらがなを除く)と、ひらがな
+const SOLID = '\\p{Script=Han}\\p{Script=Katakana}ー々〆ヶA-Za-z0-9Ａ-Ｚａ-ｚ０-９＆&・';
+const HIRA = '\\p{Script=Hiragana}';
+const NAME = `[${SOLID}${HIRA}]`;
+const SP = '[ \\u3000]';
+const isHira = (c) => !!c && /\p{Script=Hiragana}/u.test(c);
+const isSolid = (c) => !!c && new RegExp(`[${SOLID}]`, 'u').test(c);
+const isNameChar = (c) => isHira(c) || isSolid(c);
+const HIRA_RUN = `[${HIRA}]*`;
+
+// 囲み文字: U+3200〜U+33FF の字を NFKC で正規化し、法人の種類の字(括弧を外した形)か法人の種類の語になる字を拾う
+function enclosedCorporateChars() {
+  const out = [];
+  for (let cp = 0x3200; cp <= 0x33ff; cp++) {
+    const c = String.fromCodePoint(cp);
+    const n = c.normalize('NFKC');
+    if (n === c) continue;
+    const inner = n.replace(/^\((.+)\)$/u, '$1');
+    if (ENCLOSED_CORPORATE_CHARS.includes(inner) || CORPORATE_TYPES.includes(n)) out.push(c);
+  }
+  return out;
+}
+const ENCLOSED_CHARS = enclosedCorporateChars();
+
+const PAREN_ABBR = `[(（]${SP}?(?:${alt(CORPORATE_ABBREVIATIONS)})${SP}?[)）]`;
+const PAREN_ABBR_RE = new RegExp(`^${PAREN_ABBR}$`, 'u');
+const AMBIGUOUS_ABBR_RE = new RegExp(`^[(（]${SP}?(?:${alt(AMBIGUOUS_ABBREVIATIONS)})${SP}?[)）]$`, 'u');
+const CORP = `(?:${alt(CORPORATE_TYPES)}|${PAREN_ABBR}|[${ENCLOSED_CHARS.join('')}])`;
+// 法人格の後ろの名前は、次の法人格の手前で止める(「株式会社甲野及び株式会社乙川」の後ろの名前も別に見つける)
+const NAME_NOT_CORP = `(?:(?!${CORP})${NAME})`;
+
+// 文の中のひらがなの切れ目(長い順に試す)
+const BREAKS = [
+  '及び', '又は', '若しくは', '並びに', 'および', 'または', 'もしくは', 'ならびに',
+  'における', 'について', 'において', 'として', 'による', 'にある', 'である', 'となる', 'された', 'される', 'させる', 'している',
+  'できる', 'でした', 'です', 'した', 'する', 'して', 'され', 'から', 'まで', 'より', 'など', 'では', 'には', 'とは', 'との', 'への', 'ない', 'れる', 'った',
+  'は', 'が', 'を', 'に', 'で', 'と', 'の', 'へ', 'も', 'や',
+].sort((a, b) => b.length - a.length);
+// 名前の頭に来ても名前ではないひらがなの語
+const FUNC_HEAD = ['これ', 'それ', 'あれ', 'この', 'その', 'あの', 'どの', 'ここ', 'そこ', 'また', 'および', 'または', 'ならびに', 'もしくは',
+  'かつ', 'ほか', 'すべて', 'ある', 'いる', 'なる', 'する', 'した', 'できる'].sort((a, b) => b.length - a.length);
+
+const breakAt = (s, i) => BREAKS.find((b) => s.startsWith(b, i)) || '';
+
+// 法人格の前の名前の頭を切る。返すのは名前の中で残す所の始まり(残らなければ -1)
+function trimHead(name) {
+  let cut = 0;
+  for (let i = 0; i < name.length; i++) {
+    const b = breakAt(name, i);
+    if (!b) continue;
+    const before = name[i - 1];
+    const after = name[i + b.length];
+    if (i === 0 ? (after !== undefined && !isHira(after)) : isSolid(before)) cut = Math.max(cut, i + b.length);
+  }
+  let s = name.slice(cut);
+  for (let changed = true; changed;) {
+    changed = false;
+    const f = FUNC_HEAD.find((w) => s.startsWith(w) && s.length > w.length);
+    if (f) {
+      let k = f.length;
+      k += breakAt(s, k).length;
+      if (k < s.length) { cut += k; s = s.slice(k); changed = true; }
+    }
+  }
+  if (!s || FUNC_HEAD.includes(s)) return -1;
+  return cut;
+}
+
+// 法人格の後ろの名前の終わりを切る。返すのは名前の中で残す長さ(0 なら残らない)
+// 名前の終わりの1字のひらがな(「株式会社やまと」の「と」)は、前が漢字・カタカナのときだけ切る(「株式会社甲野と」)。
+// ひらがなの後ろの「と・の・に・で」は名前の中によく出るので切らない(「株式会社ふもと野ロジ」「株式会社ひのき」)。
+// そのため「株式会社さくらと契約」は「と契約」まで置き換える(漏らすより置き換えすぎの方にする)
+const INNER_OK = ['と', 'の', 'に', 'で'];
+function trimTail(name) {
+  for (let i = 0; i < name.length; i++) {
+    const b = breakAt(name, i);
+    if (!b) continue;
+    const after = name[i + b.length];
+    const prevHira = i > 0 && isHira(name[i - 1]);
+    if (prevHira && INNER_OK.includes(b)) continue;
+    if (after === undefined) {
+      if (i > 0 && (b.length > 1 || isSolid(name[i - 1]))) return i;
+    } else if (!isHira(after)) return i;
+  }
+  return name.length;
+}
+
+// 名前から一般の語・数・「第」などを除いて残る字の数
+const FILLER = /[0-9０-９A-Za-zＡ-Ｚａ-ｚ・\s　()（）]|令和|平成|年度|第|号/gu;
+const GENERIC = [...new Set([...ORG_GENERIC_WORDS, '等', '及び', '又', '又は', '以外', '以下', '各種'])].sort((a, b) => b.length - a.length);
+const ORG_GENERIC = [...new Set([...GENERIC, ...ORG_SUFFIX_GENERIC_WORDS])].sort((a, b) => b.length - a.length);
+const countRest = (name, words) => {
+  let s = name.replace(FILLER, '');
+  for (const g of words) s = s.split(g).join('');
+  return s.length;
+};
+const restLength = (name) => countRest(name, GENERIC);
+// 語尾の規則の名前の残り。「二人組」の「二人」のような人数も名前にしない
+const orgRestLength = (name) => countRest(name.replace(/[一二三四五六七八九十百数何]人/gu, ''), ORG_GENERIC);
+
+const CORP_WORD = new RegExp(alt(CORPORATE_TYPES), 'gu');
+const CORP_TAIL_SENTENCE = new Set([...CORP_TAIL_SENTENCE_WORDS, ...BREAKS, ...FUNC_HEAD]);
+const CORP_TAIL_SYSTEM = new RegExp(`^(?:${alt(CORP_TAIL_SYSTEM_WORDS)}|法(?:第.*|改正|施行.*)?)$`, 'u');
+// 法人格の後ろに続いても名前ではない語か(文の続き・制度の語・別の法人格だけ)
+const isCorpTailWord = (kept) => CORP_TAIL_SENTENCE.has(kept) || CORP_TAIL_SYSTEM.test(kept) || restLength(kept.replace(CORP_WORD, '')) < 1;
+
+const LABEL_END = new RegExp(`(?:${alt(COMPANY_LABEL_WORDS)})$`, 'u');
+const ROLE_HEAD = new RegExp(`^(?:${alt(COMPANY_ROLE_WORDS)})`, 'u');
+
+// 前の語(空白の前の、名前の字の並び)を返す
+function wordBefore(text, end) {
+  let i = end;
+  while (i > 0 && isNameChar(text[i - 1])) i--;
+  return text.slice(i, end);
+}
+
+const ORG_SUFFIXES = [...FACILITY_SUFFIXES_LAW, ...ORG_SUFFIXES_CUSTOM];
+const ORG_SUFFIX_END = new RegExp(`(?:${alt(ORG_SUFFIXES)})$`, 'u');
+// 語尾の前に名前が2字以上残る、団体の名前の形か
+function endsLikeOrg(name) {
+  const m = name.match(ORG_SUFFIX_END);
+  return !!m && orgRestLength(name.slice(0, name.length - m[0].length)) >= 2;
+}
+const LABEL_THEN_SEP = new RegExp(`(?:${alt(COMPANY_LABEL_WORDS)})[\\s\\u3000:：|｜]*$`, 'u');
+const FOLLOWS_COMPANY = new RegExp(`^[ \\u3000]?(?:${alt(COMPANY_ROLE_WORDS)}|[とに]契約|[にへ]発注|[にへ]委託|[にへ]下請)`, 'u');
+const PARTICLES = ['は', 'が', 'を', 'に', 'で', 'と', 'の', 'へ', 'も', 'や'];
+
+// 「前の語 + (有)」を会社名として取るか。「資格(有)」「指導医(医)」は取らない
+function abbrBefore(kept, text, start, end) {
+  return endsLikeOrg(kept) || LABEL_THEN_SEP.test(text.slice(Math.max(0, start - 20), start)) || FOLLOWS_COMPANY.test(text.slice(end, end + 8));
+}
+// 「(有) + 後ろの語」を会社名として取るか。「既往症(有)高血圧」「学籍(学)番号」は取らない
+function abbrAfter(kept, text, index) {
+  if (kept.startsWith('・')) return false;
+  const prev = text[index - 1];
+  if (!isNameChar(prev) || prev === '・' || endsLikeOrg(kept)) return true;
+  if (LABEL_END.test(wordBefore(text, index))) return true;
+  return PARTICLES.includes(prev) && isSolid(text[index - 2]);
+}
+
+const COMPANY_RULES = [
+  { id: 'company-before', name: '名前 + 法人格', example: 'みほん建設株式会社・甲野建設 株式会社・甲野建設㈱' },
+  { id: 'company-after', name: '法人格 + 名前', example: '株式会社さくら・社会福祉法人 みほん会' },
+  { id: 'org-suffix', name: '法人格の無い団体・施設の語尾', example: '甲野工務店・ひまわり幼稚園・みほん町役場' },
+];
+
+// 会社名の形(法人格のあるもの)。core.mjs の形として使う
+function companyPatterns(kind = 'company') {
+  const before = {
+    kind,
+    re: new RegExp(`(${NAME}{1,30}?)(${SP}?)(${CORP})`, 'gu'),
+    trim(word, index, text) {
+      const m = word.match(new RegExp(`^(${NAME}{1,30}?)(${SP}?)(${CORP})$`, 'u'));
+      if (!m) return null;
+      const [, whole, sp, corp] = m;
+      // 名前の中に別の法人格があれば、その後ろだけを名前にする(「株式会社甲野・株式会社乙川」の「株式会社甲野・」は名前にしない)
+      const last = [...whole.matchAll(CORP_WORD)].at(-1);
+      const skip = last ? last.index + last[0].length : 0;
+      const name = whole.slice(skip);
+      const trimmed = trimHead(name);
+      if (trimmed < 0) return null;
+      const h = skip + trimmed;
+      const kept = whole.slice(h);
+      if (restLength(kept) < 1 || kept.endsWith('・') || (last && CORP_TAIL_SENTENCE.has(kept))) return null;
+      if ([...kept].length === 1 && isHira(kept)) return null;
+      // 名前がひらがなの切れ目(「は」「として」など)で終わり、法人格のすぐ後ろに名前が続くときは、後ろの名前の方を取る
+      // (「下請けは株式会社乙川土工」。「やまと株式会社」のように後ろに名前が無ければ取る)
+      const endBreak = BREAKS.find((b) => kept.endsWith(b) && kept.length > b.length);
+      if (endBreak && (endBreak.length > 1 || isNameChar(text[index + word.length]))) return null;
+      if (AMBIGUOUS_ABBR_RE.test(corp) && !abbrBefore(kept, text, index + h, index + word.length)) return null;
+      if (sp) {
+        if (PAREN_ABBR_RE.test(corp)) return null;
+        if (isNameChar(text[index + word.length])) return null;
+        if (LABEL_END.test(kept)) return null;
+      }
+      return [h, word.length];
+    },
+  };
+  const after = {
+    kind,
+    re: new RegExp(`(${CORP})(${SP}?)(${NAME_NOT_CORP}{1,30})`, 'gu'),
+    trim(word, index, text) {
+      const m = word.match(new RegExp(`^(${CORP})(${SP}?)(${NAME_NOT_CORP}{1,30})$`, 'u'));
+      if (!m) return null;
+      const [, corp, sp, name] = m;
+      // 名前の終わりの「・」は区切り(「(有)甲野・(有)乙川」)
+      const len = trimTail(name.replace(/・+$/u, ''));
+      const kept = name.slice(0, len);
+      if (!kept || restLength(kept) < 1) return null;
+      if ([...kept].length === 1 && isHira(kept)) return null;
+      if (isCorpTailWord(kept)) return null;
+      if (AMBIGUOUS_ABBR_RE.test(corp) && !abbrAfter(kept, text, index)) return null;
+      if (sp) {
+        if (PAREN_ABBR_RE.test(corp)) return null;
+        if (ROLE_HEAD.test(kept)) return null;
+        const prev = text[index - 1];
+        if (isNameChar(prev)) return null;
+        if (prev === ' ' || prev === '　') {
+          const w = wordBefore(text, index - 1);
+          if (w && !LABEL_END.test(w)) return null;
+        }
+      }
+      return [0, corp.length + sp.length + len];
+    },
+  };
+  return [before, after];
+}
+
+const FACILITY_RULES = [
+  { id: 'facility-head', name: '施設の種類の語 + 名前', example: 'デイサービスセンターひまわり・グループホーム甲野' },
+  { id: 'facility-operator', name: '法人の名前の後ろの施設の名前', example: '社会福祉法人みほん会 ためし園' },
+];
+
+// 名前の途中にひらがなを入れてよい語尾(施設)。「新たな建設」のような文を取らないよう、会社の語尾には使わない
+const MIXED_NAME_SUFFIXES = new Set([...FACILITY_SUFFIXES_LAW, 'クリニック', '医院', 'デイサービスセンター', 'グループホーム']);
+const PLAIN_NAME = new RegExp(`^${HIRA_RUN}[${SOLID}]*$`, 'u');
+const MIXED_NAME = new RegExp(`^${HIRA_RUN}[${SOLID}]+[${HIRA}]{3,}[${SOLID}]*$`, 'u');
+const INFLECTED = /[るたいなだくてでう]$/u;
+function nameShapeOk(kept, sfx) {
+  if (PLAIN_NAME.test(kept)) return true;
+  if (!MIXED_NAME_SUFFIXES.has(sfx) || !MIXED_NAME.test(kept)) return false;
+  // 途中のひらがなの並びが活用の字で終わるなら文の一部(「通っている」「素晴らしい」)
+  return ![...kept.matchAll(new RegExp(`[${HIRA}]+`, 'gu'))].some((m) => m.index > 0 && INFLECTED.test(m[0]));
+}
+
+// 法人格の無い団体・施設の名前の規則(文脈の規則として、確信の弱い語にする)
+function orgSuffixPatterns({ kind = 'company', suffixes = ORG_SUFFIXES, minRest = 2 } = {}) {
+  const suffixAlt = alt(suffixes);
+  const re = new RegExp(`${NAME}{1,30}?(?:${suffixAlt})(?![\\p{Script=Han}\\p{Script=Katakana}ー々])`, 'gu');
+  const suffixEnd = new RegExp(`(?:${suffixAlt})$`, 'u');
+  return [{
+    kind,
+    rule: 'org-suffix',
+    re,
+    trim(word) {
+      const sfx = word.match(suffixEnd)[0];
+      const name = word.slice(0, word.length - sfx.length);
+      const h = trimHead(name);
+      if (h < 0) return null;
+      const kept = name.slice(h);
+      // ひらがなは名前の頭だけ(「ひまわり幼稚園」「みほん市役所」)。漢字のあとのひらがな(「新たな建設」)は名前にしない。施設の語尾は nameShapeOk
+      if (!nameShapeOk(kept, sfx)) return null;
+      if (orgRestLength(kept) < minRest) return null;
+      if (sfx === '県庁' && PREFECTURE_NAMES_KEN.includes(kept)) return null;
+      return [h, word.length];
+    },
+  }];
+}
+
+const SENTENCE_IN_TAIL = /ます|ません|ない|ある|あり|いる|する|した|です|でした|よう|こと|もの|ため|とき|ところ|として/u;
+const HEAD_NOT_NAME = new RegExp(`^(?:${alt(FACILITY_HEAD_TAIL_WORDS)})`, 'u');
+const NOT_A_FLOOR = /^[0-9０-９一二三四五六七八九十第]+[階棟号館室名人床]/u;
+const headTailNotName = (kept) => HEAD_NOT_NAME.test(kept) || FACILITY_HEAD_TAIL_CHARS.includes(kept) || NOT_A_FLOOR.test(kept)
+  || BREAKS.some((b) => b.length > 1 && kept.startsWith(b)) || (isHira(kept[0]) && SENTENCE_IN_TAIL.test(kept));
+const NON_NAME_END = new RegExp(`(?:${alt(FACILITY_SHORT_NON_NAMES)})$`, 'u');
+
+// 施設の名前の規則(F31c)。文脈の規則として使う(確信の弱い語)
+function facilityPatterns(kind = 'company') {
+  const headAlt = alt(FACILITY_HEAD_WORDS);
+  const NEXT = `(?:(?!${headAlt}|${CORP})${NAME})`;
+  const head = {
+    kind,
+    rule: 'facility-head',
+    re: new RegExp(`(?:${headAlt})${SP}?${NEXT}{1,20}`, 'gu'),
+    trim(word) {
+      const h = word.match(new RegExp(`^(?:${headAlt})${SP}?`, 'u'))[0];
+      const name = word.slice(h.length).replace(/・+$/u, '');
+      // ひらがなの名前の後ろの「の職員」「に入居」は trimTail では切れないので、ここで切る(「さくらの里」の「の里」は残す)
+      const cut = [...name].findIndex((c, i) => i > 0 && PARTICLES.includes(c) && HEAD_NOT_NAME.test(name.slice(i + 1)));
+      const len = cut > 0 ? cut : trimTail(name);
+      const kept = name.slice(0, len);
+      if (!kept || headTailNotName(kept) || isCorpTailWord(kept)) return null;
+      if (kept.replace(FILLER, '').length < 2) return null;
+      return [0, h.length + len];
+    },
+  };
+  const operator = `(?:${alt(FACILITY_OPERATOR_TYPES)}|[(（](?:${alt(FACILITY_OPERATOR_ABBREVIATIONS)})[)）])`;
+  const suffix = alt(FACILITY_SHORT_SUFFIXES);
+  const after = {
+    kind,
+    rule: 'facility-operator',
+    re: new RegExp(`(?<=${operator}${SP}?${NAME}{1,30}${SP})${NAME}{1,20}?(?:${suffix})(?![\\p{Script=Han}\\p{Script=Katakana}ー々])`, 'gu'),
+    trim(word) {
+      if (NON_NAME_END.test(word)) return null;
+      const sfx = word.match(new RegExp(`(?:${suffix})$`, 'u'))[0];
+      if (orgRestLength(word.slice(0, word.length - sfx.length)) < 2) return null;
+      return [0, word.length];
+    },
+  };
+  return [head, after];
+}
+
+return { enclosedCorporateChars, ENCLOSED_CHARS, CORP, trimHead, trimTail, restLength, orgRestLength, isCorpTailWord, COMPANY_RULES, companyPatterns, FACILITY_RULES, orgSuffixPatterns, facilityPatterns };
+})();
+__m["src/mask/rules-address.mjs"] = (function () {
+// 住所の規則(F24b)。業界を問わない。置き換えの部品(core.mjs)が形として使う。
+// 住所の並び(アドレス・ベース・レジストリ https://www.digital.go.jp/policies/base_registry_address 、
+// 日本郵便 郵便番号データの説明 https://www.post.japanpost.jp/service/search/zipcode/download/readme.html ):
+//   〒 郵便番号 → 都道府県 → 郡・市・区・町・村 → 大字・町字・字 → 丁目 → 番地・番・号 → 枝番 → 建物名・部屋番号
+// 見つける形:
+//   (1) 都道府県 +(市区町村)+(町名)+ 番地      例「架空県みほん市さくら町1-2-3」「架空県 けんちょう通り 0-0」
+//   (2) 市区町村 +(町名)+ 番地(都道府県なし)    例「みほん市さくら町一丁目2番3号」。番地は「丁目・番地・番・号」が付くか、
+//       数が2つ以上つながるか、町名が「町・村・字」などで終わるときだけ取る(「みほん市 3」「みほん市 2026年」は取らない)
+//   (3) 都道府県 + 市区町村 + 町名(番地なし)      町名が「町・村・丁目・地内・地先」などで終わる所まで。例「架空県みほん市さくら町地内」
+//   (4) 〒 郵便番号(単独でも、住所の前でも)。「郵便番号: 123-4567」の数の所
+//   (1)〜(3) の後ろの建物名(ビル・マンション・ハイツ などで終わる語)と部屋番号(301号室・3階 など)
+//   (5) 条丁目(F31c): 「北8条西5丁目1-1」「南1条西2丁目」「4条通8丁目」は番地の一部として全部を1つに取る。法令の条(「みほん市条例3条」)は取らない
+//   (6) 京都の通り名(F31c): 「寺町通御池上る上本能寺前町488」。上る・下る・東入る・西入る(カタカナの形も)があれば、町名が長くても全部を1つに取る
+// 区切り: 部分のあいだの空白は1字(半角・全角)まで許す。数字は半角・全角・漢数字、ハイフンは - − ‐ ‑ – ー － ― を許す。
+// 続く名前を食わないための決まり:
+//   ・住所は番地(か建物名・部屋番号)で終わる。番地の後ろの会社名・人名は住所に入れない(「…1-2-3 甲山建設株式会社」)
+//   ・「都道府県 空白 都道府県名で始まる語」は、前の都道府県を住所に入れない(「架空県 架空県ためし市0-0」の前の「架空県」は発注者の名前)
+//   ・都道府県 + 市区町村だけ(町名も番地も無い)は、住所の欄名(住所・所在地 など)の後ろのときだけ取る。
+//     それ以外は発注者の名前(「架空県みほん市」「みほん市長」)とみなして取らない
+//   ・建物名に法人の種類の語(株式会社 など)が入るときは建物名にしない
+
+const { CORPORATE_TYPES } = __m["src/mask/company-types.mjs"];
+const { trimHead } = __m["src/mask/rules-company.mjs"];
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const alt = (words) => [...new Set(words)].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
+
+// 都道府県(総務省 全国地方公共団体コード https://www.soumu.go.jp/denshijiti/code.html の都道府県の名前)
+const PREFECTURES = [
+  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
+  '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
+  '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
+];
+// 建物名の語尾と頭(慣用。公式の一覧なし)
+const BUILDING_SUFFIXES = ['ビルディング', 'ビル', 'マンション', 'ハイツ', 'コーポ', 'アパート', 'レジデンス', 'ハイム', 'メゾン', 'タワー', 'コート',
+  'ヒルズ', 'ハウス', 'パレス', 'プラザ', 'テラス', '荘', '団地', '住宅', '寮'];
+const BUILDING_HEADS = ['コーポ', 'メゾン', 'ハイツ', 'グラン'];
+// 住所の欄名(この後ろなら、都道府県 + 市区町村だけでも住所として取る)と、名前の頭に付いても地名ではない欄名の語
+// 「市・区・町・村・郡」で終わるが市区町村の名前ではない語(慣用)
+const NON_MUNI_WORDS = ['都市', '地区', '市区', '工区', '学区', '管区', '街区', '特区', '選挙区', '区画区', '漁村', '農村', '山村', '城下町', '門前町', '宿場町', '港町', '下町', '市町村', '区市町村', '市町', '町村'];
+const ADDRESS_LABELS = ['住所', '所在地', '所在', '本店', '本社', '支店', '営業所', '事業所', '工事場所', '施工場所', '場所', '送付先', '宛先', '連絡先', '郵便番号'];
+
+const D = '[0-9０-９]';
+const HY = '[-−‐‑–ー－―]';
+const SP = '[ \\u3000]';
+const KNUM = '[一二三四五六七八九十〇百千]';
+// 地名の字
+const NM = '[\\p{Script=Han}\\p{Script=Katakana}\\p{Script=Hiragana}ー々ヶ]';
+const NMX = '[\\p{Script=Han}\\p{Script=Katakana}\\p{Script=Hiragana}ー々ヶA-Za-zＡ-Ｚａ-ｚ0-9０-９・]';
+// 一覧に無い県の名前(架空の例など)は、漢字2字 + 県 だけを取る(3字にすると前の語の字を食う)
+const PREF = `(?:${alt(PREFECTURES)}|\\p{Script=Han}{2}県)`;
+const PREF_HEAD = `\\p{Script=Han}{2,3}[都道府県](?![市区町村郡])`;
+const MUNI = `${NM}{1,8}?[市区町村郡]`;
+const MUNIS = `${MUNI}(?:${SP}?${MUNI}){0,2}`;
+const TOWN = `${NM}{1,12}`;
+// 京都の通り名: 漢字・カタカナの通りの名前 + 上る・下る・東入る・西入る(2回まで)+ 町名
+const HK = '[\\p{Script=Han}\\p{Script=Katakana}ー々ヶ]';
+const DIR = '(?:東入る|西入る|東入ル|西入ル|東入|西入|上る|下る|上ル|下ル|入る|入ル)';
+const KYOTO_TOWN = `${HK}{1,14}?${DIR}(?:${HK}{1,8}?${DIR})?${HK}{0,14}`;
+// 番地: 「1-2-3」「1丁目2番3号」「一丁目2番地の3」「123番地」「1丁目 2-3」。漢数字は丁目・番・号・の が続くときだけ
+const NUM = `(?:${D}+|${KNUM}+(?=丁目|番|号|地割|の))`;
+const NUMSFX = '(?:丁目|番地|番|号|地割)';
+const NUMTAIL = `${NUM}${NUMSFX}?(?:(?:(?<=丁目|番地|番|地割)${SP}?|${HY}|の)?${NUM}${NUMSFX}?){0,4}`;
+// 条丁目: 条の数 +(通・東西南北)。後ろに丁目や番地が続いてよい
+const JOHEAD = `(?:${D}+|${KNUM}+)条(?:通|[東西南北])?`;
+const NUMPART = `(?<!第)(?:(?<jo>${JOHEAD})${SP}?(?:[東西南北]?${NUMTAIL})?|${NUMTAIL})`;
+const BUILDING = `(?:(?:${alt(BUILDING_HEADS)})${NMX}{1,12}|${NMX}{1,20}?(?:${alt(BUILDING_SUFFIXES)}))(?:${SP}?(?:${D}+|[A-ZＡ-Ｚ])?(?:号館|号棟|棟|館))?(?![\\p{Script=Han}\\p{Script=Katakana}ーA-Za-zＡ-Ｚａ-ｚ])`;
+const ROOM = `(?:${D}+(?:階|[FＦ])(?:${SP}?${D}+(?:号室|号)?)?|${D}+(?:号室|号)?|[A-ZＡ-Ｚ]${HY}?${D}+(?:号室)?)`;
+// 部屋番号: 建物名の後ろなら数だけでもよい。建物名が無ければ「号室・階」の付くものだけ(後ろの電話番号などを食わない)
+const ROOM_STRICT = `(?:${D}+(?:階|[FＦ])${SP}?)?${D}+号室|${D}+(?:階|[FＦ])(?!${D})`;
+const AFTER_NUM = `(?:${SP}?(?<bldg>${BUILDING})(?:${SP}?(?<room>${ROOM})(?!${D}|${HY}|階|[FＦ]))?|${SP}?(?<room2>${ROOM_STRICT}))?`;
+const ZIP = `〒${SP}?${D}{3}${HY}${D}{4}`;
+// 番地の後ろに続くと住所にしない字(年・円・人 などの数の単位。「市道1号線」の 線・号)
+const NOT_AFTER = `(?!${D}|[年月日円時分秒歳人名件台回本枚個箇ヶか％%㎡mｍ線号])`;
+
+const RE = new RegExp(
+  `(?<zip>${ZIP}${SP}?)?` +
+  `(?:(?<pref>${PREF})(?:${SP}?(?!${PREF_HEAD})(?<muni>${MUNIS}))?|(?<muni2>${MUNIS}))` +
+  `(?:${SP}?(?!${PREF_HEAD})(?<town>(?<kyoto>${KYOTO_TOWN})|${TOWN}))?` +
+  `(?:${SP}?(?<num>${NUMPART})${NOT_AFTER}${AFTER_NUM})?`,
+  'gu',
+);
+// 町名の終わりとして認める語(番地が無いとき)
+const TOWN_END = /(?:町|村|丁目|地内|地先|大字\S+|字\S+)$/u;
+const LABEL_AT_END = new RegExp(`(?:${alt(ADDRESS_LABELS)})(?:[:：|｜\\t]|${SP})*$`, 'u');
+const MUNI_UNIT = new RegExp(MUNI, 'gu');
+const NON_MUNI = new RegExp(`(?:${alt(NON_MUNI_WORDS)})$`, 'u');
+const KYOTO_END = new RegExp(`(?:町|村|丁目|${DIR})(?=${HK}*$)`, 'gu');
+// 町名の後ろの「通」は切らない(「寺町通御池」の「寺町」だけを取らない)。通信・通知など一般の語は除く
+const NOT_STREET = '(?!信|知|勤|行|常|路|話|過|学|院|算|報|達|販|貨)';
+const STREET_AFTER = new RegExp(`^通${NOT_STREET}${HK}*`, 'u');
+// 町名が「〜通〜」のとき(「烏丸通御池」)。都道府県か2つ以上の市区町村があるときだけ見る(「みほん市交通局」を取らない)
+const STREET_TOWN = new RegExp(`^${HK}{1,8}?(?<![交開共普流直文貫])通${NOT_STREET}${HK}*`, 'u');
+// 町名がこれらの語で終わる「3条」は法令の条で、住所ではない
+const LAW_BEFORE_JO = /(?:法|令|条例|規則|規程|規定|要綱|要領|契約|約款|基準|憲章|細則)$/u;
+const MULTI_MUNI = new RegExp(`^${MUNI}(?:${SP}?${MUNI})+$`, 'u');
+const KNUM_ADDR = new RegExp(`${KNUM}+(?:丁目|番地|番|号)(?:の?${KNUM}+(?![\\p{Script=Han}]))?`, 'gu');
+const LABEL_IN = new RegExp(`(?:${alt(ADDRESS_LABELS)})`, 'gu');
+const CORP_IN = new RegExp(alt(CORPORATE_TYPES), 'u');
+
+const ADDRESS_RULES = [
+  { id: 'address', name: '住所(都道府県・市区町村・町名・番地・建物名・部屋番号)', example: '架空県みほん市さくら町1-2-3 みほんビル301号室・みほん市さくら町一丁目2番3号' },
+  { id: 'zip', name: '郵便番号(〒)', example: '〒000-0000' },
+];
+
+// 市区町村の名前の頭から、文の中のひらがな・欄名の語を外す。返すのは名前の中で残す所の始まり(残らなければ -1)
+function muniStart(name) {
+  let cut = 0;
+  for (const m of name.matchAll(LABEL_IN)) cut = Math.max(cut, m.index + m[0].length);
+  const rest = name.slice(cut);
+  const h = trimHead(rest);
+  if (h < 0) return -1;
+  return cut + h;
+}
+
+// 番地の形が住所らしいか(都道府県なしのとき)
+function strongNumber(num, town, g = {}) {
+  if (g.kyoto) return true;
+  if (/丁目|番地|番|号|地割/u.test(num)) return true;
+  if (g.jo && town) return true;
+  if (new RegExp(`${D}+(?:${HY}|の)${D}+`, 'u').test(num)) return true;
+  return !!town && /(?:町|村|字\S*)$/u.test(town.trim());
+}
+
+function trimAddress(word, index, text) {
+  const m = word.match(new RegExp(`^${RE.source}$`, 'u'));
+  if (!m) return null;
+  const g = m.groups;
+  const muni = g.muni || g.muni2 || '';
+  // 「京都市」は語尾が「都市」だが市の名前
+  if (muni && [...muni.matchAll(MUNI_UNIT)].some((u) => !u[0].endsWith('京都市') && NON_MUNI.test(u[0]))) return null;
+  let start = 0;
+  // 都道府県の無い住所は、市区町村の名前の頭のひらがな・欄名を外す(〒の後ろなら外さない)
+  if (!g.pref && g.muni2) {
+    const name = g.muni2.match(new RegExp(`^${NM}{1,8}?(?=[市区町村郡])`, 'u'))[0];
+    const s = muniStart(name);
+    if (s < 0 || (g.zip && s > 0)) return null;
+    // 文の頭を外したら都道府県で始まるなら、そこから読み直す(「現場は京都府京都市…」)
+    if (s > 0 && new RegExp(`^${PREF}`, 'u').test(word.slice(s))) {
+      const again = trimAddress(word.slice(s), index + s, text);
+      return again && [again[0] + s, again[1] + s];
+    }
+    start = s; // 〒があれば s は 0(〒から取る)
+  }
+  if (g.jo && LAW_BEFORE_JO.test((g.town || '').trim())) return null;
+  if (g.num) {
+    if (g.bldg && CORP_IN.test(g.bldg)) return [start, word.slice(0, word.lastIndexOf(g.bldg)).trimEnd().length];
+    if (!g.pref && !strongNumber(g.num, g.town, g)) return null;
+    return [start, word.length];
+  }
+  const town = g.town || '';
+  const head = word.length - town.length;
+  // 京都の通り名は、上る・下る の後ろの町名まで全部か、町名でなければ 上る・下る まで
+  if (g.kyoto) {
+    const last = [...town.matchAll(KYOTO_END)].pop();
+    return [start, head + last.index + last[0].length];
+  }
+  // 番地が漢数字だけ(「一丁目二番三号」)のときは、町名の中に入っている。最後の「〜丁目・番・号」までにする
+  const kn = [...town.matchAll(KNUM_ADDR)].pop();
+  if (kn && (g.pref || muni)) return [start, head + kn.index + kn[0].length];
+  // 番地が無いとき: 町名が「町・村・丁目・地内・地先」などで終わる所まで(都道府県が無ければ「地内・地先」のときだけ)
+  if (town && muni) {
+    for (let k = town.length; k > 0; k--) {
+      const t = town.slice(0, k);
+      if (TOWN_END.test(t) && (g.pref || /(?:地内|地先)$/u.test(t))) return [start, head + k + (town.slice(k).match(STREET_AFTER)?.[0].length ?? 0)];
+    }
+  }
+  // 「…寺町」が市区町村の形に見えて、後ろが「通御池」のとき(「寺町」だけを取らない)
+  const street = town.match(STREET_AFTER);
+  if (street && muni) return [start, head + street[0].length];
+  const streetTown = (g.pref || MULTI_MUNI.test(muni)) && muni ? town.match(STREET_TOWN) : null;
+  if (streetTown) return [start, head + streetTown[0].length];
+  const core = word.slice(0, head).trimEnd().length;
+  // 都道府県 + 市区町村が2つ以上(「架空県ためし郡みほん町」「架空県みほん市さくら町」)
+  if (g.pref && g.muni && MULTI_MUNI.test(g.muni)) return [start, core];
+  // 都道府県 + 市区町村だけ: 住所の欄名の後ろのときだけ取る(それ以外は発注者の名前とみなす)
+  if (g.pref && g.muni && LABEL_AT_END.test(text.slice(Math.max(0, index - 12), index))) return [start, core];
+  return null;
+}
+
+// 住所の形。core.mjs の形として使う
+function addressPatterns(kind = 'address') {
+  return [
+    { kind, re: new RegExp(RE.source, 'gu'), trim: trimAddress },
+    // 〒 + 郵便番号だけ
+    { kind, re: new RegExp(`${ZIP}(?!${D})`, 'gu') },
+    // 「郵便番号: 123-4567」(〒の無い郵便番号は欄名の後ろだけ)
+    { kind, re: new RegExp(`(?<=郵便番号[:：]?${SP}?)${D}{3}${HY}${D}{4}(?!${D})`, 'gu') },
+  ];
+}
+
+return { PREFECTURES, BUILDING_SUFFIXES, BUILDING_HEADS, NON_MUNI_WORDS, ADDRESS_LABELS, ADDRESS_RULES, addressPatterns };
+})();
+__m["src/mask/core.mjs"] = (function () {
+// 置き換えの部品(F11a): 文の中の人名・会社名・場所の名前・住所・電話・メールなどを記号に置き換え、対応表を持ち、戻ってきた文を元に戻す。
+// この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
+// 対応表はこの部品の中(メモリ)だけに持つ。ブラウザには残さない(ページを閉じれば消える)。
+// 利用者が求めたときだけ、exportMap で対応表を文字列(JSON)にし、importMap で読み込む(F11d)。その文字列には元の名前が入っている。
+// 足した語だけは exportDict / importDict で辞書のファイル(JSON)にできる(F19a)。こちらにも元の名前が入っている。
+//
+// 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
+// 辞書は文脈の規則(contextPatterns: [{ kind, rule, re, accept? }])も持てる(F17a)。まわりの語から見つけた確信の弱い語で、
+//   accept(語, 位置, 文) が false の語は取らない(位置と文は、表の見出しの行かを見るために使う。F27c)。見つけた語は対応表の行に rule(規則の id)を付ける。同じ文の中の同じ語は、文脈が無くても同じ記号にする。
+// 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形 > 文脈の規則。重なったら優先の高いほう、同じなら長いほうを取る。
+// ただし、足した語・辞書の語が、形で見つけた長い語(メール・会社名・住所・電話など)の中に収まるときは、長い方を取る(F27d。
+//   「林」を足しても「小林商事株式会社」は会社名として、「a」を足してもメールはメールとして置き換える)。
+//   文脈の規則で見つけた長い語の中に収まるときも長い方を取る(F31c。「林」を足しても「担当者: 小林 一郎」の名を残さない)。
+// 英数字で始まる・終わる語は、英数字の途中では当てない(「a」が「data」の中に当たらない)。
+// 形・規則は trim(語, 位置, 文) を持てる(F24a)。見つけた語のうち置き換える所 [始まり, 終わり](語の中の位置)を返し、null なら取らない。
+// 法人格の無い団体・施設の名前の規則(F24a。org-suffix)は業界を問わないので、辞書の文脈の規則の後ろにいつも足す(同じ所なら辞書の規則を取る)。
+
+const { companyPatterns, orgSuffixPatterns, facilityPatterns } = __m["src/mask/rules-company.mjs"];
+const { addressPatterns } = __m["src/mask/rules-address.mjs"];
+
+const DEFAULT_LABELS = {
+  person: '人名',
+  company: '会社名',
+  site: '現場名',
+  address: '住所',
+  phone: '電話',
+  email: 'メール',
+  other: '語',
+};
+
+const DIGIT = '[0-9０-９]';
+const HYPHEN = '[-−‐‑–ー－]';
+const STOP = '[^\\s、。,，.()()「」『』\\[\\]【】:：;；]';
+
+// 部品が持つ形(分野によらないもの)
+const CORE_PATTERNS = [
+  { kind: 'email', re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/gu },
+  { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{1,4}${HYPHEN}${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
+  { kind: 'phone', re: new RegExp(`[((][0０]${DIGIT}{1,4}[))]\\s*${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
+  { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{9,10}(?![0-9０-９])`, 'gu') },
+  // 会社名: 「〇〇株式会社」「株式会社〇〇」と、ほかの法人の種類・略し方・囲み文字(F24a。規則は rules-company.mjs、語の一覧は company-types.mjs)。
+  // 名前にはひらがなも入れてよいが、文の中のひらがな(「は」「として」など)の所で切る
+  ...companyPatterns('company'),
+  // 住所: 〒・都道府県・市区町村・町名・番地・建物名・部屋番号(F24b。規則は rules-address.mjs)。都道府県なし・空白区切りも見る。
+  // 番地で終わり、続く会社名・発注者の名前を食わない
+  ...addressPatterns('address'),
+];
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// 語を、空白の違い(半角・全角・無し)を許して探す形にする
+function termRegExp(word) {
+  const w = String(word).trim();
+  const parts = w.split(/[\s　]+/).filter(Boolean).map(escapeRe);
+  const head = /^[A-Za-z0-9]/.test(w) ? '(?<![A-Za-z0-9])' : '';
+  const tail = /[A-Za-z0-9]$/.test(w) ? '(?![A-Za-z0-9])' : '';
+  return new RegExp(head + parts.join('[\\s\\u3000]*') + tail, 'gu');
+}
+
+// 1字の語の注意(F27d)。1字の語は長い語の一部にも当たるので、足すときに画面へ出す。問題がなければ空の文字列
+function shortTermWarning(word) {
+  const w = String(word ?? '').replace(/[\s\u3000]+/g, '');
+  if ([...w].length !== 1) return '';
+  return '「' + w + '」は1字の語です。ほかの語の一部も置き換わります(例: 「' + w + '」を足すと「小' + w + '」「' + w + '田」のような名前や語の中の「' + w + '」も置き換わります。会社名・メール・住所・電話の形の中は、長い方をまとめて置き換えます)。人名なら姓と名を続けて足すと確かです。';
+}
+
+// ファイルの頭の BOM(U+FEFF)を外す(F27d。メモ帳などで保存した辞書・対応表のファイルを読めるようにする)
+const stripBom = (t) => String(t ?? '').replace(/^\uFEFF/, '');
+
+const withGlobal = (re) => (re.flags.includes('g') ? new RegExp(re.source, re.flags) : new RegExp(re.source, re.flags + 'g'));
+
+// 全角の数字を半角に
+const toHalf = (s) => String(s).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[，,]/g, '');
+
+// 金額の文字(「52,000,000」「5,200万」「1億2,000万」、後ろの「円」は無くてもよい)を数にする。読めなければ null
+function parseAmount(text) {
+  const s = toHalf(String(text ?? '').trim()).replace(/円$/, '').replace(/\s+/g, '');
+  const m = s.match(/^(?:(\d+(?:\.\d+)?)億)?(?:(\d+(?:\.\d+)?)万)?(\d+)?$/);
+  if (!m || (!m[1] && !m[2] && !m[3])) return null;
+  return Math.round((Number(m[1] || 0) * 1e8) + (Number(m[2] || 0) * 1e4) + Number(m[3] || 0));
+}
+
+function formatYen(n) {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円';
+}
+
+const AMOUNT_RE = new RegExp(`(?:(${DIGIT}[0-9０-９,，]*(?:\\.${DIGIT}+)?)億)?(?:(${DIGIT}[0-9０-９,，]*(?:\\.${DIGIT}+)?)万)?(${DIGIT}[0-9０-９,，]*)?円`, 'gu');
+
+// 金額を「境目以上・未満」の形にする(元の金額は書かない)
+function bandLabel(amount, thresholds) {
+  const ts = [...new Set(thresholds.filter((t) => Number.isFinite(t) && t > 0))].sort((a, b) => a - b);
+  if (!ts.length) return '〔金額〕';
+  if (amount < ts[0]) return `〔金額 ${formatYen(ts[0])}未満〕`;
+  for (let i = 0; i < ts.length - 1; i++) {
+    if (amount >= ts[i] && amount < ts[i + 1]) return `〔金額 ${formatYen(ts[i])}以上${formatYen(ts[i + 1])}未満〕`;
+  }
+  return `〔金額 ${formatYen(ts[ts.length - 1])}以上〕`;
+}
+
+function bandAmounts(text, thresholds) {
+  return text.replace(AMOUNT_RE, (all, oku, man, rest) => {
+    if (!oku && !man && !rest) return all;
+    const n = parseAmount(all);
+    return n === null ? all : bandLabel(n, thresholds);
+  });
+}
+
+// 対応表のファイル(F11d)
+const MAP_FORMAT = 'mask-map';
+const MAP_VERSION = 1;
+const MAP_NOTICE = 'このファイルには元の名前が入っています。外へ送らず、要らなくなったら消してください。';
+
+const isText = (v) => typeof v === 'string' && v.trim() !== '';
+
+// 対応表のファイルを読んで確かめる。おかしければ、どこがおかしいかを書いた Error を投げる
+function parseMapFile(text) {
+  let data;
+  try {
+    data = JSON.parse(stripBom(text));
+  } catch {
+    throw new Error('対応表のファイルとして読めません(JSON の形になっていません)。書き出した対応表のファイルを選んでください。');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT) {
+    throw new Error('対応表のファイルではありません(format が "' + MAP_FORMAT + '" ではありません)。');
+  }
+  if (data.version !== MAP_VERSION) throw new Error('対応表のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
+  if (!Array.isArray(data.entries)) throw new Error('対応表のファイルに entries(対応表の行)がありません。');
+  const terms = data.terms === undefined ? [] : data.terms;
+  if (!Array.isArray(terms)) throw new Error('対応表のファイルの terms(足した語)が並びになっていません。');
+  const tokens = new Set();
+  const originals = new Set();
+  const entries = data.entries.map((e, i) => {
+    const at = '対応表の ' + (i + 1) + ' 行目';
+    if (!e || typeof e !== 'object') throw new Error(at + 'が読めません。');
+    if (!isText(e.token) || !isText(e.original) || !isText(e.kind)) throw new Error(at + 'に記号・元の語・種類のどれかがありません。');
+    if (tokens.has(e.token)) throw new Error(at + 'の記号 ' + e.token + ' が、ほかの行と重なっています。');
+    const key = e.original.replace(/[\s\u3000]+/g, '');
+    if (originals.has(key)) throw new Error(at + 'の元の語が、ほかの行と重なっています。');
+    tokens.add(e.token);
+    originals.add(key);
+    const variants = Array.isArray(e.variants) ? e.variants.filter(isText) : [];
+    if (!variants.includes(e.original)) variants.unshift(e.original);
+    return { token: e.token, original: e.original, kind: e.kind, variants };
+  });
+  const words = terms.map((t, i) => {
+    if (!t || !isText(t.word) || !isText(t.kind)) throw new Error('足した語の ' + (i + 1) + ' 番目に語か種類がありません。');
+    return { word: t.word.trim(), kind: t.kind.trim() };
+  });
+  return { entries, terms: words };
+}
+
+// 辞書のファイル(F19a): 「辞書に足す」で足した語と種類だけを入れる。記号・対応表は入れない。元の名前が入っている
+const DICT_FORMAT = 'mask-dict';
+const DICT_VERSION = 1;
+const DICT_NOTICE = 'このファイルには元の名前(辞書に足した人名・会社名・現場名など)が入っています。外へ送らず、要らなくなったら消してください。';
+const DICT_MAX_TERMS = 5000;
+const DICT_MAX_WORD = 200;
+
+// 辞書のファイルを読んで確かめる。kinds は受け付ける種類(labels の key)。おかしければ、どこがおかしいかを書いた Error を投げる
+function parseDictFile(text, kinds) {
+  let data;
+  try {
+    data = JSON.parse(stripBom(text));
+  } catch {
+    throw new Error('辞書のファイルとして読めません(JSON の形になっていません)。書き出した辞書のファイルを選んでください。');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('辞書のファイルではありません(中身が JSON のオブジェクトではありません)。');
+  if (data.format === MAP_FORMAT) throw new Error('これは対応表のファイルです。対応表は「対応表を読み込む」で読み込んでください。');
+  if (data.format !== DICT_FORMAT) throw new Error('辞書のファイルではありません(format が "' + DICT_FORMAT + '" ではありません)。');
+  if (data.version !== DICT_VERSION) throw new Error('辞書のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
+  if (!Array.isArray(data.terms)) throw new Error('辞書のファイルに terms(足した語の並び)がありません。');
+  if (!data.terms.length) throw new Error('辞書のファイルに語が1つもありません。');
+  if (data.terms.length > DICT_MAX_TERMS) throw new Error('辞書のファイルの語が多すぎます(' + data.terms.length + ' 件。' + DICT_MAX_TERMS + ' 件まで)。');
+  const known = new Set(kinds || []);
+  const seen = new Map();
+  const out = [];
+  data.terms.forEach((t, i) => {
+    const at = '辞書の ' + (i + 1) + ' 番目の語';
+    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new Error(at + 'が読めません。');
+    if (!isText(t.word)) throw new Error(at + 'に word(語)がありません。');
+    if (!isText(t.kind)) throw new Error(at + 'に kind(種類)がありません。');
+    const word = t.word.trim();
+    const kind = t.kind.trim();
+    if (word.length > DICT_MAX_WORD) throw new Error(at + 'が長すぎます(' + DICT_MAX_WORD + ' 字まで)。');
+    if (/[\u0000-\u001f\u007f]/u.test(word)) throw new Error(at + 'に改行や制御文字が入っています。');
+    if (known.size && !known.has(kind)) throw new Error(at + 'の種類 "' + kind + '" は、この画面の種類にありません。');
+    const prev = seen.get(word);
+    if (prev !== undefined) {
+      if (prev !== kind) throw new Error(at + '「' + word + '」が、ほかの番目と違う種類で重なっています。');
+      return;
+    }
+    seen.set(word, kind);
+    out.push({ word, kind });
+  });
+  return out;
+}
+
+function createMasker({ dictionaries = [] } = {}) {
+  const labels = { ...DEFAULT_LABELS };
+  const dictTerms = [];
+  const dictPatterns = [];
+  const contextPatterns = [];
+  for (const d of dictionaries) {
+    if (!d) continue;
+    Object.assign(labels, d.labels || {});
+    for (const t of d.terms || []) dictTerms.push({ kind: t.kind, re: termRegExp(t.word) });
+    for (const p of d.patterns || []) dictPatterns.push({ kind: p.kind, re: withGlobal(p.re) });
+    for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept, trim: p.trim });
+  }
+  for (const p of [...orgSuffixPatterns(), ...facilityPatterns()]) contextPatterns.push(p);
+  const userTerms = []; // { word, kind, re }
+  const byOriginal = new Map(); // 元の語(空白を除いた形)→ 対応表の1行
+  const byToken = new Map(); // 記号 → 対応表の1行
+  const counters = {};
+
+  const labelOf = (kind) => labels[kind] || String(kind);
+
+  function addTerm(word, kind) {
+    const w = String(word ?? '').trim();
+    const k = String(kind ?? '').trim() || 'other';
+    if (!w) throw new Error('語が空です');
+    const old = userTerms.find((t) => t.word === w);
+    const warning = shortTermWarning(w);
+    const res = warning ? { word: w, kind: k, warning } : { word: w, kind: k };
+    if (old) { old.kind = k; return res; }
+    userTerms.push({ word: w, kind: k, re: termRegExp(w) });
+    return res;
+  }
+
+  function removeTerm(word) {
+    const i = userTerms.findIndex((t) => t.word === String(word ?? '').trim());
+    if (i >= 0) userTerms.splice(i, 1);
+  }
+
+  const terms = () => userTerms.map(({ word, kind }) => ({ word, kind, label: labelOf(kind) }));
+
+  // 元の語に記号を割り当てる。同じ語にはいつも同じ記号(空白の有無だけの違いは同じ語とみなし、戻すときは最初に出た書き方にする)。
+  // 文の中に既にある文字列と同じ記号は使わない
+  const keyOf = (s) => s.replace(/[\s\u3000]+/g, '');
+  function tokenFor(original, kind, text, rule) {
+    const hit = byOriginal.get(keyOf(original));
+    if (hit) {
+      if (!hit.variants.includes(original)) hit.variants.push(original);
+      if (!rule) delete hit.rule; // 辞書や形でも見つかった語は、確信の弱い語にしない
+      return hit;
+    }
+    let token;
+    do {
+      counters[kind] = (counters[kind] || 0) + 1;
+      token = `〔${labelOf(kind)}${counters[kind]}〕`;
+    } while (byToken.has(token) || text.includes(token));
+    const entry = { token, original, kind, label: labelOf(kind), variants: [original] };
+    if (rule) entry.rule = rule;
+    byOriginal.set(keyOf(original), entry);
+    byToken.set(token, entry);
+    return entry;
+  }
+
+  function findSpans(text) {
+    const groups = [userTerms, dictTerms, dictPatterns, CORE_PATTERNS, contextPatterns];
+    const cands = [];
+    groups.forEach((list, priority) => {
+      for (const { kind, re, rule, accept, trim } of list) {
+        const r = new RegExp(re.source, re.flags);
+        for (const m of text.matchAll(r)) {
+          if (!m[0]) continue;
+          if (accept && !accept(m[0], m.index, text)) continue;
+          let [a, b] = [0, m[0].length];
+          if (trim) {
+            const t = trim(m[0], m.index, text);
+            if (!t || t[1] <= t[0]) continue;
+            [a, b] = t;
+          }
+          cands.push({ start: m.index + a, end: m.index + b, kind, priority, rule });
+        }
+      }
+    });
+    const overlaps = (c, list) => list.some((x) => c.start < x.end && x.start < c.end);
+    // 足した語・辞書の語(priority 0・1)が、形で見つけた長い語(priority 2・3)の中に収まるなら、語の方を外す(F27d)
+    const shapes = cands.filter((x) => x.priority === 2 || x.priority === 3);
+    const inShape = (c) => shapes.some((x) => x.start <= c.start && c.end <= x.end && (x.end - x.start) > (c.end - c.start));
+    for (let i = cands.length - 1; i >= 0; i--) {
+      if (cands[i].priority <= 1 && inShape(cands[i])) cands.splice(i, 1);
+    }
+    cands.sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start) || a.start - b.start);
+    const chosen = [];
+    for (const c of cands) {
+      if (overlaps(c, chosen)) continue;
+      chosen.push(c);
+    }
+    // 足した語・辞書の語が文脈で見つけた長い語の中に収まるなら、長い方に置き換える(F31c)。
+    // 文脈の語が形と重なるときは取り替えない(足した語を外すと、形に負けた文脈の語とともに語が漏れるため)
+    const contexts = cands.filter((x) => x.priority === 4 && !chosen.includes(x)).sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start);
+    for (const c of contexts) {
+      const hit = chosen.filter((x) => c.start < x.end && x.start < c.end);
+      const inside = (x) => (x.priority <= 1 || x.priority === 4) && c.start <= x.start && x.end <= c.end && (x.end - x.start) < (c.end - c.start);
+      if (!hit.some((x) => x.priority <= 1) || !hit.every(inside)) continue;
+      for (const x of hit) chosen.splice(chosen.indexOf(x), 1);
+      chosen.push(c);
+    }
+    // 文脈で見つけた語は、同じ文の中のほかの場所(文脈の無い所)でも同じ語として置き換える
+    const seen = new Set();
+    for (const c of chosen.filter((x) => x.rule)) {
+      const word = text.slice(c.start, c.end);
+      if (seen.has(keyOf(word))) continue;
+      seen.add(keyOf(word));
+      for (const m of text.matchAll(termRegExp(word))) {
+        const more = { start: m.index, end: m.index + m[0].length, kind: c.kind, rule: c.rule };
+        // 重なるのが、この語の中に収まる文脈の語・足した語だけなら(「中央病院」が「みほん台 中央病院」の中にある、「林」が2か所目の「小林 一郎」の中にある、など)、長い方に置き換える
+        const hit = chosen.filter((x) => more.start < x.end && x.start < more.end);
+        if (hit.length && hit.every((x) => (x.rule || x.priority <= 1) && x.start >= more.start && x.end <= more.end && x !== c)) {
+          for (const x of hit) chosen.splice(chosen.indexOf(x), 1);
+        }
+        if (!overlaps(more, chosen)) chosen.push(more);
+      }
+    }
+    return chosen.sort((a, b) => a.start - b.start);
+  }
+
+  // options.amounts: 'keep'(既定。金額はそのまま)か 'band'(境目以上・未満の形。options.thresholds の数を境目にする)
+  function mask(text, options = {}) {
+    const src = String(text ?? '');
+    const spans = findSpans(src);
+    let out = '';
+    let pos = 0;
+    const used = [];
+    for (const s of spans) {
+      const original = src.slice(s.start, s.end);
+      const entry = tokenFor(original, s.kind, src, s.rule);
+      out += src.slice(pos, s.start) + entry.token;
+      pos = s.end;
+      if (!used.includes(entry)) used.push(entry);
+    }
+    out += src.slice(pos);
+    if (options.amounts === 'band') out = bandAmounts(out, (options.thresholds || []).map(Number));
+    return { masked: out, map: used.map((e) => ({ ...e, variants: [...e.variants] })) };
+  }
+
+  // 記号を元の語に戻す。知らない記号はそのまま残す(金額の「境目」の形は元に戻らない)
+  function unmask(text) {
+    const src = String(text ?? '');
+    if (!byToken.size) return src;
+    const tokens = [...byToken.keys()].sort((a, b) => b.length - a.length).map(escapeRe);
+    return src.replace(new RegExp(tokens.join('|'), 'gu'), (t) => byToken.get(t).original);
+  }
+
+  // 置き換える所(始まり・終わり・種類)だけを返す。対応表・記号の番号は変えない(F28a の見本の確かめに使う)
+  const spans = (text) => findSpans(String(text ?? '')).map(({ start, end, kind }) => ({ start, end, kind }));
+
+  const entries = () => [...byOriginal.values()].map((e) => ({ ...e, variants: [...e.variants] }));
+
+  // 対応表と足した語を消す
+  function reset({ keepTerms = false } = {}) {
+    byOriginal.clear();
+    byToken.clear();
+    for (const k of Object.keys(counters)) delete counters[k];
+    if (!keepTerms) userTerms.length = 0;
+  }
+
+  // 対応表を書き出す(F11d)。JSON の文字列で、元の語・記号・種類・足した語を含む。元の名前が入っているので扱いに注意する
+  function exportMap() {
+    return JSON.stringify({
+      format: MAP_FORMAT,
+      version: MAP_VERSION,
+      notice: MAP_NOTICE,
+      entries: [...byOriginal.values()].map((e) => ({ token: e.token, original: e.original, kind: e.kind, variants: [...e.variants] })),
+      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
+    }, null, 2);
+  }
+
+  // 書き出した対応表を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる。
+  // 中身をすべて確かめてから入れ替える。おかしければ何も変えずに Error で止まる
+  function importMap(text) {
+    const data = parseMapFile(text);
+    reset();
+    for (const t of data.terms) userTerms.push({ word: t.word, kind: t.kind, re: termRegExp(t.word) });
+    for (const e of data.entries) {
+      const entry = { token: e.token, original: e.original, kind: e.kind, label: labelOf(e.kind), variants: e.variants };
+      byOriginal.set(keyOf(e.original), entry);
+      byToken.set(e.token, entry);
+      // 次に作る記号が読み込んだ記号と重ならないよう、種類ごとの番号を進めておく
+      const m = e.token.match(/(\d+)〕$/);
+      if (m) counters[e.kind] = Math.max(counters[e.kind] || 0, Number(m[1]));
+    }
+    return { entries: data.entries.length, terms: data.terms.length };
+  }
+
+  // 辞書を書き出す(F19a)。足した語と種類だけの JSON の文字列。元の名前が入っているので扱いに注意する
+  function exportDict() {
+    return JSON.stringify({
+      format: DICT_FORMAT,
+      version: DICT_VERSION,
+      notice: DICT_NOTICE,
+      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
+    }, null, 2);
+  }
+
+  // 書き出した辞書を読み込む(F19a)。今の足した語に加える(同じ語は読み込んだ種類にする)。対応表は変えない。
+  // 中身をすべて確かめてから加える。おかしければ何も変えずに Error で止まる
+  function importDict(text) {
+    const words = parseDictFile(text, Object.keys(labels));
+    let added = 0;
+    let changed = 0;
+    const short = [];
+    for (const t of words) {
+      const old = userTerms.find((u) => u.word === t.word);
+      if (!old) added += 1; else if (old.kind !== t.kind) changed += 1;
+      if (addTerm(t.word, t.kind).warning) short.push(t.word);
+    }
+    const res = { read: words.length, added, changed, total: userTerms.length };
+    if (short.length) res.short = short; // 1字の語があるときだけ付ける
+    return res;
+  }
+
+  return { mask, unmask, spans, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, exportDict, importDict, labelOf, labels: () => ({ ...labels }) };
+}
+
+return { shortTermWarning, parseAmount, formatYen, bandLabel, MAP_FORMAT, MAP_VERSION, MAP_NOTICE, parseMapFile, DICT_FORMAT, DICT_VERSION, DICT_NOTICE, parseDictFile, createMasker };
 })();
 __m["src/mask/extract.mjs"] = (function () {
 // 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
@@ -4407,7 +5518,7 @@ function parseRulesFile(fileText) {
   const s = data.source;
   if (!s || typeof s !== 'object') throw new Error('出典がありません。出典の分からない表は読み込みません');
   for (const [k, label] of [['publisher', '発注者'], ['title', '題名'], ['edition', '版']]) {
-    if (!text(s[k])) throw new Error('出典の' + label + '(source.' + k + ')がありません');
+    if (!text(s[k])) throw new Error('表のファイルに出典の' + label + 'がありません(発注者・題名・版が要ります)');
   }
   const ids = new Set();
   data.rows.forEach((row, i) => {
@@ -5056,1114 +6167,6 @@ function renderConfirmRow(r) {
 }
 
 return { CONFIRM_ROWS, markSources, confirmRows, renderConfirmRow };
-})();
-__m["src/mask/company-types.mjs"] = (function () {
-// 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
-// 語を足すときは、このファイルの一覧に足す(規則のファイルは直さない)。出典の無い語は「慣用」の一覧に分けて置く。
-
-// ---- 法人の種類(法人格) ----
-// 出典: 国税庁 法人番号公表サイト「法人種別」 https://www.houjin-bangou.nta.go.jp/documents/k-resource-dl-ver4.pdf
-//       法務局「商業・法人登記の申請書様式」 https://houmukyoku.moj.go.jp/homu/COMMERCE_11-1.html
-// 「医療法人社団」「医療法人財団」は医療法人の名前の書き方(社団・財団)。「NPO法人」は特定非営利活動法人の通称。「協同組合」は事業協同組合などの名前に付く形
-const CORPORATE_TYPES = [
-  '株式会社', '有限会社', '合名会社', '合資会社', '合同会社',
-  '一般社団法人', '一般財団法人', '公益社団法人', '公益財団法人',
-  '特定非営利活動法人', 'NPO法人', 'ＮＰＯ法人',
-  '医療法人社団', '医療法人財団', '医療法人', '社会医療法人', '社会福祉法人', '学校法人', '宗教法人',
-  '独立行政法人', '地方独立行政法人', '国立大学法人', '公立大学法人',
-  '事業協同組合', '農業協同組合', '生活協同組合', '協同組合', '農事組合法人', '管理組合法人',
-  '有限責任事業組合', '投資事業有限責任組合',
-  '弁護士法人', '税理士法人', '司法書士法人', '行政書士法人', '社会保険労務士法人', '監査法人', '特許業務法人', '土地家屋調査士法人',
-  '相互会社', '更生保護法人',
-];
-
-// ---- 法人の種類の略し方(慣用。公式の一覧は無い) ----
-// 括弧(半角・全角)の中に書く。「(株)」「（一社）」など
-const CORPORATE_ABBREVIATIONS = ['株', '有', '合', '医', '福', '学', '宗', '一社', '一財', '公社', '公財', '特非', '独'];
-// 上のうち、様式の欄の印と同じ形になる略し方(「資格(有)」「指導医(医)」「学籍(学)番号」)。
-// 名前の字が続くだけでは会社名と決めない。決め方は rules-company.mjs の abbrBefore・abbrAfter
-const AMBIGUOUS_ABBREVIATIONS = ['有', '合', '医', '福', '学', '宗', '独'];
-
-// ---- 囲み文字 ----
-// 出典: Unicode「Enclosed CJK Letters and Months」 https://www.unicode.org/Public/18.0.0/charts/PDF/U3200.pdf
-//       「CJK Compatibility」(㍿ U+337F) https://www.unicode.org/charts/PDF/U3300.pdf
-// 囲み文字は NFKC で正規化すると「(株)」「株」「株式会社」などになる。ここでは字の一覧を手で書かず、
-// U+3200〜U+33FF の字を NFKC にして、下の字(括弧を外した形)か CORPORATE_TYPES の語になる字を拾う(rules-company.mjs)。
-// 「㈹」(代表)は法人の種類ではないので入れない
-const ENCLOSED_CORPORATE_CHARS = ['株', '有', '社', '名', '特', '財', '学', '監', '企', '資', '協', '医', '宗', '労'];
-
-// ---- 法令で名前が決まっている施設 ----
-// 学校教育法 第1条 https://laws.e-gov.go.jp/law/322AC0000000026
-// 医療法 第1条の5 https://laws.e-gov.go.jp/law/323AC0000000205
-// 老人福祉法 第5条の3 https://laws.e-gov.go.jp/law/338AC0000000133
-// 介護保険法 第8条 https://laws.e-gov.go.jp/law/409AC0000000123
-const FACILITY_SUFFIXES_LAW = [
-  '幼稚園', '小学校', '中学校', '義務教育学校', '高等学校', '中等教育学校', '特別支援学校', '大学', '高等専門学校',
-  '病院', '診療所',
-  '老人デイサービスセンター', '養護老人ホーム', '特別養護老人ホーム', '軽費老人ホーム', '老人福祉センター',
-  '介護老人保健施設', '介護医療院',
-];
-
-// ---- 慣用の語尾(法令の定義は無い) ----
-// 法人格の無い会社・団体・役所の名前の終わりに付く語
-const ORG_SUFFIXES_CUSTOM = [
-  '組', '建設', '工務店', '商店', '商会', '製作所', '工業', '興業', '産業',
-  '事務所', '設計事務所', '法律事務所', '会計事務所',
-  'クリニック', '医院', '歯科', '薬局', '訪問看護ステーション',
-  '協会', '連合会', '組合',
-  '役場', '市役所', '区役所', '町役場', '村役場', '県庁',
-  '自治会', '町内会',
-  'デイサービスセンター', 'グループホーム',
-];
-
-// ---- 種類の語が名前の前に来る施設(「特別養護老人ホームさくらの里」「グループホーム甲野」) ----
-// 法令の語は FACILITY_SUFFIXES_LAW の老人福祉法・介護保険法の語。残りは慣用
-const FACILITY_HEAD_WORDS = [
-  '老人デイサービスセンター', '養護老人ホーム', '特別養護老人ホーム', '軽費老人ホーム', '老人福祉センター', '介護老人保健施設', '介護医療院',
-  'デイサービスセンター', 'デイサービス', 'グループホーム', '有料老人ホーム', '老人ホーム', '老人保健施設', 'ケアハウス',
-];
-// 種類の語のすぐ後ろに来ても名前ではない語(この語で始まれば取らない)。姓の頭にもなる1字の語は FACILITY_HEAD_TAIL_CHARS に分ける
-const FACILITY_HEAD_TAIL_WORDS = [
-  '利用', '入所', '入居', '退所', '退居', '通所', '職員', '施設', '事業', '運営', '経営', '開設', '新築', '増築', '改築', '改修', '建設', '工事', '整備', '計画',
-  '費用', '料金', '定員', '担当', '管理', '協会', '連絡', '協議', '指定', '基準', '規程', '規定', '契約', '加算', '報酬', '以外', '以上', '以下', '向け', '関係',
-  '入浴', '送迎', '食事', '嘱託', '併設', '形式', '種別', '本体', '全体', '全般', '一覧', '名簿', 'サービス', 'センター', 'ホーム',
-];
-// この1字だけなら名前ではない語
-const FACILITY_HEAD_TAIL_CHARS = ['費', '料', '代', '内', '間', '部', '課', '室', '棟', '等', '長', '側', '分', '用', '型', '系'];
-// 語尾が「園」などの短い施設名は、一般の語が多いので、次の法人の名前のすぐ後ろ(空白のあと)だけで取る(「社会福祉法人みほん会 ためし園」)
-const FACILITY_OPERATOR_TYPES = [
-  '社会福祉法人', '医療法人社団', '医療法人財団', '医療法人', '社会医療法人', '学校法人', '宗教法人', '特定非営利活動法人', 'NPO法人', 'ＮＰＯ法人',
-  '一般社団法人', '一般財団法人', '公益社団法人', '公益財団法人',
-];
-const FACILITY_OPERATOR_ABBREVIATIONS = ['福', '医', '学', '宗', '特非', '一社', '一財', '公社', '公財'];
-const FACILITY_SHORT_SUFFIXES = ['学園', '園', '苑', '荘', '寮', 'の里', 'の郷', 'の家', 'ホーム', 'ハウス', 'センター', '館'];
-// 「園」などで終わるが施設の名前ではない語
-const FACILITY_SHORT_NON_NAMES = ['公園', '農園', '庭園', '霊園', '田園', '菜園', '動物園', '植物園', '保育園', '幼稚園', 'こども園', '老人ホーム', 'グループホーム', '遊園', '楽園', '造園', '入園', '卒園', '開園', '閉園', '本館', '別館', '新館', '旧館'];
-
-// ---- 名前の部分から除く一般の語(置き換えすぎを減らす) ----
-// 語尾の前の名前から、これらの語と数・「第」を除いて2字より短く残る語は、団体・施設の名前にしない
-// (「県立高等学校」「現場事務所」「建設産業」「第一小学校」「本組合」は置き換えない)。業界を問わず文に出る語だけを入れる
-const ORG_GENERIC_WORDS = [
-  // 設置の形・種類
-  '国立', '公立', '私立', '県立', '市立', '町立', '村立', '都立', '府立', '道立', '区立', '組合立', '総合', '大学', '短期', '附属', '付属',
-  '地域', '一般', '専門', '特定', '共同', '協同', '民間', '公共', '公益', '関係', '関連', '業界', '全国', '日本',
-  // 指し方
-  '当', '本', '同', '各', '全', '他', '前', '元', '新', '旧', '貴', '弊', '御', '上記', '下記', '前記', '後記', '該当', '当該', '所属', '最寄り', '最寄',
-  '近隣', '近く', '地元', '自社', '他社', '自', '某',
-  // 場所・役所の区分
-  '国', '県', '市', '町', '村', '都', '府', '区', '郡', '北', '南', '東', '西', '中央',
-  // 事務所・組合などの前に来る、名前ではない語
-  '現場', '本社', '本店', '支店', '支社', '営業所', '出張所', '工場', '設計', '建築', '法律', '会計', '税理士', '弁護士', '司法書士', '行政書士',
-  '労働', '事業', '管理', '健康保険', '保険', '共済', '取組', '仕', '番', '労務', '班', '作業', '施工', '下請', '元請', '協力',
-  // 産業・工業・建設の前に来る、名前ではない語
-  '建設', '土木', '住宅', '道路', '公共事業', '農業', '林業', '漁業', '水産', '製造', '観光', '情報', '通信', '自動車', '化学', '重', '軽',
-  '機械', '電気', '電子', '食品', '繊維', '鉄鋼', '第一次', '第二次', '第三次', '地場', '基幹', '先端', '新規', '中小', '大手', '小規模',
-  '大規模', '国内', '海外', '工事', '整備', '開発', '再開発',
-  // 医療・介護の前に来る、名前ではない語
-  '医療', '歯科', '調剤', '保健', '介護', '老人', '福祉', '小児', '内科', '外科', '眼科', '皮膚科', '整形外科', '在宅', '訪問', '看護',
-];
-
-// 語尾の規則(法人格の無い名前)のときだけ、名前の部分から除く語。法人格のある名前(「ダム株式会社」)には使わない。
-// 1字の語(「橋」「局」)は入れない(「高橋建設」の名前まで消えて、漏れになる)
-const ORG_SUFFIX_GENERIC_WORDS = [
-  // 工事・事業の対象(「鉄道建設」「学校建設」)
-  '橋梁', '鉄道', 'ダム', '学校', '校舎', 'トンネル', '河川', '港湾', '空港', '発電所', '発電', '上水道', '下水道', '水道', '国道', '県道', '市道', '高速道路',
-  // 産業の言い方(「成長産業」「石油化学工業」)
-  '石油', '成長', '衰退', '造船', '製薬', '製鉄', '精密', '航空', '半導体',
-  // 役所・立場の言い方(「監督員事務所」「振興局事務所」)
-  '監督員', '監督職員', '監督', '振興局', '整備局', '地方', '発注者', '受注者',
-  // 診療の種類(「矯正歯科」「動物病院」)
-  '矯正', '審美', '予防', '動物', '救急', '療養', '精神',
-  // 施設の種類の言い方(「認知症グループホーム」「高齢者デイサービスセンター」)
-  '認知症', '高齢者', '障害者', '障がい者', '通所', '併設', '共同生活',
-];
-
-// 語尾が「県庁」のとき、前の語が実在の県の名前なら一般の言い方として扱う(「和歌山県庁」。「ためし県庁」は置き換える)
-const PREFECTURE_NAMES_KEN = [
-  '青森', '岩手', '宮城', '秋田', '山形', '福島', '茨城', '栃木', '群馬', '埼玉', '千葉', '神奈川', '新潟', '富山', '石川', '福井', '山梨', '長野', '岐阜', '静岡', '愛知',
-  '三重', '滋賀', '兵庫', '奈良', '和歌山', '鳥取', '島根', '岡山', '広島', '山口', '徳島', '香川', '愛媛', '高知', '福岡', '佐賀', '長崎', '熊本', '大分', '宮崎', '鹿児島', '沖縄',
-];
-
-// 法人格のすぐ後ろに来ても会社の名前ではない語(文の続きと、法人格の制度を言う語)
-const CORP_TAIL_SENTENCE_WORDS = [
-  'です', 'ですが', 'ですか', 'ですので', 'である', 'であり', 'であって', 'であった', 'であれば', 'でした', 'でない', 'ではない', 'でも', 'とは', 'には',
-  'だ', 'だった', 'か', 'かどうか', 'とする', 'とした', 'にする', 'にした', 'になる', 'になった', 'なら', 'ならば',
-];
-const CORP_TAIL_SYSTEM_WORDS = ['法律', '法令', '化', '制度', '形態', '形式', '組織', '設立', '登記', '定款', '規定', '会計基準', '会計', '通則法'];
-
-// 法人格の前に名前があるとき、その名前を欄名として扱う語(「代表者 株式会社甲野」の「代表者」を会社名にしない)
-const COMPANY_LABEL_WORDS = [
-  '会社名', '商号', '名称', '社名', '法人名', '団体名', '事業者名', '施設名', '学校名', '氏名', '宛先', '宛名', '所属', '勤務先', '取引先',
-  '発注者', '受注者', '請負者', '注文者', '元請', '下請', '代表者', '申請者', '届出者', '提出者', '事業者', '相手方', '委託先', '契約先', '甲', '乙',
-];
-
-// 法人格のあとに空白を挟んで来ても、会社の名前ではない語(「甲野建設株式会社 代表取締役」の「代表取締役」)
-const COMPANY_ROLE_WORDS = [
-  '代表取締役', '代表社員', '代表理事', '代表者', '代表', '取締役', '理事長', '理事', '社長', '会長', '専務', '常務', '支店長', '所長',
-  '御中', '殿', '様', '支店', '支社', '営業所', '本社', '本店', '工場', '事業所', '出張所', '担当', '担当者', '印',
-];
-
-// ---- 辞書に足す候補(F36b)。慣用の語で、法令の定義は無い。使う所は src/mask/company-candidates.mjs ----
-// 候補は自動で置き換えないので、語尾の一覧は置き換えの一覧(ORG_SUFFIXES_CUSTOM)より広くしてよい。ただし文の中に普通に出る語尾は入れない
-// 会社・団体の名前が値になる欄の名前(業界を問わない語)
-const CANDIDATE_FIELD_LABELS = [
-  '商号', '商号又は名称', '商号・名称', '名称又は商号', '名称・商号', '会社名', '会社名称', '社名', '法人名', '団体名', '企業名', '事業者名', '事業所名', '業者名',
-  '取引先', '取引先名', '委託先', '委託先名', '契約先', '契約相手方', '勤務先', '所属会社', '所属会社名', '受託者', '受託事業者',
-];
-// 置き換えの法人格の一覧に無い、法人の種類に近い語(前の法人の種類の旧い書き方など)。名前の前にも後ろにも付く
-const NEAR_CORPORATE_TYPES = ['社団法人', '財団法人', '企業組合', '協業組合', '国立研究開発法人'];
-// 括弧の略し方のうち、置き換えの一覧に無いもの(「(同)」は合同会社、「(資)」は合資会社)。「人数(同)」のように同上の意味でも出るが、候補は選べるので出す
-const NEAR_CORPORATE_ABBREVIATIONS = ['同', '資'];
-// 会社・団体の名前の終わりに付く、慣用の語尾(業界を問わない語)
-const CANDIDATE_SUFFIXES = [
-  '商事', '物産', '通商', '運輸', '運送', '不動産', '地所', '電機', '電鉄', '工機', '精機', '鉄工', '鉄工所', '工業所', '木材', '化成',
-  'ホールディングス', 'コーポレーション', 'カンパニー', 'コンサルタント', 'コンサルタンツ', 'コンサルティング', 'エンジニアリング', 'ソリューションズ', 'システムズ', 'リース',
-  '公社', '事業団', '振興会',
-];
-// 欄の値に来ても名前ではない語(空欄の印・指し方・表の見出しの語)
-const CANDIDATE_VALUE_STOP_WORDS = [
-  'なし', '無し', '無', '有', 'あり', '有り', '空欄', '未定', '未記入', '未記載', '記載なし', '該当なし', '該当無し', '不明', '同上', '別紙', '別途', '別添', 'その他', '上記', '下記', '当社', '自社',
-  '一覧', '一覧表', '名簿', '住所', '所在地', '本店所在地', '電話', '電話番号', '代表者', '代表者名', '代表者氏名', '担当者', '氏名', '項目', '内容', '備考', '番号', '金額', '合計', '小計', '総計', '日付', '契約日',
-  '工事', '工事名', '工事内容', '工種', '次数', '許可番号', '区分', '種別', '種類', '役割', '業種', '名称', '会社', '業者',
-];
-
-return { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, AMBIGUOUS_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, FACILITY_HEAD_WORDS, FACILITY_HEAD_TAIL_WORDS, FACILITY_HEAD_TAIL_CHARS, FACILITY_OPERATOR_TYPES, FACILITY_OPERATOR_ABBREVIATIONS, FACILITY_SHORT_SUFFIXES, FACILITY_SHORT_NON_NAMES, ORG_GENERIC_WORDS, ORG_SUFFIX_GENERIC_WORDS, PREFECTURE_NAMES_KEN, CORP_TAIL_SENTENCE_WORDS, CORP_TAIL_SYSTEM_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS, CANDIDATE_FIELD_LABELS, NEAR_CORPORATE_TYPES, NEAR_CORPORATE_ABBREVIATIONS, CANDIDATE_SUFFIXES, CANDIDATE_VALUE_STOP_WORDS };
-})();
-__m["src/mask/rules-company.mjs"] = (function () {
-// 会社・団体の名前の規則(F24a)。業界を問わない。語の一覧は src/mask/company-types.mjs(出典つき)から読む。
-// 置き換えの部品(core.mjs)が使う。規則は3つ:
-//   company-before: 名前 +(空白)+ 法人格。例「みほん建設株式会社」「甲野建設 株式会社」「甲野建設㈱」「甲野建設(株)」
-//   company-after:  法人格 +(空白)+ 名前。例「株式会社さくら」「社会福祉法人 みほん会」「㈲甲野」
-//   org-suffix:     法人格の無い団体・施設の名前(名前 + 語尾)。例「甲野工務店」「ひまわり幼稚園」「みほん町役場」。確信の弱い語として扱う
-// 名前の部分には、漢字・カタカナ・英数字のほかにひらがなも入れてよい。ただし、文の中のひらがな(「は」「として」「した」など)の所で切る:
-//   法人格の前の名前は、漢字・カタカナのすぐ後ろの「は・が・を・に・で・と・の・へ・も・や」などより前を捨てる(「当社はみほん建設株式会社」→「みほん建設株式会社」)
-//   法人格の後ろの名前は、ひらがなが続かない所の「は・が・の・と・として」などから後ろを捨てる(「株式会社さくらは」→「株式会社さくら」)
-// 法人格と名前のあいだの空白は1字(半角・全角)まで許す。空白を挟むときは、どちらの側の名前かを次のように決める:
-//   「名前 空白 法人格」は、法人格のすぐ後ろに名前の字が続かないときだけ取る。前の名前が欄名(「代表者」「会社名」など)なら取らない
-//   「法人格 空白 名前」は、法人格のすぐ前に名前の字が無いとき、または前の語が欄名のときだけ取る。後ろの語が役職など(「代表取締役」「御中」)なら取らない
-//   括弧の略し方(「(有)」など)は、様式の「有・無」の欄と紛れるので、空白を挟む形では取らない
-// 「(有)」「(医)」「(学)」など様式の印と同じ形の略し方(AMBIGUOUS_ABBREVIATIONS)は、隣に字があるだけでは会社名と決めない。
-//   前の語 + 略し方: 語が団体の語尾で終わる・前に欄名がある・後ろが「御中」「と契約」などのときだけ取る(abbrBefore)
-//   略し方 + 後ろの語: 前に字が無い・前が欄名か助詞・後ろの語が団体の語尾で終わるときだけ取る(abbrAfter)
-// 法人格だけの一般の文(「当社は株式会社です」「株式会社又は合同会社」「株式会社法」)は取らない(CORP_TAIL_*)
-// 施設の名前(F31c):
-//   org-suffix: 施設の語尾なら、名前の途中のひらがなも入れる(「さくら市立ひまわり幼稚園」「甲野ひまわり幼稚園」)。ひらがなは3字以上で、活用の字で終わらないもの(「大きな病院」「通っている幼稚園」は取らない)
-//   facility-head: 施設の種類の語 + 名前(「デイサービスセンターひまわり」「特別養護老人ホームさくらの里」)。種類の語も合わせて1つに置き換える
-//   facility-operator: 福祉・医療・学校などの法人の名前の空白の後ろの、「園」などで終わる短い名前(「社会福祉法人みほん会 ためし園」)
-
-const { CORPORATE_TYPES, CORPORATE_ABBREVIATIONS, ENCLOSED_CORPORATE_CHARS, FACILITY_SUFFIXES_LAW, ORG_SUFFIXES_CUSTOM, ORG_GENERIC_WORDS, COMPANY_LABEL_WORDS, COMPANY_ROLE_WORDS, AMBIGUOUS_ABBREVIATIONS, ORG_SUFFIX_GENERIC_WORDS, PREFECTURE_NAMES_KEN, CORP_TAIL_SENTENCE_WORDS, CORP_TAIL_SYSTEM_WORDS, FACILITY_HEAD_WORDS, FACILITY_HEAD_TAIL_WORDS, FACILITY_HEAD_TAIL_CHARS, FACILITY_OPERATOR_TYPES, FACILITY_OPERATOR_ABBREVIATIONS, FACILITY_SHORT_SUFFIXES, FACILITY_SHORT_NON_NAMES } = __m["src/mask/company-types.mjs"];
-
-const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const alt = (words) => [...new Set(words)].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
-
-// 名前の字(ひらがなを除く)と、ひらがな
-const SOLID = '\\p{Script=Han}\\p{Script=Katakana}ー々〆ヶA-Za-z0-9Ａ-Ｚａ-ｚ０-９＆&・';
-const HIRA = '\\p{Script=Hiragana}';
-const NAME = `[${SOLID}${HIRA}]`;
-const SP = '[ \\u3000]';
-const isHira = (c) => !!c && /\p{Script=Hiragana}/u.test(c);
-const isSolid = (c) => !!c && new RegExp(`[${SOLID}]`, 'u').test(c);
-const isNameChar = (c) => isHira(c) || isSolid(c);
-const HIRA_RUN = `[${HIRA}]*`;
-
-// 囲み文字: U+3200〜U+33FF の字を NFKC で正規化し、法人の種類の字(括弧を外した形)か法人の種類の語になる字を拾う
-function enclosedCorporateChars() {
-  const out = [];
-  for (let cp = 0x3200; cp <= 0x33ff; cp++) {
-    const c = String.fromCodePoint(cp);
-    const n = c.normalize('NFKC');
-    if (n === c) continue;
-    const inner = n.replace(/^\((.+)\)$/u, '$1');
-    if (ENCLOSED_CORPORATE_CHARS.includes(inner) || CORPORATE_TYPES.includes(n)) out.push(c);
-  }
-  return out;
-}
-const ENCLOSED_CHARS = enclosedCorporateChars();
-
-const PAREN_ABBR = `[(（]${SP}?(?:${alt(CORPORATE_ABBREVIATIONS)})${SP}?[)）]`;
-const PAREN_ABBR_RE = new RegExp(`^${PAREN_ABBR}$`, 'u');
-const AMBIGUOUS_ABBR_RE = new RegExp(`^[(（]${SP}?(?:${alt(AMBIGUOUS_ABBREVIATIONS)})${SP}?[)）]$`, 'u');
-const CORP = `(?:${alt(CORPORATE_TYPES)}|${PAREN_ABBR}|[${ENCLOSED_CHARS.join('')}])`;
-// 法人格の後ろの名前は、次の法人格の手前で止める(「株式会社甲野及び株式会社乙川」の後ろの名前も別に見つける)
-const NAME_NOT_CORP = `(?:(?!${CORP})${NAME})`;
-
-// 文の中のひらがなの切れ目(長い順に試す)
-const BREAKS = [
-  '及び', '又は', '若しくは', '並びに', 'および', 'または', 'もしくは', 'ならびに',
-  'における', 'について', 'において', 'として', 'による', 'にある', 'である', 'となる', 'された', 'される', 'させる', 'している',
-  'できる', 'でした', 'です', 'した', 'する', 'して', 'され', 'から', 'まで', 'より', 'など', 'では', 'には', 'とは', 'との', 'への', 'ない', 'れる', 'った',
-  'は', 'が', 'を', 'に', 'で', 'と', 'の', 'へ', 'も', 'や',
-].sort((a, b) => b.length - a.length);
-// 名前の頭に来ても名前ではないひらがなの語
-const FUNC_HEAD = ['これ', 'それ', 'あれ', 'この', 'その', 'あの', 'どの', 'ここ', 'そこ', 'また', 'および', 'または', 'ならびに', 'もしくは',
-  'かつ', 'ほか', 'すべて', 'ある', 'いる', 'なる', 'する', 'した', 'できる'].sort((a, b) => b.length - a.length);
-
-const breakAt = (s, i) => BREAKS.find((b) => s.startsWith(b, i)) || '';
-
-// 法人格の前の名前の頭を切る。返すのは名前の中で残す所の始まり(残らなければ -1)
-function trimHead(name) {
-  let cut = 0;
-  for (let i = 0; i < name.length; i++) {
-    const b = breakAt(name, i);
-    if (!b) continue;
-    const before = name[i - 1];
-    const after = name[i + b.length];
-    if (i === 0 ? (after !== undefined && !isHira(after)) : isSolid(before)) cut = Math.max(cut, i + b.length);
-  }
-  let s = name.slice(cut);
-  for (let changed = true; changed;) {
-    changed = false;
-    const f = FUNC_HEAD.find((w) => s.startsWith(w) && s.length > w.length);
-    if (f) {
-      let k = f.length;
-      k += breakAt(s, k).length;
-      if (k < s.length) { cut += k; s = s.slice(k); changed = true; }
-    }
-  }
-  if (!s || FUNC_HEAD.includes(s)) return -1;
-  return cut;
-}
-
-// 法人格の後ろの名前の終わりを切る。返すのは名前の中で残す長さ(0 なら残らない)
-// 名前の終わりの1字のひらがな(「株式会社やまと」の「と」)は、前が漢字・カタカナのときだけ切る(「株式会社甲野と」)。
-// ひらがなの後ろの「と・の・に・で」は名前の中によく出るので切らない(「株式会社ふもと野ロジ」「株式会社ひのき」)。
-// そのため「株式会社さくらと契約」は「と契約」まで置き換える(漏らすより置き換えすぎの方にする)
-const INNER_OK = ['と', 'の', 'に', 'で'];
-function trimTail(name) {
-  for (let i = 0; i < name.length; i++) {
-    const b = breakAt(name, i);
-    if (!b) continue;
-    const after = name[i + b.length];
-    const prevHira = i > 0 && isHira(name[i - 1]);
-    if (prevHira && INNER_OK.includes(b)) continue;
-    if (after === undefined) {
-      if (i > 0 && (b.length > 1 || isSolid(name[i - 1]))) return i;
-    } else if (!isHira(after)) return i;
-  }
-  return name.length;
-}
-
-// 名前から一般の語・数・「第」などを除いて残る字の数
-const FILLER = /[0-9０-９A-Za-zＡ-Ｚａ-ｚ・\s　()（）]|令和|平成|年度|第|号/gu;
-const GENERIC = [...new Set([...ORG_GENERIC_WORDS, '等', '及び', '又', '又は', '以外', '以下', '各種'])].sort((a, b) => b.length - a.length);
-const ORG_GENERIC = [...new Set([...GENERIC, ...ORG_SUFFIX_GENERIC_WORDS])].sort((a, b) => b.length - a.length);
-const countRest = (name, words) => {
-  let s = name.replace(FILLER, '');
-  for (const g of words) s = s.split(g).join('');
-  return s.length;
-};
-const restLength = (name) => countRest(name, GENERIC);
-// 語尾の規則の名前の残り。「二人組」の「二人」のような人数も名前にしない
-const orgRestLength = (name) => countRest(name.replace(/[一二三四五六七八九十百数何]人/gu, ''), ORG_GENERIC);
-
-const CORP_WORD = new RegExp(alt(CORPORATE_TYPES), 'gu');
-const CORP_TAIL_SENTENCE = new Set([...CORP_TAIL_SENTENCE_WORDS, ...BREAKS, ...FUNC_HEAD]);
-const CORP_TAIL_SYSTEM = new RegExp(`^(?:${alt(CORP_TAIL_SYSTEM_WORDS)}|法(?:第.*|改正|施行.*)?)$`, 'u');
-// 法人格の後ろに続いても名前ではない語か(文の続き・制度の語・別の法人格だけ)
-const isCorpTailWord = (kept) => CORP_TAIL_SENTENCE.has(kept) || CORP_TAIL_SYSTEM.test(kept) || restLength(kept.replace(CORP_WORD, '')) < 1;
-
-const LABEL_END = new RegExp(`(?:${alt(COMPANY_LABEL_WORDS)})$`, 'u');
-const ROLE_HEAD = new RegExp(`^(?:${alt(COMPANY_ROLE_WORDS)})`, 'u');
-
-// 前の語(空白の前の、名前の字の並び)を返す
-function wordBefore(text, end) {
-  let i = end;
-  while (i > 0 && isNameChar(text[i - 1])) i--;
-  return text.slice(i, end);
-}
-
-const ORG_SUFFIXES = [...FACILITY_SUFFIXES_LAW, ...ORG_SUFFIXES_CUSTOM];
-const ORG_SUFFIX_END = new RegExp(`(?:${alt(ORG_SUFFIXES)})$`, 'u');
-// 語尾の前に名前が2字以上残る、団体の名前の形か
-function endsLikeOrg(name) {
-  const m = name.match(ORG_SUFFIX_END);
-  return !!m && orgRestLength(name.slice(0, name.length - m[0].length)) >= 2;
-}
-const LABEL_THEN_SEP = new RegExp(`(?:${alt(COMPANY_LABEL_WORDS)})[\\s\\u3000:：|｜]*$`, 'u');
-const FOLLOWS_COMPANY = new RegExp(`^[ \\u3000]?(?:${alt(COMPANY_ROLE_WORDS)}|[とに]契約|[にへ]発注|[にへ]委託|[にへ]下請)`, 'u');
-const PARTICLES = ['は', 'が', 'を', 'に', 'で', 'と', 'の', 'へ', 'も', 'や'];
-
-// 「前の語 + (有)」を会社名として取るか。「資格(有)」「指導医(医)」は取らない
-function abbrBefore(kept, text, start, end) {
-  return endsLikeOrg(kept) || LABEL_THEN_SEP.test(text.slice(Math.max(0, start - 20), start)) || FOLLOWS_COMPANY.test(text.slice(end, end + 8));
-}
-// 「(有) + 後ろの語」を会社名として取るか。「既往症(有)高血圧」「学籍(学)番号」は取らない
-function abbrAfter(kept, text, index) {
-  if (kept.startsWith('・')) return false;
-  const prev = text[index - 1];
-  if (!isNameChar(prev) || prev === '・' || endsLikeOrg(kept)) return true;
-  if (LABEL_END.test(wordBefore(text, index))) return true;
-  return PARTICLES.includes(prev) && isSolid(text[index - 2]);
-}
-
-const COMPANY_RULES = [
-  { id: 'company-before', name: '名前 + 法人格', example: 'みほん建設株式会社・甲野建設 株式会社・甲野建設㈱' },
-  { id: 'company-after', name: '法人格 + 名前', example: '株式会社さくら・社会福祉法人 みほん会' },
-  { id: 'org-suffix', name: '法人格の無い団体・施設の語尾', example: '甲野工務店・ひまわり幼稚園・みほん町役場' },
-];
-
-// 会社名の形(法人格のあるもの)。core.mjs の形として使う
-function companyPatterns(kind = 'company') {
-  const before = {
-    kind,
-    re: new RegExp(`(${NAME}{1,30}?)(${SP}?)(${CORP})`, 'gu'),
-    trim(word, index, text) {
-      const m = word.match(new RegExp(`^(${NAME}{1,30}?)(${SP}?)(${CORP})$`, 'u'));
-      if (!m) return null;
-      const [, whole, sp, corp] = m;
-      // 名前の中に別の法人格があれば、その後ろだけを名前にする(「株式会社甲野・株式会社乙川」の「株式会社甲野・」は名前にしない)
-      const last = [...whole.matchAll(CORP_WORD)].at(-1);
-      const skip = last ? last.index + last[0].length : 0;
-      const name = whole.slice(skip);
-      const trimmed = trimHead(name);
-      if (trimmed < 0) return null;
-      const h = skip + trimmed;
-      const kept = whole.slice(h);
-      if (restLength(kept) < 1 || kept.endsWith('・') || (last && CORP_TAIL_SENTENCE.has(kept))) return null;
-      if ([...kept].length === 1 && isHira(kept)) return null;
-      // 名前がひらがなの切れ目(「は」「として」など)で終わり、法人格のすぐ後ろに名前が続くときは、後ろの名前の方を取る
-      // (「下請けは株式会社乙川土工」。「やまと株式会社」のように後ろに名前が無ければ取る)
-      const endBreak = BREAKS.find((b) => kept.endsWith(b) && kept.length > b.length);
-      if (endBreak && (endBreak.length > 1 || isNameChar(text[index + word.length]))) return null;
-      if (AMBIGUOUS_ABBR_RE.test(corp) && !abbrBefore(kept, text, index + h, index + word.length)) return null;
-      if (sp) {
-        if (PAREN_ABBR_RE.test(corp)) return null;
-        if (isNameChar(text[index + word.length])) return null;
-        if (LABEL_END.test(kept)) return null;
-      }
-      return [h, word.length];
-    },
-  };
-  const after = {
-    kind,
-    re: new RegExp(`(${CORP})(${SP}?)(${NAME_NOT_CORP}{1,30})`, 'gu'),
-    trim(word, index, text) {
-      const m = word.match(new RegExp(`^(${CORP})(${SP}?)(${NAME_NOT_CORP}{1,30})$`, 'u'));
-      if (!m) return null;
-      const [, corp, sp, name] = m;
-      // 名前の終わりの「・」は区切り(「(有)甲野・(有)乙川」)
-      const len = trimTail(name.replace(/・+$/u, ''));
-      const kept = name.slice(0, len);
-      if (!kept || restLength(kept) < 1) return null;
-      if ([...kept].length === 1 && isHira(kept)) return null;
-      if (isCorpTailWord(kept)) return null;
-      if (AMBIGUOUS_ABBR_RE.test(corp) && !abbrAfter(kept, text, index)) return null;
-      if (sp) {
-        if (PAREN_ABBR_RE.test(corp)) return null;
-        if (ROLE_HEAD.test(kept)) return null;
-        const prev = text[index - 1];
-        if (isNameChar(prev)) return null;
-        if (prev === ' ' || prev === '　') {
-          const w = wordBefore(text, index - 1);
-          if (w && !LABEL_END.test(w)) return null;
-        }
-      }
-      return [0, corp.length + sp.length + len];
-    },
-  };
-  return [before, after];
-}
-
-const FACILITY_RULES = [
-  { id: 'facility-head', name: '施設の種類の語 + 名前', example: 'デイサービスセンターひまわり・グループホーム甲野' },
-  { id: 'facility-operator', name: '法人の名前の後ろの施設の名前', example: '社会福祉法人みほん会 ためし園' },
-];
-
-// 名前の途中にひらがなを入れてよい語尾(施設)。「新たな建設」のような文を取らないよう、会社の語尾には使わない
-const MIXED_NAME_SUFFIXES = new Set([...FACILITY_SUFFIXES_LAW, 'クリニック', '医院', 'デイサービスセンター', 'グループホーム']);
-const PLAIN_NAME = new RegExp(`^${HIRA_RUN}[${SOLID}]*$`, 'u');
-const MIXED_NAME = new RegExp(`^${HIRA_RUN}[${SOLID}]+[${HIRA}]{3,}[${SOLID}]*$`, 'u');
-const INFLECTED = /[るたいなだくてでう]$/u;
-function nameShapeOk(kept, sfx) {
-  if (PLAIN_NAME.test(kept)) return true;
-  if (!MIXED_NAME_SUFFIXES.has(sfx) || !MIXED_NAME.test(kept)) return false;
-  // 途中のひらがなの並びが活用の字で終わるなら文の一部(「通っている」「素晴らしい」)
-  return ![...kept.matchAll(new RegExp(`[${HIRA}]+`, 'gu'))].some((m) => m.index > 0 && INFLECTED.test(m[0]));
-}
-
-// 法人格の無い団体・施設の名前の規則(文脈の規則として、確信の弱い語にする)
-function orgSuffixPatterns({ kind = 'company', suffixes = ORG_SUFFIXES, minRest = 2 } = {}) {
-  const suffixAlt = alt(suffixes);
-  const re = new RegExp(`${NAME}{1,30}?(?:${suffixAlt})(?![\\p{Script=Han}\\p{Script=Katakana}ー々])`, 'gu');
-  const suffixEnd = new RegExp(`(?:${suffixAlt})$`, 'u');
-  return [{
-    kind,
-    rule: 'org-suffix',
-    re,
-    trim(word) {
-      const sfx = word.match(suffixEnd)[0];
-      const name = word.slice(0, word.length - sfx.length);
-      const h = trimHead(name);
-      if (h < 0) return null;
-      const kept = name.slice(h);
-      // ひらがなは名前の頭だけ(「ひまわり幼稚園」「みほん市役所」)。漢字のあとのひらがな(「新たな建設」)は名前にしない。施設の語尾は nameShapeOk
-      if (!nameShapeOk(kept, sfx)) return null;
-      if (orgRestLength(kept) < minRest) return null;
-      if (sfx === '県庁' && PREFECTURE_NAMES_KEN.includes(kept)) return null;
-      return [h, word.length];
-    },
-  }];
-}
-
-const SENTENCE_IN_TAIL = /ます|ません|ない|ある|あり|いる|する|した|です|でした|よう|こと|もの|ため|とき|ところ|として/u;
-const HEAD_NOT_NAME = new RegExp(`^(?:${alt(FACILITY_HEAD_TAIL_WORDS)})`, 'u');
-const NOT_A_FLOOR = /^[0-9０-９一二三四五六七八九十第]+[階棟号館室名人床]/u;
-const headTailNotName = (kept) => HEAD_NOT_NAME.test(kept) || FACILITY_HEAD_TAIL_CHARS.includes(kept) || NOT_A_FLOOR.test(kept)
-  || BREAKS.some((b) => b.length > 1 && kept.startsWith(b)) || (isHira(kept[0]) && SENTENCE_IN_TAIL.test(kept));
-const NON_NAME_END = new RegExp(`(?:${alt(FACILITY_SHORT_NON_NAMES)})$`, 'u');
-
-// 施設の名前の規則(F31c)。文脈の規則として使う(確信の弱い語)
-function facilityPatterns(kind = 'company') {
-  const headAlt = alt(FACILITY_HEAD_WORDS);
-  const NEXT = `(?:(?!${headAlt}|${CORP})${NAME})`;
-  const head = {
-    kind,
-    rule: 'facility-head',
-    re: new RegExp(`(?:${headAlt})${SP}?${NEXT}{1,20}`, 'gu'),
-    trim(word) {
-      const h = word.match(new RegExp(`^(?:${headAlt})${SP}?`, 'u'))[0];
-      const name = word.slice(h.length).replace(/・+$/u, '');
-      // ひらがなの名前の後ろの「の職員」「に入居」は trimTail では切れないので、ここで切る(「さくらの里」の「の里」は残す)
-      const cut = [...name].findIndex((c, i) => i > 0 && PARTICLES.includes(c) && HEAD_NOT_NAME.test(name.slice(i + 1)));
-      const len = cut > 0 ? cut : trimTail(name);
-      const kept = name.slice(0, len);
-      if (!kept || headTailNotName(kept) || isCorpTailWord(kept)) return null;
-      if (kept.replace(FILLER, '').length < 2) return null;
-      return [0, h.length + len];
-    },
-  };
-  const operator = `(?:${alt(FACILITY_OPERATOR_TYPES)}|[(（](?:${alt(FACILITY_OPERATOR_ABBREVIATIONS)})[)）])`;
-  const suffix = alt(FACILITY_SHORT_SUFFIXES);
-  const after = {
-    kind,
-    rule: 'facility-operator',
-    re: new RegExp(`(?<=${operator}${SP}?${NAME}{1,30}${SP})${NAME}{1,20}?(?:${suffix})(?![\\p{Script=Han}\\p{Script=Katakana}ー々])`, 'gu'),
-    trim(word) {
-      if (NON_NAME_END.test(word)) return null;
-      const sfx = word.match(new RegExp(`(?:${suffix})$`, 'u'))[0];
-      if (orgRestLength(word.slice(0, word.length - sfx.length)) < 2) return null;
-      return [0, word.length];
-    },
-  };
-  return [head, after];
-}
-
-return { enclosedCorporateChars, ENCLOSED_CHARS, CORP, trimHead, trimTail, restLength, orgRestLength, isCorpTailWord, COMPANY_RULES, companyPatterns, FACILITY_RULES, orgSuffixPatterns, facilityPatterns };
-})();
-__m["src/mask/rules-address.mjs"] = (function () {
-// 住所の規則(F24b)。業界を問わない。置き換えの部品(core.mjs)が形として使う。
-// 住所の並び(アドレス・ベース・レジストリ https://www.digital.go.jp/policies/base_registry_address 、
-// 日本郵便 郵便番号データの説明 https://www.post.japanpost.jp/service/search/zipcode/download/readme.html ):
-//   〒 郵便番号 → 都道府県 → 郡・市・区・町・村 → 大字・町字・字 → 丁目 → 番地・番・号 → 枝番 → 建物名・部屋番号
-// 見つける形:
-//   (1) 都道府県 +(市区町村)+(町名)+ 番地      例「架空県みほん市さくら町1-2-3」「架空県 けんちょう通り 0-0」
-//   (2) 市区町村 +(町名)+ 番地(都道府県なし)    例「みほん市さくら町一丁目2番3号」。番地は「丁目・番地・番・号」が付くか、
-//       数が2つ以上つながるか、町名が「町・村・字」などで終わるときだけ取る(「みほん市 3」「みほん市 2026年」は取らない)
-//   (3) 都道府県 + 市区町村 + 町名(番地なし)      町名が「町・村・丁目・地内・地先」などで終わる所まで。例「架空県みほん市さくら町地内」
-//   (4) 〒 郵便番号(単独でも、住所の前でも)。「郵便番号: 123-4567」の数の所
-//   (1)〜(3) の後ろの建物名(ビル・マンション・ハイツ などで終わる語)と部屋番号(301号室・3階 など)
-//   (5) 条丁目(F31c): 「北8条西5丁目1-1」「南1条西2丁目」「4条通8丁目」は番地の一部として全部を1つに取る。法令の条(「みほん市条例3条」)は取らない
-//   (6) 京都の通り名(F31c): 「寺町通御池上る上本能寺前町488」。上る・下る・東入る・西入る(カタカナの形も)があれば、町名が長くても全部を1つに取る
-// 区切り: 部分のあいだの空白は1字(半角・全角)まで許す。数字は半角・全角・漢数字、ハイフンは - − ‐ ‑ – ー － ― を許す。
-// 続く名前を食わないための決まり:
-//   ・住所は番地(か建物名・部屋番号)で終わる。番地の後ろの会社名・人名は住所に入れない(「…1-2-3 甲山建設株式会社」)
-//   ・「都道府県 空白 都道府県名で始まる語」は、前の都道府県を住所に入れない(「架空県 架空県ためし市0-0」の前の「架空県」は発注者の名前)
-//   ・都道府県 + 市区町村だけ(町名も番地も無い)は、住所の欄名(住所・所在地 など)の後ろのときだけ取る。
-//     それ以外は発注者の名前(「架空県みほん市」「みほん市長」)とみなして取らない
-//   ・建物名に法人の種類の語(株式会社 など)が入るときは建物名にしない
-
-const { CORPORATE_TYPES } = __m["src/mask/company-types.mjs"];
-const { trimHead } = __m["src/mask/rules-company.mjs"];
-
-const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const alt = (words) => [...new Set(words)].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
-
-// 都道府県(総務省 全国地方公共団体コード https://www.soumu.go.jp/denshijiti/code.html の都道府県の名前)
-const PREFECTURES = [
-  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
-  '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
-  '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
-];
-// 建物名の語尾と頭(慣用。公式の一覧なし)
-const BUILDING_SUFFIXES = ['ビルディング', 'ビル', 'マンション', 'ハイツ', 'コーポ', 'アパート', 'レジデンス', 'ハイム', 'メゾン', 'タワー', 'コート',
-  'ヒルズ', 'ハウス', 'パレス', 'プラザ', 'テラス', '荘', '団地', '住宅', '寮'];
-const BUILDING_HEADS = ['コーポ', 'メゾン', 'ハイツ', 'グラン'];
-// 住所の欄名(この後ろなら、都道府県 + 市区町村だけでも住所として取る)と、名前の頭に付いても地名ではない欄名の語
-// 「市・区・町・村・郡」で終わるが市区町村の名前ではない語(慣用)
-const NON_MUNI_WORDS = ['都市', '地区', '市区', '工区', '学区', '管区', '街区', '特区', '選挙区', '区画区', '漁村', '農村', '山村', '城下町', '門前町', '宿場町', '港町', '下町', '市町村', '区市町村', '市町', '町村'];
-const ADDRESS_LABELS = ['住所', '所在地', '所在', '本店', '本社', '支店', '営業所', '事業所', '工事場所', '施工場所', '場所', '送付先', '宛先', '連絡先', '郵便番号'];
-
-const D = '[0-9０-９]';
-const HY = '[-−‐‑–ー－―]';
-const SP = '[ \\u3000]';
-const KNUM = '[一二三四五六七八九十〇百千]';
-// 地名の字
-const NM = '[\\p{Script=Han}\\p{Script=Katakana}\\p{Script=Hiragana}ー々ヶ]';
-const NMX = '[\\p{Script=Han}\\p{Script=Katakana}\\p{Script=Hiragana}ー々ヶA-Za-zＡ-Ｚａ-ｚ0-9０-９・]';
-// 一覧に無い県の名前(架空の例など)は、漢字2字 + 県 だけを取る(3字にすると前の語の字を食う)
-const PREF = `(?:${alt(PREFECTURES)}|\\p{Script=Han}{2}県)`;
-const PREF_HEAD = `\\p{Script=Han}{2,3}[都道府県](?![市区町村郡])`;
-const MUNI = `${NM}{1,8}?[市区町村郡]`;
-const MUNIS = `${MUNI}(?:${SP}?${MUNI}){0,2}`;
-const TOWN = `${NM}{1,12}`;
-// 京都の通り名: 漢字・カタカナの通りの名前 + 上る・下る・東入る・西入る(2回まで)+ 町名
-const HK = '[\\p{Script=Han}\\p{Script=Katakana}ー々ヶ]';
-const DIR = '(?:東入る|西入る|東入ル|西入ル|東入|西入|上る|下る|上ル|下ル|入る|入ル)';
-const KYOTO_TOWN = `${HK}{1,14}?${DIR}(?:${HK}{1,8}?${DIR})?${HK}{0,14}`;
-// 番地: 「1-2-3」「1丁目2番3号」「一丁目2番地の3」「123番地」「1丁目 2-3」。漢数字は丁目・番・号・の が続くときだけ
-const NUM = `(?:${D}+|${KNUM}+(?=丁目|番|号|地割|の))`;
-const NUMSFX = '(?:丁目|番地|番|号|地割)';
-const NUMTAIL = `${NUM}${NUMSFX}?(?:(?:(?<=丁目|番地|番|地割)${SP}?|${HY}|の)?${NUM}${NUMSFX}?){0,4}`;
-// 条丁目: 条の数 +(通・東西南北)。後ろに丁目や番地が続いてよい
-const JOHEAD = `(?:${D}+|${KNUM}+)条(?:通|[東西南北])?`;
-const NUMPART = `(?<!第)(?:(?<jo>${JOHEAD})${SP}?(?:[東西南北]?${NUMTAIL})?|${NUMTAIL})`;
-const BUILDING = `(?:(?:${alt(BUILDING_HEADS)})${NMX}{1,12}|${NMX}{1,20}?(?:${alt(BUILDING_SUFFIXES)}))(?:${SP}?(?:${D}+|[A-ZＡ-Ｚ])?(?:号館|号棟|棟|館))?(?![\\p{Script=Han}\\p{Script=Katakana}ーA-Za-zＡ-Ｚａ-ｚ])`;
-const ROOM = `(?:${D}+(?:階|[FＦ])(?:${SP}?${D}+(?:号室|号)?)?|${D}+(?:号室|号)?|[A-ZＡ-Ｚ]${HY}?${D}+(?:号室)?)`;
-// 部屋番号: 建物名の後ろなら数だけでもよい。建物名が無ければ「号室・階」の付くものだけ(後ろの電話番号などを食わない)
-const ROOM_STRICT = `(?:${D}+(?:階|[FＦ])${SP}?)?${D}+号室|${D}+(?:階|[FＦ])(?!${D})`;
-const AFTER_NUM = `(?:${SP}?(?<bldg>${BUILDING})(?:${SP}?(?<room>${ROOM})(?!${D}|${HY}|階|[FＦ]))?|${SP}?(?<room2>${ROOM_STRICT}))?`;
-const ZIP = `〒${SP}?${D}{3}${HY}${D}{4}`;
-// 番地の後ろに続くと住所にしない字(年・円・人 などの数の単位。「市道1号線」の 線・号)
-const NOT_AFTER = `(?!${D}|[年月日円時分秒歳人名件台回本枚個箇ヶか％%㎡mｍ線号])`;
-
-const RE = new RegExp(
-  `(?<zip>${ZIP}${SP}?)?` +
-  `(?:(?<pref>${PREF})(?:${SP}?(?!${PREF_HEAD})(?<muni>${MUNIS}))?|(?<muni2>${MUNIS}))` +
-  `(?:${SP}?(?!${PREF_HEAD})(?<town>(?<kyoto>${KYOTO_TOWN})|${TOWN}))?` +
-  `(?:${SP}?(?<num>${NUMPART})${NOT_AFTER}${AFTER_NUM})?`,
-  'gu',
-);
-// 町名の終わりとして認める語(番地が無いとき)
-const TOWN_END = /(?:町|村|丁目|地内|地先|大字\S+|字\S+)$/u;
-const LABEL_AT_END = new RegExp(`(?:${alt(ADDRESS_LABELS)})(?:[:：|｜\\t]|${SP})*$`, 'u');
-const MUNI_UNIT = new RegExp(MUNI, 'gu');
-const NON_MUNI = new RegExp(`(?:${alt(NON_MUNI_WORDS)})$`, 'u');
-const KYOTO_END = new RegExp(`(?:町|村|丁目|${DIR})(?=${HK}*$)`, 'gu');
-// 町名の後ろの「通」は切らない(「寺町通御池」の「寺町」だけを取らない)。通信・通知など一般の語は除く
-const NOT_STREET = '(?!信|知|勤|行|常|路|話|過|学|院|算|報|達|販|貨)';
-const STREET_AFTER = new RegExp(`^通${NOT_STREET}${HK}*`, 'u');
-// 町名が「〜通〜」のとき(「烏丸通御池」)。都道府県か2つ以上の市区町村があるときだけ見る(「みほん市交通局」を取らない)
-const STREET_TOWN = new RegExp(`^${HK}{1,8}?(?<![交開共普流直文貫])通${NOT_STREET}${HK}*`, 'u');
-// 町名がこれらの語で終わる「3条」は法令の条で、住所ではない
-const LAW_BEFORE_JO = /(?:法|令|条例|規則|規程|規定|要綱|要領|契約|約款|基準|憲章|細則)$/u;
-const MULTI_MUNI = new RegExp(`^${MUNI}(?:${SP}?${MUNI})+$`, 'u');
-const KNUM_ADDR = new RegExp(`${KNUM}+(?:丁目|番地|番|号)(?:の?${KNUM}+(?![\\p{Script=Han}]))?`, 'gu');
-const LABEL_IN = new RegExp(`(?:${alt(ADDRESS_LABELS)})`, 'gu');
-const CORP_IN = new RegExp(alt(CORPORATE_TYPES), 'u');
-
-const ADDRESS_RULES = [
-  { id: 'address', name: '住所(都道府県・市区町村・町名・番地・建物名・部屋番号)', example: '架空県みほん市さくら町1-2-3 みほんビル301号室・みほん市さくら町一丁目2番3号' },
-  { id: 'zip', name: '郵便番号(〒)', example: '〒000-0000' },
-];
-
-// 市区町村の名前の頭から、文の中のひらがな・欄名の語を外す。返すのは名前の中で残す所の始まり(残らなければ -1)
-function muniStart(name) {
-  let cut = 0;
-  for (const m of name.matchAll(LABEL_IN)) cut = Math.max(cut, m.index + m[0].length);
-  const rest = name.slice(cut);
-  const h = trimHead(rest);
-  if (h < 0) return -1;
-  return cut + h;
-}
-
-// 番地の形が住所らしいか(都道府県なしのとき)
-function strongNumber(num, town, g = {}) {
-  if (g.kyoto) return true;
-  if (/丁目|番地|番|号|地割/u.test(num)) return true;
-  if (g.jo && town) return true;
-  if (new RegExp(`${D}+(?:${HY}|の)${D}+`, 'u').test(num)) return true;
-  return !!town && /(?:町|村|字\S*)$/u.test(town.trim());
-}
-
-function trimAddress(word, index, text) {
-  const m = word.match(new RegExp(`^${RE.source}$`, 'u'));
-  if (!m) return null;
-  const g = m.groups;
-  const muni = g.muni || g.muni2 || '';
-  // 「京都市」は語尾が「都市」だが市の名前
-  if (muni && [...muni.matchAll(MUNI_UNIT)].some((u) => !u[0].endsWith('京都市') && NON_MUNI.test(u[0]))) return null;
-  let start = 0;
-  // 都道府県の無い住所は、市区町村の名前の頭のひらがな・欄名を外す(〒の後ろなら外さない)
-  if (!g.pref && g.muni2) {
-    const name = g.muni2.match(new RegExp(`^${NM}{1,8}?(?=[市区町村郡])`, 'u'))[0];
-    const s = muniStart(name);
-    if (s < 0 || (g.zip && s > 0)) return null;
-    // 文の頭を外したら都道府県で始まるなら、そこから読み直す(「現場は京都府京都市…」)
-    if (s > 0 && new RegExp(`^${PREF}`, 'u').test(word.slice(s))) {
-      const again = trimAddress(word.slice(s), index + s, text);
-      return again && [again[0] + s, again[1] + s];
-    }
-    start = s; // 〒があれば s は 0(〒から取る)
-  }
-  if (g.jo && LAW_BEFORE_JO.test((g.town || '').trim())) return null;
-  if (g.num) {
-    if (g.bldg && CORP_IN.test(g.bldg)) return [start, word.slice(0, word.lastIndexOf(g.bldg)).trimEnd().length];
-    if (!g.pref && !strongNumber(g.num, g.town, g)) return null;
-    return [start, word.length];
-  }
-  const town = g.town || '';
-  const head = word.length - town.length;
-  // 京都の通り名は、上る・下る の後ろの町名まで全部か、町名でなければ 上る・下る まで
-  if (g.kyoto) {
-    const last = [...town.matchAll(KYOTO_END)].pop();
-    return [start, head + last.index + last[0].length];
-  }
-  // 番地が漢数字だけ(「一丁目二番三号」)のときは、町名の中に入っている。最後の「〜丁目・番・号」までにする
-  const kn = [...town.matchAll(KNUM_ADDR)].pop();
-  if (kn && (g.pref || muni)) return [start, head + kn.index + kn[0].length];
-  // 番地が無いとき: 町名が「町・村・丁目・地内・地先」などで終わる所まで(都道府県が無ければ「地内・地先」のときだけ)
-  if (town && muni) {
-    for (let k = town.length; k > 0; k--) {
-      const t = town.slice(0, k);
-      if (TOWN_END.test(t) && (g.pref || /(?:地内|地先)$/u.test(t))) return [start, head + k + (town.slice(k).match(STREET_AFTER)?.[0].length ?? 0)];
-    }
-  }
-  // 「…寺町」が市区町村の形に見えて、後ろが「通御池」のとき(「寺町」だけを取らない)
-  const street = town.match(STREET_AFTER);
-  if (street && muni) return [start, head + street[0].length];
-  const streetTown = (g.pref || MULTI_MUNI.test(muni)) && muni ? town.match(STREET_TOWN) : null;
-  if (streetTown) return [start, head + streetTown[0].length];
-  const core = word.slice(0, head).trimEnd().length;
-  // 都道府県 + 市区町村が2つ以上(「架空県ためし郡みほん町」「架空県みほん市さくら町」)
-  if (g.pref && g.muni && MULTI_MUNI.test(g.muni)) return [start, core];
-  // 都道府県 + 市区町村だけ: 住所の欄名の後ろのときだけ取る(それ以外は発注者の名前とみなす)
-  if (g.pref && g.muni && LABEL_AT_END.test(text.slice(Math.max(0, index - 12), index))) return [start, core];
-  return null;
-}
-
-// 住所の形。core.mjs の形として使う
-function addressPatterns(kind = 'address') {
-  return [
-    { kind, re: new RegExp(RE.source, 'gu'), trim: trimAddress },
-    // 〒 + 郵便番号だけ
-    { kind, re: new RegExp(`${ZIP}(?!${D})`, 'gu') },
-    // 「郵便番号: 123-4567」(〒の無い郵便番号は欄名の後ろだけ)
-    { kind, re: new RegExp(`(?<=郵便番号[:：]?${SP}?)${D}{3}${HY}${D}{4}(?!${D})`, 'gu') },
-  ];
-}
-
-return { PREFECTURES, BUILDING_SUFFIXES, BUILDING_HEADS, NON_MUNI_WORDS, ADDRESS_LABELS, ADDRESS_RULES, addressPatterns };
-})();
-__m["src/mask/core.mjs"] = (function () {
-// 置き換えの部品(F11a): 文の中の人名・会社名・場所の名前・住所・電話・メールなどを記号に置き換え、対応表を持ち、戻ってきた文を元に戻す。
-// この部品は分野の語を持たない。分野の語や形(番号の書き方など)は辞書(dictionaries)で外から渡す。
-// 対応表はこの部品の中(メモリ)だけに持つ。ブラウザには残さない(ページを閉じれば消える)。
-// 利用者が求めたときだけ、exportMap で対応表を文字列(JSON)にし、importMap で読み込む(F11d)。その文字列には元の名前が入っている。
-// 足した語だけは exportDict / importDict で辞書のファイル(JSON)にできる(F19a)。こちらにも元の名前が入っている。
-//
-// 辞書の形: { name, labels: { kind: '表示名' }, terms: [{ word, kind }], patterns: [{ kind, re: RegExp }] }
-// 辞書は文脈の規則(contextPatterns: [{ kind, rule, re, accept? }])も持てる(F17a)。まわりの語から見つけた確信の弱い語で、
-//   accept(語, 位置, 文) が false の語は取らない(位置と文は、表の見出しの行かを見るために使う。F27c)。見つけた語は対応表の行に rule(規則の id)を付ける。同じ文の中の同じ語は、文脈が無くても同じ記号にする。
-// 置き換えの優先: 足した語(addTerm)> 辞書の語 > 辞書の形 > 部品の形 > 文脈の規則。重なったら優先の高いほう、同じなら長いほうを取る。
-// ただし、足した語・辞書の語が、形で見つけた長い語(メール・会社名・住所・電話など)の中に収まるときは、長い方を取る(F27d。
-//   「林」を足しても「小林商事株式会社」は会社名として、「a」を足してもメールはメールとして置き換える)。
-//   文脈の規則で見つけた長い語の中に収まるときも長い方を取る(F31c。「林」を足しても「担当者: 小林 一郎」の名を残さない)。
-// 英数字で始まる・終わる語は、英数字の途中では当てない(「a」が「data」の中に当たらない)。
-// 形・規則は trim(語, 位置, 文) を持てる(F24a)。見つけた語のうち置き換える所 [始まり, 終わり](語の中の位置)を返し、null なら取らない。
-// 法人格の無い団体・施設の名前の規則(F24a。org-suffix)は業界を問わないので、辞書の文脈の規則の後ろにいつも足す(同じ所なら辞書の規則を取る)。
-
-const { companyPatterns, orgSuffixPatterns, facilityPatterns } = __m["src/mask/rules-company.mjs"];
-const { addressPatterns } = __m["src/mask/rules-address.mjs"];
-
-const DEFAULT_LABELS = {
-  person: '人名',
-  company: '会社名',
-  site: '現場名',
-  address: '住所',
-  phone: '電話',
-  email: 'メール',
-  other: '語',
-};
-
-const DIGIT = '[0-9０-９]';
-const HYPHEN = '[-−‐‑–ー－]';
-const STOP = '[^\\s、。,，.()()「」『』\\[\\]【】:：;；]';
-
-// 部品が持つ形(分野によらないもの)
-const CORE_PATTERNS = [
-  { kind: 'email', re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/gu },
-  { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{1,4}${HYPHEN}${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
-  { kind: 'phone', re: new RegExp(`[((][0０]${DIGIT}{1,4}[))]\\s*${DIGIT}{1,4}${HYPHEN}${DIGIT}{3,4}(?![0-9０-９])`, 'gu') },
-  { kind: 'phone', re: new RegExp(`(?<![0-9０-９])[0０]${DIGIT}{9,10}(?![0-9０-９])`, 'gu') },
-  // 会社名: 「〇〇株式会社」「株式会社〇〇」と、ほかの法人の種類・略し方・囲み文字(F24a。規則は rules-company.mjs、語の一覧は company-types.mjs)。
-  // 名前にはひらがなも入れてよいが、文の中のひらがな(「は」「として」など)の所で切る
-  ...companyPatterns('company'),
-  // 住所: 〒・都道府県・市区町村・町名・番地・建物名・部屋番号(F24b。規則は rules-address.mjs)。都道府県なし・空白区切りも見る。
-  // 番地で終わり、続く会社名・発注者の名前を食わない
-  ...addressPatterns('address'),
-];
-
-const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-// 語を、空白の違い(半角・全角・無し)を許して探す形にする
-function termRegExp(word) {
-  const w = String(word).trim();
-  const parts = w.split(/[\s　]+/).filter(Boolean).map(escapeRe);
-  const head = /^[A-Za-z0-9]/.test(w) ? '(?<![A-Za-z0-9])' : '';
-  const tail = /[A-Za-z0-9]$/.test(w) ? '(?![A-Za-z0-9])' : '';
-  return new RegExp(head + parts.join('[\\s\\u3000]*') + tail, 'gu');
-}
-
-// 1字の語の注意(F27d)。1字の語は長い語の一部にも当たるので、足すときに画面へ出す。問題がなければ空の文字列
-function shortTermWarning(word) {
-  const w = String(word ?? '').replace(/[\s\u3000]+/g, '');
-  if ([...w].length !== 1) return '';
-  return '「' + w + '」は1字の語です。ほかの語の一部も置き換わります(例: 「' + w + '」を足すと「小' + w + '」「' + w + '田」のような名前や語の中の「' + w + '」も置き換わります。会社名・メール・住所・電話の形の中は、長い方をまとめて置き換えます)。人名なら姓と名を続けて足すと確かです。';
-}
-
-// ファイルの頭の BOM(U+FEFF)を外す(F27d。メモ帳などで保存した辞書・対応表のファイルを読めるようにする)
-const stripBom = (t) => String(t ?? '').replace(/^\uFEFF/, '');
-
-const withGlobal = (re) => (re.flags.includes('g') ? new RegExp(re.source, re.flags) : new RegExp(re.source, re.flags + 'g'));
-
-// 全角の数字を半角に
-const toHalf = (s) => String(s).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[，,]/g, '');
-
-// 金額の文字(「52,000,000」「5,200万」「1億2,000万」、後ろの「円」は無くてもよい)を数にする。読めなければ null
-function parseAmount(text) {
-  const s = toHalf(String(text ?? '').trim()).replace(/円$/, '').replace(/\s+/g, '');
-  const m = s.match(/^(?:(\d+(?:\.\d+)?)億)?(?:(\d+(?:\.\d+)?)万)?(\d+)?$/);
-  if (!m || (!m[1] && !m[2] && !m[3])) return null;
-  return Math.round((Number(m[1] || 0) * 1e8) + (Number(m[2] || 0) * 1e4) + Number(m[3] || 0));
-}
-
-function formatYen(n) {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円';
-}
-
-const AMOUNT_RE = new RegExp(`(?:(${DIGIT}[0-9０-９,，]*(?:\\.${DIGIT}+)?)億)?(?:(${DIGIT}[0-9０-９,，]*(?:\\.${DIGIT}+)?)万)?(${DIGIT}[0-9０-９,，]*)?円`, 'gu');
-
-// 金額を「境目以上・未満」の形にする(元の金額は書かない)
-function bandLabel(amount, thresholds) {
-  const ts = [...new Set(thresholds.filter((t) => Number.isFinite(t) && t > 0))].sort((a, b) => a - b);
-  if (!ts.length) return '〔金額〕';
-  if (amount < ts[0]) return `〔金額 ${formatYen(ts[0])}未満〕`;
-  for (let i = 0; i < ts.length - 1; i++) {
-    if (amount >= ts[i] && amount < ts[i + 1]) return `〔金額 ${formatYen(ts[i])}以上${formatYen(ts[i + 1])}未満〕`;
-  }
-  return `〔金額 ${formatYen(ts[ts.length - 1])}以上〕`;
-}
-
-function bandAmounts(text, thresholds) {
-  return text.replace(AMOUNT_RE, (all, oku, man, rest) => {
-    if (!oku && !man && !rest) return all;
-    const n = parseAmount(all);
-    return n === null ? all : bandLabel(n, thresholds);
-  });
-}
-
-// 対応表のファイル(F11d)
-const MAP_FORMAT = 'mask-map';
-const MAP_VERSION = 1;
-const MAP_NOTICE = 'このファイルには元の名前が入っています。外へ送らず、要らなくなったら消してください。';
-
-const isText = (v) => typeof v === 'string' && v.trim() !== '';
-
-// 対応表のファイルを読んで確かめる。おかしければ、どこがおかしいかを書いた Error を投げる
-function parseMapFile(text) {
-  let data;
-  try {
-    data = JSON.parse(stripBom(text));
-  } catch {
-    throw new Error('対応表のファイルとして読めません(JSON の形になっていません)。書き出した対応表のファイルを選んでください。');
-  }
-  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT) {
-    throw new Error('対応表のファイルではありません(format が "' + MAP_FORMAT + '" ではありません)。');
-  }
-  if (data.version !== MAP_VERSION) throw new Error('対応表のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
-  if (!Array.isArray(data.entries)) throw new Error('対応表のファイルに entries(対応表の行)がありません。');
-  const terms = data.terms === undefined ? [] : data.terms;
-  if (!Array.isArray(terms)) throw new Error('対応表のファイルの terms(足した語)が並びになっていません。');
-  const tokens = new Set();
-  const originals = new Set();
-  const entries = data.entries.map((e, i) => {
-    const at = '対応表の ' + (i + 1) + ' 行目';
-    if (!e || typeof e !== 'object') throw new Error(at + 'が読めません。');
-    if (!isText(e.token) || !isText(e.original) || !isText(e.kind)) throw new Error(at + 'に記号・元の語・種類のどれかがありません。');
-    if (tokens.has(e.token)) throw new Error(at + 'の記号 ' + e.token + ' が、ほかの行と重なっています。');
-    const key = e.original.replace(/[\s\u3000]+/g, '');
-    if (originals.has(key)) throw new Error(at + 'の元の語が、ほかの行と重なっています。');
-    tokens.add(e.token);
-    originals.add(key);
-    const variants = Array.isArray(e.variants) ? e.variants.filter(isText) : [];
-    if (!variants.includes(e.original)) variants.unshift(e.original);
-    return { token: e.token, original: e.original, kind: e.kind, variants };
-  });
-  const words = terms.map((t, i) => {
-    if (!t || !isText(t.word) || !isText(t.kind)) throw new Error('足した語の ' + (i + 1) + ' 番目に語か種類がありません。');
-    return { word: t.word.trim(), kind: t.kind.trim() };
-  });
-  return { entries, terms: words };
-}
-
-// 辞書のファイル(F19a): 「辞書に足す」で足した語と種類だけを入れる。記号・対応表は入れない。元の名前が入っている
-const DICT_FORMAT = 'mask-dict';
-const DICT_VERSION = 1;
-const DICT_NOTICE = 'このファイルには元の名前(辞書に足した人名・会社名・現場名など)が入っています。外へ送らず、要らなくなったら消してください。';
-const DICT_MAX_TERMS = 5000;
-const DICT_MAX_WORD = 200;
-
-// 辞書のファイルを読んで確かめる。kinds は受け付ける種類(labels の key)。おかしければ、どこがおかしいかを書いた Error を投げる
-function parseDictFile(text, kinds) {
-  let data;
-  try {
-    data = JSON.parse(stripBom(text));
-  } catch {
-    throw new Error('辞書のファイルとして読めません(JSON の形になっていません)。書き出した辞書のファイルを選んでください。');
-  }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('辞書のファイルではありません(中身が JSON のオブジェクトではありません)。');
-  if (data.format === MAP_FORMAT) throw new Error('これは対応表のファイルです。対応表は「対応表を読み込む」で読み込んでください。');
-  if (data.format !== DICT_FORMAT) throw new Error('辞書のファイルではありません(format が "' + DICT_FORMAT + '" ではありません)。');
-  if (data.version !== DICT_VERSION) throw new Error('辞書のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
-  if (!Array.isArray(data.terms)) throw new Error('辞書のファイルに terms(足した語の並び)がありません。');
-  if (!data.terms.length) throw new Error('辞書のファイルに語が1つもありません。');
-  if (data.terms.length > DICT_MAX_TERMS) throw new Error('辞書のファイルの語が多すぎます(' + data.terms.length + ' 件。' + DICT_MAX_TERMS + ' 件まで)。');
-  const known = new Set(kinds || []);
-  const seen = new Map();
-  const out = [];
-  data.terms.forEach((t, i) => {
-    const at = '辞書の ' + (i + 1) + ' 番目の語';
-    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new Error(at + 'が読めません。');
-    if (!isText(t.word)) throw new Error(at + 'に word(語)がありません。');
-    if (!isText(t.kind)) throw new Error(at + 'に kind(種類)がありません。');
-    const word = t.word.trim();
-    const kind = t.kind.trim();
-    if (word.length > DICT_MAX_WORD) throw new Error(at + 'が長すぎます(' + DICT_MAX_WORD + ' 字まで)。');
-    if (/[\u0000-\u001f\u007f]/u.test(word)) throw new Error(at + 'に改行や制御文字が入っています。');
-    if (known.size && !known.has(kind)) throw new Error(at + 'の種類 "' + kind + '" は、この画面の種類にありません。');
-    const prev = seen.get(word);
-    if (prev !== undefined) {
-      if (prev !== kind) throw new Error(at + '「' + word + '」が、ほかの番目と違う種類で重なっています。');
-      return;
-    }
-    seen.set(word, kind);
-    out.push({ word, kind });
-  });
-  return out;
-}
-
-function createMasker({ dictionaries = [] } = {}) {
-  const labels = { ...DEFAULT_LABELS };
-  const dictTerms = [];
-  const dictPatterns = [];
-  const contextPatterns = [];
-  for (const d of dictionaries) {
-    if (!d) continue;
-    Object.assign(labels, d.labels || {});
-    for (const t of d.terms || []) dictTerms.push({ kind: t.kind, re: termRegExp(t.word) });
-    for (const p of d.patterns || []) dictPatterns.push({ kind: p.kind, re: withGlobal(p.re) });
-    for (const p of d.contextPatterns || []) contextPatterns.push({ kind: p.kind, re: withGlobal(p.re), rule: p.rule || 'context', accept: p.accept, trim: p.trim });
-  }
-  for (const p of [...orgSuffixPatterns(), ...facilityPatterns()]) contextPatterns.push(p);
-  const userTerms = []; // { word, kind, re }
-  const byOriginal = new Map(); // 元の語(空白を除いた形)→ 対応表の1行
-  const byToken = new Map(); // 記号 → 対応表の1行
-  const counters = {};
-
-  const labelOf = (kind) => labels[kind] || String(kind);
-
-  function addTerm(word, kind) {
-    const w = String(word ?? '').trim();
-    const k = String(kind ?? '').trim() || 'other';
-    if (!w) throw new Error('語が空です');
-    const old = userTerms.find((t) => t.word === w);
-    const warning = shortTermWarning(w);
-    const res = warning ? { word: w, kind: k, warning } : { word: w, kind: k };
-    if (old) { old.kind = k; return res; }
-    userTerms.push({ word: w, kind: k, re: termRegExp(w) });
-    return res;
-  }
-
-  function removeTerm(word) {
-    const i = userTerms.findIndex((t) => t.word === String(word ?? '').trim());
-    if (i >= 0) userTerms.splice(i, 1);
-  }
-
-  const terms = () => userTerms.map(({ word, kind }) => ({ word, kind, label: labelOf(kind) }));
-
-  // 元の語に記号を割り当てる。同じ語にはいつも同じ記号(空白の有無だけの違いは同じ語とみなし、戻すときは最初に出た書き方にする)。
-  // 文の中に既にある文字列と同じ記号は使わない
-  const keyOf = (s) => s.replace(/[\s\u3000]+/g, '');
-  function tokenFor(original, kind, text, rule) {
-    const hit = byOriginal.get(keyOf(original));
-    if (hit) {
-      if (!hit.variants.includes(original)) hit.variants.push(original);
-      if (!rule) delete hit.rule; // 辞書や形でも見つかった語は、確信の弱い語にしない
-      return hit;
-    }
-    let token;
-    do {
-      counters[kind] = (counters[kind] || 0) + 1;
-      token = `〔${labelOf(kind)}${counters[kind]}〕`;
-    } while (byToken.has(token) || text.includes(token));
-    const entry = { token, original, kind, label: labelOf(kind), variants: [original] };
-    if (rule) entry.rule = rule;
-    byOriginal.set(keyOf(original), entry);
-    byToken.set(token, entry);
-    return entry;
-  }
-
-  function findSpans(text) {
-    const groups = [userTerms, dictTerms, dictPatterns, CORE_PATTERNS, contextPatterns];
-    const cands = [];
-    groups.forEach((list, priority) => {
-      for (const { kind, re, rule, accept, trim } of list) {
-        const r = new RegExp(re.source, re.flags);
-        for (const m of text.matchAll(r)) {
-          if (!m[0]) continue;
-          if (accept && !accept(m[0], m.index, text)) continue;
-          let [a, b] = [0, m[0].length];
-          if (trim) {
-            const t = trim(m[0], m.index, text);
-            if (!t || t[1] <= t[0]) continue;
-            [a, b] = t;
-          }
-          cands.push({ start: m.index + a, end: m.index + b, kind, priority, rule });
-        }
-      }
-    });
-    const overlaps = (c, list) => list.some((x) => c.start < x.end && x.start < c.end);
-    // 足した語・辞書の語(priority 0・1)が、形で見つけた長い語(priority 2・3)の中に収まるなら、語の方を外す(F27d)
-    const shapes = cands.filter((x) => x.priority === 2 || x.priority === 3);
-    const inShape = (c) => shapes.some((x) => x.start <= c.start && c.end <= x.end && (x.end - x.start) > (c.end - c.start));
-    for (let i = cands.length - 1; i >= 0; i--) {
-      if (cands[i].priority <= 1 && inShape(cands[i])) cands.splice(i, 1);
-    }
-    cands.sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start) || a.start - b.start);
-    const chosen = [];
-    for (const c of cands) {
-      if (overlaps(c, chosen)) continue;
-      chosen.push(c);
-    }
-    // 足した語・辞書の語が文脈で見つけた長い語の中に収まるなら、長い方に置き換える(F31c)。
-    // 文脈の語が形と重なるときは取り替えない(足した語を外すと、形に負けた文脈の語とともに語が漏れるため)
-    const contexts = cands.filter((x) => x.priority === 4 && !chosen.includes(x)).sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start);
-    for (const c of contexts) {
-      const hit = chosen.filter((x) => c.start < x.end && x.start < c.end);
-      const inside = (x) => (x.priority <= 1 || x.priority === 4) && c.start <= x.start && x.end <= c.end && (x.end - x.start) < (c.end - c.start);
-      if (!hit.some((x) => x.priority <= 1) || !hit.every(inside)) continue;
-      for (const x of hit) chosen.splice(chosen.indexOf(x), 1);
-      chosen.push(c);
-    }
-    // 文脈で見つけた語は、同じ文の中のほかの場所(文脈の無い所)でも同じ語として置き換える
-    const seen = new Set();
-    for (const c of chosen.filter((x) => x.rule)) {
-      const word = text.slice(c.start, c.end);
-      if (seen.has(keyOf(word))) continue;
-      seen.add(keyOf(word));
-      for (const m of text.matchAll(termRegExp(word))) {
-        const more = { start: m.index, end: m.index + m[0].length, kind: c.kind, rule: c.rule };
-        // 重なるのが、この語の中に収まる文脈の語・足した語だけなら(「中央病院」が「みほん台 中央病院」の中にある、「林」が2か所目の「小林 一郎」の中にある、など)、長い方に置き換える
-        const hit = chosen.filter((x) => more.start < x.end && x.start < more.end);
-        if (hit.length && hit.every((x) => (x.rule || x.priority <= 1) && x.start >= more.start && x.end <= more.end && x !== c)) {
-          for (const x of hit) chosen.splice(chosen.indexOf(x), 1);
-        }
-        if (!overlaps(more, chosen)) chosen.push(more);
-      }
-    }
-    return chosen.sort((a, b) => a.start - b.start);
-  }
-
-  // options.amounts: 'keep'(既定。金額はそのまま)か 'band'(境目以上・未満の形。options.thresholds の数を境目にする)
-  function mask(text, options = {}) {
-    const src = String(text ?? '');
-    const spans = findSpans(src);
-    let out = '';
-    let pos = 0;
-    const used = [];
-    for (const s of spans) {
-      const original = src.slice(s.start, s.end);
-      const entry = tokenFor(original, s.kind, src, s.rule);
-      out += src.slice(pos, s.start) + entry.token;
-      pos = s.end;
-      if (!used.includes(entry)) used.push(entry);
-    }
-    out += src.slice(pos);
-    if (options.amounts === 'band') out = bandAmounts(out, (options.thresholds || []).map(Number));
-    return { masked: out, map: used.map((e) => ({ ...e, variants: [...e.variants] })) };
-  }
-
-  // 記号を元の語に戻す。知らない記号はそのまま残す(金額の「境目」の形は元に戻らない)
-  function unmask(text) {
-    const src = String(text ?? '');
-    if (!byToken.size) return src;
-    const tokens = [...byToken.keys()].sort((a, b) => b.length - a.length).map(escapeRe);
-    return src.replace(new RegExp(tokens.join('|'), 'gu'), (t) => byToken.get(t).original);
-  }
-
-  // 置き換える所(始まり・終わり・種類)だけを返す。対応表・記号の番号は変えない(F28a の見本の確かめに使う)
-  const spans = (text) => findSpans(String(text ?? '')).map(({ start, end, kind }) => ({ start, end, kind }));
-
-  const entries = () => [...byOriginal.values()].map((e) => ({ ...e, variants: [...e.variants] }));
-
-  // 対応表と足した語を消す
-  function reset({ keepTerms = false } = {}) {
-    byOriginal.clear();
-    byToken.clear();
-    for (const k of Object.keys(counters)) delete counters[k];
-    if (!keepTerms) userTerms.length = 0;
-  }
-
-  // 対応表を書き出す(F11d)。JSON の文字列で、元の語・記号・種類・足した語を含む。元の名前が入っているので扱いに注意する
-  function exportMap() {
-    return JSON.stringify({
-      format: MAP_FORMAT,
-      version: MAP_VERSION,
-      notice: MAP_NOTICE,
-      entries: [...byOriginal.values()].map((e) => ({ token: e.token, original: e.original, kind: e.kind, variants: [...e.variants] })),
-      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
-    }, null, 2);
-  }
-
-  // 書き出した対応表を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる。
-  // 中身をすべて確かめてから入れ替える。おかしければ何も変えずに Error で止まる
-  function importMap(text) {
-    const data = parseMapFile(text);
-    reset();
-    for (const t of data.terms) userTerms.push({ word: t.word, kind: t.kind, re: termRegExp(t.word) });
-    for (const e of data.entries) {
-      const entry = { token: e.token, original: e.original, kind: e.kind, label: labelOf(e.kind), variants: e.variants };
-      byOriginal.set(keyOf(e.original), entry);
-      byToken.set(e.token, entry);
-      // 次に作る記号が読み込んだ記号と重ならないよう、種類ごとの番号を進めておく
-      const m = e.token.match(/(\d+)〕$/);
-      if (m) counters[e.kind] = Math.max(counters[e.kind] || 0, Number(m[1]));
-    }
-    return { entries: data.entries.length, terms: data.terms.length };
-  }
-
-  // 辞書を書き出す(F19a)。足した語と種類だけの JSON の文字列。元の名前が入っているので扱いに注意する
-  function exportDict() {
-    return JSON.stringify({
-      format: DICT_FORMAT,
-      version: DICT_VERSION,
-      notice: DICT_NOTICE,
-      terms: userTerms.map(({ word, kind }) => ({ word, kind })),
-    }, null, 2);
-  }
-
-  // 書き出した辞書を読み込む(F19a)。今の足した語に加える(同じ語は読み込んだ種類にする)。対応表は変えない。
-  // 中身をすべて確かめてから加える。おかしければ何も変えずに Error で止まる
-  function importDict(text) {
-    const words = parseDictFile(text, Object.keys(labels));
-    let added = 0;
-    let changed = 0;
-    const short = [];
-    for (const t of words) {
-      const old = userTerms.find((u) => u.word === t.word);
-      if (!old) added += 1; else if (old.kind !== t.kind) changed += 1;
-      if (addTerm(t.word, t.kind).warning) short.push(t.word);
-    }
-    const res = { read: words.length, added, changed, total: userTerms.length };
-    if (short.length) res.short = short; // 1字の語があるときだけ付ける
-    return res;
-  }
-
-  return { mask, unmask, spans, addTerm, removeTerm, terms, entries, reset, exportMap, importMap, exportDict, importDict, labelOf, labels: () => ({ ...labels }) };
-}
-
-return { shortTermWarning, parseAmount, formatYen, bandLabel, MAP_FORMAT, MAP_VERSION, MAP_NOTICE, parseMapFile, DICT_FORMAT, DICT_VERSION, DICT_NOTICE, parseDictFile, createMasker };
 })();
 __m["src/ui/download.mjs"] = (function () {
 // 画面の書き出し(F05e・F11d が使う)
@@ -7476,7 +7479,7 @@ function exportMaskMap(doc, win) {
 }
 
 // 書き出した対応表のファイルの中身を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる
-function importMaskMap(doc, text) {
+function importMaskMap(doc, text, name) {
   const m = getMasker();
   try {
     const n = m.importMap(text);
@@ -7490,7 +7493,7 @@ function importMaskMap(doc, text) {
     if (mapEl) mapEl.innerHTML = renderMap(m.entries());
     const list = doc.getElementById('dict-list');
     if (list) list.innerHTML = renderTerms(m.terms());
-    setText(doc, 'map-status', '対応表を読み込みました(対応表 ' + n.entries + ' 行・足した語 ' + n.terms + ' 件)。「元に戻す」で使えます。読み込んだファイルにも元の名前が入っています。');
+    setText(doc, 'map-status', (typeof name === 'string' ? name + ' を読みました' : '対応表を読み込みました') + '(対応表 ' + n.entries + ' 行・足した語 ' + n.terms + ' 件)。「元に戻す」で使えます。読み込んだファイルにも元の名前が入っています。');
     return true;
   } catch (e) {
     setText(doc, 'map-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の対応表はそのままです。');
@@ -7518,13 +7521,13 @@ function exportDictFile(doc, win) {
 }
 
 // 書き出した辞書のファイルの中身を読み込む(F19a)。今の足した語に加える。壊れたファイル・形の違うファイルは読み込まず、理由を出す
-function importDictFile(doc, text) {
+function importDictFile(doc, text, name) {
   const m = getMasker();
   try {
     const n = m.importDict(text);
     const list = doc.getElementById('dict-list');
     if (list) list.innerHTML = renderTerms(m.terms());
-    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。'
+    setText(doc, 'dict-file-status', (typeof name === 'string' ? name + ' を読みました' : '辞書を読み込みました') + '(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。'
       + (n.short && n.short.length ? ' 注意: 1字の語が ' + n.short.length + ' 件あります。1字の語はほかの語の一部も置き換わります(会社名・メール・住所・電話の形の中は、長い方をまとめて置き換えます)。' : ''));
     return true;
   } catch (e) {
@@ -7548,6 +7551,29 @@ async function loadMaskFile(doc, file) {
     setText(doc, 'mask-file-status', '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e)));
     return false;
   }
+}
+
+// ボタンで選んでも、ドラッグして置いても、この関数で読む(F54d)
+async function readDictFile(doc, f) {
+  if (f.size > DICT_MAX_BYTES) { setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。'); return; }
+  let text;
+  try {
+    text = await f.text();
+  } catch {
+    setText(doc, 'dict-file-status', '読み込めませんでした: ファイルを読めません。今の辞書はそのままです。');
+    return;
+  }
+  importDictFile(doc, text, f.name);
+}
+async function readMapFile(doc, f) {
+  let text;
+  try {
+    text = await f.text();
+  } catch {
+    setText(doc, 'map-status', '読み込めませんでした: ファイルを読めません。今の対応表はそのままです。');
+    return;
+  }
+  importMaskMap(doc, text, f.name);
 }
 
 function startMask(doc) {
@@ -7582,37 +7608,9 @@ function startMask(doc) {
       decideCandidate(doc, b.getAttribute('data-word'), b.getAttribute('data-candidate'));
     });
   }
-  const src = doc.getElementById('mask-file');
-  if (src) {
-    src.addEventListener('change', async () => {
-      const f = src.files && src.files[0];
-      if (!f) return;
-      await loadMaskFile(doc, f);
-      src.value = '';
-    });
-  }
-  const dictFile = doc.getElementById('dict-import');
-  if (dictFile) {
-    dictFile.addEventListener('change', async () => {
-      const f = dictFile.files && dictFile.files[0];
-      if (!f) return;
-      if (f.size > DICT_MAX_BYTES) setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。');
-      else importDictFile(doc, await f.text());
-      dictFile.value = '';
-    });
-  }
-  const file = doc.getElementById('map-import');
-  if (file) {
-    file.addEventListener('change', async () => {
-      const f = file.files && file.files[0];
-      if (!f) return;
-      importMaskMap(doc, await f.text());
-      file.value = '';
-    });
-  }
 }
 
-return { INDUSTRIES, currentIndustry, INDUSTRY_SWITCH_NOTICE, parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, isCandidateSkipped, renderCandidates, decideCandidate, lastResidualCheck, maskedText, decideMask, runMask, lastDecoyCheck, setDecoyRandom, setIndustry, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, startMask };
+return { INDUSTRIES, currentIndustry, INDUSTRY_SWITCH_NOTICE, parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, isCandidateSkipped, renderCandidates, decideCandidate, lastResidualCheck, maskedText, decideMask, runMask, lastDecoyCheck, setDecoyRandom, setIndustry, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, readDictFile, readMapFile, startMask };
 })();
 __m["src/ui/ai-app.mjs"] = (function () {
 // 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。
@@ -7625,7 +7623,7 @@ const RESULT_FORMAT = 'ai-candidates';
 function parseAiResult(text) {
   let d;
   try { d = JSON.parse(text); } catch { throw new Error('JSON として読めません。'); }
-  if (!d || d.format !== RESULT_FORMAT) throw new Error('AI の候補の結果のファイルではありません(format が違います)。');
+  if (!d || d.format !== RESULT_FORMAT) throw new Error('このファイルは AI の候補の形ではありません。');
   if (!Array.isArray(d.candidates)) throw new Error('候補の一覧がありません。');
   const candidates = d.candidates.map((c, i) => {
     if (!c || typeof c.message !== 'string' || !c.message.trim() || typeof c.basis !== 'string' || !c.basis.trim()) throw new Error((i + 1) + ' 件目の候補に、指摘か根拠がありません。');
@@ -7635,30 +7633,32 @@ function parseAiResult(text) {
   return { candidates, warnings };
 }
 
-function loadAiResult(doc, text) {
+function loadAiResult(doc, text, name) {
   const out = doc.getElementById('ai-result');
   const status = doc.getElementById('ai-status');
   try {
     const r = parseAiResult(text);
     out.innerHTML = renderAiCandidates(r.candidates, r.warnings);
-    if (status) status.textContent = 'AI の候補を ' + r.candidates.length + ' 件読み込みました。';
+    if (status) status.textContent = (typeof name === 'string' ? name + ' を読みました(AI の候補 ' + r.candidates.length + ' 件)。' : 'AI の候補を ' + r.candidates.length + ' 件読み込みました。');
   } catch (e) {
     if (status) status.textContent = '読み込めませんでした: ' + e.message;
   }
 }
 
-function startAi(doc) {
-  const file = doc.getElementById('ai-load');
-  if (!file) return;
-  file.addEventListener('change', async () => {
-    const f = file.files && file.files[0];
-    if (!f) return;
-    loadAiResult(doc, await f.text());
-    file.value = '';
-  });
+// ボタンで選んでも、ドラッグして置いても、この関数で読む(F54d)
+async function readAiFile(doc, f) {
+  let text;
+  try {
+    text = await f.text();
+  } catch {
+    const status = doc.getElementById('ai-status');
+    if (status) status.textContent = '読み込めませんでした: ファイルを読めません。';
+    return;
+  }
+  loadAiResult(doc, text, f.name);
 }
 
-return { parseAiResult, loadAiResult, startAi };
+return { RESULT_FORMAT, parseAiResult, loadAiResult, readAiFile };
 })();
 __m["src/ui/app.mjs"] = (function () {
 // 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
@@ -7667,6 +7667,7 @@ __m["src/ui/app.mjs"] = (function () {
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
 const { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
+const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
 const { readLedgerXlsx, ledgerToText, FIELD_NAMES } = __m["src/ledger-xlsx.mjs"];
 const { checkTaicho } = __m["src/check-taicho.mjs"];
@@ -7688,8 +7689,8 @@ const { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } = __m["src/intake-load.
 const wakayamaRows = __m["data/specs/wakayama_r0711_rows.json"];
 const { SAMPLE } = __m["src/sample.mjs"];
 const { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow } = __m["src/ui/confirm.mjs"];
-const { startMask } = __m["src/ui/mask-app.mjs"];
-const { startAi } = __m["src/ui/ai-app.mjs"];
+const { startMask, loadMaskFile, readDictFile, readMapFile } = __m["src/ui/mask-app.mjs"];
+const { readAiFile, RESULT_FORMAT } = __m["src/ui/ai-app.mjs"];
 const { downloadText } = __m["src/ui/download.mjs"];
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
@@ -8413,7 +8414,8 @@ function setIntakeStatus(doc, text, lines = []) {
 let intakeReading = null;
 const afterIntake = (f) => (intakeReading ? intakeReading.then(f) : f());
 function queueIntake(doc, f) {
-  const reading = (intakeReading ?? Promise.resolve()).then(() => readIntake(doc, f)).then(() => {
+  // 違う口の確かめも読み込みの順番の中でする(確かめている間に「確認する」が先へ進まないように)
+  const reading = (intakeReading ?? Promise.resolve()).then(() => readChecked(doc, 'intake-load', f, readIntake)).then(() => {
     if (intakeReading === reading) intakeReading = null;
   });
   intakeReading = reading;
@@ -8473,18 +8475,56 @@ const setLedgerFileStatus = (doc, text) => {
   const el = doc.getElementById('ledger-file-status');
   if (el) el.textContent = text;
 };
+const sayIn = (id) => (doc, text) => {
+  const el = doc.getElementById(id);
+  if (el) el.textContent = text;
+};
 const FILE_PORTS = {
   'intake-load': { read: queueIntake, say: setIntakeStatus },
-  'rules-load': { read: readRules, say: setRulesStatus },
+  'rules-load': { read: (doc, f) => readChecked(doc, 'rules-load', f, readRules), say: setRulesStatus },
   'ledger-file': { read: loadLedgerFile, say: setLedgerFileStatus },
+  'dict-import': { read: (doc, f) => readChecked(doc, 'dict-import', f, readDictFile), say: sayIn('dict-file-status') },
+  'mask-file': { read: loadMaskFile, say: sayIn('mask-file-status') },
+  'map-import': { read: (doc, f) => readChecked(doc, 'map-import', f, readMapFile), say: sayIn('map-status') },
+  'ai-load': { read: (doc, f) => readChecked(doc, 'ai-load', f, readAiFile), say: sayIn('ai-status') },
 };
-// まだ F54d で口をつないでいない枠。置いても読まないので、そう知らせる
-const PENDING_PORTS = { 'dict-import': 'dict-file-status', 'mask-file': 'mask-file-status', 'map-import': 'map-status', 'ai-load': 'ai-status' };
-const DROP_IDS = [...Object.keys(FILE_PORTS), ...Object.keys(PENDING_PORTS)];
+const DROP_IDS = Object.keys(FILE_PORTS);
+const WRONG_PORT_MAX_BYTES = 1024 * 1024;
 const DROP_HINT = 'この枠にファイルをドラッグして置いても読み込めます';
 const ONE_FILE = '一度に読めるファイルは1つです。どれも読み込んでいません。';
 const NO_FILE = '読み込んでいません。ファイルを受け取れませんでした。ボタンからファイルを選んでください。';
-const PENDING = '読み込んでいません。この枠へのドラッグはまだ使えません。ボタンからファイルを選んでください。';
+const INTAKE_PDF = '公告の PDF はこの画面では読めません。パソコンの Claude Code(Skill bid-intake)で公告を読み、できた条件のファイル(.json)をこの枠にドラッグしてください。手で入れるときは、段1「条件を入れる」の欄に入れます。';
+const NOT_READ_DROP = '読み込んでいません。';
+const USE_FRAME = NOT_READ_DROP + 'ファイルは点線の枠にドラッグしてください。';
+// 別の道具の口は閉じた折りたたみの中にある
+const toolPort = (what, label) => 'これは' + what + 'のファイルです。「ここからは別の道具」を開き、「' + label + '」の枠にドラッグしてください。';
+const WRONG_PORT = {
+  'intake-load': 'これは公告から拾った条件のファイルです。段1「条件を入れる」の「公告から拾った条件を読み込む」を開き、その枠にドラッグしてください。',
+  'rules-load': 'これは発注者の表のファイルです。段2「結果を見る」の「直轄とは・例の違い・自分の表を読み込む」を開き、その枠にドラッグしてください。',
+  'dict-import': toolPort('辞書', '辞書を読み込む'),
+  'map-import': toolPort('対応表', '対応表を読み込む'),
+  'ai-load': toolPort(' AI の候補', 'AI の候補を読み込む'),
+};
+// .json の中身の印から、どの口のファイルかを言う。分からなければ null(今の誤りの文に任せる)
+function jsonPortOf(data) {
+  if (data?.kind === 'bid-intake') return 'intake-load';
+  if (data?.format === DICT_FORMAT) return 'dict-import';
+  if (data?.format === MAP_FORMAT) return 'map-import';
+  if (data?.format === RESULT_FORMAT) return 'ai-load';
+  if (Array.isArray(data?.rows) && data.rows.some((r) => r?.kind === 'schedule' || r?.kind === 'plan-item')) return 'rules-load';
+  return null;
+}
+// 違う口のファイルなら行き先を知らせて読まない。読めないファイルは read の側の文に任せる
+async function readChecked(doc, id, f, read) {
+  let owner = null;
+  if (!(f.size > WRONG_PORT_MAX_BYTES)) {
+    try {
+      owner = jsonPortOf(JSON.parse(String(await f.text()).replace(/^\uFEFF/, '')));
+    } catch { /* read の側で理由を出す */ }
+  }
+  if (owner && owner !== id) { FILE_PORTS[id].say(doc, WRONG_PORT[owner]); return false; }
+  return read(doc, f);
+}
 
 // 受け付ける拡張子は input の accept から取る。name の無い File は確かめない(今までどおり読む)
 function fileTypeMessage(doc, id, file) {
@@ -8492,6 +8532,7 @@ function fileTypeMessage(doc, id, file) {
   const exts = String(doc.getElementById(id)?.getAttribute?.('accept') ?? '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => x.startsWith('.'));
   const name = file.name.toLowerCase();
   if (!exts.length || exts.some((x) => name.endsWith(x))) return null;
+  if (id === 'intake-load' && name.endsWith('.pdf')) return INTAKE_PDF;
   const again = /\.xls$/.test(name) ? 'Excel で .xlsx に保存し直してください。' : '';
   return '選んだファイルは ' + exts.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
 }
@@ -8549,22 +8590,57 @@ function endDrag(doc) {
   setDragOver(null);
   setDragReady(doc, false);
 }
+const sayDropStatus = sayIn('drop-status');
+const isShown = (doc, id) => { const el = doc.getElementById(id); return Boolean(el) && !el.hidden; };
+const frameName = (doc, id) => dropPortName(findDropTarget(doc.getElementById(id))?.querySelector?.('label')?.textContent);
+// 枠のある閉じた折りたたみを開く。開いたときだけ、その名前を返す
+function openFold(doc, id) {
+  const fold = doc.getElementById(id);
+  if (!fold || fold.open) return '';
+  fold.open = true;
+  return String(fold.querySelector?.('summary')?.textContent ?? '').trim();
+}
+const OPENED = (name) => (name ? '「' + name + '」を開きました' : '');
+// 枠の外に置いたとき: 今見えている段の口の欄に書き、見える所に出す(開いた折りたたみの中の欄もあるので、開いてから動かす)
+function outsideNotice(doc) {
+  if (doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
+  if (isShown(doc, 'panel-1')) {
+    const opened = OPENED(openFold(doc, 'intake-more'));
+    return ['intake-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'intake-load') + '(.json)。' + (opened ? opened + '。' : '')];
+  }
+  if (isShown(doc, 'panel-2')) {
+    const opened = OPENED(openFold(doc, 'rules-more'));
+    return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
+  }
+  if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'ledger-file') + '。'];
+  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '条件のファイル(.json)は「公告から拾った条件を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
+  // 入力の確かめの画面には枠が無い
+  return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
+}
+function sayOutside(doc) {
+  const [id, text] = outsideNotice(doc);
+  if (id === 'intake-status') setIntakeStatus(doc, text);
+  else sayIn(id)(doc, text);
+  doc.getElementById(id)?.scrollIntoView?.({ block: 'nearest' });
+}
 function handleFileDrop(doc, ev) {
   if (!hasFiles(ev)) return Promise.resolve(false);
   ev.preventDefault?.();
   endDrag(doc);
+  sayDropStatus(doc, '');
   const frame = findDropTarget(ev.target);
-  if (!frame) return Promise.resolve(false);
+  if (!frame) { sayOutside(doc); return Promise.resolve(false); }
   const id = frame.getAttribute('data-drop');
-  const port = FILE_PORTS[id];
-  if (!port) {
-    const el = doc.getElementById(PENDING_PORTS[id]);
-    if (el) el.textContent = PENDING;
-    return Promise.resolve(false);
-  }
+  const onTile = frame.id === 'entry-intake';
+  const say = onTile ? sayDropStatus : FILE_PORTS[id].say;
   const files = Array.from(ev.dataTransfer.files ?? []);
-  if (files.length !== 1) { port.say(doc, files.length ? ONE_FILE : NO_FILE); return Promise.resolve(false); }
-  return readPortFile(doc, id, files[0]);
+  if (files.length !== 1) { say(doc, files.length ? ONE_FILE : NO_FILE); return Promise.resolve(false); }
+  if (!onTile) return readPortFile(doc, id, files[0]);
+  // タイルは種類を確かめてから段1へ移る。違えば入口に留まる
+  const bad = fileTypeMessage(doc, id, files[0]);
+  if (bad) { say(doc, bad); return Promise.resolve(false); }
+  openIntake(doc);
+  return FILE_PORTS[id].read(doc, files[0]);
 }
 function startDrop(doc) {
   doc.addEventListener?.('dragenter', (ev) => handleDragMove(doc, ev));
@@ -8748,7 +8824,15 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       });
     }
     startMask(doc);
-    startAi(doc);
+    for (const id of ['dict-import', 'mask-file', 'map-import', 'ai-load']) {
+      const input = doc.getElementById(id);
+      if (input) input.addEventListener('change', async () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        await readPortFile(doc, id, f);
+        input.value = '';
+      });
+    }
     startDrop(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {

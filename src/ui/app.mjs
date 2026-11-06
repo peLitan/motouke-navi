@@ -4,6 +4,7 @@
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
+import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
 import { readLedgerXlsx, ledgerToText, FIELD_NAMES } from '../ledger-xlsx.mjs';
 import { checkTaicho } from '../check-taicho.mjs';
@@ -25,8 +26,8 @@ import { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } from '../intake-load.m
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
 import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow } from './confirm.mjs';
-import { startMask } from './mask-app.mjs';
-import { startAi } from './ai-app.mjs';
+import { startMask, loadMaskFile, readDictFile, readMapFile } from './mask-app.mjs';
+import { readAiFile, RESULT_FORMAT } from './ai-app.mjs';
 import { downloadText } from './download.mjs';
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
@@ -750,7 +751,8 @@ function setIntakeStatus(doc, text, lines = []) {
 let intakeReading = null;
 const afterIntake = (f) => (intakeReading ? intakeReading.then(f) : f());
 function queueIntake(doc, f) {
-  const reading = (intakeReading ?? Promise.resolve()).then(() => readIntake(doc, f)).then(() => {
+  // 違う口の確かめも読み込みの順番の中でする(確かめている間に「確認する」が先へ進まないように)
+  const reading = (intakeReading ?? Promise.resolve()).then(() => readChecked(doc, 'intake-load', f, readIntake)).then(() => {
     if (intakeReading === reading) intakeReading = null;
   });
   intakeReading = reading;
@@ -810,18 +812,56 @@ const setLedgerFileStatus = (doc, text) => {
   const el = doc.getElementById('ledger-file-status');
   if (el) el.textContent = text;
 };
+const sayIn = (id) => (doc, text) => {
+  const el = doc.getElementById(id);
+  if (el) el.textContent = text;
+};
 const FILE_PORTS = {
   'intake-load': { read: queueIntake, say: setIntakeStatus },
-  'rules-load': { read: readRules, say: setRulesStatus },
+  'rules-load': { read: (doc, f) => readChecked(doc, 'rules-load', f, readRules), say: setRulesStatus },
   'ledger-file': { read: loadLedgerFile, say: setLedgerFileStatus },
+  'dict-import': { read: (doc, f) => readChecked(doc, 'dict-import', f, readDictFile), say: sayIn('dict-file-status') },
+  'mask-file': { read: loadMaskFile, say: sayIn('mask-file-status') },
+  'map-import': { read: (doc, f) => readChecked(doc, 'map-import', f, readMapFile), say: sayIn('map-status') },
+  'ai-load': { read: (doc, f) => readChecked(doc, 'ai-load', f, readAiFile), say: sayIn('ai-status') },
 };
-// まだ F54d で口をつないでいない枠。置いても読まないので、そう知らせる
-const PENDING_PORTS = { 'dict-import': 'dict-file-status', 'mask-file': 'mask-file-status', 'map-import': 'map-status', 'ai-load': 'ai-status' };
-const DROP_IDS = [...Object.keys(FILE_PORTS), ...Object.keys(PENDING_PORTS)];
+const DROP_IDS = Object.keys(FILE_PORTS);
+const WRONG_PORT_MAX_BYTES = 1024 * 1024;
 const DROP_HINT = 'この枠にファイルをドラッグして置いても読み込めます';
 const ONE_FILE = '一度に読めるファイルは1つです。どれも読み込んでいません。';
 const NO_FILE = '読み込んでいません。ファイルを受け取れませんでした。ボタンからファイルを選んでください。';
-const PENDING = '読み込んでいません。この枠へのドラッグはまだ使えません。ボタンからファイルを選んでください。';
+const INTAKE_PDF = '公告の PDF はこの画面では読めません。パソコンの Claude Code(Skill bid-intake)で公告を読み、できた条件のファイル(.json)をこの枠にドラッグしてください。手で入れるときは、段1「条件を入れる」の欄に入れます。';
+const NOT_READ_DROP = '読み込んでいません。';
+const USE_FRAME = NOT_READ_DROP + 'ファイルは点線の枠にドラッグしてください。';
+// 別の道具の口は閉じた折りたたみの中にある
+const toolPort = (what, label) => 'これは' + what + 'のファイルです。「ここからは別の道具」を開き、「' + label + '」の枠にドラッグしてください。';
+const WRONG_PORT = {
+  'intake-load': 'これは公告から拾った条件のファイルです。段1「条件を入れる」の「公告から拾った条件を読み込む」を開き、その枠にドラッグしてください。',
+  'rules-load': 'これは発注者の表のファイルです。段2「結果を見る」の「直轄とは・例の違い・自分の表を読み込む」を開き、その枠にドラッグしてください。',
+  'dict-import': toolPort('辞書', '辞書を読み込む'),
+  'map-import': toolPort('対応表', '対応表を読み込む'),
+  'ai-load': toolPort(' AI の候補', 'AI の候補を読み込む'),
+};
+// .json の中身の印から、どの口のファイルかを言う。分からなければ null(今の誤りの文に任せる)
+function jsonPortOf(data) {
+  if (data?.kind === 'bid-intake') return 'intake-load';
+  if (data?.format === DICT_FORMAT) return 'dict-import';
+  if (data?.format === MAP_FORMAT) return 'map-import';
+  if (data?.format === RESULT_FORMAT) return 'ai-load';
+  if (Array.isArray(data?.rows) && data.rows.some((r) => r?.kind === 'schedule' || r?.kind === 'plan-item')) return 'rules-load';
+  return null;
+}
+// 違う口のファイルなら行き先を知らせて読まない。読めないファイルは read の側の文に任せる
+async function readChecked(doc, id, f, read) {
+  let owner = null;
+  if (!(f.size > WRONG_PORT_MAX_BYTES)) {
+    try {
+      owner = jsonPortOf(JSON.parse(String(await f.text()).replace(/^\uFEFF/, '')));
+    } catch { /* read の側で理由を出す */ }
+  }
+  if (owner && owner !== id) { FILE_PORTS[id].say(doc, WRONG_PORT[owner]); return false; }
+  return read(doc, f);
+}
 
 // 受け付ける拡張子は input の accept から取る。name の無い File は確かめない(今までどおり読む)
 export function fileTypeMessage(doc, id, file) {
@@ -829,6 +869,7 @@ export function fileTypeMessage(doc, id, file) {
   const exts = String(doc.getElementById(id)?.getAttribute?.('accept') ?? '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => x.startsWith('.'));
   const name = file.name.toLowerCase();
   if (!exts.length || exts.some((x) => name.endsWith(x))) return null;
+  if (id === 'intake-load' && name.endsWith('.pdf')) return INTAKE_PDF;
   const again = /\.xls$/.test(name) ? 'Excel で .xlsx に保存し直してください。' : '';
   return '選んだファイルは ' + exts.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
 }
@@ -886,22 +927,57 @@ function endDrag(doc) {
   setDragOver(null);
   setDragReady(doc, false);
 }
+const sayDropStatus = sayIn('drop-status');
+const isShown = (doc, id) => { const el = doc.getElementById(id); return Boolean(el) && !el.hidden; };
+const frameName = (doc, id) => dropPortName(findDropTarget(doc.getElementById(id))?.querySelector?.('label')?.textContent);
+// 枠のある閉じた折りたたみを開く。開いたときだけ、その名前を返す
+function openFold(doc, id) {
+  const fold = doc.getElementById(id);
+  if (!fold || fold.open) return '';
+  fold.open = true;
+  return String(fold.querySelector?.('summary')?.textContent ?? '').trim();
+}
+const OPENED = (name) => (name ? '「' + name + '」を開きました' : '');
+// 枠の外に置いたとき: 今見えている段の口の欄に書き、見える所に出す(開いた折りたたみの中の欄もあるので、開いてから動かす)
+function outsideNotice(doc) {
+  if (doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
+  if (isShown(doc, 'panel-1')) {
+    const opened = OPENED(openFold(doc, 'intake-more'));
+    return ['intake-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'intake-load') + '(.json)。' + (opened ? opened + '。' : '')];
+  }
+  if (isShown(doc, 'panel-2')) {
+    const opened = OPENED(openFold(doc, 'rules-more'));
+    return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
+  }
+  if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'ledger-file') + '。'];
+  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '条件のファイル(.json)は「公告から拾った条件を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
+  // 入力の確かめの画面には枠が無い
+  return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
+}
+function sayOutside(doc) {
+  const [id, text] = outsideNotice(doc);
+  if (id === 'intake-status') setIntakeStatus(doc, text);
+  else sayIn(id)(doc, text);
+  doc.getElementById(id)?.scrollIntoView?.({ block: 'nearest' });
+}
 export function handleFileDrop(doc, ev) {
   if (!hasFiles(ev)) return Promise.resolve(false);
   ev.preventDefault?.();
   endDrag(doc);
+  sayDropStatus(doc, '');
   const frame = findDropTarget(ev.target);
-  if (!frame) return Promise.resolve(false);
+  if (!frame) { sayOutside(doc); return Promise.resolve(false); }
   const id = frame.getAttribute('data-drop');
-  const port = FILE_PORTS[id];
-  if (!port) {
-    const el = doc.getElementById(PENDING_PORTS[id]);
-    if (el) el.textContent = PENDING;
-    return Promise.resolve(false);
-  }
+  const onTile = frame.id === 'entry-intake';
+  const say = onTile ? sayDropStatus : FILE_PORTS[id].say;
   const files = Array.from(ev.dataTransfer.files ?? []);
-  if (files.length !== 1) { port.say(doc, files.length ? ONE_FILE : NO_FILE); return Promise.resolve(false); }
-  return readPortFile(doc, id, files[0]);
+  if (files.length !== 1) { say(doc, files.length ? ONE_FILE : NO_FILE); return Promise.resolve(false); }
+  if (!onTile) return readPortFile(doc, id, files[0]);
+  // タイルは種類を確かめてから段1へ移る。違えば入口に留まる
+  const bad = fileTypeMessage(doc, id, files[0]);
+  if (bad) { say(doc, bad); return Promise.resolve(false); }
+  openIntake(doc);
+  return FILE_PORTS[id].read(doc, files[0]);
 }
 export function startDrop(doc) {
   doc.addEventListener?.('dragenter', (ev) => handleDragMove(doc, ev));
@@ -1085,7 +1161,15 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       });
     }
     startMask(doc);
-    startAi(doc);
+    for (const id of ['dict-import', 'mask-file', 'map-import', 'ai-load']) {
+      const input = doc.getElementById(id);
+      if (input) input.addEventListener('change', async () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        await readPortFile(doc, id, f);
+        input.value = '';
+      });
+    }
     startDrop(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {

@@ -25,7 +25,7 @@ test('h1 のすぐ後に「このツールでできること」と3つの箇条�
 test('入口の題「まず、どう始めますか」に3つのタイルが同じ形で並び、見本が先頭で主の形(見本を読み込むボタン)', () => {
   const start = body.slice(body.indexOf('<div class="start no-print" id="start">'), body.indexOf('id="entry-back"'));
   assert.ok(start.includes('<h2>まず、どう始めますか</h2>'));
-  const btns = [...start.matchAll(/<button type="button" id="(sample-load|entry-bid|entry-intake)" class="([^"]*)">([\s\S]*?)<\/button>/g)];
+  const btns = [...start.matchAll(/<button type="button" id="(sample-load|entry-bid|entry-intake)" class="([^"]*)"[^>]*>([\s\S]*?)<\/button>/g)];
   assert.deepEqual(btns.map((m) => m[1]), ['sample-load', 'entry-bid', 'entry-intake']);
   for (const m of btns) {
     assert.ok(m[2].split(' ').includes('entry-button'), m[1] + ' が同じ形でない');

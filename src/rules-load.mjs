@@ -34,7 +34,7 @@ export function parseRulesFile(fileText) {
   const s = data.source;
   if (!s || typeof s !== 'object') throw new Error('出典がありません。出典の分からない表は読み込みません');
   for (const [k, label] of [['publisher', '発注者'], ['title', '題名'], ['edition', '版']]) {
-    if (!text(s[k])) throw new Error('出典の' + label + '(source.' + k + ')がありません');
+    if (!text(s[k])) throw new Error('表のファイルに出典の' + label + 'がありません(発注者・題名・版が要ります)');
   }
   const ids = new Set();
   data.rows.forEach((row, i) => {

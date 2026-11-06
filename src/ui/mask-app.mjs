@@ -317,7 +317,7 @@ export function exportMaskMap(doc, win) {
 }
 
 // 書き出した対応表のファイルの中身を読み込む(F11d)。今の対応表と足した語は、読み込んだものに置き換わる
-export function importMaskMap(doc, text) {
+export function importMaskMap(doc, text, name) {
   const m = getMasker();
   try {
     const n = m.importMap(text);
@@ -331,7 +331,7 @@ export function importMaskMap(doc, text) {
     if (mapEl) mapEl.innerHTML = renderMap(m.entries());
     const list = doc.getElementById('dict-list');
     if (list) list.innerHTML = renderTerms(m.terms());
-    setText(doc, 'map-status', '対応表を読み込みました(対応表 ' + n.entries + ' 行・足した語 ' + n.terms + ' 件)。「元に戻す」で使えます。読み込んだファイルにも元の名前が入っています。');
+    setText(doc, 'map-status', (typeof name === 'string' ? name + ' を読みました' : '対応表を読み込みました') + '(対応表 ' + n.entries + ' 行・足した語 ' + n.terms + ' 件)。「元に戻す」で使えます。読み込んだファイルにも元の名前が入っています。');
     return true;
   } catch (e) {
     setText(doc, 'map-status', '読み込めませんでした: ' + (e && e.message ? e.message : String(e)) + ' 今の対応表はそのままです。');
@@ -359,13 +359,13 @@ export function exportDictFile(doc, win) {
 }
 
 // 書き出した辞書のファイルの中身を読み込む(F19a)。今の足した語に加える。壊れたファイル・形の違うファイルは読み込まず、理由を出す
-export function importDictFile(doc, text) {
+export function importDictFile(doc, text, name) {
   const m = getMasker();
   try {
     const n = m.importDict(text);
     const list = doc.getElementById('dict-list');
     if (list) list.innerHTML = renderTerms(m.terms());
-    setText(doc, 'dict-file-status', '辞書を読み込みました(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。'
+    setText(doc, 'dict-file-status', (typeof name === 'string' ? name + ' を読みました' : '辞書を読み込みました') + '(読んだ語 ' + n.read + '・新しく足した語 ' + n.added + '・種類を変えた語 ' + n.changed + '。足した語は全部で ' + n.total + ')。もう一度「置き換える」を押すと使います。読み込んだファイルにも元の名前が入っています。'
       + (n.short && n.short.length ? ' 注意: 1字の語が ' + n.short.length + ' 件あります。1字の語はほかの語の一部も置き換わります(会社名・メール・住所・電話の形の中は、長い方をまとめて置き換えます)。' : ''));
     return true;
   } catch (e) {
@@ -389,6 +389,29 @@ export async function loadMaskFile(doc, file) {
     setText(doc, 'mask-file-status', '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e)));
     return false;
   }
+}
+
+// ボタンで選んでも、ドラッグして置いても、この関数で読む(F54d)
+export async function readDictFile(doc, f) {
+  if (f.size > DICT_MAX_BYTES) { setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。'); return; }
+  let text;
+  try {
+    text = await f.text();
+  } catch {
+    setText(doc, 'dict-file-status', '読み込めませんでした: ファイルを読めません。今の辞書はそのままです。');
+    return;
+  }
+  importDictFile(doc, text, f.name);
+}
+export async function readMapFile(doc, f) {
+  let text;
+  try {
+    text = await f.text();
+  } catch {
+    setText(doc, 'map-status', '読み込めませんでした: ファイルを読めません。今の対応表はそのままです。');
+    return;
+  }
+  importMaskMap(doc, text, f.name);
 }
 
 export function startMask(doc) {
@@ -421,34 +444,6 @@ export function startMask(doc) {
       if (!b) return;
       if (ev.preventDefault) ev.preventDefault();
       decideCandidate(doc, b.getAttribute('data-word'), b.getAttribute('data-candidate'));
-    });
-  }
-  const src = doc.getElementById('mask-file');
-  if (src) {
-    src.addEventListener('change', async () => {
-      const f = src.files && src.files[0];
-      if (!f) return;
-      await loadMaskFile(doc, f);
-      src.value = '';
-    });
-  }
-  const dictFile = doc.getElementById('dict-import');
-  if (dictFile) {
-    dictFile.addEventListener('change', async () => {
-      const f = dictFile.files && dictFile.files[0];
-      if (!f) return;
-      if (f.size > DICT_MAX_BYTES) setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。');
-      else importDictFile(doc, await f.text());
-      dictFile.value = '';
-    });
-  }
-  const file = doc.getElementById('map-import');
-  if (file) {
-    file.addEventListener('change', async () => {
-      const f = file.files && file.files[0];
-      if (!f) return;
-      importMaskMap(doc, await f.text());
-      file.value = '';
     });
   }
 }
