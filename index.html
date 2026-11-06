@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-RtMCq17nW8Xc6xU3Y3fyzJrp3ZxJR9dBUG4paMxg0+c='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Vm7GitjOAyO5Jy4LbcJLdmG3+dsezw1x/SzcILGOdas='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -283,6 +283,9 @@
   input[type="text"][aria-invalid="true"] { border: 2px solid var(--need); }
   input[type="file"] { min-height: 2.75rem; padding: 0.5rem 0; }
   button { min-height: 2.75rem; padding: 0.5rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 8px; }
+  /* ファイルの口のボタン(F83a9): ほかのボタンと同じ枠・色・角丸・高さ。焦点の輪は input の焦点の決まりで欄の全体に付く */
+  input[type="file"]::file-selector-button { min-height: 2.75rem; padding: 0.5rem 1rem; margin: 0 0.5rem 0 0; font: inherit; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 8px; }
+  input[type="file"]::file-selector-button:hover { background: var(--primary-bg); }
   input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; accent-color: var(--primary); }
   /* 四角の印とラベルの行も、押せる高さにする */
   .check-row { display: flex; align-items: center; min-height: 2.75rem; }
@@ -356,6 +359,7 @@
   /* 指の端末は押す所を 48px にする(F54a)。ここには min-height だけを書く */
   @media (pointer: coarse) {
     button, input[type="text"], select, input[type="file"], textarea, details > summary, .radio-group div, .unknown-check, .check-row, .entry-link, .next-go { min-height: 3rem; }
+    input[type="file"]::file-selector-button { min-height: 3rem; }
   }
   /* ファイルをドラッグして置ける枠(F54c)。マウスなどがある端末だけに見せる。ボタンは残す */
   @media (any-pointer: fine) {
@@ -8917,8 +8921,10 @@ function decideCandidate(doc, word, value) {
   m.addTerm(word, 'company');
   const list = doc.getElementById('dict-list');
   if (list) list.innerHTML = renderTerms(m.terms());
-  runMask(doc);
-  setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し、置き換え直しました。');
+  // 長い文では置き換えが後で走るので、知らせはその後に書く(先に書くと置き換えが消す)
+  const done = () => setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し、置き換え直しました。');
+  const later = runMask(doc);
+  if (later) later.then(done); else done();
   return true;
 }
 
@@ -8967,7 +8973,27 @@ function decideMask(doc, token, value) {
   return true;
 }
 
+// 長い文(F83a9): 置き換えは1回で走らせる(区切ると名前が区切りをまたいで漏れる)ので、
+// 走らせる前に「置き換えています…」を出し、一度画面に手を返して文が描かれてから走らせる
+const MASK_DEFER_CHARS = 20000;
+const MASK_RUNNING = '置き換えています…';
 function runMask(doc) {
+  if (valueOf(doc, 'mask-input').length <= MASK_DEFER_CHARS) { runMaskNow(doc); return null; }
+  setText(doc, 'mask-status', MASK_RUNNING);
+  const status = doc.getElementById('mask-status');
+  status?.setAttribute?.('aria-busy', 'true');
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      try {
+        runMaskNow(doc);
+      } finally {
+        status?.removeAttribute?.('aria-busy');
+        resolve();
+      }
+    }, 0);
+  });
+}
+function runMaskNow(doc) {
   const m = getMasker();
   const text = valueOf(doc, 'mask-input');
   const amounts = valueOf(doc, 'mask-amounts') === 'band' ? 'band' : 'keep';
@@ -9230,7 +9256,7 @@ function startMask(doc) {
   }
 }
 
-return { INDUSTRIES, currentIndustry, INDUSTRY_SWITCH_NOTICE, parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, isCandidateSkipped, renderCandidates, decideCandidate, lastResidualCheck, maskedText, decideMask, runMask, lastDecoyCheck, setDecoyRandom, setIndustry, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, readDictFile, readMapFile, startMask };
+return { INDUSTRIES, currentIndustry, INDUSTRY_SWITCH_NOTICE, parseThresholds, renderMap, renderTerms, ruleName, UNCHECKED_NOTICE, stateOf, weakEntries, renderAfter, renderReview, isCandidateSkipped, renderCandidates, decideCandidate, lastResidualCheck, maskedText, decideMask, MASK_DEFER_CHARS, MASK_RUNNING, runMask, lastDecoyCheck, setDecoyRandom, setIndustry, runUnmask, addDictWord, resetMask, exportMaskMap, importMaskMap, exportDictFile, importDictFile, loadMaskFile, readDictFile, readMapFile, startMask };
 })();
 __m["src/ui/ai-app.mjs"] = (function () {
 // 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。
@@ -10338,9 +10364,33 @@ function sayNotRead(doc, port, text) {
   port.say(doc, text);
   markFailed(doc.getElementById(port.status));
 }
+// 読んでいる間の知らせ(F83a9)。.xlsx・.docx・.pdf は1秒を超えることがあるので、読む前に口の欄へ出し aria-busy を付ける。
+// 同じ欄で重ねて読むこともある(段1 は順番に読む)ので、欄ごとに数え、最後の1つが終わったときに外す
+const busyReads = new Map();
+const readingNotice = (file) => (typeof file?.name === 'string' ? '「' + file.name + '」を読んでいます…' : 'ファイルを読んでいます…');
+function startBusy(doc, port, file) {
+  port.say(doc, readingNotice(file));
+  busyReads.set(port.status, (busyReads.get(port.status) ?? 0) + 1);
+  doc.getElementById(port.status)?.setAttribute?.('aria-busy', 'true');
+}
+function endBusy(doc, port, file) {
+  const n = (busyReads.get(port.status) ?? 1) - 1;
+  if (n > 0) { busyReads.set(port.status, n); return; }
+  busyReads.delete(port.status);
+  const el = doc.getElementById(port.status);
+  el?.removeAttribute?.('aria-busy');
+  // 読む関数が何も書かずに終わったときに「読んでいます」を残さない
+  if (el && el.textContent === readingNotice(file)) port.say(doc, '');
+}
 // 読む関数が false を返したら失敗。文はその関数が書いてあるので、印だけを付ける。成功の文を書くときに印は外れる
 async function readMarked(doc, port, file) {
-  const ok = await port.read(doc, file);
+  startBusy(doc, port, file);
+  let ok;
+  try {
+    ok = await port.read(doc, file);
+  } finally {
+    endBusy(doc, port, file);
+  }
   if (ok === false) markFailed(doc.getElementById(port.status));
   return ok;
 }
@@ -10675,7 +10725,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { renderSafety, changeSafety, showPanel, showEntry, openConfirm, changeField, openPanelForLink, runBid, setScheduleNote, awardedNotice, enterAwarded, loadRulesFile, useWakayamaExample, clearRulesTable, exportScheduleCsv, openDetailsForPrint, openSummaryForPrint, restoreDetailsAfterPrint, stampPrintHead, endPrint, exportCsv, printResult, printAll, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, loadIntakeFile, fileTypeMessage, dropPortName, findDropTarget, handleDragMove, handleFileDrop, startDrop, clearSample, startApp };
+return { renderSafety, changeSafety, showPanel, showEntry, openConfirm, changeField, openPanelForLink, runBid, setScheduleNote, awardedNotice, enterAwarded, loadRulesFile, useWakayamaExample, clearRulesTable, exportScheduleCsv, openDetailsForPrint, openSummaryForPrint, restoreDetailsAfterPrint, stampPrintHead, endPrint, exportCsv, printResult, printAll, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, exportPlanCsv, loadSample, loadIntakeFile, fileTypeMessage, readingNotice, dropPortName, findDropTarget, handleDragMove, handleFileDrop, startDrop, clearSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

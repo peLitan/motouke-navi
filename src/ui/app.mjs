@@ -1053,9 +1053,33 @@ function sayNotRead(doc, port, text) {
   port.say(doc, text);
   markFailed(doc.getElementById(port.status));
 }
+// 読んでいる間の知らせ(F83a9)。.xlsx・.docx・.pdf は1秒を超えることがあるので、読む前に口の欄へ出し aria-busy を付ける。
+// 同じ欄で重ねて読むこともある(段1 は順番に読む)ので、欄ごとに数え、最後の1つが終わったときに外す
+const busyReads = new Map();
+export const readingNotice = (file) => (typeof file?.name === 'string' ? '「' + file.name + '」を読んでいます…' : 'ファイルを読んでいます…');
+function startBusy(doc, port, file) {
+  port.say(doc, readingNotice(file));
+  busyReads.set(port.status, (busyReads.get(port.status) ?? 0) + 1);
+  doc.getElementById(port.status)?.setAttribute?.('aria-busy', 'true');
+}
+function endBusy(doc, port, file) {
+  const n = (busyReads.get(port.status) ?? 1) - 1;
+  if (n > 0) { busyReads.set(port.status, n); return; }
+  busyReads.delete(port.status);
+  const el = doc.getElementById(port.status);
+  el?.removeAttribute?.('aria-busy');
+  // 読む関数が何も書かずに終わったときに「読んでいます」を残さない
+  if (el && el.textContent === readingNotice(file)) port.say(doc, '');
+}
 // 読む関数が false を返したら失敗。文はその関数が書いてあるので、印だけを付ける。成功の文を書くときに印は外れる
 async function readMarked(doc, port, file) {
-  const ok = await port.read(doc, file);
+  startBusy(doc, port, file);
+  let ok;
+  try {
+    ok = await port.read(doc, file);
+  } finally {
+    endBusy(doc, port, file);
+  }
   if (ok === false) markFailed(doc.getElementById(port.status));
   return ok;
 }

@@ -145,8 +145,10 @@ export function decideCandidate(doc, word, value) {
   m.addTerm(word, 'company');
   const list = doc.getElementById('dict-list');
   if (list) list.innerHTML = renderTerms(m.terms());
-  runMask(doc);
-  setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し、置き換え直しました。');
+  // 長い文では置き換えが後で走るので、知らせはその後に書く(先に書くと置き換えが消す)
+  const done = () => setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し、置き換え直しました。');
+  const later = runMask(doc);
+  if (later) later.then(done); else done();
   return true;
 }
 
@@ -195,7 +197,27 @@ export function decideMask(doc, token, value) {
   return true;
 }
 
+// 長い文(F83a9): 置き換えは1回で走らせる(区切ると名前が区切りをまたいで漏れる)ので、
+// 走らせる前に「置き換えています…」を出し、一度画面に手を返して文が描かれてから走らせる
+export const MASK_DEFER_CHARS = 20000;
+export const MASK_RUNNING = '置き換えています…';
 export function runMask(doc) {
+  if (valueOf(doc, 'mask-input').length <= MASK_DEFER_CHARS) { runMaskNow(doc); return null; }
+  setText(doc, 'mask-status', MASK_RUNNING);
+  const status = doc.getElementById('mask-status');
+  status?.setAttribute?.('aria-busy', 'true');
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      try {
+        runMaskNow(doc);
+      } finally {
+        status?.removeAttribute?.('aria-busy');
+        resolve();
+      }
+    }, 0);
+  });
+}
+function runMaskNow(doc) {
   const m = getMasker();
   const text = valueOf(doc, 'mask-input');
   const amounts = valueOf(doc, 'mask-amounts') === 'band' ? 'band' : 'keep';

@@ -283,6 +283,9 @@
   input[type="text"][aria-invalid="true"] { border: 2px solid var(--need); }
   input[type="file"] { min-height: 2.75rem; padding: 0.5rem 0; }
   button { min-height: 2.75rem; padding: 0.5rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 8px; }
+  /* ファイルの口のボタン(F83a9): ほかのボタンと同じ枠・色・角丸・高さ。焦点の輪は input の焦点の決まりで欄の全体に付く */
+  input[type="file"]::file-selector-button { min-height: 2.75rem; padding: 0.5rem 1rem; margin: 0 0.5rem 0 0; font: inherit; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 8px; }
+  input[type="file"]::file-selector-button:hover { background: var(--primary-bg); }
   input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; accent-color: var(--primary); }
   /* 四角の印とラベルの行も、押せる高さにする */
   .check-row { display: flex; align-items: center; min-height: 2.75rem; }
@@ -356,6 +359,7 @@
   /* 指の端末は押す所を 48px にする(F54a)。ここには min-height だけを書く */
   @media (pointer: coarse) {
     button, input[type="text"], select, input[type="file"], textarea, details > summary, .radio-group div, .unknown-check, .check-row, .entry-link, .next-go { min-height: 3rem; }
+    input[type="file"]::file-selector-button { min-height: 3rem; }
   }
   /* ファイルをドラッグして置ける枠(F54c)。マウスなどがある端末だけに見せる。ボタンは残す */
   @media (any-pointer: fine) {
