@@ -73,6 +73,7 @@
 - 画面のコード(試験は `_helpers.mjs` の runPage が node:vm と最小の DOM で動かす):
   - スクリプトは別ファイルを読まない(import・export を含まない。type="module" でない普通の script か、import・export の無い module)
   - 要素は getElementById か querySelector('#id') で取る(querySelector は `#id` の形だけ。`[name=…]`・id の無い form・委任の中の closest・matches は使わず、e.target.id で振り分ける)
+  - 無い DOM では飛ばす守りつきの closest は可。ファイルをドラッグして置く処理は closest・matches を使わず parentNode をたどる(最小の DOM の要素に dataTransfer は無いので、無ければ何もしない)
   - 受け方: 要素の addEventListener・onclick、document・window での委任(click は泡立つ)、form の submit(type="submit" のボタンを押すと form に submit が届く)。async の handler も待つ
   - 入力は .value・.checked、結果は innerHTML か textContent。CSV は Blob で作る(中身を試験が読む)
   - 使える物: Event・CustomEvent・requestAnimationFrame・setTimeout(すぐ動く)・FileReader(最小)・getComputedStyle(空)。ほかのブラウザの API は無い

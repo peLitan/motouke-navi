@@ -493,3 +493,27 @@ test('07 の決まり: 外部と通信しない・外部の読み込み無し・
   assert.ok(body.includes('id="disclaimer"'));
   assert.ok(body.includes('PDL1.0'));
 });
+
+test('ドラッグの枠(F54c): 決まりは印刷より前で、マウスのある端末だけ。角・余白・線と字の比・紙', () => {
+  const raw = shell.match(/<style>([\s\S]*?)<\/style>/)[1].replace(/\/\*[\s\S]*?\*\//g, '');
+  const at = raw.indexOf('@media (any-pointer: fine)');
+  assert.ok(at > 0 && at < raw.indexOf('@media print {'), 'any-pointer の決まりが @media print より前に無い');
+  const block = raw.slice(at, raw.indexOf('\n  }', at));
+  assert.equal(prop(ruleOf('.drop-hint'), 'display'), 'none');
+  const drop = ruleOf('.drop');
+  assert.ok(block.includes('.drop {') && block.includes('.drop-hint { display: block'), '枠と案内は any-pointer の中');
+  assert.equal(prop(drop, 'border-radius'), '8px');
+  assert.equal(prop(drop, 'padding'), '8px 12px');
+  assert.equal(prop(drop, 'border'), '2px dashed var(--line)');
+  const over = ruleOf('.drop.drop-over');
+  for (const b of [drop, over, ruleOf('.drop.drop-ready'), ruleOf('.drop-hint')]) assert.ok(!/outline|box-shadow/.test(b));
+  atLeast(color(prop(drop, 'border')), color(prop(drop, 'background')), 3, '枠の線');
+  atLeast(color(prop(over, 'border-color')), color(prop(over, 'background')), 3, '枠の上の線');
+  const hintRule = rules.filter((r) => r.sel === '.drop-hint').find((r) => prop(r.body, 'color'));
+  atLeast(color(prop(hintRule.body, 'color')), vars['--paper'], 4.5, '案内の字');
+  atLeast(color(prop(hintRule.body, 'color')), color(prop(over, 'background')), 4.5, '枠の上の案内の字');
+  assert.ok(printHidden.includes('.drop-hint'), '案内が紙に出る');
+  const printDrop = printRules.find((r) => r.sel === '.drop');
+  assert.equal(prop(printDrop.body, 'border'), 'none');
+  assert.equal(prop(printDrop.body, 'padding'), '0');
+});

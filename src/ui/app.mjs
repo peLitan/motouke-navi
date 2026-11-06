@@ -453,7 +453,7 @@ function setRulesStatus(doc, text) {
   if (el) el.textContent = text;
 }
 // 壊れたファイルは理由を出して拒み、今の表はそのままにする
-export function loadRulesFile(doc, text) {
+export function loadRulesFile(doc, text, name) {
   let table;
   try {
     table = parseRulesFile(text);
@@ -464,7 +464,7 @@ export function loadRulesFile(doc, text) {
   rulesTable = table;
   applyRulesTable(doc);
   const missing = [table.schedule.length ? '' : '段取り', table.planItems.length ? '' : '施工計画書の記載項目'].filter(Boolean);
-  setRulesStatus(doc, '読み込みました(段取り ' + table.schedule.length + '行・記載項目 ' + table.planItems.length + '行)。'
+  setRulesStatus(doc, (typeof name === 'string' ? name + ' を読みました' : '読み込みました') + '(段取り ' + table.schedule.length + '行・記載項目 ' + table.planItems.length + '行)。'
     + (missing.length ? missing.join('と') + 'の行が無いので、そちらは国の直轄の例のままです。' : '')
     + 'ブラウザには保存しません。ページを閉じると消えます。');
   return true;
@@ -659,7 +659,7 @@ export async function loadLedgerFile(doc, file) {
     if (input) input.value = ledgerToText(r.ledger);
     lastCheck = null;
     if (outEl) outEl.innerHTML = renderXlsxResult(r, FIELD_NAMES);
-    if (status) status.textContent = '「' + file.name + '」を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。';
+    if (status) status.textContent = file.name + ' を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。';
     return true;
   } catch (e) {
     if (outEl) outEl.innerHTML = '';
@@ -749,15 +749,22 @@ function setIntakeStatus(doc, text, lines = []) {
 // 先に動かすと、空の欄で結果が出て、知らせが出ないまま欄だけがあとから入る
 let intakeReading = null;
 const afterIntake = (f) => (intakeReading ? intakeReading.then(f) : f());
+function queueIntake(doc, f) {
+  const reading = (intakeReading ?? Promise.resolve()).then(() => readIntake(doc, f)).then(() => {
+    if (intakeReading === reading) intakeReading = null;
+  });
+  intakeReading = reading;
+  return reading;
+}
 async function readIntake(doc, f) {
   if (f.size > INTAKE_MAX_BYTES) { setIntakeStatus(doc, '読み込めませんでした: ファイルが大きすぎます(1MB まで)。入力欄はそのままです。'); return; }
   try {
-    loadIntakeFile(doc, await f.text());
+    loadIntakeFile(doc, await f.text(), f.name);
   } catch {
     setIntakeStatus(doc, '読み込めませんでした: ファイルを読めません。入力欄はそのままです。');
   }
 }
-export function loadIntakeFile(doc, text) {
+export function loadIntakeFile(doc, text, name) {
   let t;
   try {
     t = parseIntakeFile(text);
@@ -785,8 +792,123 @@ export function loadIntakeFile(doc, text) {
   }
   const filled = t.participation ? [...Object.keys(t.form), 'participation-conditions'] : Object.keys(t.form);
   fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, filled) };
-  setIntakeStatus(doc, '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
+  setIntakeStatus(doc, (typeof name === 'string' ? name + ' を読みました。' : '') + '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。予定価格は上限の見込みで、請負代金そのものではありません。原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
   return true;
+}
+
+// ファイルの読み込み口(F54c)。ボタンで選んでも、ドラッグして置いても、同じ関数で読む。
+// value = '' のリセットはボタンの側だけ。input.files には代入しない
+async function readRules(doc, f) {
+  if (f.size > RULES_MAX_BYTES) { setRulesStatus(doc, '読み込めませんでした: 表のファイルとしては大きすぎます(1MB まで)。今の表はそのままです。'); return; }
+  try {
+    loadRulesFile(doc, await f.text(), f.name);
+  } catch {
+    setRulesStatus(doc, '読み込めませんでした: ファイルを読めません。今の表はそのままです。');
+  }
+}
+const setLedgerFileStatus = (doc, text) => {
+  const el = doc.getElementById('ledger-file-status');
+  if (el) el.textContent = text;
+};
+const FILE_PORTS = {
+  'intake-load': { read: queueIntake, say: setIntakeStatus },
+  'rules-load': { read: readRules, say: setRulesStatus },
+  'ledger-file': { read: loadLedgerFile, say: setLedgerFileStatus },
+};
+// まだ F54d で口をつないでいない枠。置いても読まないので、そう知らせる
+const PENDING_PORTS = { 'dict-import': 'dict-file-status', 'mask-file': 'mask-file-status', 'map-import': 'map-status', 'ai-load': 'ai-status' };
+const DROP_IDS = [...Object.keys(FILE_PORTS), ...Object.keys(PENDING_PORTS)];
+const DROP_HINT = 'この枠にファイルをドラッグして置いても読み込めます';
+const ONE_FILE = '一度に読めるファイルは1つです。どれも読み込んでいません。';
+const NO_FILE = '読み込んでいません。ファイルを受け取れませんでした。ボタンからファイルを選んでください。';
+const PENDING = '読み込んでいません。この枠へのドラッグはまだ使えません。ボタンからファイルを選んでください。';
+
+// 受け付ける拡張子は input の accept から取る。name の無い File は確かめない(今までどおり読む)
+export function fileTypeMessage(doc, id, file) {
+  if (typeof file?.name !== 'string') return null;
+  const exts = String(doc.getElementById(id)?.getAttribute?.('accept') ?? '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => x.startsWith('.'));
+  const name = file.name.toLowerCase();
+  if (!exts.length || exts.some((x) => name.endsWith(x))) return null;
+  const again = /\.xls$/.test(name) ? 'Excel で .xlsx に保存し直してください。' : '';
+  return '選んだファイルは ' + exts.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
+}
+function readPortFile(doc, id, file) {
+  const port = FILE_PORTS[id];
+  const bad = fileTypeMessage(doc, id, file);
+  if (bad) { port.say(doc, bad); return Promise.resolve(false); }
+  return port.read(doc, file);
+}
+
+// 口の名前は label の文の括弧の前から取る(「台帳の Excel を読む(…」→「台帳の Excel」)
+export function dropPortName(labelText) {
+  return String(labelText ?? '').split('(')[0].trim().replace(/(から読む|を読み込む|を読む)$/, '').trim();
+}
+const hasFiles = (ev) => Array.from(ev?.dataTransfer?.types ?? []).includes('Files');
+// e.target から親をたどって枠を探す。closest・matches は使わない(docs/acceptance-map.md)
+export function findDropTarget(node) {
+  for (let n = node; n; n = n.parentNode) {
+    if (n.getAttribute?.('data-drop')) return n;
+  }
+  return null;
+}
+let dragReady = false;
+let dragOver = null;
+const dropHintOf = (frame) => frame?.querySelector?.('.drop-hint');
+function setDragOver(el) {
+  if (dragOver === el) return;
+  if (dragOver) {
+    dragOver.classList?.remove('drop-over');
+    const hint = dropHintOf(dragOver);
+    if (hint) hint.textContent = DROP_HINT;
+  }
+  dragOver = el;
+  if (!el) return;
+  el.classList?.add('drop-over');
+  const hint = dropHintOf(el);
+  if (hint) hint.textContent = 'ここで離すと「' + dropPortName(el.querySelector?.('label')?.textContent) + '」を読み込みます';
+}
+function setDragReady(doc, on) {
+  if (dragReady === on) return;
+  dragReady = on;
+  for (const id of DROP_IDS) findDropTarget(doc.getElementById(id))?.classList?.[on ? 'add' : 'remove']('drop-ready');
+}
+// ファイルのドラッグだけを受ける。文字のドラッグは止めない。
+// 枠の外で dropEffect を none にすると drop が届かず、ブラウザが開くのは止まるが知らせを出せなくなるので、枠の上だけ決める
+export function handleDragMove(doc, ev) {
+  if (!hasFiles(ev)) return;
+  ev.preventDefault?.();
+  setDragReady(doc, true);
+  const frame = findDropTarget(ev.target);
+  if (frame && ev.dataTransfer) ev.dataTransfer.dropEffect = 'copy';
+  setDragOver(frame);
+}
+function endDrag(doc) {
+  setDragOver(null);
+  setDragReady(doc, false);
+}
+export function handleFileDrop(doc, ev) {
+  if (!hasFiles(ev)) return Promise.resolve(false);
+  ev.preventDefault?.();
+  endDrag(doc);
+  const frame = findDropTarget(ev.target);
+  if (!frame) return Promise.resolve(false);
+  const id = frame.getAttribute('data-drop');
+  const port = FILE_PORTS[id];
+  if (!port) {
+    const el = doc.getElementById(PENDING_PORTS[id]);
+    if (el) el.textContent = PENDING;
+    return Promise.resolve(false);
+  }
+  const files = Array.from(ev.dataTransfer.files ?? []);
+  if (files.length !== 1) { port.say(doc, files.length ? ONE_FILE : NO_FILE); return Promise.resolve(false); }
+  return readPortFile(doc, id, files[0]);
+}
+export function startDrop(doc) {
+  doc.addEventListener?.('dragenter', (ev) => handleDragMove(doc, ev));
+  doc.addEventListener?.('dragover', (ev) => handleDragMove(doc, ev));
+  // 窓の外へ出たときだけ、枠を元に戻す(枠の中の子の間の移動では relatedTarget がある)
+  doc.addEventListener?.('dragleave', (ev) => { if (!ev.relatedTarget) endDrag(doc); });
+  doc.addEventListener?.('drop', (ev) => handleFileDrop(doc, ev));
 }
 
 // 「自分の工事で入れ直す」(F37a): 見本の値と見本から出た結果を消し、段1 を開く。
@@ -924,19 +1046,14 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     if (rulesFile) rulesFile.addEventListener('change', async () => {
       const f = rulesFile.files && rulesFile.files[0];
       if (!f) return;
-      if (f.size > RULES_MAX_BYTES) setRulesStatus(doc, '読み込めませんでした: 表のファイルとしては大きすぎます(1MB まで)。今の表はそのままです。');
-      else loadRulesFile(doc, await f.text());
+      await readPortFile(doc, 'rules-load', f);
       rulesFile.value = '';
     });
     const intakeFile = doc.getElementById('intake-load');
     if (intakeFile) intakeFile.addEventListener('change', () => {
       const f = intakeFile.files && intakeFile.files[0];
       if (!f) return;
-      const reading = (intakeReading ?? Promise.resolve()).then(() => readIntake(doc, f)).then(() => {
-        intakeFile.value = '';
-        if (intakeReading === reading) intakeReading = null;
-      });
-      intakeReading = reading;
+      readPortFile(doc, 'intake-load', f).then(() => { intakeFile.value = ''; });
     });
     on('plan-run', () => runPlanCheck(doc));
     on('plan-csv-btn', () => exportPlanCsv(doc));
@@ -963,12 +1080,13 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       ledgerFile.addEventListener('change', async () => {
         const f = ledgerFile.files && ledgerFile.files[0];
         if (!f) return;
-        await loadLedgerFile(doc, f);
+        await readPortFile(doc, 'ledger-file', f);
         ledgerFile.value = '';
       });
     }
     startMask(doc);
     startAi(doc);
+    startDrop(doc);
     // 条件を変えたら、前の結果は印刷・書き出しに使わない(入れた条件と結果が食い違わないように)
     for (const id of BID_FORM_IDS) {
       const el = doc.getElementById(id);

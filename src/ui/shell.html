@@ -64,6 +64,7 @@
   .req-optional { color: var(--ink-2); }
   .form-lead { margin: 0.25rem 0 0.75rem; }
   .row { margin: 0.5rem 0; }
+  .drop-hint { display: none; }
   .hint { margin: 0.25rem 0 0; font-size: 1rem; color: var(--ink-2); }
   .radio-group { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
   .radio-group legend { font-weight: bold; padding: 0 0.25rem; }
@@ -314,6 +315,13 @@
   @media (pointer: coarse) {
     button, input[type="text"], select, input[type="file"], textarea, details > summary, .radio-group div, .unknown-check, .check-row, .entry-link, .next-go { min-height: 3rem; }
   }
+  /* ファイルをドラッグして置ける枠(F54c)。マウスなどがある端末だけに見せる。ボタンは残す */
+  @media (any-pointer: fine) {
+    .drop { padding: 8px 12px; border: 2px dashed var(--line); border-radius: 8px; background: var(--paper); }
+    .drop-hint { display: block; color: var(--ink-2); }
+    .drop.drop-ready { border-style: solid; }
+    .drop.drop-over { border-color: var(--primary); background: var(--primary-bg); }
+  }
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
   @media print {
@@ -323,6 +331,8 @@
     .wrap, .topbar .wrap { max-width: none; padding: 0; }
     button, .export, .no-print { display: none !important; }
     .phone-only { display: none !important; }
+    .drop-hint { display: none !important; }
+    .drop { border: none; padding: 0; }
     p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status) { display: none !important; }
     /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
     #panel-1[hidden], #panel-2[hidden], #panel-3[hidden] { display: block; }
@@ -414,8 +424,8 @@
 </details>
 <details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
 <p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。通信も保存もしません。</p>
-<div class="row"><label for="intake-load">拾った条件のファイル(.json)</label>
-<input type="file" id="intake-load" name="intake-load" accept=".json,application/json"></div>
+<div class="row drop" data-drop="intake-load"><label for="intake-load">拾った条件のファイル(.json)</label>
+<input type="file" id="intake-load" name="intake-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="intake-status" aria-live="polite"></p>
 <div id="intake-result"></div>
 </details>
@@ -535,8 +545,8 @@
 <details class="fold no-print" id="rules-more"><summary>直轄とは・例の違い・自分の表を読み込む</summary>
 <p>直轄 = 国(国土交通省の地方整備局など)が自分で発注する工事。</p>
 <p>和歌山県の例は、県の「土木請負工事必携」の7つの節だけから作った行です。条件を当てはめないので、要らない行も出ます。切り替えると 3 の目次の点検の記載項目も同じ例に変わります。</p>
-<div class="row"><label for="rules-load">自分の発注者の表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
-<input type="file" id="rules-load" name="rules-load" accept=".json,application/json"></div>
+<div class="row drop" data-drop="rules-load"><label for="rules-load">自分の発注者の表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
+<input type="file" id="rules-load" name="rules-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 </details>
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
@@ -604,8 +614,8 @@
 | 専任・非専任 | 専任 または 非専任 |</pre>
 <p>入口の「まず見本で試す」を押すと、架空の台帳がこの欄に入ります。</p>
 </details>
-<div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
-<input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+<div class="row drop" data-drop="ledger-file"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
+<input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <details class="fold"><summary>Excel で読める欄</summary>
 <p class="note" id="ledger-file-note">ファイルはこの端末の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
 </details>
@@ -687,12 +697,12 @@
 <p id="dict-status" aria-live="polite"></p>
 <div id="dict-list"><p>足した語はまだありません。</p></div>
 <p class="note" id="dict-file-note">足した語は、ページを閉じると消えます(ブラウザには保存しません)。次に使うときのために「辞書を書き出す」でこの端末に JSON のファイルとして保存し、「辞書を読み込む」で読み込めます。このファイルには元の名前が入っています。外の AI などへ送らず、要らなくなったら消してください。</p>
-<div class="row"><button type="button" id="dict-export">辞書を書き出す</button>
+<div class="row drop" data-drop="dict-import"><button type="button" id="dict-export">辞書を書き出す</button>
 <label for="dict-import">辞書を読み込む</label>
-<input type="file" id="dict-import" name="dict-import" accept=".json,application/json"></div>
+<input type="file" id="dict-import" name="dict-import" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="dict-file-status" aria-live="polite"></p>
-<div class="row"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
-<input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+<div class="row drop" data-drop="mask-file"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
+<input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <details class="fold"><summary>読めるファイルと読めないもの</summary>
 <p class="note" id="mask-file-note">ファイルはこの端末の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
 </details>
@@ -728,9 +738,9 @@
 <pre id="unmask-output"></pre>
 <h3>対応表の書き出しと読み込み</h3>
 <p class="warning-box" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この端末に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
-<div class="row"><button type="button" id="map-export">対応表を書き出す</button>
+<div class="row drop" data-drop="map-import"><button type="button" id="map-export">対応表を書き出す</button>
 <label for="map-import">対応表を読み込む</label>
-<input type="file" id="map-import" name="map-import" accept=".json,application/json"></div>
+<input type="file" id="map-import" name="map-import" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="map-status" aria-live="polite"></p>
 </section>
 <section id="ai-check">
@@ -740,8 +750,8 @@
 <details class="fold"><summary>結果のファイルの作り方</summary>
 <p>この画面は外へ通信しません。Claude での点検は、手元で動かす別のプログラム(動かし方は説明書にあります)が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。</p>
 </details>
-<div class="row"><label for="ai-load">AI の候補を読み込む</label>
-<input type="file" id="ai-load" name="ai-load" accept=".json,application/json"></div>
+<div class="row drop" data-drop="ai-load"><label for="ai-load">AI の候補を読み込む</label>
+<input type="file" id="ai-load" name="ai-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="ai-status" aria-live="polite"></p>
 <div id="ai-result" class="result" aria-live="polite"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
 </section>
