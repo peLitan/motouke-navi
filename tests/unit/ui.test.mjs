@@ -7,8 +7,11 @@ import { bundle, buildHtml } from '../../build.mjs';
 import { judgeTaicho } from '../../src/taicho.mjs';
 import { bidCheck } from '../../src/bid-check.mjs';
 
-test('parseYen: 桁区切り・全角・円・空白を許し、小数・負・単位は読めないとする', () => {
+test('parseYen: 桁区切り・全角・円・空白と、末尾に円の付いた億・万・千円・百万円を許し、単位の無い小数・負・円の無い単位は読めないとする', () => {
   assert.deepEqual(parseYen('1,234円'), { value: 1234, error: null });
+  assert.deepEqual(parseYen('1億3,420万円'), { value: 134200000, error: null });
+  assert.deepEqual(parseYen('134.2百万円'), { value: 134200000, error: null });
+  assert.equal(parseYen('1億').value, null, '単位を使うときは末尾の円が要る');
   assert.deepEqual(parseYen('１２　３４５'), { value: 12345, error: null });
   assert.deepEqual(parseYen(''), { value: null, error: null });
   assert.deepEqual(parseYen(undefined), { value: null, error: null });

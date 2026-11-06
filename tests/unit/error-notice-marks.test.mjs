@@ -229,7 +229,7 @@ test('入口のタイル: 種類の違いは入口の欄に、読めない中身
 
 test('#bid-status: 金額を読めないと印が付き、戻る(空)・条件の変更で外れる', async () => {
   const page = runPage(html);
-  await page.set('contract-amount', '2億円');
+  await page.set('contract-amount', '約2億円');
   await page.click('bid-run');
   assert.ok(line(page, 'bid-status').startsWith('＊ 金額の欄を読めませんでした。'), line(page, 'bid-status'));
   assert.equal(kind(page, 'bid-status'), 'error');

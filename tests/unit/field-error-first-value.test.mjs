@@ -13,7 +13,7 @@ const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
 const value = (page, key) => page.el('confirm-value-' + key).innerHTML;
 const WARN = '工種が土木のままです。建築の工事なら「変更」で選び直してください。';
 const WARN_LOAD = '工種が土木のままです。建築の工事なら「工種」の欄で選び直してください。';
-const UNREADABLE = '読めない値です。数字だけで入れてください(例 200,000,000)';
+const UNREADABLE = '読めない値です。数字か、末尾に「円」を付けた億・万・千円・百万円で入れてください(例 200,000,000 や 2億円)';
 
 const intakeFile = (workType) => JSON.stringify({
   kind: 'bid-intake',
@@ -109,7 +109,7 @@ for (const id of ['contract-amount', 'subcontract-total']) {
     const page = await bidPage();
     const el = page.el(id);
     const note = page.el(id + '-error');
-    await page.set(id, '2億円');
+    await page.set(id, '約2億円');
     assert.equal(note.textContent, UNREADABLE);
     assert.equal(note.hidden, false);
     assert.equal(el.getAttribute('aria-invalid'), 'true');
@@ -152,11 +152,11 @@ test('誤りの文: 空にすると消え、「分からない」に印を付け
 
 test('誤りの文: 読めるのは文を出さない。数字だけで大きすぎる値には「数字だけで」と言わない', async () => {
   const page = await bidPage();
-  for (const ok of ['１２,０００,０００円', '0', '1 000']) {
+  for (const ok of ['１２,０００,０００円', '0', '1 000', '1億3,420万円', '134,200千円']) {
     await page.set('contract-amount', ok);
     assert.equal(page.el('contract-amount-error').hidden, true, ok);
   }
-  for (const bad of ['1.5', '-100', '1万']) assert.equal(amountFieldError(bad), UNREADABLE, bad);
+  for (const bad of ['1.5', '-100', '1万', '約1億円', '1億']) assert.equal(amountFieldError(bad), UNREADABLE, bad);
   await page.set('contract-amount', '99999999999999999');
   assert.equal(page.el('contract-amount-error').textContent, '金額が大きすぎます。桁を確かめてください(例 200,000,000)');
 });

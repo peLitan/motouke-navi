@@ -84,7 +84,7 @@ test('bid-status: 見本の文にも同じ数が入る(結果の枠が読まれ�
 test('bid-status: 結果が無いときは件数を言わない。金額を読めない・条件が変わった', async () => {
   const page = await samplePage();
   await page.click('bid-run');
-  await page.set('contract-amount', '2億円');
+  await page.set('contract-amount', '約2億円');
   assert.ok(status(page, 'bid-status').startsWith('＊ 条件が変わりました。'), status(page, 'bid-status'));
   assert.doesNotMatch(status(page, 'bid-status'), /要る \d/);
   await page.click('bid-run');

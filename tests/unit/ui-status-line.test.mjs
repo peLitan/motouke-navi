@@ -59,7 +59,7 @@ test('もう受注した: 条件から出した結果があれば、その旨が
 
 test('金額を読めないとき: 「結果が出ました」も ✓ も出さず、直す所を言う。もう受注したでも同じ', async () => {
   const page = runPage();
-  await page.set('contract-amount', '2億円');
+  await page.set('contract-amount', '約2億円');
   await page.click('bid-run');
   assert.ok(status(page).startsWith('＊ 金額の欄を読めませんでした。'), status(page));
   assert.ok(!status(page).includes('✓') && !status(page).includes('結果が出ました'), status(page));
@@ -103,7 +103,7 @@ test('入口に戻ると、自分の工事で入れ直すと、知らせは空�
 test('aria-invalid: 読めない金額の欄にだけ付き、直して押すと外れる。打っている途中は付かない(F59)', async () => {
   const page = runPage();
   const typed = page.el('contract-amount');
-  typed.value = '2億円';
+  typed.value = '約2億円';
   typed.dispatchEvent({ type: 'input', bubbles: false });
   assert.equal(typed.getAttribute('aria-invalid'), null, '打っている途中から付いた');
   await page.click('bid-run');
@@ -115,12 +115,12 @@ test('aria-invalid: 読めない金額の欄にだけ付き、直して押すと
 });
 
 test('aria-invalid: 「分からない」に印があれば付けない。入れ直すと外れる', async () => {
-  assert.deepEqual(amountValidity({ 'contract-amount': '2億円', 'contract-amount-unknown': true }), [['contract-amount', false], ['subcontract-total', false]]);
+  assert.deepEqual(amountValidity({ 'contract-amount': '約2億円', 'contract-amount-unknown': true }), [['contract-amount', false], ['subcontract-total', false]]);
   assert.deepEqual(amountValidity({ 'subcontract-total': 'x' }), [['contract-amount', false], ['subcontract-total', true]]);
   const page = runPage();
-  await page.set('contract-amount', '2億円');
+  await page.set('contract-amount', '約2億円');
   await page.click('sample-load');
-  await page.set('contract-amount', '2億円');
+  await page.set('contract-amount', '約2億円');
   await page.click('bid-run');
   assert.equal(page.el('contract-amount').getAttribute('aria-invalid'), 'true');
   await page.click('sample-reenter');

@@ -1,7 +1,7 @@
 // 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
-import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
+import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
@@ -301,7 +301,22 @@ function bidNotice(done) {
 function resultNotice(head) {
   return bidNotice(null) ?? resultCountText(head, summary.bid, summary.values) + NEXT_STEP;
 }
-// 金額の欄の読めない値に印と文を付け、直ったら外す(F59)。説明の hint は残し、誤りの id だけを後ろに足し引きする
+// 欄の aria-describedby の後ろに noteId を足すか外す。説明の hint など、ほかの id は残す
+function describe(el, noteId, on) {
+  const rest = (el.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((x) => x && x !== noteId);
+  el.setAttribute('aria-describedby', (on ? [...rest, noteId] : rest).join(' '));
+}
+// 金額の欄の下の「n円 として読みました」(F83a7)。単位つきで読めて、「分からない」の印が無いときだけ出す
+function markAmountRead(doc, id, text) {
+  const el = doc.getElementById(id);
+  const note = doc.getElementById(id + '-read');
+  if (!el || !note) return;
+  describe(el, id + '-read', Boolean(text));
+  note.textContent = text;
+  note.hidden = !text;
+}
+// 金額の欄の読めない値に印と文を付け、直ったら外す(F59)。説明の hint は残し、誤りの id だけを後ろに足し引きする。
+// 単位つきで読めた値には、読んだ円の値の行を出す(F83a7)
 function markAmountFields(doc, values) {
   for (const [id, bad] of amountValidity(values)) {
     const el = doc.getElementById(id);
@@ -309,13 +324,14 @@ function markAmountFields(doc, values) {
     if (bad) el.setAttribute('aria-invalid', 'true');
     else el.removeAttribute('aria-invalid');
     const errorId = id + '-error';
-    const rest = (el.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((x) => x && x !== errorId);
-    el.setAttribute('aria-describedby', (bad ? [...rest, errorId] : rest).join(' '));
+    describe(el, errorId, bad);
     const note = doc.getElementById(errorId);
     if (note) {
       note.textContent = bad ? amountFieldError(values[id]) : '';
       note.hidden = !bad;
     }
+    const unknown = values[id + '-unknown'] === true || values[id + '-unknown'] === 'true' || values[id + '-unknown'] === 'on';
+    markAmountRead(doc, id, bad || unknown ? '' : amountReadNote(values[id]));
   }
 }
 
@@ -1352,6 +1368,8 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     // 金額の欄の誤りは欄を離れたときに見る。打っている途中(input)には出さない(F59)
     for (const [id] of amountValidity()) {
       for (const target of [id, id + '-unknown']) doc.getElementById(target)?.addEventListener('change', () => markAmountFields(doc, collect(doc)));
+      // 読んだ値の行(F83a7)は打ち直している間は古いので消し、欄を離れたときにまた出す
+      doc.getElementById(id)?.addEventListener('input', () => markAmountRead(doc, id, ''));
     }
     // ブラウザのメニューから印刷したときも、日時を描いて折りたたみを開く
     if (win && win.addEventListener) {
