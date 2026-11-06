@@ -10,7 +10,7 @@ const hyouka = read('docs/評価.md');
 const total = hyouka.match(/^\| 合計 \| (\d+) \| \*\*(\d+)\*\* \| \*\*(\d+)\*\* \|/m);
 const rows = hyouka.match(/結果は同じ (\d+) のうち (\d+) だった/);
 
-// 確かめた数字と版。overview は冒頭3行に、README は「## 評価」の節にある(F51a で README の冒頭から移した)
+// 確かめた数字と版。README と overview の「## 評価」の節にある(冒頭から移した。README は F51a、overview は F53a)
 function assertNumbers(text) {
   assert.ok(total && rows, '評価の文書から数字を読めない');
   assert.ok(text.includes(`${total[1]}件のうち見つけたのは${total[2]}件`));
@@ -22,11 +22,13 @@ function assertNumbers(text) {
   assert.ok(!/\d+ *(%|割)/.test(text.split('\n').find((l) => l.includes('見つけたのは'))), '時間の減り方は書かない');
 }
 
-test('docs/overview.md の冒頭3行に、使う前と後の文と、評価の文書と同じ数字と版がある', () => {
-  const head = read('docs/overview.md').split('\n').slice(0, 3).join('\n');
-  assert.ok(head.includes('使う前は'));
-  assert.ok(head.includes('使うと'));
-  assertNumbers(head);
+test('docs/overview.md の冒頭は要約の3行で、評価の文書と同じ数字と版は評価の節にある', () => {
+  const overview = read('docs/overview.md');
+  const summary = overview.split('\n').slice(3, 6).join('');
+  assert.ok(summary.includes('使う前は'));
+  assert.ok(summary.includes('使うと'));
+  assert.ok(!/\d/.test(summary), '要約の3行に数字を置かない');
+  assertNumbers(overview.slice(overview.indexOf('\n## 評価\n'), overview.indexOf('\n## 限界\n')));
 });
 
 test('README.md の冒頭は作者の言葉のあとに誰の・何を・どうの3行で、数字は評価の節にある', () => {
