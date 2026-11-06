@@ -14,6 +14,7 @@
 //                         原文はこの道具が読む(Claude が写した文を照合に持ち込まないため)。読めるのは作業フォルダの中の文のファイルだけで、
 //                         raw/・secrets/・.claude/・.git/ の下と、名前が . で始まる部分のあるパスは断る。
 //                         read_masked と同じく、名前に : のあるパスと Windows のデバイス名のパスも断る(F83b3)。
+//                         条件と notes は 50件まで、value は 200字まで、quote は 500字までで、超えたら原文を読まずに断る(F83b4)。
 //                         1つ目の文は check-conditions.mjs の CLI の --md の表と最後の行、2つ目の文は --out と同じ形の JSON。
 //
 // 環境変数(どれも任意):
@@ -80,7 +81,7 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        data: { type: 'string', description: '拾った条件の JSON の文(Skill bid-intake の「ファイルの形」)' },
+        data: { type: 'string', description: '拾った条件の JSON の文(Skill bid-intake の「ファイルの形」)。conditions と notes は 50件まで、value は 200字まで、quote は 500字まで' },
         files: { type: 'array', items: { type: 'string' }, minItems: 1, description: '原文のファイルの、作業フォルダからのパスの配列(例 公告/入札公告.txt)。raw/ の下は渡せない' },
       },
       required: ['data', 'files'],
@@ -136,6 +137,11 @@ const OUTSIDE_WORK = '作業フォルダの中のファイルだけを読めま�
 // check_conditions が読まない所。permissions.deny は MCP の道に効かないので、道具の中で断る
 const DENIED_DIRS = ['raw', 'secrets', '.claude', '.git'];
 const MAX_SOURCES = 50;
+// check_conditions の入口の上限(F83b4)。見本(docs/samples/bid-intake と測り/N1〜N5)の最大は 条件 15件・value 51字・quote 76字・notes 5件で、
+// 受け入れ条件の下限のほうが2倍より大きいので下限をそのまま使う。原文は全部で 50ファイル×1MB まで読めるので、条件や notes の数と抜き書きの長さの掛け算で手間が決まる
+const MAX_ITEMS = 50;
+const MAX_VALUE_CHARS = 200;
+const MAX_QUOTE_CHARS = 500;
 
 // 作業フォルダからのパスに読まない部分があれば断る。どの階層でも見る。guard-raw と同じく RAW・Raw も raw とみなす(大文字と小文字を分けないファイルシステムで同じ所を指す)
 function refuseDeniedPart(relPath) {
@@ -412,6 +418,23 @@ function readSource(root, rel) {
   }
 }
 
+// 文字でない値も照合では String() で文になるので、配列に包んで上限を抜けないよう JSON の長さで数える
+const charsOf = (v) => (typeof v === 'string' ? v : JSON.stringify(v ?? '')).length;
+
+// 件数と字数の上限を超えていれば断る。値そのものは返さず、何番目が何字かだけを返す
+function refuseOverCaps(data) {
+  const notes = Array.isArray(data.notes) ? data.notes : [];
+  for (const [label, list] of [['条件', data.conditions], ['notes の項目', notes]]) {
+    if (list.length > MAX_ITEMS) throw new ToolError(`${label}が多すぎます(${MAX_ITEMS}件まで、渡されたのは ${list.length}件)。`);
+    list.forEach((item, i) => {
+      if (charsOf(item?.quote) > MAX_QUOTE_CHARS) throw new ToolError(`quote が長すぎます(${MAX_QUOTE_CHARS}字まで、${label}の ${i + 1}番目は ${charsOf(item.quote)}字)。原文の該当の所だけを抜き書きしてください。`);
+    });
+  }
+  data.conditions.forEach((c, i) => {
+    if (charsOf(c?.value) > MAX_VALUE_CHARS) throw new ToolError(`value が長すぎます(${MAX_VALUE_CHARS}字まで、条件の ${i + 1}番目は ${charsOf(c.value)}字)。値は公告の語だけを短く書いてください。`);
+  });
+}
+
 // 拾った条件を原文と照らし、CLI の --md の表と最後の行(table)、--out と同じ形の JSON(json)を返す(F76a)
 // 読めない原文(空のファイルを含む)が1つでもあれば全体を断る。その原文を飛ばして照らすと、そこにしかない条件を「公告に書いていない」と言ってしまう(CLI も止まる)
 export async function checkConditionsFiles(root, data, files, { toolDir = TOOL_DIR } = {}) {
@@ -419,6 +442,7 @@ export async function checkConditionsFiles(root, data, files, { toolDir = TOOL_D
   let parsed;
   try { parsed = JSON.parse(data); } catch { throw new ToolError('data が JSON として読めません。拾った条件の JSON の文を渡してください。'); }
   if (!Array.isArray(parsed?.conditions)) throw new ToolError('data に conditions の配列がありません。Skill bid-intake の「ファイルの形」に合わせてください。');
+  refuseOverCaps(parsed);
   if (!Array.isArray(files) || !files.length || !files.every((f) => typeof f === 'string' && f.trim())) throw new ToolError('files がありません。原文のファイルの、作業フォルダからのパスの配列を渡してください。');
   if (files.length > MAX_SOURCES) throw new ToolError('files が多すぎます(' + MAX_SOURCES + ' ファイルまで)。');
   const sources = files.map((f) => readSource(root, f));
@@ -461,7 +485,9 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
       return ok(id, { tools: TOOLS });
     case 'tools/call': {
       const name = params?.name;
-      if (!TOOLS.some((t) => t.name === name)) return err(id, -32602, '知らない道具です: ' + String(name));
+      // name は呼ぶ側の JSON のまま。{"toString":1} のような物を String() に渡すと投げる
+      if (typeof name !== 'string') return err(id, -32602, '知らない道具です');
+      if (!TOOLS.some((t) => t.name === name)) return err(id, -32602, '知らない道具です: ' + name);
       try {
         if (name === 'list_masked') {
           return ok(id, { content: [{ type: 'text', text: formatList(listRawFiles(root, params?.arguments?.dir)) }], isError: false });
@@ -491,19 +517,26 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
   }
 }
 
-async function main() {
-  const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+// input・output は試験が差し替える(init の権限では子のプロセスを起こせない)。handle も同じで、今の入力では handleMessage が投げる形が無いので、受け止めを試すときに投げる物を渡す
+export async function main({ input = process.stdin, output = process.stdout, handle = handleMessage } = {}) {
+  const rl = readline.createInterface({ input, crlfDelay: Infinity });
   for await (const line of rl) {
     if (!line.trim()) continue;
     let msg;
     try {
       msg = JSON.parse(line);
     } catch {
-      process.stdout.write(JSON.stringify(err(null, -32700, 'Parse error')) + '\n');
+      output.write(JSON.stringify(err(null, -32700, 'Parse error')) + '\n');
       continue;
     }
-    const res = await handleMessage(msg);
-    if (res) process.stdout.write(JSON.stringify(res) + '\n');
+    // 1通の思わぬ例外でプロセスを落とさない。中身(パスや語が入るおそれ)は返さない。通知には返事を書けない
+    let res;
+    try {
+      res = await handle(msg);
+    } catch {
+      res = msg?.id === undefined || msg?.id === null ? null : err(msg.id, -32603, 'Internal error');
+    }
+    if (res) output.write(JSON.stringify(res) + '\n');
   }
 }
 
