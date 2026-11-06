@@ -65,7 +65,10 @@ const NUM = `[0-9,.${KANJI}]`;
 const GAP = '[ \\t　]*';
 // 「円」で始まる語(「3 円滑に」「120 円形の管」)の円は額の単位ではない
 const NOT_YEN_NEXT = '滑形周盤筒柱錐弧';
-const AMOUNT_RE = new RegExp(`(?:(${NUM}+)${GAP}億${GAP})?(?:(${NUM}+)${GAP}万${GAP})?(${NUM}*)${GAP}円(?![${NOT_YEN_NEXT}])`, 'g');
+const MAX_RUN = 40; // 額として読む数字の並びの字数の上限。超えた並びは額ではない
+const RUN = `${NUM}{1,${MAX_RUN}}`;
+// 長い1行で固まらないよう、並びの頭からだけ読み、空白の繰り返しを隣り合わせない(「億」の後の空白と「円」の前の空白は1つにまとまる)
+const AMOUNT_RE = new RegExp(`(?<!${NUM})(?:(${RUN})${GAP}億${GAP})?(?:(${RUN})${GAP}万${GAP})?(?:(${RUN})${GAP})?円(?![${NOT_YEN_NEXT}])`, 'g');
 const UNIT_WORD = new RegExp(`^(?:千|百${GAP}万)${GAP}円$`);
 const groupsBad = (run) => run.includes(',') && !/^[0-9]{1,3}(,[0-9]{3})+$/.test(run);
 
@@ -91,7 +94,7 @@ export function parseAmounts(text) {
 const ERAS = { 令和: 2018, 平成: 1988, R: 2018, H: 1988 };
 const DATE_RE = /(?:(令和|平成|R|H)\s*(\d+|元)\s*年|(?<!\d)(\d{4})\s*年)\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/g;
 // 日付の中の漢数字を数字にする(「令和九年四月一日」)
-const dateDigits = (s) => toHalf(s).replace(new RegExp(`[${KANJI}]+(?=\\s*[年月日])`, 'g'), (r) => String(smallValue(r)));
+const dateDigits = (s) => toHalf(s).replace(new RegExp(`(?<![${KANJI}])[${KANJI}]+(?=\\s*[年月日])`, 'g'), (r) => String(smallValue(r)));
 
 // 文の中の日付。{ raw, y, m, d, time, valid }。time は比べられる数(日)
 export function parseDates(text) {
@@ -109,7 +112,7 @@ export function parseDates(text) {
 
 // 値の数字の列。漢数字は単位が続くときだけ数字にする(「一式」「一括」を数にしない)
 function numberTokens(s) {
-  const t = toHalf(s).replace(/(\d),(?=\d)/g, '$1').replace(new RegExp(`[${KANJI}]+(?=\\s*(?:年|月|日|か月|箇月|ヶ月|人|名|級|点|件|回))`, 'g'), (r) => String(smallValue(r)));
+  const t = toHalf(s).replace(/(\d),(?=\d)/g, '$1').replace(new RegExp(`(?<![${KANJI}])[${KANJI}]+(?=\\s*(?:年|月|日|か月|箇月|ヶ月|人|名|級|点|件|回))`, 'g'), (r) => String(smallValue(r)));
   return t.match(/\d+/g) ?? [];
 }
 
@@ -123,7 +126,7 @@ export function taxState(text) {
 
 // 原文の「(単位:千円)」の宣言
 export function declaredUnit(text) {
-  const m = toHalf(text).match(new RegExp(`単位\\s*[:：]?\\s*(百${GAP}万${GAP}円|千${GAP}円|万${GAP}円)`));
+  const m = toHalf(text).match(new RegExp(`単位\\s*(?:[:：]\\s*)?(百${GAP}万${GAP}円|千${GAP}円|万${GAP}円)`));
   if (!m) return null;
   const word = m[1].replace(new RegExp(GAP, 'g'), '');
   return { word, yen: { 千円: 1e3, 万円: 1e4, 百万円: 1e6 }[word] };
@@ -138,7 +141,8 @@ const rel = (a, b) => {
   return '金額が違う';
 };
 const yenText = (n) => n.toLocaleString('en-US') + '円';
-const linesOf = (sources) => sources.flatMap((s) => s.text.split(/\r?\n/).map((line, i) => ({ file: s.file, no: i + 1, line })));
+const LINE_HEAD = 2000; // 1行のうち、見出しと日付の拾いに使う先頭の字数
+const linesOf = (sources) => sources.flatMap((s) => s.text.split(/\r\n|[\n\r\u2028\u2029]/).map((line, i) => ({ file: s.file, no: i + 1, line })));
 const where = (l) => `${l.file} ${l.no}行目`;
 
 // 見出しの語のすぐあとにある金額(境目の説明「1億円以上」は除く)
@@ -155,13 +159,22 @@ function labelledAmounts(sources, words) {
   return out;
 }
 
+// 見出しの行の本文の末尾から落とす字
+const BODY_TAIL = /[\s　|]/;
+
 // 行の頭が見出しの語で始まる行の中身(「工事名: ○○」「| 工事名 | ○○ |」「2 工事名 ○○」)
 function labelledLines(sources, words) {
-  const head = new RegExp(`^[\\s　|#*\\-・]*(?:[(（]?[0-9０-９]+[)）.．]?[\\s　]*)?(?:${words.join('|')})[\\s　]*(?:[:：|]|[\\s　])[\\s　|]*(.+?)[\\s　|]*$`);
+  const head = new RegExp(`^[\\s　|#*\\-・]*(?:[(（]?[0-9０-９]+[)）.．]?[\\s　]*)?(?:${words.join('|')})([\\s　]*[:：|][\\s　|]*|[\\s　]+)`);
   const out = [];
   for (const l of linesOf(sources)) {
-    const m = l.line.match(head);
-    if (m) out.push({ ...l, body: m[1] });
+    const line = l.line.slice(0, LINE_HEAD);
+    const m = line.match(head);
+    if (!m) continue;
+    const rest = line.slice(m[0].length);
+    let end = rest.length;
+    while (end > 0 && BODY_TAIL.test(rest[end - 1])) end--;
+    if (end > 0) out.push({ ...l, body: rest.slice(0, end) });
+    else if (m[1].length > 1) out.push({ ...l, body: m[1].at(-1) }); // 本文の無い行(「| 工事名 | |」)は語の後の最後の1字
   }
   return out;
 }
@@ -238,7 +251,7 @@ export function eraConflicts(sources) {
   const out = [];
   const re = /(令和|平成)\s*(\d+|元)\s*年\s*[(（]\s*(\d{4})\s*年?\s*[)）]/g;
   for (const l of linesOf(sources)) {
-    for (const m of dateDigits(l.line).matchAll(re)) {
+    for (const m of dateDigits(l.line.slice(0, LINE_HEAD)).matchAll(re)) {
       const y = ERAS[m[1]] + (m[2] === '元' ? 1 : Number(m[2]));
       if (y !== Number(m[3])) out.push(`${where(l)} の「${m[0]}」は ${y}年 で合わない`);
     }
