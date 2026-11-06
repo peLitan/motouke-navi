@@ -24,20 +24,20 @@ function assertNumbers(text) {
 
 test('docs/overview.md の冒頭は要約の箇条で、評価の文書と同じ数字と版は評価の節にある', () => {
   const overview = read('docs/overview.md');
-  const summary = overview.split('\n').slice(3, 7).join('');
+  const summary = overview.split('\n').slice(5, 9).join('');
   assert.ok(summary.includes('使う前は'));
   assert.ok(summary.includes('使うと'));
   assert.ok(!/\d/.test(summary), '要約の箇条に数字を置かない');
   assertNumbers(overview.slice(overview.indexOf('\n## 評価\n'), overview.indexOf('\n## 限界\n')));
 });
 
-test('README.md の冒頭は作者の言葉のあとに誰の・どんな場面で・何を・どうの4行で、数字は評価の節にある', () => {
+test('README.md の冒頭は作者の言葉と作者の立場の段落のあとに誰の・どんな場面で・何を・どうの4行で、数字は評価の節にある', () => {
   const readme = read('README.md');
   const lines = readme.split('\n');
   assert.equal(lines[1], read('docs/overview.md').split('\n')[1], '作者の言葉の行');
-  assert.deepEqual(lines.slice(3, 7).map((l) => l.slice(0, 5)), ['- 誰の:', '- どんな', '- 何を:', '- どう:']);
-  assert.ok(lines[6].includes('使う前は') && lines[6].includes('使うと'));
-  assert.ok(!/\d/.test(lines.slice(3, 7).join('')), '要約の箇条に数字を置かない');
+  assert.deepEqual(lines.slice(5, 9).map((l) => l.slice(0, 5)), ['- 誰の:', '- どんな', '- 何を:', '- どう:']);
+  assert.ok(lines[8].includes('使う前は') && lines[8].includes('使うと'));
+  assert.ok(!/\d/.test(lines.slice(5, 9).join('')), '要約の箇条に数字を置かない');
   const section = readme.slice(readme.indexOf('\n## 評価\n'), readme.indexOf('\n## データと出典\n'));
   assertNumbers(section);
 });

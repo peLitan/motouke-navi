@@ -102,15 +102,15 @@ test('5分で試せる手順: ブラウザだけで済む番号が手順と合�
   assert.ok(steps[0].includes('GitHub Pages') && steps[0].includes('`index.html`'));
 });
 
-test('どんな場面で: README と overview の「誰の」のすぐ下にあり、監督職員の語が無く、作者の立場の段落は箇条の下のまま', () => {
+test('どんな場面で: README と overview の「誰の」のすぐ下にあり、監督職員の語が無く、作者の立場の段落は箇条の上(F74a)', () => {
   for (const file of ['README.md', 'docs/overview.md']) {
     const lines = read(file).split('\n');
     const scene = lines[lines.findIndex((l) => l.startsWith('- 誰の: ')) + 1];
     assert.match(scene, /^- どんな場面で: /, file);
     assert.ok(!scene.includes('監督職員'), file);
-    const how = lines.findIndex((l) => l.startsWith('- どう: '));
+    const who = lines.findIndex((l) => l.startsWith('- 誰の: '));
     const stance = lines.findIndex((l) => l.startsWith('最初の3文は作者の言葉です。'));
-    assert.ok(how >= 0 && how < stance, file);
+    assert.ok(stance >= 0 && stance < who, file);
   }
 });
 
