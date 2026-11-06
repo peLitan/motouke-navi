@@ -301,7 +301,11 @@ export function makeMasker(mapPath, dictPath) {
   return m;
 }
 
-// バイト列を文にする(F63a)。UTF-8 → Shift_JIS の順にどちらも fatal で読み、どちらでも読めなければ断る(化けた文を Claude に渡さない)
+// ISO-2022-JP の文字集合を切り替える印(F83b2)。0x1B は UTF-8 でも Shift_JIS でも2バイトの字の途中に現れないので、バイトのまま探してよい
+const ISO2022_MARKS = ['\x1b$B', '\x1b$@', '\x1b(J', '\x1b(B'];
+
+// バイト列を文にする(F63a)。UTF-8 → Shift_JIS の順にどちらも fatal で読み、どちらでも読めなければ断る(UTF-16 など)
+// fatal でも化けた文を全部は止められない。ISO-2022-JP は全部が 7bit で UTF-8 として読めるので下の toText が先に断る。EUC-JP の短い文は Shift_JIS として読めて化けたまま返る(manual に書いた)
 // 画面の src/mask/extract.mjs の decodeText と同じ順。extract.mjs は zip の処理も含み plugin/ に写していないので、読み込まずにここに書く
 function decodeFile(bytes) {
   const hasBom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
@@ -324,6 +328,8 @@ function decodeFile(bytes) {
 }
 
 function toText(bytes) {
+  // 読むと漢字が JIS の符号の ASCII になり、会社名と人名が辞書にも規則にも当たらず置き換わらないまま返る。読む前に断る
+  if (ISO2022_MARKS.some((mark) => bytes.includes(mark))) throw new ToolError('ISO-2022-JP のファイルは読めません。UTF-8 か Shift_JIS で保存し直してください');
   const text = decodeFile(bytes);
   if (text.includes('\u0000')) throw new ToolError('文のファイルではないようです。');
   return text;
@@ -332,6 +338,8 @@ function toText(bytes) {
 // 置き換えた中身と、見本の語の確かめ(F28a)の結果を返す。見本は置き換えた中身にも対応表にも入らない
 export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, dictPath = process.env.MASK_DICT, rand } = {}) {
   const text = toText(readChecked(root, rel, 'raw'));
+  // 空の返事を「書類が白紙」と読まれないように断る。check_conditions の readSource と同じ見方(BOM だけ・空白だけも空)
+  if (!text.trim()) throw new ToolError('ファイルが空です');
   const m = makeMasker(mapPath, dictPath);
   const { masked } = m.mask(text);
   const check = checkDecoys(m, text, rand ? { rand } : {});

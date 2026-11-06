@@ -108,7 +108,7 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 ## Claude Code に組み込む
 `raw/` に置いた生のファイル(元の名前が入ったもの)を Claude Code の道具で読む操作の多くを止め、置き換えた後の中身だけを渡すための設定と道具です(`integration/claude-code/`)。詳しくは [docs/manual.md の「Claude Code に組み込む」](docs/manual.md#claude-code-に組み込む)。
 - フック `hooks/guard-raw.mjs` が Read・Grep・Glob・Bash などで `raw/` を読む形を止め、手元の MCP の道具 `masked-files` の `read_masked` が置き換えた後の中身だけを返します
-- `read_masked` は UTF-8(BOM の有無どちらも)と Shift_JIS のファイルを読みます。Excel の既定で保存した CSV・TXT は Shift_JIS になることがあります。どちらでも読めないファイルは、中身を返さず読めない旨を返します
+- `read_masked` は UTF-8(BOM の有無どちらも)と Shift_JIS のファイルを読みます。Excel の既定で保存した CSV・TXT は Shift_JIS になることがあります。どちらでも読めないファイルは、中身を返さず読めない旨を返します。ISO-2022-JP のファイルは、そのまま読むと名前が置き換わらないので読む前に断ります。空のファイルも断ります
 - 画面の「辞書を書き出す」で保存した辞書のファイルを環境変数 `MASK_DICT` に指定すると、`read_masked` も辞書に足した語(人名・現場名など)を置き換えます。読めない辞書は理由の種類だけを返して断り、辞書の語は道具の返事・出力に出しません
 - `list_masked` は `raw/` の中のファイル名を置き換えずに返すので、ファイル名に人名・会社名などの個人情報が入っているとそのまま送られます。個人情報を含まない名前にしてください
 - コマンド(`cat` など)での読み取りは、Linux・WSL で Claude Code の sandbox が有効なときは止まります。Windows(ネイティブ)では sandbox が使えないので止まりません。フックで止めきれない操作もあります
