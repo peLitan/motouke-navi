@@ -1,9 +1,10 @@
-// 置き換えの部品(F11c): .txt・.docx・.xlsx のファイルから文字を取り出す。
+// 置き換えの部品(F11c): .txt・.docx・.xlsx と文字の入った PDF のファイルから文字を取り出す。
 // 外の部品(ライブラリ)は使わない。zip の展開は、ブラウザと Node に標準である DecompressionStream('deflate-raw') を使う。
 // 取り出すのは文字だけ。書式・画像・埋め込みのファイルは読まない。
-// 返すのは1つの文字列(段落・行ごとに改行、表のセルはタブで区切る)。
+// 返すのは1つの文字列(段落・行ごとに改行、表のセルはタブで区切る)。PDF は頁の間に区切りの行を入れる。
+import { readPdf } from '../pdf-read.mjs';
 
-export const MASK_FILE_TYPES = ['.txt', '.docx', '.xlsx'];
+export const MASK_FILE_TYPES = ['.txt', '.docx', '.xlsx', '.pdf'];
 
 const MAX_FILE = 30 * 1024 * 1024;       // 読むファイルの大きさの上限
 const MAX_ENTRY = 50 * 1024 * 1024;      // zip の中の1つのファイルを開いた後の大きさの上限(展開しすぎを防ぐ)
@@ -252,15 +253,61 @@ async function extractXlsx(bytes) {
   return out.join('\n');
 }
 
-// ファイルの名前(拡張子で形式を決める)と中身(Uint8Array か ArrayBuffer)から、文字を取り出す
-export async function extractText(name, data) {
+// ---- PDF ----
+// 読めない PDF の文。理由と次の手を入れ、内部の語(status の名前)は出さない
+const PDF_STOPS = {
+  'no-text': '文字の入っていない PDF です(紙を写した画像だけ)。この画面は画像の文字を読みません。元の Excel・Word をもらうか、紙を見て入れてください。',
+  encrypted: '保護(パスワードやコピーの禁止)のかかった PDF です。この画面は保護を解きません。文字の取れる版をもらうか、要る所を手で入れてください。',
+  unmapped: '字の形しか入っていない PDF で、文字に戻せません(読むと化けます)。元の Word・Excel をもらってください。',
+  broken: 'PDF が途中で切れているか壊れていて読めません。もう一度ダウンロードするか、送り直してもらってください。',
+  'too-big': 'PDF が大きすぎて、途中で読むのをやめました。要る頁だけの PDF にしてください。',
+  'not-pdf': 'PDF の形ではありません。名前が .pdf でも中身が違います。',
+};
+const TABLE_NOTE = '表は行や列の順が崩れることがあります。紙と見比べてください。';
+
+// 続いた3頁以上は「2〜5」にまとめる。スキャンの頁が多い PDF で知らせの行が伸びないように
+function pageList(nums) {
+  const out = [];
+  for (let i = 0, j; i < nums.length; i = j + 1) {
+    j = i;
+    while (nums[j + 1] === nums[j] + 1) j++;
+    if (j - i >= 2) out.push(nums[i] + '〜' + nums[j]);
+    else out.push(...nums.slice(i, j + 1));
+  }
+  return out.join('・');
+}
+
+async function extractPdf(bytes, onProgress) {
+  const r = await readPdf(bytes, { onProgress });
+  // 展開の機能が無いブラウザでは、圧縮された PDF が壊れた物に見える
+  if (r.status === 'broken' && typeof DecompressionStream !== 'function') throw new Error('このブラウザでは PDF を開けません。文字をコピーして貼り付けてください');
+  if (r.status !== 'ok' && r.status !== 'partial') throw new Error(PDF_STOPS[r.status] ?? PDF_STOPS.broken);
+  // 空の頁にも区切りの行を置く。後ろの頁の番号が紙とずれないように
+  const text = r.pages.map((p, i) => (i ? '―― ' + p.page + '頁 ――\n' : '') + p.text).join('\n');
+  const unread = r.pages.filter((p) => p.scanLike).map((p) => p.page);
+  const notes = [];
+  if (unread.length) notes.push(r.pageCount + '頁のうち ' + pageList(unread) + '頁は文字が無い(紙を写した画像)ので読めていません。');
+  if (r.stats.hidden) notes.push('見えない字(' + r.stats.hidden + '字)は入れていません。');
+  // 次の2つは status が ok のままでも起きる。字が欠けていても置き換えの前に気づけるように言う
+  if (r.stats.unmapped) notes.push('字に戻せなかった字(' + r.stats.unmapped + '字)は「\uFFFD」のまま入れています。この字を探して紙と見比べてください。');
+  if (r.stats.damagedStreams) notes.push('中身の一部が壊れていて、読めていない所があります。紙と見比べてください。');
+  notes.push(TABLE_NOTE);
+  return { text, notes };
+}
+
+// ファイルの名前(拡張子で形式を決める)と中身(Uint8Array か ArrayBuffer)から、文字と注意(notes)を取り出す
+// onProgress(page, pageCount) は PDF の頁を読み始めるごとに呼ぶ
+export async function extractFile(name, data, { onProgress } = {}) {
   const ext = extOf(name);
   if (!MASK_FILE_TYPES.includes(ext)) {
-    throw new Error('対応していない形式です(' + (ext || '拡張子なし') + ')。読めるのは ' + MASK_FILE_TYPES.join('・') + ' です。PDF・.doc・.xls は、文字をコピーして貼り付けてください');
+    throw new Error('対応していない形式です(' + (ext || '拡張子なし') + ')。読めるのは ' + MASK_FILE_TYPES.join('・') + ' です。.doc・.xls は、文字をコピーして貼り付けてください');
   }
   const bytes = toBytes(data);
   if (bytes.length > MAX_FILE) throw new Error('ファイルが大きすぎます(上限 ' + (MAX_FILE / 1024 / 1024) + 'MB)');
-  if (ext === '.txt') return decodeText(bytes);
-  if (ext === '.docx') return extractDocx(bytes);
-  return extractXlsx(bytes);
+  if (ext === '.pdf') return extractPdf(bytes, onProgress);
+  if (ext === '.txt') return { text: decodeText(bytes), notes: [] };
+  if (ext === '.docx') return { text: await extractDocx(bytes), notes: [] };
+  return { text: await extractXlsx(bytes), notes: [] };
 }
+
+export const extractText = async (name, data) => (await extractFile(name, data)).text;

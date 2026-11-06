@@ -23,7 +23,7 @@ const HAND_BACK_MS = 50;       // 前に手を返してからこれより経っ�
 const LZW_DICT = 4096;         // LZW の符号は 12 ビットまでなので、これより先の語は呼ばれない
 const CODESPACES = 100;        // CMap の codespacerange の数(仕様の上限)
 
-export class PdfError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
+class PdfError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
 
 // 時計を見て、時間を越えていれば止める。主スレッドを持ち続けていれば画面に手を返す
 async function breathe(ctx) {

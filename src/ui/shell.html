@@ -764,10 +764,10 @@
 <label for="dict-import">辞書を読み込む</label>
 <input type="file" id="dict-import" name="dict-import" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="dict-file-status" aria-live="polite"></p>
-<div class="row drop" data-drop="mask-file"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
-<input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
+<div class="row drop" data-drop="mask-file"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx・.pdf)</label>
+<input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <details class="fold"><summary>読めるファイルと読めないもの</summary>
-<p class="note" id="mask-file-note">ファイルはこの端末の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
+<p class="note" id="mask-file-note">ファイルはこの端末の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF は文字の入った物だけを読みます。紙を写した画像だけの物と、保護のかかった物は読みません。.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
 </details>
 <p id="mask-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-input">置き換える文</label><br>

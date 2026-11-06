@@ -10,7 +10,7 @@ import { writeNotice } from './notice.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
 import { MEDICAL_DICT } from '../mask/dict-medical.mjs';
 import { esc, scrollTable } from './view.mjs';
-import { extractText } from '../mask/extract.mjs';
+import { extractFile } from '../mask/extract.mjs';
 import { PERSON_RULES } from '../mask/rules-person.mjs';
 import { SITE_RULES } from '../mask/rules-site.mjs';
 import { COMPANY_RULES, FACILITY_RULES } from '../mask/rules-company.mjs';
@@ -376,18 +376,27 @@ export function importDictFile(doc, text, name) {
 }
 
 // ファイルを読み、取り出した文字を「置き換える文」の欄に入れる(F11c)。置き換えは利用者が「置き換える」を押してから
+// 大きい PDF は読むのに数秒かかる。その間に別のファイルを選んだら後の方を活かし、前の読みは欄にも知らせにも書かない(null を返す)
+let maskFileRun = 0;
 export async function loadMaskFile(doc, file) {
   if (!file) return false;
+  const run = ++maskFileRun;
+  const say = (text) => { if (run === maskFileRun) setText(doc, 'mask-file-status', text); };
+  say('「' + file.name + '」を読んでいます…');
   try {
     const buf = await file.arrayBuffer();
-    const text = await extractText(file.name, new Uint8Array(buf));
+    const { text, notes } = await extractFile(file.name, new Uint8Array(buf), {
+      onProgress: (page, pages) => say('「' + file.name + '」を読んでいます(' + page + '/' + pages + '頁)'),
+    });
+    if (run !== maskFileRun) return null;
     const input = doc.getElementById('mask-input');
     if (input) input.value = text;
     const lines = text ? text.split(/\r?\n/).length : 0;
-    setText(doc, 'mask-file-status', '「' + file.name + '」から文字を取り出しました(' + lines + ' 行)。中身を確かめてから「置き換える」を押してください。');
+    say(['「' + file.name + '」から文字を取り出しました(' + lines + ' 行)。中身を確かめてから「置き換える」を押してください。', ...notes].join(' '));
     return true;
   } catch (e) {
-    setText(doc, 'mask-file-status', '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e)));
+    if (run !== maskFileRun) return null;
+    say('「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e)));
     return false;
   }
 }
