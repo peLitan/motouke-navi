@@ -61,7 +61,12 @@ function smallValue(run) {
 }
 
 const NUM = `[0-9,.${KANJI}]`;
-const AMOUNT_RE = new RegExp(`(?:(${NUM}+)億)?(?:(${NUM}+)万)?(${NUM}*)円`, 'g');
+// 億・万・円の前後の空白。\s は改行を含み、表の行をまたいで読むので使わない。toHalf は全角の空白を変えないので字で書く
+const GAP = '[ \\t　]*';
+// 「円」で始まる語(「3 円滑に」「120 円形の管」)の円は額の単位ではない
+const NOT_YEN_NEXT = '滑形周盤筒柱錐弧';
+const AMOUNT_RE = new RegExp(`(?:(${NUM}+)${GAP}億${GAP})?(?:(${NUM}+)${GAP}万${GAP})?(${NUM}*)${GAP}円(?![${NOT_YEN_NEXT}])`, 'g');
+const UNIT_WORD = new RegExp(`^(?:千|百${GAP}万)${GAP}円$`);
 const groupsBad = (run) => run.includes(',') && !/^[0-9]{1,3}(,[0-9]{3})+$/.test(run);
 
 // 文の中の金額を円の数にする。{ yen, raw, index, badComma }。全角・漢数字・億・万・千円・百万円を読む
@@ -71,7 +76,7 @@ export function parseAmounts(text) {
   for (const m of s.matchAll(AMOUNT_RE)) {
     const [raw, oku, man, rest] = m;
     const parts = [oku, man, rest].filter(Boolean);
-    if (!parts.length || /^(?:千|百万)円$/.test(raw)) continue; // 「単位:千円」の語は額ではない
+    if (!parts.length || UNIT_WORD.test(raw)) continue; // 「単位:千円」の語は額ではない
     const clean = (p) => {
       const t = String(p ?? '').replace(/,/g, '');
       return /^[0-9]*\.[0-9]+$/.test(t) ? Number(t) : smallValue(t); // 「1.2億円」「12.5万円」
@@ -118,8 +123,10 @@ export function taxState(text) {
 
 // 原文の「(単位:千円)」の宣言
 export function declaredUnit(text) {
-  const m = toHalf(text).match(/単位\s*[:：]?\s*(百万円|千円|万円)/);
-  return m ? { word: m[1], yen: { 千円: 1e3, 万円: 1e4, 百万円: 1e6 }[m[1]] } : null;
+  const m = toHalf(text).match(new RegExp(`単位\\s*[:：]?\\s*(百${GAP}万${GAP}円|千${GAP}円|万${GAP}円)`));
+  if (!m) return null;
+  const word = m[1].replace(new RegExp(GAP, 'g'), '');
+  return { word, yen: { 千円: 1e3, 万円: 1e4, 百万円: 1e6 }[word] };
 }
 
 const rel = (a, b) => {
