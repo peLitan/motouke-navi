@@ -48,6 +48,15 @@ export function parseIntakeFile(text) {
   return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped), company: list(data.companyFields) };
 }
 
+// 公告の PDF を「公告の参加の条件」の欄に入れたときの知らせ(F82c)。条件は拾わないので、見た物と見ていない物を言う
+export const INTAKE_FIELD_FILLED = '「公告の参加の条件」の欄に文があるので入れていません。欄を空にしてから置き直してください。';
+export function pdfIntakeNotice(name, pages, text) {
+  const prime = findPrimeExperience(text)
+    ? '元請けとしての実績を求める文がありました。結果の「確認が要る点」に出します。'
+    : '元請けとしての実績を求める文は見つかりませんでした。公告の本文で確かめてください。';
+  return '「' + name + '」の文字を読みました(' + pages + '頁)。「公告の参加の条件」の欄に入れました。見たのは元請けの実績の条件だけで、金額・工事の種類・等級・地域などの条件は拾っていません。拾うのはパソコンの Claude Code の Skill bid-intake で、渡すのは文のファイルです(この欄の文をメモ帳に貼り、.txt で保存して渡してください)。' + prime;
+}
+
 // 読み込んだあとに人が見る行
 export function intakeLines(t) {
   const lines = [];

@@ -81,12 +81,15 @@ export function confirmRows(values = {}, sources = {}, initial = null) {
 }
 
 const QUOTE_MAX = 80;
+// 公告の PDF は全文が欄に入るので、この画面には頭だけ出す(F82c)
+const TEXT_MAX = 200;
+const shownText = (text) => (text.length > TEXT_MAX ? cutQuote(text, TEXT_MAX) + '(全 ' + text.length + '字。全文は「変更」で欄を見てください)' : text);
 const SOURCE_TEXT = { 未入力: '入れていません', 手入力: '手入力', 見本: '見本(架空の工事)', 最初の値: '最初の値(変えていません)' };
 const AMOUNT_NOTE = '予定価格は上限の見込みで、請負代金そのものではありません。';
 export function renderConfirmRow(r) {
   const quote = cutQuote(r.quote, QUOTE_MAX);
   const source = r.source === '公告' ? '公告' + (quote ? '「' + quote + '」' : '') : SOURCE_TEXT[r.source];
-  const value = r.state === 'bad' ? '<span class="errors">読めない値: ' + esc(r.text) + '。「変更」で直してください</span>' : esc(r.text);
+  const value = r.state === 'bad' ? '<span class="errors">読めない値: ' + esc(r.text) + '。「変更」で直してください</span>' : esc(shownText(r.text));
   const unset = r.state === 'unset' ? statusBadge('unanswered') + ' ' : '';
   const warning = r.warning
     ? '<small class="confirm-est"><span class="badge badge-needs_check"><span class="mark" aria-hidden="true">!</span> 注意</span> ' + esc(r.warning) + '</small>'

@@ -455,7 +455,7 @@
 <div class="entry-choices">
 <button type="button" id="sample-load" class="entry-button sample-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 4l3.6 7.6 8.4 1.2-6 5.9 1.4 8.3-7.4-4-7.4 4 1.4-8.3-6-5.9 8.4-1.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">まず見本で試す</span><span class="btn-sub">初めての方はこちら。架空の工事の見本を読み込む</span></button>
 <button type="button" id="entry-bid" class="entry-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M6 26l1.5-6L22 5.5l4.5 4.5L12 24.5zM19 8.5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">条件を入れる</span><span class="btn-sub">工事の条件を手で入れる</span></button>
-<button type="button" id="entry-intake" class="entry-button drop-tile" data-drop="intake-load"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4h11l6 6v18H8zM19 4v6h6M16.5 14v9M12.5 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">公告から拾った条件を読み込む</span><span class="btn-sub">公告を読んだ AI がまとめた条件のファイルを選ぶ</span></button>
+<button type="button" id="entry-intake" class="entry-button drop-tile" data-drop="intake-load"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4h11l6 6v18H8zM19 4v6h6M16.5 14v9M12.5 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">公告から拾った条件を読み込む</span><span class="btn-sub">PDF か、公告を読んだ AI がまとめた条件のファイル</span></button>
 </div>
 <p class="entry-aside"><button type="button" id="entry-awarded" class="entry-link">もう受注した方は段取りの一覧へ</button></p>
 </div>
@@ -478,9 +478,9 @@
 <p>「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
 </details>
 <details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
-<p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。外へ送らず、入れた内容を残しません。</p>
-<div class="row drop" data-drop="intake-load"><label for="intake-load">拾った条件のファイル(.json)</label>
-<input type="file" id="intake-load" name="intake-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
+<p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。文字の入った公告の PDF を選ぶと、文字を読んで「公告の参加の条件」の欄に入れます(見るのは元請けの実績の条件だけで、ほかの条件は拾いません)。外へ送らず、入れた内容を残しません。</p>
+<div class="row drop" data-drop="intake-load"><label for="intake-load">公告の PDF・拾った条件のファイル(.pdf・.json)</label>
+<input type="file" id="intake-load" name="intake-load" accept=".json,application/json,.pdf,application/pdf"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="intake-status" aria-live="polite"></p>
 <div id="intake-result"></div>
 </details>
@@ -548,7 +548,7 @@
 <details class="fold hint-fold"><summary aria-label="閲覧できる措置の説明">説明</summary><p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></details></div>
 <div class="row"><label for="participation-conditions">公告の参加の条件(任意)</label>
 <textarea id="participation-conditions" name="participation-conditions" rows="3" placeholder="例 平成29年度以降に、元請けとして同種工事の施工実績を有すること。" aria-describedby="participation-conditions-hint"></textarea>
-<details class="fold hint-fold"><summary aria-label="公告の参加の条件の説明">説明</summary><p id="participation-conditions-hint" class="hint">公告の施工実績の条件の文を貼ります。公告から拾った条件を読み込むと、施工実績の抜き書きがここに入ります。元請けとしての実績を求める文があれば、確認が要る点に出します。文の語を見るだけで、参加できるかどうかは判定しません。</p></details></div>
+<details class="fold hint-fold"><summary aria-label="公告の参加の条件の説明">説明</summary><p id="participation-conditions-hint" class="hint">公告の施工実績の条件の文を貼ります。公告から拾った条件を読み込むと、施工実績の抜き書きがここに入ります。公告の PDF を読むと、全文がここに入ります。元請けとしての実績を求める文があれば、確認が要る点に出します。文の語を見るだけで、参加できるかどうかは判定しません。</p></details></div>
 <div class="row"><button type="button" id="bid-run">確認する</button></div>
 </form>
 </section>

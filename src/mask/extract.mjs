@@ -292,10 +292,10 @@ async function extractPdf(bytes, onProgress) {
   if (r.stats.unmapped) notes.push('字に戻せなかった字(' + r.stats.unmapped + '字)は「\uFFFD」のまま入れています。この字を探して紙と見比べてください。');
   if (r.stats.damagedStreams) notes.push('中身の一部が壊れていて、読めていない所があります。紙と見比べてください。');
   notes.push(TABLE_NOTE);
-  return { text, notes };
+  return { text, notes, pages: r.pageCount };
 }
 
-// ファイルの名前(拡張子で形式を決める)と中身(Uint8Array か ArrayBuffer)から、文字と注意(notes)を取り出す
+// ファイルの名前(拡張子で形式を決める)と中身(Uint8Array か ArrayBuffer)から、文字と注意(notes)を取り出す。PDF は頁の数(pages)も返す
 // onProgress(page, pageCount) は PDF の頁を読み始めるごとに呼ぶ
 export async function extractFile(name, data, { onProgress } = {}) {
   const ext = extOf(name);

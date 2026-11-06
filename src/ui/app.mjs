@@ -22,7 +22,9 @@ import { kindSourceText, kindTable } from '../work-kind-tables.mjs';
 import { DEFAULT_WORK_KIND, NOT_READ, ALWAYS_SHOWN, hasKindTable } from '../work-kinds.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
 import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
-import { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } from '../intake-load.mjs';
+import { parseIntakeFile, intakeLines, pdfIntakeNotice, INTAKE_FIELD_FILLED, INTAKE_MAX_BYTES } from '../intake-load.mjs';
+import { extractFile } from '../mask/extract.mjs';
+import { tidyPdfPages } from '../pdf-text.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
 import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
@@ -861,8 +863,9 @@ function setIntakeStatus(doc, text, lines = []) {
 let intakeReading = null;
 const afterIntake = (f) => (intakeReading ? intakeReading.then(f) : f());
 function queueIntake(doc, f) {
-  // 違う口の確かめも読み込みの順番の中でする(確かめている間に「確認する」が先へ進まないように)
-  const reading = (intakeReading ?? Promise.resolve()).then(() => readChecked(doc, 'intake-load', f, readIntake)).then((ok) => {
+  // 違う口の確かめも読み込みの順番の中でする(確かめている間に「確認する」が先へ進まないように)。PDF も順番の中で読む
+  const read = () => (isPdf(f.name) ? readIntakePdf(doc, f) : readChecked(doc, 'intake-load', f, readIntake));
+  const reading = (intakeReading ?? Promise.resolve()).then(read).then((ok) => {
     if (intakeReading === reading) intakeReading = null;
     return ok;
   });
@@ -877,6 +880,38 @@ async function readIntake(doc, f) {
     setIntakeStatus(doc, '読み込めませんでした: ファイルを読めません。入力欄はそのままです。');
     return false;
   }
+}
+const isPdf = (name) => String(name ?? '').toLowerCase().endsWith('.pdf');
+function setParticipation(doc, text) {
+  const participation = doc.getElementById('participation-conditions');
+  if (!participation) return;
+  participation.value = text;
+  if (typeof Event === 'function') participation.dispatchEvent?.(new Event('input', { bubbles: true }));
+}
+// 公告の PDF(F82c): 文字を読んで「公告の参加の条件」の欄に入れる。条件は拾わず、ほかの欄は変えない。
+// 欄に文があれば入れない。読む間に書かれた文も消さないよう、読んだ後にも見る
+const INTAKE_BY_HAND = '手で入れるときは、段1「条件を入れる」の欄に入れます。';
+async function readIntakePdf(doc, f) {
+  const filled = () => String(doc.getElementById('participation-conditions')?.value ?? '').trim() !== '';
+  if (filled()) { setIntakeStatus(doc, INTAKE_FIELD_FILLED); return false; }
+  setIntakeStatus(doc, '「' + f.name + '」を読んでいます…');
+  let read;
+  try {
+    read = await extractFile(f.name, new Uint8Array(await f.arrayBuffer()), {
+      onProgress: (page, pages) => setIntakeStatus(doc, '「' + f.name + '」を読んでいます(' + page + '/' + pages + '頁)'),
+    });
+  } catch (e) {
+    setIntakeStatus(doc, '「' + f.name + '」を読めませんでした: ' + String(e?.message ?? e).replace(/。?$/, '。') + INTAKE_BY_HAND);
+    return false;
+  }
+  if (filled()) { setIntakeStatus(doc, INTAKE_FIELD_FILLED); return false; }
+  if (doc.getElementById('sample-banner')?.hidden === false) clearSample(doc);
+  const text = tidyPdfPages(read.text);
+  setParticipation(doc, text);
+  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', {}, ['participation-conditions']) };
+  // 読めない頁や見えない字の注意は、見つからなかったと言う文の根拠に関わるので行で添える
+  setIntakeStatus(doc, pdfIntakeNotice(f.name, read.pages, text), read.notes);
+  return true;
 }
 export function loadIntakeFile(doc, text, name) {
   let t;
@@ -899,11 +934,7 @@ export function loadIntakeFile(doc, text, name) {
     if (typeof Event === 'function') el.dispatchEvent?.(new Event('input', { bubbles: true }));
   }
   // 別の公告の文が残らないよう、施工実績の文は無くても置き換える(F49a)
-  const participation = doc.getElementById('participation-conditions');
-  if (participation) {
-    participation.value = t.participation;
-    if (typeof Event === 'function') participation.dispatchEvent?.(new Event('input', { bubbles: true }));
-  }
+  setParticipation(doc, t.participation);
   const filled = t.participation ? [...Object.keys(t.form), 'participation-conditions'] : Object.keys(t.form);
   const values = collect(doc);
   markAmountFields(doc, values); // 読めない値を読み込みで置き換えたら、欄の下の文も消す
@@ -942,7 +973,6 @@ const WRONG_PORT_MAX_BYTES = 1024 * 1024;
 const DROP_HINT = 'この枠にファイルをドラッグして置いても読み込めます';
 const ONE_FILE = '一度に読めるファイルは1つです。どれも読み込んでいません。';
 const NO_FILE = '読み込んでいません。ファイルを受け取れませんでした。ボタンからファイルを選んでください。';
-const INTAKE_PDF = '公告の PDF はこの画面では読めません。パソコンの Claude Code(Skill bid-intake)で公告を読み、できた条件のファイル(.json)をこの枠にドラッグしてください。手で入れるときは、段1「条件を入れる」の欄に入れます。';
 const NOT_READ_DROP = '読み込んでいません。';
 const USE_FRAME = NOT_READ_DROP + 'ファイルは点線の枠にドラッグしてください。';
 // 別の道具の口は閉じた折りたたみの中にある
@@ -981,9 +1011,10 @@ export function fileTypeMessage(doc, id, file) {
   const exts = String(doc.getElementById(id)?.getAttribute?.('accept') ?? '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => x.startsWith('.'));
   const name = file.name.toLowerCase();
   if (!exts.length || exts.some((x) => name.endsWith(x))) return null;
-  if (id === 'intake-load' && name.endsWith('.pdf')) return INTAKE_PDF;
   const again = /\.xls$/.test(name) ? 'Excel で .xlsx に保存し直してください。' : '';
-  return '選んだファイルは ' + exts.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
+  // 段1 の枠は公告の PDF も読むが、違う種類のファイルに案内するのは今までどおり条件のファイル(F82c)
+  const shown = id === 'intake-load' ? exts.filter((x) => x !== '.pdf') : exts;
+  return '選んだファイルは ' + shown.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
 }
 // 読まなかったことを知らせる(F58a)。文は変えず、書いたあとで印を付ける
 function sayNotRead(doc, port, text) {
@@ -1052,7 +1083,8 @@ function endDrag(doc) {
 }
 const TILE_PORT = filePort('drop-status');
 const isShown = (doc, id) => { const el = doc.getElementById(id); return Boolean(el) && !el.hidden; };
-const frameName = (doc, id) => dropPortName(findDropTarget(doc.getElementById(id))?.querySelector?.('label')?.textContent);
+const frameLabel = (doc, id) => String(findDropTarget(doc.getElementById(id))?.querySelector?.('label')?.textContent ?? '').trim();
+const frameName = (doc, id) => dropPortName(frameLabel(doc, id));
 // 枠のある閉じた折りたたみを開く。開いたときだけ、その名前を返す
 function openFold(doc, id) {
   const fold = doc.getElementById(id);
@@ -1066,7 +1098,7 @@ function outsideNotice(doc) {
   if (doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
   if (isShown(doc, 'panel-1')) {
     const opened = OPENED(openFold(doc, 'intake-more'));
-    return ['intake-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'intake-load') + '(.json)。' + (opened ? opened + '。' : '')];
+    return ['intake-status', USE_FRAME + 'この段の枠: ' + frameLabel(doc, 'intake-load') + '。' + (opened ? opened + '。' : '')];
   }
   if (isShown(doc, 'panel-2')) {
     const opened = OPENED(openFold(doc, 'rules-more'));

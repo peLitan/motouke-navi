@@ -1,5 +1,5 @@
 // PDF から写した文の見た目を整える部品(F65c)。通信しない。空白と改行だけを動かし、語は変えない。
-import { bracketPairs } from './brackets.mjs';
+import { bracketPairs, insideOf } from './brackets.mjs';
 
 const LINE_BREAK = /\r\n?|[\n\v\f\u2028\u2029]/;
 const SENTENCE_END = /[。｡．][)）」』]*$/;
@@ -20,19 +20,30 @@ function gap(prev, next, insideBrackets) {
   return WORD_END.test(prev) && WORD_HEAD.test(next) ? ' ' : '';
 }
 
+// 頁の区切りの行(src/mask/extract.mjs が頁の間に入れる行)
+export const PAGE_LINE = /^―― [0-9]+頁 ――$/gm;
+
 // 2つ以上続く空白を1つにし、行の頭と終わりの空白と空の行を除き、文の途中の改行を詰める。1つだけの空白はそのまま
 export function tidyPdfText(text) {
   const lines = String(text ?? '').split(LINE_BREAK).map((line) => line.replace(/\s{2,}/g, ' ').trim()).filter(Boolean);
-  const pairs = bracketPairs(lines.join('\n'));
+  const joined = lines.join('\n');
+  const inside = insideOf(bracketPairs(joined), joined.length);
   let out = '';
   let at = -1; // lines.join('\n') の上の、この行の前の改行の位置
   lines.forEach((line, i) => {
     if (i > 0) {
       const prev = lines[i - 1];
       at += prev.length + 1;
-      out += gap(prev, line, pairs.some(([open, close]) => open < at && at < close));
+      out += gap(prev, line, inside(at));
     }
     out += line;
   });
   return out;
+}
+
+// 頁ごとに整え、区切りの行は1行のまま残す(前後の行とつなげない)。空の頁は区切りの行だけになる
+export function tidyPdfPages(text) {
+  const s = String(text ?? '');
+  const marks = s.match(PAGE_LINE) ?? [];
+  return s.split(PAGE_LINE).flatMap((page, i) => [i ? marks[i - 1] : '', tidyPdfText(page)]).filter(Boolean).join('\n');
 }

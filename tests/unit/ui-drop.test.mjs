@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { buildHtml } from '../../build.mjs';
 import { makeXlsx } from '../acceptance/_helpers.mjs';
+import { koukokuPdf, pdfFile, PRIME_LINES, NO_PRIME_LINES, PRIME_SENTENCE } from './_koukoku-pdf.mjs';
 import { findDropTarget, handleFileDrop, handleDragMove, dropPortName, fileTypeMessage, startDrop, startApp } from '../../src/ui/app.mjs';
 
 const JSON_ACCEPT = '.json,application/json';
@@ -264,24 +265,76 @@ test('(F54d-2) タイルに .json を置くと、段1へ移って折りたたみ
   assert.equal(status(doc, 'drop-status'), '');
 });
 
-test('(F54d-2b) タイルに違う種類を置くと入口に留まり、.pdf は専用の文を出す', async () => {
+test('(F54d-2b) タイルに違う種類を置くと入口に留まる。ほかの口の PDF は違う種類の文のまま', async () => {
   const doc = fakeDoc();
-  await handleFileDrop(doc, dropEv(doc.tile, [text('公告.pdf', 'x')]));
-  assert.equal(doc.getElementById('entry').hidden, false);
-  assert.equal(doc.getElementById('intake-more').open, false);
-  assert.match(status(doc, 'drop-status'), /^公告の PDF はこの画面では読めません。パソコンの Claude Code\(Skill bid-intake\)で/);
-  assert.equal(status(doc, 'intake-status'), '');
   await handleFileDrop(doc, dropEv(doc.tile, [text('台帳.xlsx', 'x')]));
   assert.equal(status(doc, 'drop-status'), '選んだファイルは .json にしてください(今のファイル: 台帳.xlsx)。');
   assert.equal(doc.getElementById('entry').hidden, false);
+  assert.equal(doc.getElementById('intake-more').open, false);
   await handleFileDrop(doc, dropEv(doc.tile, [text('a.json', INTAKE), text('b.json', INTAKE)]));
   assert.equal(status(doc, 'drop-status'), '一度に読めるファイルは1つです。どれも読み込んでいません。');
   assert.equal(doc.getElementById('entry').hidden, false);
-  // 段1の枠でも同じ文。ほかの口の PDF は違う種類の文のまま
-  await handleFileDrop(doc, dropEv(doc.frames['intake-load'], [text('公告.pdf', 'x')]));
-  assert.match(status(doc, 'intake-status'), /^公告の PDF はこの画面では読めません。/);
   await handleFileDrop(doc, dropEv(doc.frames['rules-load'], [text('公告.pdf', 'x')]));
   assert.equal(status(doc, 'rules-status'), '選んだファイルは .json にしてください(今のファイル: 公告.pdf)。');
+});
+
+// 公告の PDF を受ける段1 の枠。accept は画面の物を使う(F82c)
+function pdfDoc() {
+  const doc = fakeDoc();
+  const accept = shell.match(/<input\b[^>]*\bid="intake-load"[^>]*\baccept="([^"]*)"/)[1];
+  doc.els.set('intake-load', el('intake-load', { accept }, doc.frames['intake-load']));
+  return doc;
+}
+const NOT_PICKED = '金額・工事の種類・等級・地域などの条件は拾っていません。';
+const PRIME_FOUND = '元請けとしての実績を求める文がありました。結果の「確認が要る点」に出します。';
+const PRIME_MISSED = '元請けとしての実績を求める文は見つかりませんでした。公告の本文で確かめてください。';
+
+test('(F82c) タイルに公告の PDF を置くと、段1 を開いて欄に入れ、見た物と見ていない物を知らせる', async () => {
+  const doc = pdfDoc();
+  doc.getElementById('contract-amount').value = '100';
+  assert.equal(await handleFileDrop(doc, dropEv(doc.tile, [pdfFile('公告.pdf', koukokuPdf([PRIME_LINES, NO_PRIME_LINES]))])), true);
+  assert.equal(doc.getElementById('entry').hidden, true);
+  assert.equal(doc.getElementById('panel-1').hidden, false);
+  assert.equal(doc.getElementById('intake-more').open, true);
+  assert.ok(doc.getElementById('participation-conditions').value.includes(PRIME_SENTENCE));
+  const line = status(doc, 'intake-status');
+  assert.ok(line.startsWith('「公告.pdf」の文字を読みました(2頁)。「公告の参加の条件」の欄に入れました。'), line);
+  for (const part of [NOT_PICKED, 'Skill bid-intake', '文のファイル', PRIME_FOUND]) assert.ok(line.includes(part), part);
+  assert.equal(status(doc, 'drop-status'), '');
+  assert.equal(doc.getElementById('contract-amount').value, '100', 'ほかの欄は変えない');
+});
+
+test('(F82c) 段1 の枠に置いても同じ。実績の文が無ければ、見つからなかったと言う', async () => {
+  const doc = pdfDoc();
+  await handleFileDrop(doc, dropEv(doc.frames['intake-load'], [pdfFile('公告.pdf', koukokuPdf([NO_PRIME_LINES]))]));
+  assert.ok(status(doc, 'intake-status').endsWith(PRIME_MISSED), status(doc, 'intake-status'));
+  assert.ok(status(doc, 'intake-status').includes(NOT_PICKED));
+  assert.ok(!status(doc, 'intake-status').includes(PRIME_FOUND));
+});
+
+test('(F82c) 欄に文があるときは欄を変えない', async () => {
+  const doc = pdfDoc();
+  doc.getElementById('participation-conditions').value = '手で貼った文';
+  assert.equal(await handleFileDrop(doc, dropEv(doc.tile, [pdfFile('公告.pdf', koukokuPdf([PRIME_LINES]))])), false);
+  assert.equal(doc.getElementById('participation-conditions').value, '手で貼った文');
+  assert.equal(status(doc, 'intake-status'), '「公告の参加の条件」の欄に文があるので入れていません。欄を空にしてから置き直してください。');
+});
+
+test('(F82c) 読めない PDF は F82b の文で、欄を変えない', async () => {
+  const doc = pdfDoc();
+  assert.equal(await handleFileDrop(doc, dropEv(doc.tile, [pdfFile('写し.pdf', koukokuPdf([[]]))])), false);
+  assert.equal(doc.getElementById('participation-conditions').value, '');
+  assert.equal(status(doc, 'intake-status'), '「写し.pdf」を読めませんでした: 文字の入っていない PDF です(紙を写した画像だけ)。この画面は画像の文字を読みません。元の Excel・Word をもらうか、紙を見て入れてください。手で入れるときは、段1「条件を入れる」の欄に入れます。');
+  await handleFileDrop(doc, dropEv(doc.frames['intake-load'], [text('公告.pdf', 'x')]));
+  assert.match(status(doc, 'intake-status'), /^「公告\.pdf」を読めませんでした: /);
+});
+
+test('(F82c) 段1 の枠の外に置いたときの知らせは、枠の label の文のまま言う', async () => {
+  const doc = pdfDoc();
+  showStep(doc, 'panel-1');
+  doc.frames['intake-load'].querySelector('label').textContent = shell.match(/<label for="intake-load">([^<]*)</)[1];
+  await handleFileDrop(doc, dropEv(el(''), [text('公告.pdf', 'x')]));
+  assert.ok(status(doc, 'intake-status').includes('この段の枠: 公告の PDF・拾った条件のファイル(.pdf・.json)。'), status(doc, 'intake-status'));
 });
 
 test('(F54d-3) 枠の外に置くと、今見えている段の欄に書き、見える所に出す', async () => {

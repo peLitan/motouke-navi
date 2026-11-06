@@ -1,6 +1,7 @@
 // 公告の参加の条件の文から「元請けとしての施工実績」を求める文を探す(F49a)。通信しない。AI も使わない。
 // 文ごとに語で見るだけなので、当たっても「確認が要る」として知らせ、参加できないとは言い切らない。
-import { splitSentences } from './brackets.mjs';
+import { cutQuote, splitSentences } from './brackets.mjs';
+import { PAGE_LINE } from './pdf-text.mjs';
 
 // 実績の条件の語
 const EXPERIENCE = /実績|同種(?:の)?工事|同等(?:の)?工事|類似(?:の)?工事/;
@@ -42,9 +43,10 @@ const SUB_DENIED = /(?:認め|含め)(?:られ)?(?:てい)?(?:な|ず|ません)
 const SUB_ALLOWED = /認め|含(?:む|め|みます)|(?<![許認])可|差し支え|でもよい|も対象/;
 const ITEM_HEAD = /\n(?=[\s　]*[(（]?[0-9０-９]+[)）.．])/;
 
-// 改行を除いた文の列。PDF の折り返しと括弧の中の「。」では切らず、「。」と番号の付いた行の頭で切る
-const sentences = (text) => String(text ?? '').split(ITEM_HEAD).flatMap((part) => splitSentences(part))
-  .map((s) => s.replace(/[\s　]*\n[\s　]*/g, '').trim()).filter(Boolean);
+// 改行を除いた文の列。PDF の折り返しと括弧の中の「。」では切らず、「。」と番号の付いた行の頭で切る。
+// 頁の区切りの行は文に入れない(頁をまたいだ文がつながり、知らせの抜き書きに区切りの行が混ざらない)
+const sentences = (text) => String(text ?? '').replace(PAGE_LINE, '').split(ITEM_HEAD).flatMap((part) => splitSentences(part))
+  .map((s) => s.split('\n').map((line) => line.trim()).join('').trim()).filter(Boolean);
 
 function isEngineerSentence(s) {
   const head = s.split(/[、。]/)[0];
@@ -73,4 +75,6 @@ export function findPrimeExperience(text) {
 
 export const PRIME_CHECK_KEY = 'prime-experience';
 export const PRIME_CHECK_LABEL = '元請けの施工実績';
-export const primeMessage = (quote) => 'この工事は元請けとしての施工実績を参加の条件にしています。初めて元請けをする会社は参加できない場合があります。発注者が認める実績の範囲は、公告と説明書で確かめてください。公告の文: 「' + quote + '」';
+// PDF の全文を見ると「。」の無い長い文が当たることがあるので、抜き書きは長さで切る
+const PRIME_QUOTE_MAX = 300;
+export const primeMessage = (quote) => 'この工事は元請けとしての施工実績を参加の条件にしています。初めて元請けをする会社は参加できない場合があります。発注者が認める実績の範囲は、公告と説明書で確かめてください。公告の文: 「' + cutQuote(quote, PRIME_QUOTE_MAX) + '」';
