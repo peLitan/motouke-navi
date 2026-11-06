@@ -13,6 +13,7 @@
 //   check_conditions { data, files }  公告から拾った条件の JSON の文(data)を、原文のファイル(files。作業フォルダからのパスの配列)と照らす(F76a)。
 //                         原文はこの道具が読む(Claude が写した文を照合に持ち込まないため)。読めるのは作業フォルダの中の文のファイルだけで、
 //                         raw/・secrets/・.claude/・.git/ の下と、名前が . で始まる部分のあるパスは断る。
+//                         名前が raw・secrets のリンクの先も断る(F83b6)。
 //                         read_masked と同じく、名前に : のあるパスと Windows のデバイス名のパスも断る(F83b3)。
 //                         条件と notes は 50件まで、value は 200字まで、quote は 500字までで、超えたら原文を読まずに断る(F83b4)。
 //                         1つ目の文は check-conditions.mjs の CLI の --md の表と最後の行、2つ目の文は --out と同じ形の JSON。
@@ -28,6 +29,7 @@
 //
 // 限界: 置き換えの漏れは0にならない(README の「文の置き換え」)。読めるのは文のファイル(.txt .md .csv .tsv .json)だけ。文字は UTF-8(BOM の有無どちらも)か Shift_JIS(F63a)。
 //       リンクの数が2以上のファイル(ハードリンク)と、ファイルの番号を返さないドライブ(exFAT の USB など)のファイルは読まない(F83b1)。
+//       呼ぶたびに断る物の実体の (dev, ino) の集合を作って開いた物と比べる(F83b6)。raw/ などが 8段か 50,000件を超えると断る。raw/ から外へ移したファイルは見分けられない。
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -191,6 +193,94 @@ const READ_RULES = { raw: rawRule, source: sourceRule };
 const OPEN_FLAGS = fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0) | (fs.constants.O_NOCTTY ?? 0);
 const NOT_THERE = ['ENOENT', 'ENOTDIR', 'ELOOP', 'ENAMETOOLONG'];
 const REPLACED = '読む間にファイルが替わりました。もう一度呼んでください';
+const LIST_DEPTH = 8;
+// 断る物の実体の集合の上限(F83b6)。超えた所を黙って飛ばすと集合に穴が空くので断る
+const DENIED_MAX = 50000;
+const TOO_MANY = 'raw/ などが大きすぎて確かめられません(50,000件まで)。終わった工事の書類を作業フォルダの外へ移してください';
+const TOO_DEEP = 'raw/ などの階層が深すぎて確かめられません(8段まで)。終わった工事の書類を作業フォルダの外へ移してください';
+const IN_DENIED_SET = '読まない所のファイルは読めません(raw/・secrets/・.git/・.claude/ の下、名前が raw・secrets のリンクの先、MASK_MAP・MASK_DICT): ';
+// 名前が raw・secrets の物を探す範囲(F83b6)。作業フォルダ全体を毎回深く歩かないため。超えた所は見分けられない(manual の限界)
+const NAME_SEARCH_DEPTH = 4;
+const NAME_SEARCH_MAX = 20000;
+
+// 実体の見分け。Windows の ino は 53 ビットを超えるので bigint の stat から作る
+export const inodeKey = (st) => `${st.dev}:${st.ino}`;
+
+// 断る物の実体の (dev, ino) の集合を作る(F83b6)。名前を確かめた後に途中のフォルダをリンクへ戻すと dev と ino の比べが合ってしまう(差し替え2回)ので、
+// 差し替えで替わらない開いた fd の番号と比べる。kind は readChecked と同じ。read_masked('raw')は raw を読む道具なので、raw の名前の物を見ず raw/ も歩かない
+export function deniedInodes(root, kind) {
+  const base = path.resolve(root);
+  const names = kind === 'raw' ? ['secrets'] : ['raw', 'secrets'];
+  const denied = new Set();
+  const walked = new Set();
+  let count = 0;
+  const addStat = (st) => { if (st) denied.add(inodeKey(st)); };
+  // 途中で消えた物と開けない物は null。通り抜けられないフォルダの下は、この道具も開けない
+  const statOf = (stat, p) => { try { return stat(p, { bigint: true, throwIfNoEntry: false }); } catch { return null; } };
+  // フォルダへのリンクはたどらない(輪になるため)。名前が raw・secrets のリンクだけ、先を1つの根として歩く。種類は lstat で見る(Windows の Dirent はクラウドの置き場のファイルもリンクと言う)
+  const walk = (dir, depth, skip) => {
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (skip?.(e.name, depth)) continue;
+      count += 1;
+      if (count > DENIED_MAX) throw new ToolError(TOO_MANY);
+      const abs = path.join(dir, e.name);
+      const st = statOf(fs.lstatSync, abs);
+      if (st?.isDirectory()) {
+        if (depth >= LIST_DEPTH) throw new ToolError(TOO_DEEP);
+        walk(abs, depth + 1, skip);
+      } else if (st?.isSymbolicLink()) {
+        if (names.includes(e.name.toLowerCase())) addRoot(abs);
+      } else addStat(st);
+    }
+  };
+  // リンクの先の実体から歩く。ファイルならそれだけを足す。同じフォルダは2回数えない
+  const addRoot = (abs, skip) => {
+    let real;
+    try { real = fs.realpathSync.native(abs); } catch { return; }
+    const st = statOf(fs.statSync, real);
+    if (st?.isDirectory()) {
+      if (!walked.has(real)) { walked.add(real); walk(real, 0, skip); }
+    } else addStat(st);
+  };
+  // 上の段から順に探す。直下は数えずに全部見る(直下のファイルの数で raw/ を集合から落とさないため)。raw・secrets の中は集める側で歩き、.git・.claude は下で歩くので、探す数を使わない
+  const lowerDirs = [];
+  const queue = [[base, 0]];
+  let looked = 0;
+  for (let i = 0; i < queue.length && looked < NAME_SEARCH_MAX; i += 1) {
+    const [dir, depth] = queue[i];
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      if (depth > 0) {
+        looked += 1;
+        if (looked > NAME_SEARCH_MAX) break;
+      }
+      const name = e.name.toLowerCase();
+      if (depth === 0 && (name === '.git' || name === '.claude' || (kind === 'raw' && name === 'raw'))) continue;
+      const abs = path.join(dir, e.name);
+      if (names.includes(name)) {
+        if (depth > 0 && e.isDirectory()) lowerDirs.push(abs); else addRoot(abs);
+      } else if (e.isDirectory() && depth < NAME_SEARCH_DEPTH) queue.push([abs, depth + 1]);
+    }
+  }
+  // objects と worktrees は数が多く、中に秘密が無い物として集合に入れない(Linux では下の fd のパスの確かめが見る)。
+  // raw・secrets より後に歩く: .git が raw へのリンクのとき、これらの名前を飛ばした歩きで「歩いた」にしないため
+  addRoot(path.join(base, '.git'), (name) => name === 'objects');
+  addRoot(path.join(base, '.claude'), (name, depth) => depth === 0 && name === 'worktrees');
+  for (const p of [process.env.MASK_MAP, process.env.MASK_DICT]) if (p) addRoot(maskFilePath(base, p));
+  // 下の階層の本物のフォルダ(工事B/raw/)は名前で断るが、Windows・mac の2回の差し替えは集合でしか止まらないので足す。写真/RAW/ のような物の数で全体を止めないよう、上限に届いたらやめる
+  try { for (const abs of lowerDirs) addRoot(abs); } catch (e) { if (!(e instanceof ToolError)) throw e; }
+  return denied;
+}
+
+// fd の今の実体のパス。Linux だけに口があり、Windows・mac の Node には無い(そこでは集合だけで見る)。/proc が読めない環境も同じ
+// 開いた後に名前が消えたファイルは「パス (deleted)」と返る。消える前のパスに決まりを当てる(印を残すと文のファイルでも拡張子で断ってしまう)
+function pathOfFd(fd) {
+  if (process.platform !== 'linux') return null;
+  try { return fs.readlinkSync('/proc/self/fd/' + fd).replace(/ \(deleted\)$/, ''); } catch { return null; }
+}
 
 // 開いた fd から読む。大きさ+1 バイトまで読み、fstat の大きさと違えば読む間に書き換えられたものとして断る(fstat で上限の内なので、上限を超えた分もここで止まる)
 function readOpened(fd, size) {
@@ -207,8 +297,10 @@ function readOpened(fd, size) {
 
 // 道具がファイルを読む1つの読み口(F83b1)。kind は read_masked の 'raw' と check_conditions の 'source'。読んだバイト列を返す。
 // 確かめてから名前で読み直すと、その間の差し替えで読まない所が読める(CWE-367・CWE-59)ので、先に開き、開いた物を確かめ、開いた fd から読む
-function readChecked(root, rel, kind) {
+// call は1回の呼び出しで分け合う物。複数のファイルを読む道具が同じ物を渡すと、断る物の集合を作るのは1回で済む。字で断る物には作らない
+function readChecked(root, rel, kind, call = {}) {
   const { target, checkReal, tooLarge } = READ_RULES[kind](root, rel);
+  call.denied ??= deniedInodes(root, kind);
   let fd;
   try {
     fd = fs.openSync(target, OPEN_FLAGS);
@@ -232,6 +324,10 @@ function readChecked(root, rel, kind) {
     // 開いた後に同じ実体のハードリンクへ替えられると dev と ino が合い、上の fstat の数は替える前の物なので、リンクの数も今の物を見る
     const now = fs.statSync(real, { bigint: true, throwIfNoEntry: false });
     if (now?.dev !== st.dev || now?.ino !== st.ino || now?.nlink !== 1n) throw new ToolError(REPLACED);
+    // ここまでは名前を見るので、実体のパスの確かめの後に途中のフォルダをリンクへ戻すと通る。ここからは fd を見るので、差し替えの順に関係なく効く
+    const fdPath = pathOfFd(fd);
+    if (fdPath) checkReal(fdPath);
+    if (call.denied.has(inodeKey(st))) throw new ToolError(IN_DENIED_SET + rel);
     // 上限は実体の確かめの後で見る。先に見ると 1MB を超える Excel に「大きすぎます」と返して文にして置く案内が出ず、リンクの先の大きさも返事から分かる
     if (st.size > MAX_BYTES) throw new ToolError(tooLarge);
     return readOpened(fd, Number(st.size));
@@ -241,7 +337,6 @@ function readChecked(root, rel, kind) {
 }
 
 const LIST_MAX = 500;
-const LIST_DEPTH = 8;
 
 // raw/ の中のファイルの名前だけを集める(中身は開かない)。シンボリックリンクは実体が raw/ の中のファイルのときだけ挙げ、フォルダへのリンクはたどらない
 export function listRawFiles(root, dir = 'raw') {
@@ -407,8 +502,8 @@ const CHECK_CONDITIONS_PLACES = [
 ];
 
 // 原文を1つ読む。file は CLI と同じくファイルの名前だけ。文字で読めないときは、どのファイルかを添える
-function readSource(root, rel) {
-  const bytes = readChecked(root, rel, 'source');
+function readSource(root, rel, call) {
+  const bytes = readChecked(root, rel, 'source', call);
   try {
     const text = toText(bytes);
     if (!text.trim()) throw new ToolError('中身がありません。');
@@ -445,7 +540,8 @@ export async function checkConditionsFiles(root, data, files, { toolDir = TOOL_D
   refuseOverCaps(parsed);
   if (!Array.isArray(files) || !files.length || !files.every((f) => typeof f === 'string' && f.trim())) throw new ToolError('files がありません。原文のファイルの、作業フォルダからのパスの配列を渡してください。');
   if (files.length > MAX_SOURCES) throw new ToolError('files が多すぎます(' + MAX_SOURCES + ' ファイルまで)。');
-  const sources = files.map((f) => readSource(root, f));
+  const call = {};
+  const sources = files.map((f) => readSource(root, f, call));
   for (const place of CHECK_CONDITIONS_PLACES) {
     let tool;
     try {
