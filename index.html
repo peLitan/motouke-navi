@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DOqaA0YF4f3cghqQXYHBeb34oUHQWrfejBR66q4dj80='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-msiRHL7LiQfUEfF25qnFxbIq+WS6uzixo168LZ8YG9g='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -2122,11 +2122,13 @@ function statusBadge(status, extra = '') {
   const mark = STATUS_MARK[status];
   return '<span class="badge badge-' + esc(status) + '">' + (mark ? '<span class="mark" aria-hidden="true">' + esc(mark) + '</span> ' : '') + esc(word + extra) + '</span>';
 }
-// 「確認が要る」の項目の数と「確認が要る点」の数が違うときの説明(F37g)。結論の出た項目についての確認があると数が増える
+// 確認が要る点のうち、結論の出た項目の中で確かめる点の数の説明(F37g・F83a1)。札「確認が要る」の項目より点が多くなるのはこの分
 function pointsNote(points) {
   const n = points.filter((p) => p.status !== 'needs_check').length;
-  return n ? 'うち ' + n + '件は、結論の出た項目について確かめる点です(「確認が要る」の項目の数には入りません)。' : '';
+  return n ? 'このうち ' + n + '件は、結論の出た項目の中で確かめる点です。' : '';
 }
+// 項目の札と点の関係(F83a1)。節の頭に1回だけ書く
+const BADGE_NOTE = '項目の札「確認が要る」は、その項目の結論が確かめの答えで決まることを表します。';
 // 結果の項目へのページの中のリンクの行き先(まとめの枠から移る)
 const bidItemId = (key) => 'bid-item-' + String(key ?? '').replace(/[^\w-]/g, '_');
 const ENGINEER = { kanri: '監理技術者', shunin: '主任技術者' };
@@ -2170,12 +2172,12 @@ function renderBidResult(bid, values) {
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
   const checks = points.length
-    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map(pointLine).join('') + '</ul>'
+    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<p class="points-note">' + BADGE_NOTE + '</p><ul class="checks">' + points.map(pointLine).join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
   // 労務費と処遇の候補(F50a): 上の「確認が要る点」の件数には混ぜない
   const dutyList = bid.duties ?? [];
   const duties = dutyList.length
-    ? '<h3 id="labor-duties">労務費と処遇の確認(確認が要る候補)</h3><p class="points-note">上の件数には数えていません。原文の抜き書きを見て、担当者が確かめてください。このツールは当たる・当たらないを判定しません。</p><ul class="items">'
+    ? '<h3 id="labor-duties">労務費と処遇の候補(確認が要る点の数に入れません)</h3><p class="points-note">上の件数には数えていません。原文の抜き書きを見て、担当者が確かめてください。このツールは当たる・当たらないを判定しません。</p><ul class="items">'
       + dutyList.map((d) => '<li class="duty item status-needs_check"><h4>' + esc(d.label) + ': <span class="status">' + statusBadge('needs_check') + '</span></h4><p class="reason">' + esc(d.note) + '</p>'
         + '<details class="basis"><summary>根拠を見る: ' + basisLabels(d.basis) + '</summary>' + basisItems(d.basis) + exceptionList(d.exceptions) + '</details></li>').join('') + '</ul>'
     : '';
@@ -2512,7 +2514,7 @@ function nextStep(state, points, un) {
   // 元請けの実績の知らせは法令の項目ではないので checks の最後にあるが、参加の条件なので未回答より先に出す(F62a)。参加できないとは言い切らない(F49)
   if ((state.bid?.checks ?? []).some((c) => c.key === PRIME_CHECK_KEY)) return { title: '元請けとしての施工実績が参加の条件です', sub: '公告の抜き書きを確かめ、認められる実績の範囲を発注者の公告と説明書で確かめてください。', href: 'open-items', go: '確認が要る点を見る' };
   if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '1 条件に戻る' };
-  if (points.length) return { title: '「確認が要る」の ' + points.length + '件を確かめる', sub: points[0].label + ': ' + points[0].message, href: 'open-items', go: '確認が要る点を見る' };
+  if (points.length) return { title: '確認が要る点 ' + points.length + '件を確かめる', sub: points[0].label + ': ' + points[0].message, href: 'open-items', go: '確認が要る点を見る' };
   return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '3 書類を確かめる' };
 }
 function renderResultTop(state = {}) {
@@ -2534,7 +2536,7 @@ function renderResultTop(state = {}) {
     : ['schedule-heading', '−', '条件を入れると出ます'];
   return '<ul class="stats" aria-label="結果の件数と段取りの例(候補)">'
     + stat('required', 'bid-result', provisional ? '−' : STATUS_MARK.required + ' ' + required, '要るものの候補', provisional ? '質問に答えると出ます' : '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
-    + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る', '自分で確かめる点(件)')
+    + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る点', '自分で確かめる点(件)')
     + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
     + stat('schedule', schedule[0], schedule[1], '受注後の段取りの例', schedule[2], '<li class="phone-only">')
     + '</ul>' + next;

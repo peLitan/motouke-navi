@@ -75,12 +75,12 @@ test('岡山の条件の形: 未回答に答えたあとも、専任の文では
   assert.equal(nextText(page.el('result-top').innerHTML).title, PRIME_TITLE);
 });
 
-test('見本: 今までどおり「確認が要る」の件で、副題は専任の平らな文', async () => {
+test('見本: 確認が要る点の件で、副題は専任の平らな文', async () => {
   const page = runPage(html);
   await page.click('sample-load');
   await page.click('confirm-go');
   const n = nextText(page.el('result-top').innerHTML);
-  assert.equal(n.title, '次にすること: 「確認が要る」の 2件を確かめる');
+  assert.equal(n.title, '次にすること: 確認が要る点 2件を確かめる');
   assert.equal(n.href, 'open-items');
   assert.match(n.sub, /^技術者を専任で置く必要があるか: 公告で、発注者が国か地方公共団体か/);
 });

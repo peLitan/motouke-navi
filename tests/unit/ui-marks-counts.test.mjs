@@ -34,10 +34,10 @@ test('見本: 画面の結果に ✕ が出ず、印は ●。「確認が要る
   const sum = plain(renderSummary({ values, bid }));
   assert.match(sum, /● 要る 6項目/);
   assert.match(sum, /! 確認が要る 0項目/);
-  assert.match(sum, /確認が要る点 2件を入札前の確認の欄に出しています。うち 2件は、結論の出た項目について確かめる点です/);
+  assert.match(sum, /確認が要る点 2件を入札前の確認の欄に出しています。このうち 2件は、結論の出た項目の中で確かめる点です。/);
   const out = renderBidResult(bid, values);
   assert.ok(!(out + renderSummary({ values, bid })).includes('✕'));
-  assert.match(out, /<h3>確認が要る点\(2件\)<\/h3><p class="points-note">うち 2件は、結論の出た項目/);
+  assert.match(out, /<h3>確認が要る点\(2件\)<\/h3><p class="points-note">このうち 2件は、結論の出た項目/);
 });
 
 test('数え方: まとめ・入札前の確認・最後の一覧の「確認が要る点」は、どの条件でも同じ数', () => {
@@ -75,7 +75,7 @@ test('説明の文: 数が同じときは出さず、未回答の項目は入札
   assert.ok(!renderBidResult(onlyItem).includes('結論の出た項目'));
   assert.ok(!renderSummary({ bid: onlyItem }).includes('結論の出た項目'));
   const mixed = { ...onlyItem, checks: [...onlyItem.checks, { key: 'b', label: '項目B', message: 'y' }] };
-  assert.match(plain(renderBidResult(mixed)), /確認が要る点\(2件\)うち 1件は/);
+  assert.match(plain(renderBidResult(mixed)), /確認が要る点\(2件\)このうち 1件は/);
   // 欄の値を渡さないときは、判定の状態のまま全部数える
   assert.equal(needsCheckPoints(mixed).length, 2);
   // 項目に当たらない確認は「確認が要る」と数え、落とさない

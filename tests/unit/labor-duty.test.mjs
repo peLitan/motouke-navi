@@ -85,7 +85,7 @@ test('結果の画面: 節が出て、抜き書きと断り書きが常に出る
   const input = { ...base, direct: true, hasSubcontract: true };
   const bid = bidCheck(input);
   const html = renderBidResult(bid);
-  assert.ok(html.includes('労務費と処遇の確認(確認が要る候補)'));
+  assert.ok(html.includes('労務費と処遇の候補(確認が要る点の数に入れません)'));
   assert.ok(html.includes('著しく下回ることとなるような変更を求めてはならない。'));
   assert.ok(html.includes('その他の労働者の適切な処遇を確保するための措置'));
   assert.ok(html.includes('当たる・当たらないを判定しません'));

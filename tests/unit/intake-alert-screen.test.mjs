@@ -58,7 +58,7 @@ test('岡山の条件の形: 会社側の欄が空のまま結果まで進むと
   }
   assert.match(page.el('open-items').innerHTML, /確認が要る点\(1件\)/);
   assert.match(page.el('open-items').innerHTML, /未回答\(5問\)/);
-  assert.match(page.text('result-top').replace(/\s+/g, ' '), /! 1 確認が要る/);
+  assert.match(page.text('result-top').replace(/\s+/g, ' '), /! 1 確認が要る点/);
   assert.ok(page.el('panel-2').hidden !== true, '結果の段が開いている');
 });
 

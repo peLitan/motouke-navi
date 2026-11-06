@@ -147,12 +147,12 @@ const topText = (o) => o.replace(/<[^>]+>/g, '');
 
 const statCards = (o) => [...o.matchAll(/<a class="stat stat-(\w+)" href="#([\w-]+)"><span class="stat-num">([^<]*)<\/span><span class="stat-lab">([^<]*)<\/span><span class="stat-sub">([^<]*)<\/span>/g)].map((m) => m.slice(1));
 
-test('数字のカード: 要るものの候補・確認が要る・安全の法令の候補・段取りの例の4つで、押すとその節へ飛ぶ。安全は要るものに混ぜない', () => {
+test('数字のカード: 要るものの候補・確認が要る点・安全の法令の候補・段取りの例の4つで、押すとその節へ飛ぶ。安全は要るものに混ぜない', () => {
   const out = renderResultTop({ bid: TOP_BID, safety: { count: 3 } });
   const cards = statCards(out);
   assert.deepEqual(cards.map((c) => c.slice(0, 4)), [
     ['required', 'bid-result', '● 2', '要るものの候補'],
-    ['check', 'open-items', '! 1', '確認が要る'],
+    ['check', 'open-items', '! 1', '確認が要る点'],
     ['safety', 'safety-fold', SAFETY_MARK + ' 3', '安全の法令の候補'],
     ['schedule', 'schedule-heading', '−', '受注後の段取りの例'],
   ]);
@@ -237,7 +237,7 @@ test('次にすること: 誤り・条件の変更・元請けの実績・未回
   assert.deepEqual(go(renderResultTop({ bid: TOP_BID, values: {} })).slice(1), ['bid-form']);
   assert.match(go(renderResultTop({ bid: TOP_BID, values: {} }))[0], /^次にすること: 未回答の質問 \d+つに答える$/);
   const check = renderResultTop({ bid: TOP_BID });
-  assert.deepEqual(go(check), ['次にすること: 「確認が要る」の 1件を確かめる', 'open-items']);
+  assert.deepEqual(go(check), ['次にすること: 確認が要る点 1件を確かめる', 'open-items']);
   assert.ok(check.includes('&lt;確かめる&gt;') && !check.includes('<確かめる>'));
   assert.deepEqual(go(renderResultTop({ bid: { ...TOP_BID, checks: [] } })), ['次にすること: 書類を確かめる', 'panel-3']);
   assert.ok(body.includes('id="bid-run"') && body.includes('id="bid-form"') && body.includes('id="panel-3"'));
