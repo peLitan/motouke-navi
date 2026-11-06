@@ -262,6 +262,10 @@ export function bidCheck(input = {}) {
   // 元請けとしての施工実績を求める文(F49a)。法令の判定ではないので項目にせず、確認が要る点にだけ出す
   const prime = findPrimeExperience(input.participationConditions);
   if (prime) checks.push({ key: PRIME_CHECK_KEY, label: PRIME_CHECK_LABEL, message: primeMessage(prime) });
+  // 下請けの総額が請負代金より大きいのは、桁か欄の入れ違いのことが多い(F77a)。判定の項目は変えず、確認が要る点にだけ出す
+  if (input.direct === true && input.hasSubcontract === true && isAmount(input.contractAmount) && isAmount(input.subcontractTotal) && input.subcontractTotal > input.contractAmount) {
+    checks.push({ key: 'subcontract-over', label: '下請けの総額', message: '下請けの総額(' + yen(input.subcontractTotal) + ')が請負代金の見込み(' + yen(input.contractAmount) + ')より大きくなっています。桁か欄を確かめてください。' });
+  }
   return {
     items,
     checks,

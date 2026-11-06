@@ -50,3 +50,25 @@ test('民間で専任の境目以上は「確認が要る」で、施設の種�
   assert.match(d.note, /第3号/);
   assert.match(d.note, /第2号/);
 });
+
+test('下請けの総額が請負代金より大きいときだけ確認が要る点に出す(F77a)。判定の項目は変えない', () => {
+  const POINT = 'subcontract-over';
+  const base = { orderer: 'public', direct: true, workType: 'other', hasSubcontract: true, license: 'tokutei', engineerQualification: 'kanri' };
+  const run = (over) => bidCheck({ ...base, ...over });
+  const point = (over) => run(over).checks.find((c) => c.key === POINT);
+  const c = point({ contractAmount: 10_000_000, subcontractTotal: 90_000_000 });
+  assert.equal(c.label, '下請けの総額');
+  assert.equal(c.message, '下請けの総額(90,000,000円)が請負代金の見込み(10,000,000円)より大きくなっています。桁か欄を確かめてください。');
+  assert.equal(point({ contractAmount: 300_000_000, subcontractTotal: 60_000_000 }), undefined);
+  assert.equal(point({ contractAmount: 60_000_000, subcontractTotal: 60_000_000 }), undefined, '同じ額は大きくない');
+  assert.equal(point({ contractAmount: null, subcontractTotal: 90_000_000 }), undefined);
+  assert.equal(point({ contractAmount: 10_000_000, subcontractTotal: null }), undefined);
+  assert.equal(point({ contractAmount: 10_000_000, subcontractTotal: 0, hasSubcontract: false }), undefined);
+  assert.equal(point({ contractAmount: 10_000_000, subcontractTotal: 90_000_000, direct: false }), undefined);
+  assert.equal(point({ contractAmount: 10_000_000, subcontractTotal: 90_000_000, direct: null }), undefined);
+  // 請負代金が下請けの総額をまたいでも、専任と特例の境目(1億円)の同じ側なら items は同じで、点だけが増える
+  const over = run({ contractAmount: 80_000_000, subcontractTotal: 90_000_000 });
+  const under = run({ contractAmount: 99_000_000, subcontractTotal: 90_000_000 });
+  assert.deepEqual(over.items, under.items);
+  assert.equal(over.checks.length, under.checks.length + 1);
+});
