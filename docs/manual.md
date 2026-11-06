@@ -459,7 +459,7 @@ Anthropic の公式ページ(2026-11-02 に確認)によると、API に送っ�
 ## Claude で点検(画面なしの Claude Code)
 Claude Code を画面なしで動かす入口です。`scripts/claude-headless.mjs` が `claude -p --plugin-dir plugin` を動かし、下の「Claude Code のプラグイン」の Skill `construction-check` と反証の係 `refuter` で書類を点検します。API の鍵ではなく、Claude Code のログインで動きます。
 
-**走らせた記録(今の版。2026-11-05、版 156b15c、作る係とは別の担当)**: 評価のケース E1 の架空の書類2件を `raw/` に置いた作業フォルダで、下の手順3のとおり走らせました。
+**走らせた記録(2026-11-05、版 156b15c、作る係とは別の担当。F56a で替えた後の版の走らせは、下の表に統括が足す)**: 評価のケース E1 の架空の書類2件を `raw/` に置いた作業フォルダで、下の手順3のとおり走らせました。
 
 | 見たこと | 結果 |
 |---|---|
@@ -469,6 +469,11 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 | 断られた道具 | Bash 2回。1回目は Claude が自分で書いた抜き書きの照合のスクリプトを見張り(フック `guard-raw`)が止めた。2回目はそのスクリプトの削除で、許した形に無いので断られた |
 
 この回の元の名前の数と費用は受け取っていません。
+
+F56a で替えた後の版の走らせ(値は統括が足す):
+
+| 版 | 日時 | 往復 | 秒 | 費用 | 道具の呼び出し(主と係を分けて名前ごと) | 断られた道具 | 係の本文の有無 | plugin_errors | mcp_servers | Stop の催促 |
+|---|---|---|---|---|---|---|---|---|---|---|
 
 **最初の記録(2026-11-04 22時台、作る係とは別の担当)**: 同じ書類で、同じ手順で走らせました。
 
@@ -483,18 +488,20 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 
 どちらの回も、記録(`run.jsonl`)と答えには置き換えた後の書類の中身が入るので、リポジトリには入れていません。
 
-最初の記録の後、Skill `construction-check` の手順に「`check-articles.mjs` は単独で呼び、別の命令をつながない」と書きました(許す道具と見張りの決まりは変えていません)。上の今の版の回では、この手順のとおり条番号の確かめが動きました。
+最初の記録の後、Skill `construction-check` の手順に「`check-articles.mjs` は単独で呼び、別の命令をつながない」と書きました(許す道具と見張りの決まりは変えていません)。上の版 156b15c の回では、この手順のとおり条番号の確かめが動きました。
 
 その後、F56a で手順の確かめを道具 `check_articles` に替えたので、今の手順に Bash の命令はありません。上の2つの回は替える前の版で、替えた後の版ではこの入口を走らせていません。
 
 1. Claude Code を入れて、`claude auth login` でログインする
 2. 空の作業フォルダを作り、点検する書類を `raw/` に置く(作業フォルダはこのリポジトリの `plugin/` の外にする。重ねると止まります)
 3. `node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]` を動かす
-4. 答えは標準出力に出ます。呼んだ道具・Skill・係の数え上げと注意は標準エラーに出ます。`read_masked` や `refuter` を呼ばなかったとき、道具が断られたとき、途中で止まったときは「注意:」と出ます
+4. 答えは標準出力に出ます。呼んだ道具(主と係の中に分けて)・Skill・係・係の本文の有無・往復と秒と費用・プラグインと MCP の読み込みの数え上げと、注意は標準エラーに出ます。`read_masked` や `refuter` を呼ばなかったとき、道具が断られたとき、途中で止まったとき、プラグインか MCP の読み込みに失敗したときは「注意:」と出ます
 
 - `--doc` を省くと、`raw/` の書類すべてを点検します
 - `--log` を省くと、記録は作業フォルダの `headless-logs/<日時>.jsonl` に残ります。記録は `--output-format stream-json` の出力そのままです。同じ名前のファイルがあれば止まり、上書きしません。`raw/` の中には置けません
 - `--max-budget-usd` の既定は 3 です。1回の点検にかかる額は測っていません
+- 係の本文は `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` で記録に残します(公式の headless のページの「Follow subagent messages」)。記録の `parent_tool_use_id` がある行を係の分として、道具の呼び出しを主と係の中に分けて数えます
+- 読み込みの失敗(記録の init の `plugin_errors`・`mcp_servers`)は黙って進まず `ok: false` にし、「注意:」を出して終了コードを 1 にします(同じページの「Fail CI when a plugin or MCP server doesn't load」)。`plugin_errors` があるとき、`mcp_servers` に名前に `masked-files` を含む物が無いとき、その状態が `failed`・`needs-auth`・`disabled` のときです。`pending` は注意だけで、`mcp_servers` の無い記録では確かめません
 
 ### 絞っていること
 - 鍵: `ANTHROPIC_API_KEY`・`ANTHROPIC_AUTH_TOKEN` を外してから `claude` を動かします。端末に鍵が入っていても送られません。記録の `apiKeySource` が `none` でなければ注意を出します
@@ -519,6 +526,9 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 - 確かめたこと: 上の記録のとおり、架空の書類 E1 の2件では、許可の決まりが当たり、点検が最後まで通りました。ほかの書類では試していません。足りない許可があれば「断られた道具」の注意に出ます
 - 道具の一覧では係を呼ぶ道具が `Task` の名前で出る(版 2.1.317 の記録。公式の名前は `Agent` で、`Task` は別名)ので、許可には `Agent(...)` と `Task(...)` の両方を挙げています
 - `--allowedTools`・`--disallowedTools`・`--permission-mode dontAsk`・`--max-budget-usd` は、`claude --help` の説明と上の確かめによります。公式のページ https://code.claude.com/docs/en/headless は作る係の環境から開けなかったので、ページとは照らしていません。`--max-budget-usd` の説明は API の呼び出しの額で、ログインのプランで上限として効くかは確かめていません
+- 記録の欄の名前(init の `plugins`・`plugin_errors`・`mcp_servers`、`parent_tool_use_id`)と `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` は公式の headless のページ、`num_turns`・`duration_ms` と `mcp_servers` の状態の5つ(`connected`・`pending`・`failed`・`needs-auth`・`disabled`)は公式の Agent SDK の TypeScript の参照 https://code.claude.com/docs/en/agent-sdk/typescript によります。どちらも設計の係が 2026-11-06 に開いた物で、作る係は開いていません。数え上げを足した後の版(F80c)ではこの入口を走らせておらず、本物の記録で欄の実名と中身の形(`plugin_errors` の要素の形、プラグインから入れた MCP の名前)は確かめていません
+- `mcp_servers` は、名前に `masked-files` を含む物だけを見ます。ほかの MCP の失敗は見ません。`masked-files` を含む物が2つ以上あれば、1つでも使えない状態なら `ok: false` にします。公式の5つに無い状態(大文字の書き方や状態の無い物を含む)は注意だけです。init と result は主の行だけから取り、init は最初の1行を見ます。`read_masked` の注意は主の会話の呼び出しで見ます(係の中の呼び出しだけなら注意を出します)。`plugin_errors` は、このプラグインのほかのプラグインの失敗でも `ok: false` にします
+- 係の本文は、有無と係の message の数だけを数え上げに出し、中身は出しません(記録には入ります)。上の版 156b15c とその前の回は、`CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` を付ける前の版で走らせた物です
 - ログインのプランでの書類の扱いが、上の「API に送った内容の扱い」と同じとは限りません。使う前に Claude Code の公式の文書と、利用しているプランの規約で確かめてください
 - 記録には、置き換えた後の書類の中身が入ります。置き換えの漏れは0になりません。書類のファイル名は置き換えないので、そのまま Claude と記録に渡ります。記録は外へ渡さないでください
 - 記号の元の名前の対応表を使うときは、端末の環境変数 `MASK_MAP`・`MASK_DICT` がそのまま道具へ渡ります。相対パスは作業フォルダ(`MASK_ROOT`、既定は起動したフォルダ)から解きます
@@ -625,7 +635,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 読み込ませて確かめたこと(2026-11-03。架空の書類 A の施工体制台帳だけを `raw/` に置いた作業フォルダで、`claude --plugin-dir` で開いた。1回だけで、ほかの書類では確かめていない):
 - `raw/` の Read: 人が画面で頼み、フックに止められ、`read_masked` で記号に置き換わった中身が返った
 - Skill: 同じ頼みを `claude -p --plugin-dir` で回し、記録(stream-json)で見た。Skill `motouke-navi-guard:construction-check` が呼ばれ、`read_masked` で読み、`reference/sources/` の原文を根拠に指摘の候補を10件出した。`check-articles.mjs` では条番号30件のうち「ある」26・「無い」3・「確かめられない」1だった(候補の中身が正しいかは数えていない)
-- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた。この確かめは Skill の手順に係を呼ぶことを書く前のもの。書いた後の手順で走らせた結果は、上の「走らせた記録(今の版。2026-11-05、版 156b15c)」にある(元の18件のうち 残る 15・崩れた 2・確かめられない 1)
+- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた。この確かめは Skill の手順に係を呼ぶことを書く前のもの。書いた後の手順で走らせた結果は、上の「走らせた記録(2026-11-05、版 156b15c、作る係とは別の担当。F56a で替えた後の版の走らせは、下の表に統括が足す)」にある(元の18件のうち 残る 15・崩れた 2・確かめられない 1)
 
 確かめた公式のページ(Claude Code の文書。取得日 2026-11-03。作る係の環境からは開けなかったので、作る係とは別の進行役が別の環境で開いて要点を渡した。題名は受け取っていないので URL の末尾の名前で示す):
 - plugins/manifest-reference https://code.claude.com/docs/en/plugins/manifest-reference.md (plugin.json の置き場と必須の項目、`${CLAUDE_PLUGIN_ROOT}` などの変数)

@@ -180,6 +180,7 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 | Claude Code の文書(mcp。道具の返事の保存と上限。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/mcp | 2026-11-06 |
 | Claude Code の文書(plugins-reference・hooks。hooks の既定の置き場と、Skill の frontmatter の hook を登録する時。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/plugins-reference ・ https://code.claude.com/docs/en/hooks | 2026-11-06 |
 | Claude Code の文書(plugin-evals。`--case` を付けないときに走るケース、`partial`・`skippedPaidGraders`、`arm: with-only` の検査の点の扱い。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/plugin-evals | 2026-11-06 |
+| Claude Code の文書(headless と Agent SDK の TypeScript の参照。画面なしの記録の init の `plugins`・`plugin_errors`・`mcp_servers`、`parent_tool_use_id`、`CLAUDE_CODE_FORWARD_SUBAGENT_TEXT`、result の `num_turns`・`duration_ms`、MCP の状態の5つ。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/headless ・ https://code.claude.com/docs/en/agent-sdk/typescript | 2026-11-06 |
 | Anthropic の記事 Demystifying evals for AI agents(評価のケースの数の始めの目安、pass@k と pass^k、退行の評価と能力の評価。開いたのは調べる係で、作る係は開いていない) | https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents | 2026-11-06 |
 | デジタル庁デザインシステム `@digital-go-jp/design-tokens`(MIT。画面の色の値の多くを借りた。この画面はデジタル庁が作ったものではない) | https://www.npmjs.com/package/@digital-go-jp/design-tokens | 2026-11-05 |
 

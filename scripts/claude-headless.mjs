@@ -5,9 +5,10 @@
 // 守ること:
 // - ANTHROPIC_API_KEY などの鍵は、動かす claude に渡さない(渡すとログインではなく鍵で動くため)
 // - 道具は既定で断る(--permission-mode dontAsk)。--allowedTools に挙げた物だけを許す
-// - raw/ の直接の読み書きは --disallowedTools でも断る(プラグインのフックに重ねる2つ目の守り)
+// - --disallowedTools は raw/ の Read・Edit と WebFetch・WebSearch を断る(フックに重ねる断り。raw/ の読み取りを止める主はフック guard-raw で、Bash などは --allowedTools に無いので断られる)
 // - 作業フォルダはプラグインのフォルダと重ねない(plugin/evals の仕込みの一覧を読めないように)
 // - 記録(stream-json)は作業フォルダの raw/ の外に新しいファイルで残し、上書きしない。セッションの保存はしない
+// - 係の本文も記録に残す(CLAUDE_CODE_FORWARD_SUBAGENT_TEXT)。プラグインか MCP の masked-files の読み込みに失敗した記録は失敗(ok: false)にする
 //
 // 使い方(コマンド):
 //   node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]
@@ -74,9 +75,10 @@ export function buildArgs({ prompt, pluginDir = PLUGIN_DIR, maxBudgetUsd = DEFAU
   ];
 }
 
-// 鍵を外した環境。道具が raw/ を探す作業フォルダは MASK_ROOT で渡す
+// 鍵を外した環境。道具が raw/ を探す作業フォルダは MASK_ROOT で渡す。
+// 係(反証の係)の本文を記録に残すため CLAUDE_CODE_FORWARD_SUBAGENT_TEXT を付ける(公式の headless のページの環境変数。引数の指定にしないのは buildArgs を変えないため)
 export function buildEnv(env, work) {
-  const out = { ...env, MASK_ROOT: work };
+  const out = { ...env, MASK_ROOT: work, CLAUDE_CODE_FORWARD_SUBAGENT_TEXT: '1' };
   for (const k of KEY_VARS) delete out[k];
   return out;
 }
@@ -104,38 +106,131 @@ export function validateLog(log, work) {
   return abs;
 }
 
-// 記録の文(1行に1つの JSON)から、どの道具・Skill・係を呼んだかを数える。書類の中身は返さない
+// MCP の status(公式 Agent SDK の TypeScript の参照の5つ)。道具が使えない3つは失敗にし、pending は注意だけにする
+const MCP_UNUSABLE = new Set(['failed', 'needs-auth', 'disabled']);
+const MCP_KNOWN = new Set(['connected', 'pending', ...MCP_UNUSABLE]);
+const MASKED_FILES = 'masked-files';
+
+const bump = (counts, name) => { counts[name] = (counts[name] ?? 0) + 1; };
+
+// init の欄。plugin_errors は誤りが無いと欄ごと省かれるので、無ければ []。
+// mcp_servers は無ければ null(欄の無い版の記録では確かめない)。配列でなければ要素が無いと読み、黙って通さない
+function readInit(init) {
+  const errs = init?.plugin_errors;
+  const pluginErrors = Array.isArray(errs) ? errs : errs ? [errs] : [];
+  const ms = init?.mcp_servers;
+  const str = (v) => (typeof v === 'string' ? v : null); // 文字でない名前・状態は無いものとして読む
+  const mcpServers = ms == null ? null : (Array.isArray(ms) ? ms : []).map((s) => ({ name: str(s?.name), status: str(s?.status) }));
+  // plugins は名前だけを取る(パスは返さない)
+  const plugins = Array.isArray(init?.plugins) ? init.plugins.map((p) => (typeof p === 'string' ? p : p?.name)).filter((n) => typeof n === 'string') : null;
+  return { plugins, pluginErrors, mcpServers };
+}
+
+// 読み込みの失敗(公式の headless のページの「Fail CI when a plugin or MCP server doesn't load」)。failed が true なら ok: false にする
+function loadWarnings({ pluginErrors, mcpServers }) {
+  const warnings = [];
+  let failed = false;
+  if (pluginErrors.length) {
+    failed = true;
+    warnings.push(`プラグインの読み込みに失敗しました(${pluginErrors.map((e) => (typeof e === 'string' ? e : JSON.stringify(e))).join('、')})。`);
+  }
+  if (!mcpServers) return { warnings, failed };
+  const masked = mcpServers.filter((s) => String(s.name ?? '').includes(MASKED_FILES));
+  if (!masked.length) {
+    failed = true;
+    warnings.push(`MCP の ${MASKED_FILES} が読み込まれていません(記録の init の mcp_servers に無い)。`);
+  }
+  for (const s of masked) {
+    const label = `MCP の ${s.name}(status: ${s.status ?? '無し'})`;
+    if (MCP_UNUSABLE.has(s.status)) {
+      failed = true;
+      warnings.push(`${label} が使えない状態でした。`);
+    } else if (s.status === 'pending') warnings.push(`${label} は始まりの時点で接続の途中でした。`);
+    else if (!MCP_KNOWN.has(s.status)) warnings.push(`${label} の状態が分かりません。`);
+  }
+  return { warnings, failed };
+}
+
+// 記録の文(1行に1つの JSON)から、どの道具・Skill・係を呼んだかを数える。書類の中身は返さない。
+// 道具の数は主(parent_tool_use_id が null か無い)と係(null でない)に分けても数える。tools は今までどおり両方の合計
 export function summarize(text) {
   const tools = {};
+  const mainTools = {};
+  const subagentTools = {};
   const skills = [];
   const agents = [];
-  let apiKeySource = null;
+  let init = null;
   let result = null;
   let badLines = 0;
+  const subIds = new Set();
+  let subNoId = 0;
+  let subagentText = false;
   for (const line of String(text).split('\n')) {
     if (!line.trim()) continue;
     let ev;
     try { ev = JSON.parse(line); } catch { badLines++; continue; }
-    if (ev.type === 'system' && ev.subtype === 'init') apiKeySource = ev.apiKeySource ?? null;
-    if (ev.type === 'result') result = ev;
+    if (!ev || typeof ev !== 'object') { badLines++; continue; } // null・数・文字の行は事象ではない
+    const sub = ev.parent_tool_use_id != null;
+    // init と result は主の行だけから取る。init は始まりの1行目(読み込みの結果はそこに出る)
+    if (!sub && ev.type === 'system' && ev.subtype === 'init' && !init) init = ev;
+    if (!sub && ev.type === 'result') result = ev;
     if (ev.type !== 'assistant') continue;
-    for (const b of ev.message?.content ?? []) {
+    const content = Array.isArray(ev.message?.content) ? ev.message.content : [];
+    if (sub) {
+      // 1つの message が block ごとの行に分かれて出るので、message の id で数える(id の無い行は1行を1つに数える)
+      if (typeof ev.message?.id === 'string') subIds.add(ev.message.id);
+      else subNoId++;
+      if (content.some((b) => b?.type === 'text' && typeof b.text === 'string' && b.text.trim())) subagentText = true;
+    }
+    for (const b of content) {
       if (b?.type !== 'tool_use') continue;
-      tools[b.name] = (tools[b.name] ?? 0) + 1;
+      bump(tools, b.name);
+      bump(sub ? subagentTools : mainTools, b.name);
       if (b.name === 'Skill' && b.input?.skill) skills.push(String(b.input.skill));
       if ((b.name === 'Agent' || b.name === 'Task') && b.input?.subagent_type) agents.push(String(b.input.subagent_type));
     }
   }
+  const apiKeySource = init?.apiKeySource ?? null;
+  const { plugins, pluginErrors, mcpServers } = readInit(init);
+  const load = loadWarnings({ pluginErrors, mcpServers });
   const denied = (result?.permission_denials ?? []).map((d) => String(d?.tool_name ?? '?'));
-  const warnings = [];
+  const warnings = [...load.warnings];
   if (!result) warnings.push('終わりの知らせ(result)が記録にありません。途中で止まったおそれがあります。');
   else if (result.is_error) warnings.push(result.subtype && result.subtype !== 'success' ? `失敗で終わりました(${String(result.subtype)})。` : '失敗で終わりました。');
-  if (!tools[READ_MASKED]) warnings.push('read_masked を呼んでいません。書類を読まずに答えたおそれがあります。');
+  // 主の会話の呼び出しで見る(係の中の read_masked だけでは、点検した側が書類を読んだことにならない)
+  if (!mainTools[READ_MASKED]) warnings.push('read_masked を呼んでいません。書類を読まずに答えたおそれがあります。');
   if (!agents.some((a) => a.endsWith('refuter'))) warnings.push('反証の係 refuter を呼んでいません。');
   if (apiKeySource && apiKeySource !== 'none') warnings.push(`ログインではなく鍵で動いたおそれがあります(apiKeySource: ${String(apiKeySource)})。`);
   if (denied.length) warnings.push(`断られた道具があります: ${[...new Set(denied)].join('、')}`);
   if (badLines) warnings.push(`読めない行が ${badLines} 行ありました。`);
-  return { tools, skills, agents, denied, apiKeySource, answer: typeof result?.result === 'string' ? result.result : '', ok: Boolean(result) && !result.is_error, costUsd: result?.total_cost_usd ?? null, warnings };
+  return {
+    tools, mainTools, subagentTools, skills, agents, denied, apiKeySource,
+    plugins, pluginErrors, mcpServers,
+    // num_turns・duration_ms は公式 Agent SDK の TypeScript の参照の SDKResultMessage の欄。usage は取らない
+    numTurns: result?.num_turns ?? null, durationMs: result?.duration_ms ?? null,
+    subagentMessages: subIds.size + subNoId, subagentText,
+    answer: typeof result?.result === 'string' ? result.result : '',
+    ok: Boolean(result) && !result.is_error && !load.failed,
+    costUsd: result?.total_cost_usd ?? null,
+    warnings,
+  };
+}
+
+const countsText = (counts) => Object.entries(counts).map(([k, v]) => `${k} ${v}回`).join('、') || '無し';
+const orMissing = (v, f) => (v == null ? '記録に無い' : f(v));
+
+// 標準エラーに出す数え上げ(manual の走らせた記録の表の欄に合わせる)。書類の中身は入らない
+export function summaryLines(s) {
+  const seconds = (ms) => (typeof ms === 'number' ? String(Math.round(ms / 1000)) : String(ms));
+  const servers = (list) => list.map((x) => `${x.name ?? '名前なし'} ${x.status ?? '状態なし'}`).join('、') || '無し';
+  return [
+    '呼んだ道具(主): ' + countsText(s.mainTools),
+    '呼んだ道具(係の中): ' + countsText(s.subagentTools),
+    'Skill: ' + (s.skills.join('、') || '無し') + ' / 係: ' + (s.agents.join('、') || '無し'),
+    `係の本文: ${s.subagentText ? 'あり' : '無し'}(係の message ${s.subagentMessages}件)`,
+    `往復: ${orMissing(s.numTurns, String)} / 秒: ${orMissing(s.durationMs, seconds)} / 費用(記録の見積もり): ${orMissing(s.costUsd, (c) => '$' + c)}`,
+    'プラグイン: ' + orMissing(s.plugins, (p) => p.join('、') || '無し') + ' / MCP: ' + orMissing(s.mcpServers, servers),
+  ];
 }
 
 // claude を1回動かし、標準出力をそのまま記録のファイルへ書く。spawnImpl は試験で模したものに差し替える
@@ -180,11 +275,11 @@ async function main() {
   const { code, summary: s } = await runHeadless({ work, log, docs, maxBudgetUsd: args.maxBudgetUsd });
   if (s.answer) console.log(s.answer);
   console.error('記録: ' + log + '(置き換えた後の書類の中身が入ります。外へ渡さないでください)');
-  console.error('呼んだ道具: ' + (Object.entries(s.tools).map(([k, v]) => `${k} ${v}回`).join('、') || '無し'));
-  console.error('Skill: ' + (s.skills.join('、') || '無し') + ' / 係: ' + (s.agents.join('、') || '無し'));
+  for (const l of summaryLines(s)) console.error(l);
   for (const w of s.warnings) console.error('注意: ' + w);
   if (code !== 0 || !s.ok) {
-    console.error(`失敗しました(終了コード ${code})。ログインしていないときは claude auth login を動かしてください。`);
+    const hint = s.warnings.length ? '上の「注意:」を見てください。' : '';
+    console.error(`失敗しました(終了コード ${code})。${hint}ログインしていないときは claude auth login を動かしてください。`);
     process.exitCode = 1;
   }
 }
