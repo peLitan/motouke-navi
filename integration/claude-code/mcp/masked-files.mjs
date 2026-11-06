@@ -10,6 +10,10 @@
 //   check_articles { text }  指摘の文(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる(F56a)。ファイルは読まない。
 //                         返すのは check-articles.mjs の CLI と同じ文(条番号ごとの「ある」「無い」「確かめられない」と数)だけで、原文の全文は返さない。
 //                         確かめるのは条・項・号・細分があるかだけ。指摘の中身が条の文に合っているかは確かめない。
+//   check_conditions { data, files }  公告から拾った条件の JSON の文(data)を、原文のファイル(files。作業フォルダからのパスの配列)と照らす(F76a)。
+//                         原文はこの道具が読む(Claude が写した文を照合に持ち込まないため)。読めるのは作業フォルダの中の文のファイルだけで、
+//                         raw/・secrets/・.claude/・.git/ の下と、名前が . で始まる部分のあるパスは断る。
+//                         1つ目の文は check-conditions.mjs の CLI の --md の表と最後の行、2つ目の文は --out と同じ形の JSON。
 //
 // 環境変数(どれも任意):
 //   MASK_ROOT      作業フォルダ(raw/ のある所)。既定は起動したときのフォルダ(Claude Code はプロジェクトのフォルダで起動する)
@@ -67,6 +71,19 @@ export const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'check_conditions',
+    description: '公告から拾った条件の JSON を原文のファイルと照らす。原文はこの道具が読む。1つ目の文は人が読む表(外した値と確かめが要る理由、画面に入る値)と最後の行、2つ目の文は画面に読み込める JSON。読めるのは作業フォルダの中の文のファイルだけで、raw/・secrets/・.claude/・.git/ の下と、名前が . で始まる部分のあるパスは断る。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        data: { type: 'string', description: '拾った条件の JSON の文(Skill bid-intake の「ファイルの形」)' },
+        files: { type: 'array', items: { type: 'string' }, minItems: 1, description: '原文のファイルの、作業フォルダからのパスの配列(例 公告/入札公告.txt)。raw/ の下は渡せない' },
+      },
+      required: ['data', 'files'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 class ToolError extends Error {}
@@ -92,6 +109,54 @@ export function resolveRawFile(root, rel) {
   if (!st.isFile()) throw new ToolError('ファイルではありません: ' + rel);
   if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです。Excel・Word は画面か表計算で文にしてから raw/ に置いてください。');
   if (st.size > MAX_BYTES) throw new ToolError('ファイルが大きすぎます(1MB まで)。');
+  return real;
+}
+
+const OUTSIDE_WORK = '作業フォルダの中のファイルだけを読めます。';
+// check_conditions が読まない所。permissions.deny は MCP の道に効かないので、道具の中で断る
+const DENIED_DIRS = ['raw', 'secrets', '.claude', '.git'];
+const MAX_SOURCES = 50;
+
+// 作業フォルダからのパスに読まない部分があれば断る。どの階層でも見る。guard-raw と同じく RAW・Raw も raw とみなす(大文字と小文字を分けないファイルシステムで同じ所を指す)
+function refuseDeniedPart(relPath) {
+  const parts = relPath.split(path.sep).map((p) => p.toLowerCase());
+  if (parts.includes('raw')) throw new ToolError('raw/ の書類は check_conditions に渡せません。公告は raw/ の外に置いてください。');
+  if (parts.includes('secrets') || parts.some((p) => p.startsWith('.'))) throw new ToolError('secrets/・.claude/・.git/ の下と、名前が . で始まる部分のあるパスは読めません。');
+}
+
+// 原文のファイルの実体のパスを返す(F76a)。先に字で断るので、字で断る所の下にファイルがあるかは返事から分からない(リンクを通すパスでは、無いファイルは「ファイルがありません」になる)。
+// 次に実体でも同じことを確かめる(リンクで外や raw/ へ出る形、Windows の末尾の点・短い名前のように字が違っても同じ所を指す形)
+function resolveSourceFile(root, rel) {
+  const base = path.resolve(root);
+  const target = path.resolve(base, rel.replace(/\\/g, '/'));
+  if (!within(base, target)) throw new ToolError(OUTSIDE_WORK);
+  refuseDeniedPart(path.relative(base, target));
+  let realBase;
+  try { realBase = fs.realpathSync.native(base); } catch { throw new ToolError('作業フォルダがありません。'); }
+  // 作業フォルダそのものが断る所のとき。guard-raw も作業フォルダが raw/ の中なら止める。worktree は .claude/ の下に置かれるので、.claude・.git は作業フォルダの名前だけを見る
+  const baseParts = realBase.split(path.sep).map((p) => p.toLowerCase());
+  if (baseParts.includes('raw')) refuseDeniedPart('raw');
+  if (baseParts.includes('secrets') || ['.claude', '.git'].includes(baseParts.at(-1))) refuseDeniedPart('secrets');
+  let real;
+  try { real = fs.realpathSync.native(target); } catch { throw new ToolError('ファイルがありません: ' + rel); }
+  if (!within(realBase, real)) throw new ToolError(OUTSIDE_WORK);
+  refuseDeniedPart(path.relative(realBase, real));
+  // raw/ などそのものが作業フォルダの中の別のフォルダへのリンクのとき、実体のパスに raw の字が出ないので、リンクの先と比べる
+  for (const dir of DENIED_DIRS) {
+    let realDir;
+    try { realDir = fs.realpathSync.native(path.join(base, dir)); } catch { continue; }
+    if (within(realDir, real)) refuseDeniedPart(dir);
+  }
+  // 対応表と辞書には元の語が入るので、raw/ の外に置かれていても読まない
+  for (const p of [process.env.MASK_MAP, process.env.MASK_DICT]) {
+    let realMask;
+    try { realMask = p ? fs.realpathSync.native(path.resolve(base, p)) : null; } catch { continue; }
+    if (real === realMask) throw new ToolError('MASK_MAP・MASK_DICT のファイルは読めません。');
+  }
+  const st = fs.statSync(real);
+  if (!st.isFile()) throw new ToolError('ファイルではありません: ' + rel);
+  if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです: ' + rel);
+  if (st.size > MAX_BYTES) throw new ToolError('ファイルが大きすぎます(1MB まで): ' + rel);
   return real;
 }
 
@@ -208,11 +273,15 @@ function decodeFile(bytes) {
   }
 }
 
-// 置き換えた中身と、見本の語の確かめ(F28a)の結果を返す。見本は置き換えた中身にも対応表にも入らない
-export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, dictPath = process.env.MASK_DICT, rand } = {}) {
-  const file = resolveRawFile(root, rel);
+function readTextFile(file) {
   const text = decodeFile(fs.readFileSync(file));
   if (text.includes('\u0000')) throw new ToolError('文のファイルではないようです。');
+  return text;
+}
+
+// 置き換えた中身と、見本の語の確かめ(F28a)の結果を返す。見本は置き換えた中身にも対応表にも入らない
+export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, dictPath = process.env.MASK_DICT, rand } = {}) {
+  const text = readTextFile(resolveRawFile(root, rel));
   const m = makeMasker(mapPath, dictPath);
   const { masked } = m.mask(text);
   const check = checkDecoys(m, text, rand ? { rand } : {});
@@ -243,6 +312,50 @@ export async function checkArticlesText(text, { toolDir = TOOL_DIR } = {}) {
   throw new ToolError('確かめられない: 条番号を確かめる部品か取得した原文が見つからず、どの条番号も確かめていません。プラグインの入れ方を確かめてください。');
 }
 
+// check-conditions.mjs の場所。check-articles.mjs と同じ2通り(F76a)
+const CHECK_CONDITIONS_PLACES = [
+  ['plugin', 'skills', 'bid-intake', 'scripts', 'check-conditions.mjs'],
+  ['skills', 'bid-intake', 'scripts', 'check-conditions.mjs'],
+];
+
+// 原文を1つ読む。file は CLI と同じくファイルの名前だけ。文字で読めないときは、どのファイルかを添える
+function readSource(root, rel) {
+  const real = resolveSourceFile(root, rel);
+  try {
+    const text = readTextFile(real);
+    if (!text.trim()) throw new ToolError('中身がありません。');
+    return { file: path.basename(rel.replace(/\\/g, '/')), text };
+  } catch (e) {
+    throw e instanceof ToolError ? new ToolError(rel + ': ' + e.message) : e;
+  }
+}
+
+// 拾った条件を原文と照らし、CLI の --md の表と最後の行(table)、--out と同じ形の JSON(json)を返す(F76a)
+// 読めない原文(空のファイルを含む)が1つでもあれば全体を断る。その原文を飛ばして照らすと、そこにしかない条件を「公告に書いていない」と言ってしまう(CLI も止まる)
+export async function checkConditionsFiles(root, data, files, { toolDir = TOOL_DIR } = {}) {
+  if (typeof data !== 'string' || !data.trim()) throw new ToolError('data がありません。拾った条件の JSON の文を渡してください。');
+  let parsed;
+  try { parsed = JSON.parse(data); } catch { throw new ToolError('data が JSON として読めません。拾った条件の JSON の文を渡してください。'); }
+  if (!Array.isArray(parsed?.conditions)) throw new ToolError('data に conditions の配列がありません。Skill bid-intake の「ファイルの形」に合わせてください。');
+  if (!Array.isArray(files) || !files.length || !files.every((f) => typeof f === 'string' && f.trim())) throw new ToolError('files がありません。原文のファイルの、作業フォルダからのパスの配列を渡してください。');
+  if (files.length > MAX_SOURCES) throw new ToolError('files が多すぎます(' + MAX_SOURCES + ' ファイルまで)。');
+  const sources = files.map((f) => readSource(root, f));
+  for (const place of CHECK_CONDITIONS_PLACES) {
+    let tool;
+    try {
+      tool = await import(pathToFileURL(path.join(toolDir, ...place)).href);
+    } catch { continue; /* この場所には無い。次を試す */ }
+    let r;
+    try {
+      r = tool.checkConditions(parsed, sources);
+    } catch {
+      throw new ToolError('拾った条件を照らせませんでした。data の形を Skill bid-intake の「ファイルの形」に合わせてください。');
+    }
+    return { table: tool.renderMarkdown(r) + tool.summaryLine(r), json: JSON.stringify(r, null, 2) + '\n' };
+  }
+  throw new ToolError('照らせない: 照合の部品が見つからず、どの値も照らしていません。プラグインの入れ方を確かめてください。');
+}
+
 const ok = (id, result) => ({ jsonrpc: '2.0', id, result });
 const err = (id, code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
 
@@ -258,7 +371,7 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
         protocolVersion: typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
-        instructions: 'raw/ の生のファイルは直接読まず、read_masked で置き換えた後の中身を読んでください。ファイルの名前が分からないときは list_masked で名前の一覧を見てください。記号(〔人名1〕など)の元の名前は推測しないでください。指摘の条番号は check_articles で確かめてください。',
+        instructions: 'raw/ の生のファイルは直接読まず、read_masked で置き換えた後の中身を読んでください。ファイルの名前が分からないときは list_masked で名前の一覧を見てください。記号(〔人名1〕など)の元の名前は推測しないでください。指摘の条番号は check_articles で確かめてください。公告から拾った条件は check_conditions で照らしてください。',
       });
     case 'ping':
       return ok(id, {});
@@ -274,6 +387,11 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
         // 「無い」があっても道具としては成功。確かめられなかったときだけ isError にする
         if (name === 'check_articles') {
           return ok(id, { content: [{ type: 'text', text: await checkArticlesText(params?.arguments?.text) }], isError: false });
+        }
+        // 外した値があっても道具としては成功。照らせなかったときだけ isError にする
+        if (name === 'check_conditions') {
+          const { table, json } = await checkConditionsFiles(root, params?.arguments?.data, params?.arguments?.files);
+          return ok(id, { content: [{ type: 'text', text: table }, { type: 'text', text: json }], isError: false });
         }
         const opts = {};
         if (mapPath !== undefined) opts.mapPath = mapPath;

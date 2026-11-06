@@ -314,11 +314,11 @@ test('文書: 評価.md の 7 に合否の書き方・公式のページの出�
   assert.equal(SECTION7.includes('開けず'), false);
 });
 
-test('README: claude plugin eval の1行に旗と3つの道具があり、単体の試験の命令がある', () => {
+test('README: claude plugin eval の1行に旗と4つの道具があり、単体の試験の命令がある', () => {
   const lines = read('README.md').split('\n');
   const line = lines.find((l) => l.includes('claude plugin eval plugin'));
   assert.ok(line);
-  for (const w of ['--scaffold', '--allow-real-servers', '--allow-tools', '--model', '--judge-model <別の固定の値>', '--no-publish', `${TOOL}read_masked`, `${TOOL}list_masked`, `${TOOL}check_articles`]) {
+  for (const w of ['--scaffold', '--allow-real-servers', '--allow-tools', '--model', '--judge-model <別の固定の値>', '--no-publish', `${TOOL}read_masked`, `${TOOL}list_masked`, `${TOOL}check_articles`, `${TOOL}check_conditions`]) {
     assert.ok(line.includes(w), w);
   }
   assert.ok(lines.some((l) => l.includes('node --test tests/unit/*.test.mjs')));

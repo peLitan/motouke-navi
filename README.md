@@ -32,10 +32,10 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
    - 空の作業フォルダを、このリポジトリの `plugin/` の外に作り、`plugin/evals/cases/E1_しおかぜ町下水道/raw/` だけを写す(`case.json` は写さない)
    - その作業フォルダで `claude --plugin-dir <このリポジトリ>/plugin` を開き、`case.json` の `prompt` を渡す。`raw/` の書類は直接は読めず、道具 `read_masked` で置き換えた後の中身だけが渡ります
    - 返ってきた指摘をファイルに保存し、`node plugin/evals/score.mjs plugin/evals/cases/E1_しおかぜ町下水道 <答えのファイル>` で採点する
-   - 公式の評価で走らせるときは、リポジトリの直下で次の1行です。`<固定の値>` は走らせるモデルに、`<別の固定の値>` は判定役のモデルに置き換えます。判定役は作る側(`--model`)と別のモデルに固定します。`--scaffold` が無いと書類が作業フォルダへ写らず、`--allow-real-servers` と `--allow-tools` の3つの道具が無いと本物の MCP の道具が使えません。`--no-publish` が無いと報告が claude.ai へ公開されます。E1 と E2 の両方が走り、片方だけなら `--case e1-trace-masked` のように足します
+   - 公式の評価で走らせるときは、リポジトリの直下で次の1行です。`<固定の値>` は走らせるモデルに、`<別の固定の値>` は判定役のモデルに置き換えます。判定役は作る側(`--model`)と別のモデルに固定します。`--scaffold` が無いと書類が作業フォルダへ写らず、`--allow-real-servers` と `--allow-tools` の4つの道具が無いと本物の MCP の道具が使えません。`--no-publish` が無いと報告が claude.ai へ公開されます。E1 と E2 の両方が走り、片方だけなら `--case e1-trace-masked` のように足します
 
      ```
-     claude plugin eval plugin --model <固定の値> --judge-model <別の固定の値> --scaffold --allow-real-servers --allow-tools mcp__plugin_motouke-navi-guard_masked-files__read_masked mcp__plugin_motouke-navi-guard_masked-files__list_masked mcp__plugin_motouke-navi-guard_masked-files__check_articles --ablation with-without --runs 3 --no-publish --output-dir tmp/eval --report tmp/eval/report.html
+     claude plugin eval plugin --model <固定の値> --judge-model <別の固定の値> --scaffold --allow-real-servers --allow-tools mcp__plugin_motouke-navi-guard_masked-files__read_masked mcp__plugin_motouke-navi-guard_masked-files__list_masked mcp__plugin_motouke-navi-guard_masked-files__check_articles mcp__plugin_motouke-navi-guard_masked-files__check_conditions --ablation with-without --runs 3 --no-publish --output-dir tmp/eval --report tmp/eval/report.html
      ```
 
 ## できること
@@ -113,7 +113,7 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 
 ## Claude Code のプラグイン(plugin/)
 上の守り(フック)と道具を、作業フォルダに写さずに使えるようにしたプラグインです。建設の書類を点検する Skill(`skills/construction-check/`)、発注者の仕様書の文から段取りと施工計画書の記載項目の行を作って原文と機械で照らす Skill(`skills/spec-to-rules/`。[説明](docs/manual.md#claude-code-のプラグインplugin))と、指摘の候補を崩しにかかる反証の係(`agents/refuter.md`)が入っています。`claude --plugin-dir ./plugin` で、そのセッションだけ読み込めます。
-- 公告・入札説明書・仕様書から条件を拾う Skill `bid-intake`: 値ごとに原文の抜き書きを付け、`check-conditions.mjs` が原文と合わない値を外し、単位・桁・前後の食い違いを「確かめが要る」にします。人が読む表と、段1 の「公告から拾った条件を読み込む」で開くファイルを出します。見本は [docs/samples/bid-intake/拾った結果.md](docs/samples/bid-intake/拾った結果.md)(架空の公告)
+- 公告・入札説明書・仕様書から条件を拾う Skill `bid-intake`: 値ごとに原文の抜き書きを付け、MCP の道具 `check_conditions`(部品は `check-conditions.mjs`)が原文と合わない値を外し、単位・桁・前後の食い違いを「確かめが要る」にします。原文は道具が読み、読めるのは作業フォルダの中で `raw/`・`secrets/`・`.claude/`・`.git/` の下と名前が `.` で始まる部分の外だけです。人が読む表と、段1 の「公告から拾った条件を読み込む」で開くファイルを出します。見本は [docs/samples/bid-intake/拾った結果.md](docs/samples/bid-intake/拾った結果.md)(架空の公告)
 - 数量の表から参考の額を出す Skill `estimate`: 金抜き設計書や数量総括表の行を Claude が施工パッケージに当て、両方の抜き書きを付けます。`check-estimate.mjs` が抜き書きと単位を照らし、合わない行は合計に入れず、通った行だけをプログラムで積み上げます。1行ごとの出どころ、合計に入っていない行の割合、補正していない部分の額と割合を参考の額と並べます。見本は [docs/samples/estimate/結果.md](docs/samples/estimate/結果.md)(架空の数量の表と架空の単価)
 - 辞書は、端末で環境変数 `MASK_DICT` に辞書のファイルのパスを入れてから `claude --plugin-dir ./plugin` で開くと使えます(`plugin/.mcp.json` の `env` が `"MASK_DICT": "${MASK_DICT:-}"` を道具へ渡します)。入れないと空が渡り、辞書なしで動きます。確かめたのは2つに分けてです。同じ書き方の使い捨てのプラグインで、Claude Code 2.1.317 が値と空を道具へ渡すことを `claude mcp list` で確かめ(2026-11-04)、道具が辞書の語を置き換えることは単体の試験で確かめました。このプラグインで Claude に `read_masked` を呼ばせて、辞書の語が置き換わるところまで通しては確かめていません
 - プラグインは `permissions.deny` と sandbox の設定を配れません。コマンドでの読み取りを sandbox で止めるには、`integration/claude-code/.claude/settings.json` を作業フォルダに置いてください
