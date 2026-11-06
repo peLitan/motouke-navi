@@ -154,7 +154,7 @@ test('E2-P2 の組は1つで、語があるかだけを見る(ほぼ必ず当た
 
 test('手順の印: Skill・Agent の refuter・check_articles → refuter の順を見る', () => {
   for (const c of CASES) {
-    const steps = c.graders.filter((g) => g.type !== 'regex' && g.name !== 'read_masked-used');
+    const steps = c.graders.filter((g) => g.type !== 'regex' && g.type !== 'llm' && g.name !== 'read_masked-used');
     assert.deepEqual(steps, [
       { type: 'tool_used', name: 'skill-construction-check', tool: 'Skill', input_match: 'construction-check' },
       { type: 'tool_used', name: 'refuter-called', tool: 'Agent', input_match: 'refuter', min: '1', arm: 'with-only' },
@@ -167,6 +167,61 @@ test('手順の印: Skill・Agent の refuter・check_articles → refuter の�
       },
     ], c.id);
   }
+});
+
+test('判定役の検査: E1・E2 に llm が1つずつあり、focus は last_message で、arm と weight が無い', () => {
+  for (const c of CASES) {
+    const llm = c.graders.filter((g) => g.type === 'llm');
+    assert.equal(llm.length, 1, c.id);
+    assert.deepEqual(Object.keys(llm[0]), ['type', 'name', 'focus', 'criteria'], c.id);
+    assert.equal(llm[0].name, 'planted-judge', c.id);
+    assert.equal(llm[0].focus, 'last_message', c.id);
+  }
+});
+
+test('判定役の検査: criteria は一重引用符の1行で、PASS と FAIL の条件を書き、正しさは見ないと書く', () => {
+  for (const c of CASES) {
+    const { criteria } = c.graders.find((g) => g.type === 'llm');
+    assert.ok(c.yaml.includes(`    criteria: '${criteria}'\n`), c.id);
+    assert.equal(/['\n]/.test(criteria), false, c.id);
+    for (const w of ['PASS: 答えが次の5件をすべて挙げ', '法令の条番号(第○条)と原文の抜き書き(「 」)が添えてある', '1件でも無い、または条番号か抜き書きが無いものがあれば FAIL', '条番号や当てはめが正しいかは見ない', 'PASS か FAIL だけを答える']) {
+      assert.ok(criteria.includes(w), `${c.id} ${w}`);
+    }
+  }
+});
+
+test('判定役の検査: criteria の5件は planted と同じ順で、各件が planted の語の組を含み、調べる名前を含まない', () => {
+  for (const c of CASES) {
+    const { criteria } = c.graders.find((g) => g.type === 'llm');
+    const parts = criteria.split(/\((?=[1-5]\) )/).slice(1).map((p) => p.slice(3));
+    assert.equal(parts.length, 5, c.id);
+    c.meta.planted.forEach((p, i) => {
+      for (const group of p.match) assert.ok(group.some((w) => parts[i].includes(w)), `${p.id} ${group[0]}`);
+    });
+    for (const g of c.names) assert.equal(criteria.includes(g.pattern), false, g.pattern);
+  }
+});
+
+test('点に入る検査の数は E1 15・E2 18(arm の付いた物と tool_used の Skill を除く)で、評価.md の 7 と同じ', () => {
+  const scored = (c) => c.graders.filter((g) => !g.arm && !(g.type === 'tool_used' && g.tool === 'Skill')).length;
+  assert.deepEqual(CASES.map(scored), [15, 18]);
+  for (const w of ['E1 で 9 から 15 に増えました', 'E2 は 18 です']) assert.ok(SECTION7.includes(w), w);
+});
+
+test('case.yaml のコメント: regex の検査と判定役の違いを書き、前の「呼ばない」の文が無い', () => {
+  for (const c of CASES) {
+    assert.equal(c.yaml.includes('判定のモデルは呼ばない'), false, c.id);
+    assert.ok(c.yaml.includes('# regex の検査は意味の正しさを見ない。`planted-judge` だけが判定役のモデルを呼ぶ(1回につき3回)\n'), c.id);
+  }
+});
+
+test('文書: 評価.md の 7 に判定役の読み方があり、走らせ方の1行に --judge-model がある', () => {
+  for (const w of ['3票のうち2票', '判定役の呼び出しが3回', '1票で不合格が出うる', '正しいかは見ない', '短い出力に', '差は出にくい', '判定役は同じモデルに固定', '判定役は作る側(`--model`)と別のモデルに固定']) {
+    assert.ok(SECTION7.includes(w), w);
+  }
+  const line = SECTION7.split('\n').find((l) => l.startsWith('claude plugin eval plugin'));
+  assert.ok(line.includes('--judge-model <別の固定の値>'));
+  assert.ok(read('README.md').includes('判定役は作る側(`--model`)と別のモデルに固定'));
 });
 
 test('arm は手順の印にだけ付け、read_masked の検査を点数から外さない(0回でも 1.00 になるため)', () => {
@@ -263,7 +318,7 @@ test('README: claude plugin eval の1行に旗と3つの道具があり、単体
   const lines = read('README.md').split('\n');
   const line = lines.find((l) => l.includes('claude plugin eval plugin'));
   assert.ok(line);
-  for (const w of ['--scaffold', '--allow-real-servers', '--allow-tools', '--model', '--no-publish', `${TOOL}read_masked`, `${TOOL}list_masked`, `${TOOL}check_articles`]) {
+  for (const w of ['--scaffold', '--allow-real-servers', '--allow-tools', '--model', '--judge-model <別の固定の値>', '--no-publish', `${TOOL}read_masked`, `${TOOL}list_masked`, `${TOOL}check_articles`]) {
     assert.ok(line.includes(w), w);
   }
   assert.ok(lines.some((l) => l.includes('node --test tests/unit/*.test.mjs')));

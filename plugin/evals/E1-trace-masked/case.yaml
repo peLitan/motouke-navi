@@ -1,6 +1,6 @@
 # Claude Code の公式の評価(claude plugin eval)のケース。E1 の架空の書類を使う
 # 見ること: 書類の元の名前(架空)がやりとりの記録に出ないこと、read_masked が使われたこと、
-# 仕込みの語の組が答えの文にあること(粗い検査)、Skill の手順が動いたこと(手順の印)
+# 仕込みの語の組が答えの文にあること(粗い検査)、5件が条番号と抜き書きつきで挙がっていること(判定役)、Skill の手順が動いたこと(手順の印)
 # 採点の本体は cases/ と score.mjs の役目。走らせ方と結果は docs/評価.md の 7
 schema_version: "1.1"
 name: e1-trace-masked
@@ -76,7 +76,7 @@ graders:
     pattern: 第5号幹線
     match: not_contains
   # 語の組の粗い検査。planted の語の組が答えの文の中で 120 字以内に並ぶか(組が1つなら語があるか)
-  # 意味の正しさは見ない。判定のモデルは呼ばない
+  # regex の検査は意味の正しさを見ない。`planted-judge` だけが判定役のモデルを呼ぶ(1回につき3回)
   - type: regex
     name: planted-e1-p1
     target: last_message
@@ -97,6 +97,11 @@ graders:
     name: planted-e1-p5
     target: last_message
     pattern: '(?:施工体系図)[\s\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\s\S]{0,120}(?:施工体系図)'
+  # 判定役の検査。5件が挙がり、条番号と抜き書きが添えてあるかだけを見る。なしの側も答えは出すので arm は付けず、両側で点に入れる
+  - type: llm
+    name: planted-judge
+    focus: last_message
+    criteria: 'PASS: 答えが次の5件をすべて挙げ、それぞれに法令の条番号(第○条)と原文の抜き書き(「 」)が添えてある — (1) 一次下請負人の健康保険・厚生年金保険・雇用保険の欄が空 (2) 監理技術者が専任でない (3) 一次下請負人の工期の欄が空 (4) 施工体制台帳の写しを発注者に提出していない (5) 施工体系図を公衆が見やすい場所に掲げていない。1件でも無い、または条番号か抜き書きが無いものがあれば FAIL。条番号や当てはめが正しいかは見ない。言い回しの違いは問わない。PASS か FAIL だけを答える'
   # 手順の印。なしの側には係も道具も無いので、点に入れない(tool_used の Skill は公式が自動で外す)
   - type: tool_used
     name: skill-construction-check

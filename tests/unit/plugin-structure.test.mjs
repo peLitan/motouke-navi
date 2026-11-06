@@ -195,7 +195,7 @@ test('反証の係: agents/refuter.md があり、frontmatter に name・descrip
   assert.ok(text.slice(text.indexOf('\n---\n', 4) + 5).trim().length > 200, '本文が無い');
 });
 
-test('反証の係: 道具は masked-files の read_masked だけ。Read などファイルを読む道具・コマンド・書き込み・Web を持たない', async () => {
+test('反証の係: 道具は masked-files の read_masked と check_articles だけ。Read などファイルを読む道具・コマンド・書き込み・Web を持たない', async () => {
   const fm = frontmatter(fs.readFileSync(path.join(PLUGIN, 'agents', 'refuter.md'), 'utf8'));
   const tools = fm.tools.split(',').map((s) => s.trim()).filter(Boolean);
   assert.ok(tools.length >= 1);
@@ -224,6 +224,8 @@ test('反証の係: 道具は masked-files の read_masked だけ。Read など�
     assert.ok(!tools.includes(bad), `tools に ${bad}`);
   }
   assert.ok(tools.every((t) => t.startsWith('mcp__')));
+  // 試験の名前のとおり、持たせる道具はこの2つだけ
+  assert.deepEqual([...new Set(tools.map((t) => t.split('__').pop()))].sort(), ['check_articles', 'read_masked']);
 });
 
 test('反証の係: 無視される項目(hooks・mcpServers・permissionMode・initialPrompt)を書かず、守りは hooks/hooks.json にある', () => {

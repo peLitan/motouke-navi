@@ -32,10 +32,10 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
    - 空の作業フォルダを、このリポジトリの `plugin/` の外に作り、`plugin/evals/cases/E1_しおかぜ町下水道/raw/` だけを写す(`case.json` は写さない)
    - その作業フォルダで `claude --plugin-dir <このリポジトリ>/plugin` を開き、`case.json` の `prompt` を渡す。`raw/` の書類は直接は読めず、道具 `read_masked` で置き換えた後の中身だけが渡ります
    - 返ってきた指摘をファイルに保存し、`node plugin/evals/score.mjs plugin/evals/cases/E1_しおかぜ町下水道 <答えのファイル>` で採点する
-   - 公式の評価で走らせるときは、リポジトリの直下で次の1行です。`<固定の値>` は走らせるモデルに置き換えます。`--scaffold` が無いと書類が作業フォルダへ写らず、`--allow-real-servers` と `--allow-tools` の3つの道具が無いと本物の MCP の道具が使えません。`--no-publish` が無いと報告が claude.ai へ公開されます。E1 と E2 の両方が走り、片方だけなら `--case e1-trace-masked` のように足します
+   - 公式の評価で走らせるときは、リポジトリの直下で次の1行です。`<固定の値>` は走らせるモデルに、`<別の固定の値>` は判定役のモデルに置き換えます。判定役は作る側(`--model`)と別のモデルに固定します。`--scaffold` が無いと書類が作業フォルダへ写らず、`--allow-real-servers` と `--allow-tools` の3つの道具が無いと本物の MCP の道具が使えません。`--no-publish` が無いと報告が claude.ai へ公開されます。E1 と E2 の両方が走り、片方だけなら `--case e1-trace-masked` のように足します
 
      ```
-     claude plugin eval plugin --model <固定の値> --scaffold --allow-real-servers --allow-tools mcp__plugin_motouke-navi-guard_masked-files__read_masked mcp__plugin_motouke-navi-guard_masked-files__list_masked mcp__plugin_motouke-navi-guard_masked-files__check_articles --ablation with-without --runs 3 --no-publish --output-dir tmp/eval --report tmp/eval/report.html
+     claude plugin eval plugin --model <固定の値> --judge-model <別の固定の値> --scaffold --allow-real-servers --allow-tools mcp__plugin_motouke-navi-guard_masked-files__read_masked mcp__plugin_motouke-navi-guard_masked-files__list_masked mcp__plugin_motouke-navi-guard_masked-files__check_articles --ablation with-without --runs 3 --no-publish --output-dir tmp/eval --report tmp/eval/report.html
      ```
 
 ## できること
@@ -175,6 +175,7 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 | Anthropic「How long do you store my organization's data?」 | https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data | 2026-11-02 |
 | Anthropic「Is my data used for model training?」 | https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training | 2026-11-02 |
 | Claude Code の文書(plugins/manifest-reference・plugins/create・plugins/components・hooks・sub-agents) | https://code.claude.com/docs/en/plugins/manifest-reference.md ほか4ページ | 2026-11-03 |
+| Claude Code の文書(mcp。道具の返事の保存と上限。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/mcp | 2026-11-06 |
 | デジタル庁デザインシステム `@digital-go-jp/design-tokens`(MIT。画面の色の値の多くを借りた。この画面はデジタル庁が作ったものではない) | https://www.npmjs.com/package/@digital-go-jp/design-tokens | 2026-11-05 |
 
 - 会社・団体の名前の語の一覧(`src/mask/company-types.mjs`)は、国税庁「法人種別」(https://www.houjin-bangou.nta.go.jp/documents/k-resource-dl-ver4.pdf)・法務局「商業・法人登記の申請書様式」(https://houmukyoku.moj.go.jp/homu/COMMERCE_11-1.html)・Unicode の文字表(https://www.unicode.org/Public/18.0.0/charts/PDF/U3200.pdf)・学校教育法 第1条・医療法 第1条の5・老人福祉法 第5条の3・介護保険法 第8条(e-Gov の URL はファイルに書いた)の語を、作る係とは別の進行役が並べた一覧(2026-11-03)から入れました。開発用のエージェントはこれらのページを開いておらず、原文と照合していません。略し方と慣用の語尾は公式の一覧が無いので「慣用」として分けています
