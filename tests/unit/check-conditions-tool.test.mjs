@@ -272,12 +272,11 @@ test('空の原文と files の本数: 空のファイルは断り(「公告に�
   assert.match(refused(await call(dir, { data: DATA, files: Array(51).fill(FILES[0]) }), '51'), /50 ファイルまで/);
 });
 
-test('限界(動きを固定する): ハードリンクは実体のパスが分からないので見分けられない。手順で raw/ の外に写さない', async (t) => {
+test('ハードリンク: 実体のパスでは見分けられないので、開いたファイルのリンクの数で断る(F83b1)', async (t) => {
   const dir = work(t);
   const data = JSON.stringify({ conditions: [{ key: 'grade', value: '12,345,678', quote: '甲山建設株式会社の内部の控え 12,345,678円' }] });
   if (!linked(t, () => fs.linkSync(path.join(dir, 'raw', '台帳.txt'), path.join(dir, '写し.txt')))) return;
-  const r = await call(dir, { data, files: ['写し.txt'] });
-  assert.equal(r.result.isError, false);
+  assert.match(refused(await call(dir, { data, files: ['写し.txt'] }), 'ハードリンク'), /ハードリンク.*写し\.txt$/);
 });
 
 test('読まないパスの字に似た名前は断らない(部分の名前で見る)', async (t) => {

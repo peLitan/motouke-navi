@@ -24,6 +24,7 @@
 //                  MASK_MAP と両方を指定したときは、対応表を読んでから辞書の語を加える。読めないときは理由の種類だけを返し、辞書の中身(語)は返事にも記録にも出さない
 //
 // 限界: 置き換えの漏れは0にならない(README の「文の置き換え」)。読めるのは文のファイル(.txt .md .csv .tsv .json)だけ。文字は UTF-8(BOM の有無どちらも)か Shift_JIS(F63a)。
+//       リンクの数が2以上のファイル(ハードリンク)と、ファイルの番号を返さないドライブ(exFAT の USB など)のファイルは読まない(F83b1)。
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -88,28 +89,26 @@ export const TOOLS = [
 
 class ToolError extends Error {}
 
+// 試験の口(F83b1)。本番では null のまま。afterOpen は開いて fstat で確かめた直後、afterResolve は実体のパスの確かめが通った直後に呼ぶ(F83b6 が使う)
+export const __testHooks = { afterOpen: null, afterResolve: null };
+
 const within = (dir, p) => { const r = path.relative(dir, p); return r !== '' && !r.startsWith('..') && !path.isAbsolute(r); };
 
-// raw/ の中のファイルだけを許す(.. やシンボリックリンクで外へ出るものは断る)
-export function resolveRawFile(root, rel) {
+const OUTSIDE_RAW = 'raw/ の中のファイルだけを読めます。';
+
+// read_masked の決まり: raw/ の中のファイルだけを許す(.. やシンボリックリンクで外へ出るものは断る)。返す物の形は sourceRule と同じ
+function rawRule(root, rel) {
   if (typeof rel !== 'string' || !rel.trim()) throw new ToolError('path がありません。');
   const rawDir = path.resolve(root, 'raw');
   const target = path.resolve(root, rel.replace(/\\/g, '/'));
-  if (!within(rawDir, target)) throw new ToolError('raw/ の中のファイルだけを読めます。');
-  let real;
-  try {
-    real = fs.realpathSync(target);
-  } catch {
-    throw new ToolError('ファイルがありません: ' + rel);
-  }
-  let realRaw;
-  try { realRaw = fs.realpathSync(rawDir); } catch { throw new ToolError('raw/ がありません。'); }
-  if (!within(realRaw, real)) throw new ToolError('raw/ の中のファイルだけを読めます。');
-  const st = fs.statSync(real);
-  if (!st.isFile()) throw new ToolError('ファイルではありません: ' + rel);
-  if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです。Excel・Word は画面か表計算で文にしてから raw/ に置いてください。');
-  if (st.size > MAX_BYTES) throw new ToolError('ファイルが大きすぎます(1MB まで)。');
-  return real;
+  if (!within(rawDir, target)) throw new ToolError(OUTSIDE_RAW);
+  const checkReal = (real) => {
+    let realRaw;
+    try { realRaw = fs.realpathSync.native(rawDir); } catch { throw new ToolError('raw/ がありません。'); }
+    if (!within(realRaw, real)) throw new ToolError(OUTSIDE_RAW);
+    if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです。Excel・Word は画面か表計算で文にしてから raw/ に置いてください。');
+  };
+  return { target, checkReal, tooLarge: 'ファイルが大きすぎます(1MB まで)。' };
 }
 
 const OUTSIDE_WORK = '作業フォルダの中のファイルだけを読めます。';
@@ -124,9 +123,9 @@ function refuseDeniedPart(relPath) {
   if (parts.includes('secrets') || parts.some((p) => p.startsWith('.'))) throw new ToolError('secrets/・.claude/・.git/ の下と、名前が . で始まる部分のあるパスは読めません。');
 }
 
-// 原文のファイルの実体のパスを返す(F76a)。先に字で断るので、字で断る所の下にファイルがあるかは返事から分からない(リンクを通すパスでは、無いファイルは「ファイルがありません」になる)。
-// 次に実体でも同じことを確かめる(リンクで外や raw/ へ出る形、Windows の末尾の点・短い名前のように字が違っても同じ所を指す形)
-function resolveSourceFile(root, rel) {
+// check_conditions の決まり(F76a)。先に字で断るので、字で断る所の下にファイルがあるかは返事から分からない(リンクを通すパスでは、無いファイルは「ファイルがありません」になる)。
+// 開いた後に実体でも同じことを確かめる(リンクで外や raw/ へ出る形、Windows の末尾の点・短い名前のように字が違っても同じ所を指す形)
+function sourceRule(root, rel) {
   const base = path.resolve(root);
   const target = path.resolve(base, rel.replace(/\\/g, '/'));
   if (!within(base, target)) throw new ToolError(OUTSIDE_WORK);
@@ -137,27 +136,78 @@ function resolveSourceFile(root, rel) {
   const baseParts = realBase.split(path.sep).map((p) => p.toLowerCase());
   if (baseParts.includes('raw')) refuseDeniedPart('raw');
   if (baseParts.includes('secrets') || ['.claude', '.git'].includes(baseParts.at(-1))) refuseDeniedPart('secrets');
-  let real;
-  try { real = fs.realpathSync.native(target); } catch { throw new ToolError('ファイルがありません: ' + rel); }
-  if (!within(realBase, real)) throw new ToolError(OUTSIDE_WORK);
-  refuseDeniedPart(path.relative(realBase, real));
-  // raw/ などそのものが作業フォルダの中の別のフォルダへのリンクのとき、実体のパスに raw の字が出ないので、リンクの先と比べる
-  for (const dir of DENIED_DIRS) {
-    let realDir;
-    try { realDir = fs.realpathSync.native(path.join(base, dir)); } catch { continue; }
-    if (within(realDir, real)) refuseDeniedPart(dir);
+  const checkReal = (real) => {
+    if (!within(realBase, real)) throw new ToolError(OUTSIDE_WORK);
+    refuseDeniedPart(path.relative(realBase, real));
+    // raw/ などそのものが作業フォルダの中の別のフォルダへのリンクのとき、実体のパスに raw の字が出ないので、リンクの先と比べる
+    for (const dir of DENIED_DIRS) {
+      let realDir;
+      try { realDir = fs.realpathSync.native(path.join(base, dir)); } catch { continue; }
+      if (within(realDir, real)) refuseDeniedPart(dir);
+    }
+    // 対応表と辞書には元の語が入るので、raw/ の外に置かれていても読まない
+    for (const p of [process.env.MASK_MAP, process.env.MASK_DICT]) {
+      let realMask;
+      try { realMask = p ? fs.realpathSync.native(path.resolve(base, p)) : null; } catch { continue; }
+      if (real === realMask) throw new ToolError('MASK_MAP・MASK_DICT のファイルは読めません。');
+    }
+    if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです: ' + rel);
+  };
+  return { target, checkReal, tooLarge: 'ファイルが大きすぎます(1MB まで): ' + rel };
+}
+
+const READ_RULES = { raw: rawRule, source: sourceRule };
+// FIFO を開いて止まらないため。Windows の Node にはこの2つが無く、付かない。O_NOFOLLOW は使わない(作業フォルダの中のファイルへのリンクを読むので、リンクの先は開いた後に確かめる)
+const OPEN_FLAGS = fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0) | (fs.constants.O_NOCTTY ?? 0);
+const NOT_THERE = ['ENOENT', 'ENOTDIR', 'ELOOP', 'ENAMETOOLONG'];
+const REPLACED = '読む間にファイルが替わりました。もう一度呼んでください';
+
+// 開いた fd から読む。大きさ+1 バイトまで読み、fstat の大きさと違えば読む間に書き換えられたものとして断る(fstat で上限の内なので、上限を超えた分もここで止まる)
+function readOpened(fd, size) {
+  const bytes = Buffer.alloc(size + 1);
+  let got = 0;
+  while (got < bytes.length) {
+    const n = fs.readSync(fd, bytes, got, bytes.length - got, got);
+    if (n === 0) break;
+    got += n;
   }
-  // 対応表と辞書には元の語が入るので、raw/ の外に置かれていても読まない
-  for (const p of [process.env.MASK_MAP, process.env.MASK_DICT]) {
-    let realMask;
-    try { realMask = p ? fs.realpathSync.native(path.resolve(base, p)) : null; } catch { continue; }
-    if (real === realMask) throw new ToolError('MASK_MAP・MASK_DICT のファイルは読めません。');
+  if (got !== size) throw new ToolError(REPLACED);
+  return bytes.subarray(0, size);
+}
+
+// 道具がファイルを読む1つの読み口(F83b1)。kind は read_masked の 'raw' と check_conditions の 'source'。読んだバイト列を返す。
+// 確かめてから名前で読み直すと、その間の差し替えで読まない所が読める(CWE-367・CWE-59)ので、先に開き、開いた物を確かめ、開いた fd から読む
+function readChecked(root, rel, kind) {
+  const { target, checkReal, tooLarge } = READ_RULES[kind](root, rel);
+  let fd;
+  try {
+    fd = fs.openSync(target, OPEN_FLAGS);
+  } catch (e) {
+    if (NOT_THERE.includes(e.code)) throw new ToolError('ファイルがありません: ' + rel);
+    throw e;
   }
-  const st = fs.statSync(real);
-  if (!st.isFile()) throw new ToolError('ファイルではありません: ' + rel);
-  if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです: ' + rel);
-  if (st.size > MAX_BYTES) throw new ToolError('ファイルが大きすぎます(1MB まで): ' + rel);
-  return real;
+  try {
+    const st = fs.fstatSync(fd, { bigint: true });
+    if (!st.isFile()) throw new ToolError('ファイルではありません: ' + rel);
+    // raw/x が secrets/ や MASK_MAP へのハードリンクでも、パスからは見分けられない。リンクの数で断る
+    if (st.nlink !== 1n) throw new ToolError('リンクの数が2以上のファイル(ハードリンク)は読みません。写し(コピー)を置いてください: ' + rel);
+    // 下の dev と ino の比べができないドライブ
+    if (st.ino === 0n) throw new ToolError('このドライブではファイルの番号が取れないので読めません。作業フォルダを NTFS などのドライブに置いてください');
+    __testHooks.afterOpen?.(target);
+    let real;
+    try { real = fs.realpathSync.native(target); } catch { throw new ToolError('ファイルがありません: ' + rel); }
+    checkReal(real);
+    __testHooks.afterResolve?.(target);
+    // 確かめた実体のパスと開いた物が同じファイルか。開いた後に名前を替えられると、確かめは替えた先を見ている
+    // 開いた後に同じ実体のハードリンクへ替えられると dev と ino が合い、上の fstat の数は替える前の物なので、リンクの数も今の物を見る
+    const now = fs.statSync(real, { bigint: true, throwIfNoEntry: false });
+    if (now?.dev !== st.dev || now?.ino !== st.ino || now?.nlink !== 1n) throw new ToolError(REPLACED);
+    // 上限は実体の確かめの後で見る。先に見ると 1MB を超える Excel に「大きすぎます」と返して文にして置く案内が出ず、リンクの先の大きさも返事から分かる
+    if (st.size > MAX_BYTES) throw new ToolError(tooLarge);
+    return readOpened(fd, Number(st.size));
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 const LIST_MAX = 500;
@@ -273,15 +323,15 @@ function decodeFile(bytes) {
   }
 }
 
-function readTextFile(file) {
-  const text = decodeFile(fs.readFileSync(file));
+function toText(bytes) {
+  const text = decodeFile(bytes);
   if (text.includes('\u0000')) throw new ToolError('文のファイルではないようです。');
   return text;
 }
 
 // 置き換えた中身と、見本の語の確かめ(F28a)の結果を返す。見本は置き換えた中身にも対応表にも入らない
 export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, dictPath = process.env.MASK_DICT, rand } = {}) {
-  const text = readTextFile(resolveRawFile(root, rel));
+  const text = toText(readChecked(root, rel, 'raw'));
   const m = makeMasker(mapPath, dictPath);
   const { masked } = m.mask(text);
   const check = checkDecoys(m, text, rand ? { rand } : {});
@@ -320,9 +370,9 @@ const CHECK_CONDITIONS_PLACES = [
 
 // 原文を1つ読む。file は CLI と同じくファイルの名前だけ。文字で読めないときは、どのファイルかを添える
 function readSource(root, rel) {
-  const real = resolveSourceFile(root, rel);
+  const bytes = readChecked(root, rel, 'source');
   try {
-    const text = readTextFile(real);
+    const text = toText(bytes);
     if (!text.trim()) throw new ToolError('中身がありません。');
     return { file: path.basename(rel.replace(/\\/g, '/')), text };
   } catch (e) {
