@@ -121,7 +121,7 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 - 部品・試した記録・限界の全部は [docs/manual.md の「Claude Code のプラグイン」](docs/manual.md#claude-code-のプラグインplugin)
 
 ## Claude Code での作り方
-開発の仕組み(自走キット・hook・subagent・機能の一覧)は開始前に作ったもので、このリポジトリには入っていません(審査の対象外です)。Claude Code が1つずつの機能を短いセッションで作り、人は決めることがあるときだけ答える形で作りました。受け入れテスト(`tests/acceptance/`、21 ファイル)は人の承認のあと指紋で固定し、作る係は直せません。仕組みの説明は [docs/manual.md の「Claude Code での作り方」](docs/manual.md#claude-code-での作り方) にあります。作品の中で Claude と機械が役を分けている筋と、期間中に作った跡の数は、[docs/overview.md の「Claude の使い方」](docs/overview.md#claude-の使い方) にあります。
+開発の仕組み(自走キット・hook・subagent・機能の一覧)は開始前に作ったもので、このリポジトリには入っていません(審査の対象外です)。Claude Code が1つずつの機能を短いセッションで作り、人は決めることがあるときだけ答える形で作りました。受け入れテスト(`tests/acceptance/`、21 ファイル)は人の承認のあと指紋で固定し、作る係は直せません。仕組みの説明は [docs/manual.md の「Claude Code での作り方」](docs/manual.md#claude-code-での作り方) にあります。作品の中で Claude と機械が役を分けている筋と、期間中に作った跡の数は、[docs/overview.md の「Claude の使い方」](docs/overview.md#claude-の使い方) にあります。見つけて直して測り直した流れは [開発の記録](docs/development.md)、未測と直していない所は [残っていること](docs/development.md#残っていること未測直していない) の一覧にあります。
 
 ## 評価
 - 確かめた数字: 架空の見本の書類3件に仕込んだ抜けと誤り11件のうち見つけたのは9件(2026-11-04 の採点。版 7ba4f4f、1fcb4ec の出力も同じ。9件のうち1件は部分一致で、見落としが2件)、和歌山県の仕様書の7つの節から作った31行のうち抜き書きが原文と合ったのは31行(「土木請負工事必携」令和7年11月版、check-rows。行の意味は人が確かめます)。

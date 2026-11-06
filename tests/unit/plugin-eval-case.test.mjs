@@ -286,6 +286,13 @@ const SECTION7 = (() => {
   return doc.slice(doc.indexOf('## 7. 公式の評価のケース'), doc.indexOf('## 8. 公告から条件を拾う正しさ'));
 })();
 
+// 新しい組の結果の枠: 行は「未測」か、版の印(7桁以上の16進)と日時つきの値。値の字は版の印の無い行には書けない
+const VERSION_MARK = /(?<![0-9A-Za-z])[0-9a-f]{7,}(?![0-9A-Za-z])/;
+const DATE_TIME = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}/;
+const VALUE_MARKS = /\$|0\.\d|[Δ差]は? ?[0-9]/;
+const frameRowOk = (l) => l.includes('未測') || (VERSION_MARK.test(l) && DATE_TIME.test(l));
+const frameLineOk = (l) => VERSION_MARK.test(l) || !VALUE_MARKS.test(l);
+
 test('文書: 走らせていない新しい組の数字を書かず、未測の枠だけを置く', () => {
   const start = SECTION7.indexOf('### 新しい組の結果');
   assert.ok(start > 0);
@@ -293,8 +300,24 @@ test('文書: 走らせていない新しい組の数字を書かず、未測の
   const rows = frame.split('\n').filter((l) => l.startsWith('|') && !/^\|[-|]+\|$/.test(l));
   const body = rows.filter((l) => !/^\| (ケース|モデル) \|/.test(l));
   assert.ok(body.length >= 4);
-  for (const l of body) assert.ok(l.includes('未測'), l);
-  assert.equal(/\$|0\.\d|[Δ差]は? ?[0-9]/.test(frame), false);
+  for (const l of body) assert.ok(frameRowOk(l), l);
+  for (const l of frame.split('\n')) assert.ok(frameLineOk(l), l);
+});
+
+test('未測の枠の決まり: 値は版の印と日時つきの行にだけ入れられる', () => {
+  const measured = '| E1 | 0.83 | 0.42 | 差 0.41 | 不合格 | 3/3 | $3.2 | 1042秒 | 版 1a2b3c4、2026-11-07 21:05 |';
+  assert.ok(frameRowOk(measured));
+  assert.ok(frameLineOk(measured));
+  const noMark = '| E1 | 0.83 | 0.42 | 差 0.41 | 不合格 | 3/3 | $3.2 | 1042秒 | 未測 |';
+  assert.ok(frameRowOk(noMark), '未測の字があるので行の決まりは通る');
+  assert.equal(frameLineOk(noMark), false, '版の印が無いので値の決まりで落ちる');
+  assert.equal(frameRowOk('| E1 | 版 1a2b3c4 | 通った |'), false, '日時が無い');
+  assert.equal(frameRowOk('| E1 | 2026-11-07 21:05 | 通った |'), false, '版の印が無い');
+  assert.equal(frameRowOk('| E1 | 1a2b3 | 2026-11-07 21:05 |'), false, '版の印が7桁に足りない');
+  assert.equal(frameLineOk('| E1 | $3.2 |'), false);
+  assert.equal(frameLineOk('| E1 | 0.83 |'), false);
+  assert.equal(frameLineOk('| E1 | 差 0.41 |'), false);
+  assert.equal(frameLineOk('| E1 | Δ 0.41 |'), false);
 });
 
 test('文書: 8/8・0/8 と判定の合格は、古い組(検査9つ)の値だと書く', () => {
