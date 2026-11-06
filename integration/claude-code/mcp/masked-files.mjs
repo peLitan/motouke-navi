@@ -19,7 +19,7 @@
 //   MASK_DICT      画面の「辞書を書き出す」で保存した辞書の JSON(format: "mask-dict")。指定すると、足した語(人名・現場名など)も置き換える(F28c)。
 //                  MASK_MAP と両方を指定したときは、対応表を読んでから辞書の語を加える。読めないときは理由の種類だけを返し、辞書の中身(語)は返事にも記録にも出さない
 //
-// 限界: 置き換えの漏れは0にならない(README の「文の置き換え」)。読めるのは文のファイル(.txt .md .csv .tsv .json)だけ。
+// 限界: 置き換えの漏れは0にならない(README の「文の置き換え」)。読めるのは文のファイル(.txt .md .csv .tsv .json)だけ。文字は UTF-8(BOM の有無どちらも)か Shift_JIS(F63a)。
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -186,10 +186,32 @@ export function makeMasker(mapPath, dictPath) {
   return m;
 }
 
+// バイト列を文にする(F63a)。UTF-8 → Shift_JIS の順にどちらも fatal で読み、どちらでも読めなければ断る(化けた文を Claude に渡さない)
+// 画面の src/mask/extract.mjs の decodeText と同じ順。extract.mjs は zip の処理も含み plugin/ に写していないので、読み込まずにここに書く
+function decodeFile(bytes) {
+  const hasBom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
+  const body = hasBom ? bytes.subarray(3) : bytes;
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(body);
+  } catch { /* UTF-8 ではない。Shift_JIS を試す */ }
+  let sjis;
+  // 小さい ICU の Node には shift_jis が無く、作るときに投げる
+  try {
+    sjis = new TextDecoder('shift_jis', { fatal: true });
+  } catch {
+    throw new ToolError('この Node では Shift_JIS を読めません。UTF-8 で保存してください。');
+  }
+  try {
+    return sjis.decode(body);
+  } catch {
+    throw new ToolError('文字のファイルとして読めません(UTF-8 か Shift_JIS で保存してください)。');
+  }
+}
+
 // 置き換えた中身と、見本の語の確かめ(F28a)の結果を返す。見本は置き換えた中身にも対応表にも入らない
 export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP, dictPath = process.env.MASK_DICT, rand } = {}) {
   const file = resolveRawFile(root, rel);
-  const text = fs.readFileSync(file, 'utf8');
+  const text = decodeFile(fs.readFileSync(file));
   if (text.includes('\u0000')) throw new ToolError('文のファイルではないようです。');
   const m = makeMasker(mapPath, dictPath);
   const { masked } = m.mask(text);
