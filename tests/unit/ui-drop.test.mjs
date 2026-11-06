@@ -299,7 +299,7 @@ test('(F82c) タイルに公告の PDF を置くと、段1 を開いて欄に入
   assert.ok(doc.getElementById('participation-conditions').value.includes(PRIME_SENTENCE));
   const line = status(doc, 'intake-status');
   assert.ok(line.startsWith('「公告.pdf」の文字を読みました(2頁)。「公告の参加の条件」の欄に入れました。'), line);
-  for (const part of [NOT_PICKED, 'Skill bid-intake', '文のファイル', PRIME_FOUND]) assert.ok(line.includes(part), part);
+  for (const part of [NOT_PICKED, '『公告を読む Skill(bid-intake)』', '文のファイル', PRIME_FOUND]) assert.ok(line.includes(part), part);
   assert.equal(status(doc, 'drop-status'), '');
   assert.equal(doc.getElementById('contract-amount').value, '100', 'ほかの欄は変えない');
 });

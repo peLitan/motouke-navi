@@ -60,6 +60,9 @@ async function inflateRaw(data, limit) {
   return out;
 }
 
+// 読めないときの文。画面にそのまま出るので、zip の語を使わない(F83a2)
+const NOT_OFFICE = '.docx・.xlsx として読めません(壊れているか、別の形のファイルです)。保存し直すか、元のファイルをもらってください。';
+
 // zip の中央ディレクトリを読み、名前 → 取り出す関数 の表を返す
 export function listZip(bytes) {
   const b = bytes;
@@ -67,12 +70,12 @@ export function listZip(bytes) {
   for (let i = b.length - 22; i >= 0 && i >= b.length - 22 - 0xffff; i--) {
     if (u32(b, i) === 0x06054b50) { eocd = i; break; }
   }
-  if (eocd < 0) throw new Error('.docx・.xlsx の形(zip)になっていません。壊れているか、別の形式のファイルです');
+  if (eocd < 0) throw new Error(NOT_OFFICE);
   const count = u16(b, eocd + 10);
   let off = u32(b, eocd + 16);
   const entries = new Map();
   for (let k = 0; k < count; k++) {
-    if (off + 46 > b.length || u32(b, off) !== 0x02014b50) throw new Error('zip の目次が壊れています');
+    if (off + 46 > b.length || u32(b, off) !== 0x02014b50) throw new Error(NOT_OFFICE);
     const flags = u16(b, off + 8);
     const method = u16(b, off + 10);
     const csize = u32(b, off + 20);
@@ -90,7 +93,7 @@ async function readEntry(bytes, entry, name) {
   if (entry.flags & 1) throw new Error('パスワードのかかったファイルは開けません(' + name + ')');
   const b = bytes;
   const lo = entry.local;
-  if (lo + 30 > b.length || u32(b, lo) !== 0x04034b50) throw new Error('zip の中身が壊れています(' + name + ')');
+  if (lo + 30 > b.length || u32(b, lo) !== 0x04034b50) throw new Error(NOT_OFFICE);
   const start = lo + 30 + u16(b, lo + 26) + u16(b, lo + 28);
   const body = b.subarray(start, start + entry.csize);
   if (entry.method === 0) return body;

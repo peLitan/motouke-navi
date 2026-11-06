@@ -167,6 +167,11 @@ export function renderTaichoResult(t) {
     + '<p class="human">規則表の行に当てはめた結果です。台帳を作るか・写しを出すかの最後の判断は、発注者の仕様書などを確かめたうえで人がしてください</p>';
 }
 
+// 入力が空のときの知らせ(F83a2)。読めなかったのではないので、renderErrors の見出しの文を付けない
+export function renderEmptyInput(text) {
+  return '<div class="errors"><p>' + esc(text) + '</p></div>';
+}
+
 export function renderErrors(list) {
   return '<div class="errors"><p>入力を読めませんでした。直してからもう一度押してください。</p><ul>' + list.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
 }

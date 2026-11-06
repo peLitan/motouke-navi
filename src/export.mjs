@@ -52,7 +52,7 @@ export function taichoRows(t) {
     COLUMNS.slice(),
     row('施工体制台帳', '施工体制台帳', TAICHO_STATUS[t.status] ?? t.status, t.message ?? '', all, []),
     row('施工体制台帳', '写しを発注者に出すか', COPY_STATUS[t.copyToOrderer] ?? t.copyToOrderer, '', [], []),
-    ...t.reasons.map((r) => row('施工体制台帳(当てはめた規則)', r.ruleId ?? '', '', r.action, r.basis, r.exceptions)),
+    ...t.reasons.map((r, i) => row('施工体制台帳(当てはめた規則)', '当てはめた規則 ' + (i + 1), '', r.action, r.basis, r.exceptions)),
   ];
 }
 

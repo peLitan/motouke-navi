@@ -41,7 +41,7 @@ test('.xlsx: シートの順・空きセル・インラインの文字・ふり�
 });
 
 test('壊れたファイル・zip でないファイルは、分かる言葉で止まる', async () => {
-  await assert.rejects(() => extractText('z.docx', new TextEncoder().encode('ただの文')), /zip/);
+  await assert.rejects(() => extractText('z.docx', new TextEncoder().encode('ただの文')), { message: '.docx・.xlsx として読めません(壊れているか、別の形のファイルです)。保存し直すか、元のファイルをもらってください。' });
   await assert.rejects(() => extractText('z.xlsx', makeZip([{ name: 'a.txt', data: 'x' }])), /シート/);
   await assert.rejects(() => extractText('z.docx', makeZip([{ name: 'a.txt', data: 'x' }])), /document\.xml/);
   await assert.rejects(() => extractText('z.xls', new Uint8Array(1)), /対応していない形式/);

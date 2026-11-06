@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
+import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -644,7 +644,7 @@ export function runLedgerCheck(doc) {
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') {
-    outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、入口の「まず見本で試す」を押してください。']);
+    outEl.innerHTML = renderEmptyInput('台帳の文が空です。台帳を貼るか、入口の「まず見本で試す」を押してください。');
     setCheckStatus(doc, '＊ 台帳の文が空です。');
     lastChecklist = null; checklistText = null; checklistChecked.clear();
     const cl = doc.getElementById('checklist-result');
@@ -785,7 +785,7 @@ export function runPlanCheck(doc) {
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') {
-    outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。']);
+    outEl.innerHTML = renderEmptyInput('目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。');
     setPlanStatus(doc, '＊ 目次が空です。');
     return;
   }
