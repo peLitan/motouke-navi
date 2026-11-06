@@ -15,6 +15,7 @@ const SOURCES_DIR = path.join(SKILL_DIR, 'reference', 'sources');
 
 // 法令の名前(長いものから並べる)。略した名前は正式な名前に寄せる
 // 「法」「令」だけの書き方は、どの法令か決められないので「確かめられない」にする
+// この一覧に無い法令名が条番号の前にあれば、理由を「この道具が取り込んでいない法令」にする(F81c。名前の一覧は持たず、字の並びで見る)
 const LAW_NAMES = [
   ['公共工事の入札及び契約の適正化の促進に関する法律', '公共工事の入札及び契約の適正化の促進に関する法律'],
   ['入札契約適正化法', '公共工事の入札及び契約の適正化の促進に関する法律'],
@@ -59,16 +60,69 @@ export function loadSources(dir = SOURCES_DIR) {
     .map((s) => ({ law: s.law, article: String(s.article), title: s.title, text: fs.readFileSync(path.join(dir, s.file), 'utf8') }));
 }
 
-// 文から条番号を取り出す。返り値: [{ raw, law, article, paragraph, item, subitem }]
+// 条番号の前の書き方の見分け(F81c)。見るのは条番号のすぐ前の短い所だけにする(文の全体に正規表現を当てると、長い1行で固まるため)
+// 法令名に使う字: 漢字・平仮名・片仮名・長音・々・〆・ヶ・英字(「ＰＦＩ法」のような略した名前)
+const NAME_CHAR = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー々〆ヶA-Za-zＡ-Ｚａ-ｚ]/u;
+const LOOK_BACK = 24;
+// 法令の種類を表す語。「〜法」「〜令」「〜規則」「〜条例」と「〜法律」。「施行令」「施行規則」も種類の語として外して、前に名前が残るかを見る
+const LAW_KIND = '施行規則|施行令|法律|法令|政令|省令|府令|規則|条例|法|令';
+const KIND_TAIL = new RegExp('(?:' + LAW_KIND + ')+$', 'u');
+const KIND_HEAD = new RegExp('^(?:' + LAW_KIND + ')', 'u');
+// 種類の語の前がこれらの語なら名前ではない(前に出た法令を指す語など)。漢字の語は、前が名前の続きでないときだけ(「環境基本法」の「本」は名前の続き)
+const NOT_NAME = /(?:^|\p{Script=Hiragana})(?:同|本|旧|新|当該|前記|上記|下記|関係|現行|改正|各|他|諸|両)$|(?:この|その|あの)$/u;
+// 平仮名のすぐ後では名前の続きにならない種類の語(「…ので法第24条の8」「…は施行令第27条」)。「…に関する法律」「…に関する条例」は名前
+const BARE_AFTER_KANA = new Set(['法', '令', '法令', '施行令', '施行規則']);
+// 助詞の字のすぐ後の種類の語は、どれも名前でなく前に出た法令を指す書き方(「根拠は規則第14条の2」「市の条例第3条」)。
+// 名前の終わりの平仮名は「…に関する」「…を定める」のような動詞の形が多い。助詞の字で終わる名前(「…の条例」など)は、取り込んでいない法令でも「法令名が書かれていない」になる
+const PARTICLE_END = /[はがをにでもへやとの]$/u;
+// 前の条番号の法令名を引き継ぐつなぎの語(この3つだけ。「又は」「と」などでは引き継がない)
+const LINKS = ['及び', '並びに', '、'];
+
+// text の end より前に、取り込んだ一覧に無い法令名が書かれているか。end は条番号の「第」の前の空白の始まり(空白は飛ばしてある)
+function namesOtherLaw(text, end) {
+  let start = end;
+  while (start > 0 && end - start < LOOK_BACK && NAME_CHAR.test(text[start - 1])) start--;
+  const run = text.slice(start, end);
+  const kind = run.match(KIND_TAIL);
+  if (!kind || kind.index === 0) return false;
+  const stem = run.slice(0, kind.index);
+  if (NOT_NAME.test(stem) || PARTICLE_END.test(stem)) return false;
+  if (/\p{Script=Hiragana}$/u.test(stem) && BARE_AFTER_KANA.has(kind[0].match(KIND_HEAD)[0])) return false;
+  return true;
+}
+
+// from から to までに行の切れ目があるか
+function crossesLine(text, from, to) {
+  for (let i = from; i < to; i++) {
+    const c = text.charCodeAt(i);
+    if (c === 10 || c === 13 || c === 0x2028 || c === 0x2029) return true;
+  }
+  return false;
+}
+
+// 文から条番号を取り出す。返り値: [{ raw, law, unknownLaw, article, paragraph, item, subitem }]
+// law は取り込んだ法令の名前か null。unknownLaw は、取り込んだ一覧に無い法令名が書かれていたとき true(law は null のまま)
+// 「及び」「並びに」「、」のすぐ後(空白は挟んでよい)が素の「第」なら、同じ行の直前の条番号の法令名を引き継ぐ。「法第」「同法第」は引き継がない
 export function extractRefs(text) {
   const refs = [];
-  for (const m of String(text ?? '').matchAll(REF_RE)) {
-    const law = m[1] ? LAW_NAMES.find(([n]) => n === m[1])[1] : null;
+  const s = String(text ?? '');
+  let prev = null;
+  for (const m of s.matchAll(REF_RE)) {
+    let law = m[1] ? LAW_NAMES.find(([n]) => n === m[1])[1] : null;
+    let unknownLaw = false;
+    if (!m[1]) {
+      const dai = m.index + m[0].indexOf('第');
+      const linked = LINKS.some((w) => m.index >= w.length && s.startsWith(w, m.index - w.length));
+      if (linked && prev && !crossesLine(s, prev.end, dai)) ({ law, unknownLaw } = prev);
+      else unknownLaw = namesOtherLaw(s, m.index);
+    }
+    prev = { end: m.index + m[0].length, law, unknownLaw };
     const a = toInt(m[2]);
     const sub = m[3] != null ? toInt(m[3]) : null;
     refs.push({
       raw: m[0].trim(),
       law,
+      unknownLaw,
       article: sub != null ? `${a}の${sub}` : String(a),
       paragraph: m[4] != null ? toInt(m[4]) : null,
       item: m[5] != null ? toInt(m[5]) : null,
@@ -78,11 +132,13 @@ export function extractRefs(text) {
   return refs;
 }
 
-const label = (r) => `${r.law ?? '(法令名なし)'} 第${r.article.replace(/^(\d+)(?:の(\d+))?$/, (_, a, b) => a + '条' + (b ? 'の' + b : ''))}` +
+const label = (r) => `${r.law ?? (r.unknownLaw ? '(取り込んでいない法令)' : '(法令名なし)')} 第${r.article.replace(/^(\d+)(?:の(\d+))?$/, (_, a, b) => a + '条' + (b ? 'の' + b : ''))}` +
   (r.paragraph != null ? `第${r.paragraph}項` : '') + (r.item != null ? `第${r.item}号` : '') + (r.subitem ?? '');
 
 // 1つの条番号を確かめる。返り値: { status: 'ある' | '無い' | '確かめられない', reason }
 export function checkRef(r, sources) {
+  // 取り込んでいない法令名は、名前を返事に写さない(指摘の文を返事に入れないため)
+  if (!r.law && r.unknownLaw) return { status: '確かめられない', reason: 'この道具が取り込んでいない法令(取り込んだ法令の名前に無い。取り込んだ法令を略して書いたなら、正式な名前で書き直す)' };
   if (!r.law) return { status: '確かめられない', reason: '法令名が書かれていない(「法」「令」だけ・同条などは、どの法令か決められない)' };
   const src = sources.find((s) => s.law === r.law && s.article === r.article);
   if (!src) return { status: '無い', reason: '取得した原文に無い条(このプラグインはこの条を見ていない)' };
