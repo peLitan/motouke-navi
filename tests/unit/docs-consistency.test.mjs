@@ -17,10 +17,10 @@ test('想定の人物: README と overview に「中小の建設会社」の書�
   }
 });
 
-test('条の数: 説明の 26 と 8 が data/sources の法令の行の数と Skill の原文のファイルの数と同じ', () => {
+test('条の数: 説明の 29 と 8 が data/sources の法令の行の数と Skill の原文のファイルの数と同じ', () => {
   const all = lawRows('data/sources/index.json').length;
   const skill = fs.readdirSync(new URL('../../plugin/skills/construction-check/reference/sources/', import.meta.url)).filter((f) => /^law-.*\.txt$/.test(f)).length;
-  assert.equal(all, 26);
+  assert.equal(all, 29);
   assert.equal(skill, 8);
   const readme = read('README.md');
   assert.ok(readme.includes(`Skill に入れた${skill}つの条だけ`));

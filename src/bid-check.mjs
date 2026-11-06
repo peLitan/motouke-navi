@@ -49,6 +49,15 @@ export function dedicatedThreshold() {
   return { other: kanjiYen(m[1]), kenchiku: kanjiYen(m[2]), basis: basisOf('q-rei-27-1')[0] };
 }
 
+// 現場を兼ねる特例の金額(施行令 第28条)と現場の数(施行令 第30条)。原文の「…一億円とする。ただし、…二億円とする。」「…二とする。」から読む
+export function sharedSiteLimit() {
+  const amount = quoteText('q-rei-28').match(new RegExp('金額は、' + AMOUNT + 'とする。ただし、当該建設工事が建築一式工事である場合においては、' + AMOUNT + 'とする。'));
+  if (!amount) throw new Error('施行令 第28条の抜き書きから金額を読めない');
+  const sites = quoteText('q-rei-30').match(/政令で定める数は、([一二三四五六七八九十]+)とする。/);
+  if (!sites) throw new Error('施行令 第30条の抜き書きから数を読めない');
+  return { other: kanjiYen(amount[1]), kenchiku: kanjiYen(amount[2]), sites: kanjiUnder10000(sites[1]) };
+}
+
 // 特定建設業の許可が要る下請けの総額(施行令 第2条)。原文の「…五千万円とする。ただし、…建築工事業である場合においては、八千万円とする。」から読む
 export function licenseThreshold() {
   const text = quoteText('q-rei-2-1');
@@ -160,15 +169,28 @@ function taichoItems(input) {
   return { items: [taicho, copy, taikeizu], amountBasis: j.amountBasis };
 }
 
+const oku = (n) => n / 100_000_000 + '億円';
+const sharedOver = (input, s) => isAmount(input.contractAmount) && input.contractAmount >= (isKenchiku(input) ? s.kenchiku : s.other);
+// 現場を兼ねる特例の一文。確認が要る点の文なので条番号は書かない(根拠は basis)。
+// 金額の条件は第26条第3項ただし書の第1号だけで、第2号(監理技術者を補佐する者を専任で置く)には無いので、境目以上でも特例全部が無くなるとは書かない
+function sharedSiteSentence(input, s) {
+  const amounts = (word) => '請負代金が' + oku(s.other) + word + '(建築一式は' + oku(s.kenchiku) + word + ')';
+  const undecided = 'この道具は特例を判定していません。';
+  if (sharedOver(input, s)) return amounts('以上') + 'なので、情報通信技術を使って' + s.sites + 'つの現場まで兼ねる特例は使えません。監理技術者を補佐する者を専任で置く場合の特例があります。' + undecided;
+  return amounts('未満') + 'などの条件を満たすと、' + s.sites + 'つの現場まで兼ねられる特例があります。' + undecided;
+}
+
 function dedicatedItem(input, t) {
   const line = isKenchiku(input) ? t.kenchiku : t.other;
+  const s = sharedSiteLimit();
   const item = {
     key: 'dedicated',
     label: '技術者を専任で置く必要があるか',
-    basis: basisOf('q-kensetsu-26-3', 'q-rei-27-1', ...(input.orderer === 'public' ? ['q-rei-27-1-1'] : []), 'q-kensetsu-26-3-1', 'q-kensetsu-26-3-2', 'q-kensetsu-26-4', 'q-rei-27-2'),
+    basis: basisOf('q-kensetsu-26-3', 'q-rei-27-1', ...(input.orderer === 'public' ? ['q-rei-27-1-1'] : []), 'q-rei-27-1-2', 'q-rei-27-1-3', 'q-rei-15-1', 'q-rei-15-3', 'q-kensetsu-26-3-1', 'q-kensetsu-26-3-2', 'q-kensetsu-26-4', 'q-rei-28', 'q-rei-30', 'q-kensetsu-26-5', 'q-rei-27-2'),
     threshold: { amount: line, quote: t.basis.quote },
     exceptions: [
-      '建設業法 第26条第3項のただし書: 同項第1号(請負代金が政令で定める金額未満で、移動時間・連絡方法と情報通信技術の措置の要件を満たす場合)・第2号(監理技術者を補佐する者を専任で置く場合)は専任でなくてよい。第4項の現場の数の上限もある。このツールはこれらを判定していない',
+      '請負代金が' + oku(s.other) + '未満(建築一式は' + oku(s.kenchiku) + '未満)などの条件を満たすと、' + s.sites + 'つの現場まで兼ねられる特例がある(建設業法 第26条第3項ただし書第1号・第4項、施行令 第28条・第30条)。第1号は移動時間・連絡方法と情報通信技術の措置の要件も要る。監理技術者を補佐する者を専任で置く特例(同項ただし書第2号)には金額の条件が無く、現場の数の上限は同じ。このツールは特例を判定していない',
+      ...(sharedOver(input, s) ? ['請負代金が' + oku(s.other) + '以上(建築一式は' + oku(s.kenchiku) + '以上)なので、建設業法 第26条第3項ただし書第1号の特例は使えない(施行令 第28条)'] : []),
       '施行令 第27条第2項: 密接な関係のある二以上の工事を同じ場所・近い場所で施工する場合は、同じ専任の主任技術者が管理できる',
       '請負代金の額は税込みで比べる(国交省 建設業許可事務ガイドライン【その他】2.)',
     ],
@@ -183,7 +205,7 @@ function dedicatedItem(input, t) {
     };
   }
   if (input.orderer === 'private') {
-    return { ...item, status: 'needs_check', note: '請負代金(税込み)が ' + yen(line) + ' 以上。民間工事では、施設・工作物が施行令 第27条第1項第3号(学校・病院・共同住宅・事務所・工場・倉庫など)か第2号(施行令 第15条第1号・第3号の施設・工作物。第15条の原文はこのツールに取り込んでいない)に当たれば専任。当たるかは工事の対象で確かめる' };
+    return { ...item, status: 'needs_check', note: '請負代金(税込み)が ' + yen(line) + ' 以上。民間工事では、施設・工作物が施行令 第27条第1項第3号(学校・病院・共同住宅・事務所・工場・倉庫など)か第2号(施行令 第15条第1号・第3号の施設・工作物。鉄道・道路・橋・上下水道、電気やガスの事業用の施設など)に当たれば専任。当たるかは工事の対象で確かめる。' + sharedSiteSentence(input, s) };
   }
   return { ...item, status: 'needs_check', note: '発注者が公共か民間かの入力が無いので判定できない' };
 }
@@ -205,8 +227,8 @@ export function bidCheck(input = {}) {
   }
   const ded = items[5];
   if (ded.status === 'required' && input.orderer === 'public') {
-    // 文は平らな言葉にし、条番号と抜き書きは basis で根拠の折りたたみと CSV の根拠の列に出す(F62a)。画面の「公共」には国・地方公共団体でない発注者も含むので、言い切らず「と見て」と書く
-    checks.push({ key: 'dedicated', label: ded.label, changes: true, basis: ded.basis, message: '発注者は国か地方公共団体(都道府県・市区町村・一部事務組合など)と見て、専任としました。独立行政法人・特殊法人・地方公社などの発注なら、工事の目的物(施設・工作物の種類)で決まるので、発注者に確かめてください。' });
+    // 文は平らな言葉にし、条番号と抜き書きは basis で根拠の折りたたみと CSV の根拠の列に出す(F62a)。画面の「公共」には国・地方公共団体でない発注者も含むので、言い切らず、確かめることを先に書く(F67a)
+    checks.push({ key: 'dedicated', label: ded.label, changes: true, basis: ded.basis, message: '公告で、発注者が国か地方公共団体か(独立行政法人・特殊法人・地方公社ではないか)を確かめてください。国か地方公共団体(都道府県・市区町村・一部事務組合など)なら専任が要ります。それ以外なら工事の目的物(施設・工作物の種類)で決まります。' + sharedSiteSentence(input, sharedSiteLimit()) });
   }
   if (engineer.value === 'kanri' && input.engineerQualification !== 'kanri') {
     checks.push({ key: 'engineer', label: engineer.label, message: '受注したら監理技術者を置くが、置ける技術者の資格が「監理技術者」と入っていない。置ける人を確かめる' });

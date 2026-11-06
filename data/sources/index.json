@@ -132,6 +132,45 @@
       "file": "law-rei-37.txt"
     },
     {
+      "id": "rei-15",
+      "kind": "law",
+      "law": "建設業法施行令",
+      "lawId": "331CO0000000273",
+      "article": "15",
+      "title": "建設業法施行令 第15条（公共性のある施設又は工作物）",
+      "url": "https://laws.e-gov.go.jp/law/331CO0000000273",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml",
+      "revisionId": "331CO0000000273_20260401_507CO0000000412",
+      "fetchedAt": "2026-11-06",
+      "file": "law-rei-15.txt"
+    },
+    {
+      "id": "rei-28",
+      "kind": "law",
+      "law": "建設業法施行令",
+      "lawId": "331CO0000000273",
+      "article": "28",
+      "title": "建設業法施行令 第28条（法第二十六条第三項第一号イの金額）",
+      "url": "https://laws.e-gov.go.jp/law/331CO0000000273",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml",
+      "revisionId": "331CO0000000273_20260401_507CO0000000412",
+      "fetchedAt": "2026-11-06",
+      "file": "law-rei-28.txt"
+    },
+    {
+      "id": "rei-30",
+      "kind": "law",
+      "law": "建設業法施行令",
+      "lawId": "331CO0000000273",
+      "article": "30",
+      "title": "建設業法施行令 第30条（同一の主任技術者又は監理技術者を置くことができる工事現場の数）",
+      "url": "https://laws.e-gov.go.jp/law/331CO0000000273",
+      "apiUrl": "https://laws.e-gov.go.jp/api/2/law_data/331CO0000000273?response_format=xml",
+      "revisionId": "331CO0000000273_20260401_507CO0000000412",
+      "fetchedAt": "2026-11-06",
+      "file": "law-rei-30.txt"
+    },
+    {
       "id": "nyukei-15",
       "kind": "law",
       "law": "公共工事の入札及び契約の適正化の促進に関する法律",

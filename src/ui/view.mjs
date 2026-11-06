@@ -22,7 +22,7 @@ export function basisLabel(b) {
   if (!b.article) return [b.title ?? b.law, b.section, b.page ? b.page + 'ページ' : null].filter(Boolean).join(' ');
   const [main, ...subs] = String(b.article).split('の');
   let s = '第' + main + '条' + subs.map((x) => 'の' + x).join('');
-  if (b.paragraph) s += '第' + b.paragraph + '項';
+  if (b.paragraph && !b.soleParagraph) s += '第' + b.paragraph + '項'; // 項が1つだけの条(施行令 第28条など)は項を書かない
   if (b.item) s += '第' + b.item + '号' + (b.branch ? 'の' + b.branch : '');
   return b.law + ' ' + s;
 }

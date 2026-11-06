@@ -54,5 +54,5 @@ test('見ていない範囲を4つの文書に書き、言い過ぎの語を書�
 });
 
 test('公開の説明の抜き書きの件数が同じ日の数にそろっている', () => {
-  for (const file of ['README.md', 'docs/overview.md']) assert.match(read(file), /規則表の抜き書き 337 件が原文にある/, file);
+  for (const file of ['README.md', 'docs/overview.md']) assert.match(read(file), /規則表の抜き書き 344 件が原文にある/, file);
 });

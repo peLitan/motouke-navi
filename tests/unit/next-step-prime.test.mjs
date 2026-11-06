@@ -82,7 +82,7 @@ test('見本: 今までどおり「確認が要る」の件で、副題は専任
   const n = nextText(page.el('result-top').innerHTML);
   assert.equal(n.title, '次にすること: 「確認が要る」の 1件を確かめる');
   assert.equal(n.href, 'open-items');
-  assert.match(n.sub, /^技術者を専任で置く必要があるか: 発注者は国か地方公共団体/);
+  assert.match(n.sub, /^技術者を専任で置く必要があるか: 公告で、発注者が国か地方公共団体か/);
 });
 
 test('公告の文が無ければ、次にすることに元請けの実績は出ない', () => {
@@ -99,7 +99,7 @@ test('専任の確認の文: 条番号が無く、言い切らず、誰に何を
   assert.doesNotMatch(c.message, ARTICLE);
   assert.ok(!c.message.includes('このままでよい'));
   assert.ok(!c.message.includes('公団'), '今は無いものを書かない');
-  for (const w of ['都道府県', '市区町村', '一部事務組合', '独立行政法人', '特殊法人', '地方公社', '工事の目的物', '発注者に確かめてください']) assert.ok(c.message.includes(w), w);
+  for (const w of ['都道府県', '市区町村', '一部事務組合', '独立行政法人', '特殊法人', '地方公社', '工事の目的物', '確かめてください']) assert.ok(c.message.includes(w), w);
   assert.equal(c.changes, true, '「この要るは変わることがある」の印は残す');
 });
 

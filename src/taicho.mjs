@@ -70,6 +70,7 @@ export function resolveQuoteIds(list, quotes, sources, label) {
       law: s.law ?? s.title,
       article: q.article,
       paragraph: q.paragraph,
+      ...(q.soleParagraph ? { soleParagraph: true } : {}),
       item: q.item,
       ...(q.branch ? { branch: q.branch } : {}),
       quote: q.text,
