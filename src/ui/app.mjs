@@ -232,11 +232,17 @@ function openIntake(doc) {
 }
 // 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開く。動くのはリンクの既定の動きに任せる
 export function openPanelForLink(doc, href) {
-  const target = doc.getElementById(String(href ?? '').replace(/^#/, ''));
+  const id = String(href ?? '').replace(/^#/, '');
+  const target = doc.getElementById(id);
   const panel = target?.closest?.('[id^="panel-"]');
   if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
   // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
   for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
+  // 段取りの行から飛ぶと、閉じて出る表も開く(F54a)
+  if (id === 'schedule-result') {
+    const table = target?.querySelector?.('details.schedule-table');
+    if (table) table.open = true;
+  }
 }
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける

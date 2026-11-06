@@ -405,11 +405,16 @@ export function renderResultTop(state = {}) {
   if (errors) return next;
   const required = state.bid.items.filter((it) => (vals ? displayStatus(it, vals) : it.status) === 'required').length;
   const safety = state.safety?.count;
-  const stat = (cls, href, num, lab, sub) => '<li><a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
-  return '<ul class="stats" aria-label="結果の件数(候補)">'
+  const stat = (cls, href, num, lab, sub, li = '<li>') => li + '<a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
+  // スマホ幅だけの4つ目の行(F54a)。国の例などの件数で自分の工事の判定ではないので、印を付けず名前に「例」を入れる
+  const schedule = state.scheduleNotRead ? ['schedule-heading', '−', 'この工種の段取りの例はまだありません']
+    : typeof state.scheduleCount === 'number' ? ['schedule-result', state.scheduleCount + '件', 'いつ・何を・誰にの行。自分の発注者の仕様書で確かめてください']
+    : ['schedule-heading', '−', '条件を入れると出ます'];
+  return '<ul class="stats" aria-label="結果の件数と段取りの例(候補)">'
     + stat('required', 'bid-result', STATUS_MARK.required + ' ' + required, '要るものの候補', '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
     + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る', '自分で確かめる点(件)')
     + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
+    + stat('schedule', schedule[0], schedule[1], '受注後の段取りの例', schedule[2], '<li class="phone-only">')
     + '</ul>' + next;
 }
 

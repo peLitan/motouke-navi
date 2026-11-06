@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PO4kiA80HYEYFl7tCGOtomWM0ir8/CtAbLb8Zpp0/iM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XI/HwQSWYum31+qb5xYicrgvnYQBvFGxmgcv5aF6OFM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -172,6 +172,7 @@
   .stat-required .stat-num { color: var(--need); }
   .stat-check { border-top-color: var(--check-line); }
   .stat-safety { border-top-color: var(--ink-2); }
+  .stat-schedule { border-top-color: var(--ink-2); }
   .next-card { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; color: var(--ink); background: var(--primary-bg); border: 1px solid var(--primary); border-radius: 12px; padding: 1rem 1.5rem; margin: 0 0 1rem; }
   .next-text { flex: 1 1 16rem; min-width: 0; }
   .next-title { margin: 0; font-size: 1.1875rem; font-weight: bold; }
@@ -268,14 +269,29 @@
   .checklist-table .cl-check label { display: inline-block; min-height: 44px; line-height: 44px; }
   .checklist-table tr.cl-empty .cl-status { font-weight: 700; }
   .checklist-notice { font-weight: 700; }
+  /* スマホ幅だけに出す部品(F54a)。パソコン幅と紙には出さない */
+  .phone-only { display: none; }
   @media (max-width: 40rem) {
+    html { scroll-padding-bottom: 4rem; }
+    .phone-only { display: block; }
+    li.phone-only { display: list-item; }
     .wrap { padding: 0 0.75rem; }
     .start h2 { font-size: 1.5rem; }
     .result, .form, .summary, .other-tools { padding: 0.75rem 1rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
     .entry-choices { grid-template-columns: minmax(0, 1fr); }
     .stats { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    /* 数字のカードは、数字が左・名前と説明が右の行にする(F54a)。説明は消さない */
+    .stat { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: 0.75rem; align-items: center; padding: 0.5rem 0.75rem; border-top-width: 1px; border-left: 6px solid var(--line); }
+    .stat-num { grid-row: 1 / span 2; font-size: 1.5rem; }
+    .stat-required { border-left-color: var(--need-line); }
+    .stat-check { border-left-color: var(--check-line); }
+    .stat-safety { border-left-color: var(--ink-2); }
+    .stat-schedule { border-left-color: var(--ink-2); }
     .next-card { padding: 0.75rem 1rem; }
+    .next-go { width: 100%; justify-content: center; }
+    #bid-run, #ledger-run, #plan-run, .rules-switch button, .sample-banner button { width: 100%; margin: 0.25rem 0; }
+    .sample-banner { padding: 0.5rem 0.75rem; }
     /* 下に止まる帯(F43c)は「次へ」の1つだけ。流れの中の行なので、下まで動かせば本文は隠れない */
     .step-next { position: sticky; bottom: 0; margin: 1rem 0 0; padding: 0.5rem 0; background: var(--paper); border-top: 1px solid var(--line); }
     #next-step-3, #confirm-go { width: 100%; margin: 0; }
@@ -294,6 +310,10 @@
     table.schedule td:empty { display: none; }
     table.schedule td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
   }
+  /* 指の端末は押す所を 48px にする(F54a)。ここには min-height だけを書く */
+  @media (pointer: coarse) {
+    button, input[type="text"], select, input[type="file"], textarea, details > summary, .radio-group div, .unknown-check, .check-row, .entry-link, .next-go { min-height: 3rem; }
+  }
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
   @media print {
@@ -302,6 +322,7 @@
     body { font-size: 10.5pt; }
     .wrap, .topbar .wrap { max-width: none; padding: 0; }
     button, .export, .no-print { display: none !important; }
+    .phone-only { display: none !important; }
     p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status) { display: none !important; }
     /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
     #panel-1[hidden], #panel-2[hidden], #panel-3[hidden] { display: block; }
@@ -2116,11 +2137,16 @@ function renderResultTop(state = {}) {
   if (errors) return next;
   const required = state.bid.items.filter((it) => (vals ? displayStatus(it, vals) : it.status) === 'required').length;
   const safety = state.safety?.count;
-  const stat = (cls, href, num, lab, sub) => '<li><a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
-  return '<ul class="stats" aria-label="結果の件数(候補)">'
+  const stat = (cls, href, num, lab, sub, li = '<li>') => li + '<a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
+  // スマホ幅だけの4つ目の行(F54a)。国の例などの件数で自分の工事の判定ではないので、印を付けず名前に「例」を入れる
+  const schedule = state.scheduleNotRead ? ['schedule-heading', '−', 'この工種の段取りの例はまだありません']
+    : typeof state.scheduleCount === 'number' ? ['schedule-result', state.scheduleCount + '件', 'いつ・何を・誰にの行。自分の発注者の仕様書で確かめてください']
+    : ['schedule-heading', '−', '条件を入れると出ます'];
+  return '<ul class="stats" aria-label="結果の件数と段取りの例(候補)">'
     + stat('required', 'bid-result', STATUS_MARK.required + ' ' + required, '要るものの候補', '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
     + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る', '自分で確かめる点(件)')
     + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
+    + stat('schedule', schedule[0], schedule[1], '受注後の段取りの例', schedule[2], '<li class="phone-only">')
     + '</ul>' + next;
 }
 
@@ -7856,11 +7882,17 @@ function openIntake(doc) {
 }
 // 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開く。動くのはリンクの既定の動きに任せる
 function openPanelForLink(doc, href) {
-  const target = doc.getElementById(String(href ?? '').replace(/^#/, ''));
+  const id = String(href ?? '').replace(/^#/, '');
+  const target = doc.getElementById(id);
   const panel = target?.closest?.('[id^="panel-"]');
   if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
   // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
   for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
+  // 段取りの行から飛ぶと、閉じて出る表も開く(F54a)
+  if (id === 'schedule-result') {
+    const table = target?.querySelector?.('details.schedule-table');
+    if (table) table.open = true;
+  }
 }
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける

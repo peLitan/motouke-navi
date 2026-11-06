@@ -141,3 +141,66 @@ test('07 の決まり: 外部の読み込み・通信・保存が無く、断り
   // index.html 1つで動く(作り直した index.html が今の src と同じ)
   assert.equal(fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8'), html, 'index.html を作り直していない');
 });
+
+// F54a: スマホ幅の結果の先頭の行・押す所・帯の焦点
+const mediaBody = (cond) => screenCss.match(new RegExp('@media \\(' + cond + '\\) \\{([\\s\\S]*?)\\n {2}\\}'))?.[1];
+const phoneRules = () => [...mediaBody('max-width: 40rem').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
+const phoneRule = (sel) => phoneRules().find((r) => r.sel === sel)?.body;
+
+test('F54a (1) 画面の CSS で order を使わない(DOM の順と見た目の順を合わせる)', () => {
+  assert.ok(!/(?<![-\w])order\s*:/.test(css), 'order がある');
+});
+
+test('F54a (2) .phone-only は既定で隠し、40rem の中で出し、印刷では隠す', () => {
+  assert.equal(prop(ruleOf('.phone-only'), 'display'), 'none');
+  assert.equal(prop(phoneRule('.phone-only'), 'display'), 'block');
+  assert.equal(prop(phoneRule('li.phone-only'), 'display'), 'list-item');
+  assert.ok([...printCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)].some((m) => m[1].split(',').map((x) => x.trim()).includes('.phone-only') && /display: none !important/.test(m[2])), '印刷で隠していない');
+});
+
+test('F54a (3) 下の帯が焦点を隠さない: 40rem の中の scroll-padding-bottom が帯の高さ(61px)以上', () => {
+  assert.ok(toPx(prop(phoneRule('html'), 'scroll-padding-bottom')) >= 61);
+  assert.equal(prop(ruleOf('html'), 'scroll-padding-bottom'), undefined, 'パソコン幅にも効いている');
+});
+
+test('F54a (4) 下に止まる決まりは1つのまま', () => {
+  assert.equal((css.match(/position: sticky/g) ?? []).length, 1);
+});
+
+test('F54a (5) 40rem の中の .stat は grid の行で、説明を隠さない', () => {
+  const st = phoneRule('.stat');
+  assert.equal(prop(st, 'display'), 'grid');
+  assert.equal(prop(st, 'grid-template-columns'), '4.5rem minmax(0, 1fr)');
+  assert.ok([4, 8, 12, 16, 24, 32, 40].includes(toPx(prop(st, 'column-gap'))));
+  assert.equal(prop(phoneRule('.stat-num'), 'font-size'), '1.5rem');
+  for (const r of rules) if (r.sel.split(',').some((x) => x.includes('.stat-sub'))) assert.ok(!/display: none|visibility: hidden/.test(r.body), r.sel);
+  for (const c of ['.stat-required', '.stat-check', '.stat-safety', '.stat-schedule']) assert.ok(prop(phoneRule(c), 'border-left-color'), c);
+  assert.equal(prop(ruleOf('.stat'), 'display'), 'block', 'パソコン幅のカードが変わった');
+});
+
+test('F54a 主なボタンは 40rem の中で幅いっぱい', () => {
+  assert.equal(prop(phoneRule('.next-go'), 'width'), '100%');
+  const wide = phoneRules().find((r) => r.sel.includes('#bid-run'));
+  for (const s of ['#bid-run', '#ledger-run', '#plan-run', '.rules-switch button', '.sample-banner button']) assert.ok(wide.sel.split(',').map((x) => x.trim()).includes(s), s);
+  assert.equal(prop(wide.body, 'width'), '100%');
+  assert.equal(prop(phoneRule('.sample-banner'), 'padding'), '0.5rem 0.75rem');
+});
+
+test('F54a (6) pointer: coarse の中は min-height だけで、44px 以上。節 4.5 の部品がそろう', () => {
+  const inner = [...mediaBody('pointer: coarse').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
+  assert.ok(inner.length > 0);
+  for (const r of inner) {
+    const names = [...r.body.matchAll(/([\w-]+)\s*:/g)].map((m) => m[1]);
+    assert.deepEqual(names, ['min-height'], r.sel);
+    assert.ok(toPx(prop(r.body, 'min-height')) >= 48, r.sel);
+  }
+  const sels = inner.flatMap((r) => r.sel.split(',').map((x) => x.trim()));
+  for (const s of ['button', 'input[type="text"]', 'select', 'input[type="file"]', 'textarea', 'details > summary', '.radio-group div', '.unknown-check', '.check-row', '.entry-link', '.next-go']) assert.ok(sels.includes(s), s);
+});
+
+test('F54a (7) pointer の @media は @media print より前', () => {
+  const print = css.indexOf('@media print');
+  const found = [...css.matchAll(/@media \((?:any-)?pointer:/g)];
+  assert.ok(found.length > 0);
+  for (const m of found) assert.ok(m.index < print, m[0]);
+});
