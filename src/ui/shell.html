@@ -77,6 +77,7 @@
   .summary a, .result a, .result-plain a { display: inline-block; padding: 0.25rem 0; }
   .human { font-weight: bold; }
   .errors { color: var(--need); }
+  .field-error { color: var(--need); margin: 0.25rem 0 0; }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 0.75rem; }
   footer { margin-top: 2rem; border-top: 1px solid var(--line); font-size: 1rem; color: var(--ink); }
   .export { margin: 0.5rem 0 1rem; }
@@ -471,10 +472,12 @@
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-hint">
 <span class="unknown-check"><input type="checkbox" id="contract-amount-unknown" name="contract-amount-unknown"><label for="contract-amount-unknown">分からない</label></span>
+<p id="contract-amount-error" class="field-error" hidden></p>
 <details class="fold hint-fold"><summary aria-label="請負代金の見込みの説明">説明</summary><p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。</p></details></div>
 <div class="row"><label for="subcontract-total">下請けの総額(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000" aria-describedby="subcontract-total-hint">
 <span class="unknown-check"><input type="checkbox" id="subcontract-total-unknown" name="subcontract-total-unknown"><label for="subcontract-total-unknown">分からない</label></span>
+<p id="subcontract-total-error" class="field-error" hidden></p>
 <details class="fold hint-fold"><summary aria-label="下請けの総額の説明">説明</summary><p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。</p></details></div>
 <div class="row"><label for="license">元請けの許可の種類(この工事の業種)<span class="req req-must">※必須</span></label>
 <select id="license" name="license" aria-describedby="license-hint">

@@ -54,7 +54,7 @@ test('手入力: 確認するで確かめへ進む。値は読みやすい形で
   assert.match(value(page, 'contract-amount'), /12,000,000円\(税込み\).*出どころ: 手入力/);
   assert.match(value(page, 'subcontract-total'), /分からない.*出どころ: 手入力/);
   assert.match(value(page, 'role'), /未回答.*出どころ: 入れていません/);
-  assert.match(value(page, 'ict-measure'), /講じない.*出どころ: 手入力/);
+  assert.match(value(page, 'ict-measure'), /講じない.*出どころ: 最初の値\(変えていません\)/);
   for (const r of CONFIRM_ROWS) assert.match(value(page, r.key), /出どころ: /, r.key);
   assert.ok(!/推定/.test(section + CONFIRM_ROWS.map((r) => value(page, r.key)).join('')), '手入力に推定が付いている');
   await page.click('confirm-go');

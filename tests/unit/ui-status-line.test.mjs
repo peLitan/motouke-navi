@@ -100,10 +100,12 @@ test('入口に戻ると、自分の工事で入れ直すと、知らせは空�
   assert.equal(status(page), '');
 });
 
-test('aria-invalid: 読めない金額の欄にだけ付き、直して押すと外れる', async () => {
+test('aria-invalid: 読めない金額の欄にだけ付き、直して押すと外れる。打っている途中は付かない(F59)', async () => {
   const page = runPage();
-  await page.set('contract-amount', '2億円');
-  assert.equal(page.el('contract-amount').getAttribute('aria-invalid'), null, '押す前から付いた');
+  const typed = page.el('contract-amount');
+  typed.value = '2億円';
+  typed.dispatchEvent({ type: 'input', bubbles: false });
+  assert.equal(typed.getAttribute('aria-invalid'), null, '打っている途中から付いた');
   await page.click('bid-run');
   assert.equal(page.el('contract-amount').getAttribute('aria-invalid'), 'true');
   assert.equal(page.el('subcontract-total').getAttribute('aria-invalid'), null);

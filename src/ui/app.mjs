@@ -1,7 +1,7 @@
 // 画面のつながり(F05a・F05e・F05b・F06a・F07): 入力欄を読み、入札前の確認と施工体制台帳の判定を動かし、結果の欄に書く。結果を印刷・CSV に書き出す。
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
-import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
+import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
@@ -25,7 +25,7 @@ import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../
 import { parseIntakeFile, intakeLines, INTAKE_MAX_BYTES } from '../intake-load.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
-import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow } from './confirm.mjs';
+import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
 import { startMask, loadMaskFile, readDictFile, readMapFile } from './mask-app.mjs';
 import { readAiFile, RESULT_FORMAT } from './ai-app.mjs';
 import { downloadText } from './download.mjs';
@@ -199,7 +199,7 @@ function openPanel(doc, n, scrollId = 'steps') {
 // 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
 let fieldSources = {};
 export function openConfirm(doc) {
-  for (const r of confirmRows(collect(doc), fieldSources)) {
+  for (const r of confirmRows(collect(doc), fieldSources, initialForm)) {
     const el = doc.getElementById('confirm-value-' + r.key);
     if (el) el.innerHTML = renderConfirmRow(r);
   }
@@ -268,13 +268,21 @@ function bidNotice(done) {
 function resultNotice(head) {
   return bidNotice(null) ?? resultCountText(head, summary.bid, summary.values) + NEXT_STEP;
 }
-// 金額の欄の読めない値に印を付け、直ったら外す
+// 金額の欄の読めない値に印と文を付け、直ったら外す(F59)。説明の hint は残し、誤りの id だけを後ろに足し引きする
 function markAmountFields(doc, values) {
   for (const [id, bad] of amountValidity(values)) {
     const el = doc.getElementById(id);
     if (!el) continue;
     if (bad) el.setAttribute('aria-invalid', 'true');
     else el.removeAttribute('aria-invalid');
+    const errorId = id + '-error';
+    const rest = (el.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((x) => x && x !== errorId);
+    el.setAttribute('aria-describedby', (bad ? [...rest, errorId] : rest).join(' '));
+    const note = doc.getElementById(errorId);
+    if (note) {
+      note.textContent = bad ? amountFieldError(values[id]) : '';
+      note.hidden = !bad;
+    }
   }
 }
 
@@ -823,10 +831,12 @@ export function loadIntakeFile(doc, text, name) {
     if (typeof Event === 'function') participation.dispatchEvent?.(new Event('input', { bubbles: true }));
   }
   const filled = t.participation ? [...Object.keys(t.form), 'participation-conditions'] : Object.keys(t.form);
-  fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', t.quotes, filled) };
+  const values = collect(doc);
+  markAmountFields(doc, values); // 読めない値を読み込みで置き換えたら、欄の下の文も消す
+  fieldSources = { ...fieldSources, ...markSources(values, '公告', t.quotes, filled) };
   // 予定価格の注意は、請負代金の欄へ値を入れたときだけ(F65a)。入れていないのに言うと、どの値の話か分からない
   const amountNote = Object.hasOwn(t.form, 'contract-amount') ? '予定価格は上限の見込みで、請負代金そのものではありません。' : '';
-  setIntakeStatus(doc, (typeof name === 'string' ? name + ' を読みました。' : '') + '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。' + amountNote + '原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
+  setIntakeStatus(doc, (typeof name === 'string' ? name + ' を読みました。' : '') + '「' + t.title + '」から ' + Object.keys(t.form).length + ' 欄を入れました。' + amountNote + workKindWarning(values, '「工種」の欄') + '原文で確かめてください。ブラウザには保存しません。残りの欄を入れて「確認する」を押すと、入れた内容を確かめる画面へ進みます。', intakeLines(t));
   return true;
 }
 
@@ -1216,6 +1226,10 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       };
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
+    }
+    // 金額の欄の誤りは欄を離れたときに見る。打っている途中(input)には出さない(F59)
+    for (const [id] of amountValidity()) {
+      for (const target of [id, id + '-unknown']) doc.getElementById(target)?.addEventListener('change', () => markAmountFields(doc, collect(doc)));
     }
     // ブラウザのメニューから印刷したときも、日時を描いて折りたたみを開く
     if (win && win.addEventListener) {

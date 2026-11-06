@@ -2,6 +2,7 @@
 // DOM には触らない。画面からは欄の id をキーにした値の入れ物を渡す(チェックの欄は true / false)。
 import { DEFAULT_WORK_KIND, isWorkKind } from '../work-kinds.mjs';
 
+const TOO_LARGE = '金額が大きすぎます';
 // 全角の数字・桁区切り・空白・「円」を許して、0 以上の整数の円にする。
 // 返り値: { value: 数 | null, error: 文 | null }。空なら value は null で error も null(入力が無い)
 export function parseYen(raw) {
@@ -12,7 +13,7 @@ export function parseYen(raw) {
   if (s === '') return { value: null, error: null };
   if (!/^\d+$/.test(s)) return { value: null, error: '金額は数字で入れてください(桁区切りは使えます。小数・負の数・「万」などの単位は使えません): ' + String(raw) };
   const n = Number(s);
-  if (!Number.isSafeInteger(n)) return { value: null, error: '金額が大きすぎます: ' + String(raw) };
+  if (!Number.isSafeInteger(n)) return { value: null, error: TOO_LARGE + ': ' + String(raw) };
   return { value: n, error: null };
 }
 
@@ -71,6 +72,13 @@ export function formErrors(values = {}) {
 // 金額の欄ごとの読めるかどうか(aria-invalid を付ける欄を決める)。[欄の id, 読めないなら true] の列
 export function amountValidity(values = {}) {
   return AMOUNT_FIELDS.map(([key]) => [key, Boolean(amountError(values, key))]);
+}
+
+// 読めない金額の欄の下に出す文(F59)。数字だけで大きすぎる値に「数字だけで」と言わない
+export function amountFieldError(raw) {
+  return parseYen(raw).error?.startsWith(TOO_LARGE)
+    ? TOO_LARGE + '。桁を確かめてください(例 200,000,000)'
+    : '読めない値です。数字だけで入れてください(例 200,000,000)';
 }
 
 export const BID_FORM_IDS = ['orderer', 'direct-unset', 'direct', 'direct-sub', 'direct-unknown', 'work-type', 'work-kind', 'contract-amount', 'contract-amount-unknown', 'subcontract-total', 'subcontract-total-unknown', 'license', 'engineer-qualification', 'ict-measure', 'participation-conditions'];

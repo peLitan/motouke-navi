@@ -171,7 +171,8 @@ test('見本: docs/samples の結果は、今のスクリプトの出力と同�
 
 function fakeDoc() {
   const els = new Map();
-  return { els, getElementById(id) { if (!els.has(id)) els.set(id, { innerHTML: '', textContent: '', value: '', hidden: true, checked: false }); return els.get(id); } };
+  const attrs = () => { const a = {}; return { getAttribute: (k) => a[k] ?? null, setAttribute: (k, v) => { a[k] = String(v); }, removeAttribute: (k) => { delete a[k]; } }; };
+  return { els, getElementById(id) { if (!els.has(id)) els.set(id, { innerHTML: '', textContent: '', value: '', hidden: true, checked: false, ...attrs() }); return els.get(id); } };
 }
 
 test('画面の読み込み: 見本のファイルで欄が入り、確かめが要る行が出る。金額の「分からない」を外す', () => {
