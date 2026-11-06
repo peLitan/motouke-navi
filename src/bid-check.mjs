@@ -180,6 +180,8 @@ function sharedSiteSentence(input, s) {
   return amounts('未満') + 'などの条件を満たすと、' + s.sites + 'つの現場まで兼ねられる特例があります。' + undecided;
 }
 
+const DEDICATED_ENGINEER_SENTENCE = '専任の監理技術者(現場を兼ねる特例の監理技術者を含む)は、監理技術者資格者証の交付を受け、国土交通大臣の登録を受けた講習を受講した人から選ばなければなりません。';
+
 function dedicatedItem(input, t) {
   const line = isKenchiku(input) ? t.kenchiku : t.other;
   const s = sharedSiteLimit();
@@ -205,9 +207,24 @@ function dedicatedItem(input, t) {
     };
   }
   if (input.orderer === 'private') {
-    return { ...item, status: 'needs_check', note: '請負代金(税込み)が ' + yen(line) + ' 以上。民間工事では、施設・工作物が施行令 第27条第1項第3号(学校・病院・共同住宅・事務所・工場・倉庫など)か第2号(施行令 第15条第1号・第3号の施設・工作物。鉄道・道路・橋・上下水道、電気やガスの事業用の施設など)に当たれば専任。当たるかは工事の対象で確かめる。' + sharedSiteSentence(input, s) };
+    return { ...item, status: 'needs_check', note: '請負代金(税込み)が ' + yen(line) + ' 以上。民間工事では、施設・工作物が施行令 第27条第1項第3号(学校・病院・共同住宅・事務所・工場・倉庫など)か第2号(施行令 第15条第1号・第3号の施設・工作物。鉄道・道路・橋・上下水道、電気やガスの事業用の施設など)に当たれば専任。' + (input.direct === false ? '当たるかは工事の対象を元請けに確かめる。' : '当たるかは工事の対象で確かめる。') + sharedSiteSentence(input, s) + (input.direct === false ? '' : DEDICATED_ENGINEER_SENTENCE) };
   }
-  return { ...item, status: 'needs_check', note: '発注者が公共か民間かの入力が無いので判定できない' };
+  return { ...item, status: 'needs_check', note: '発注者が公共か民間かの入力が無いので判定できない' + (input.direct === false ? '。発注者が公共か民間かは元請けに確かめる' : '') };
+}
+
+// 入れた額に消費税 10% を足すと境目以上になるか(F67b)。「要らない」の項目(額が境目より下)にだけ使う。「1.1倍」は小数の誤差が出ないよう整数で比べる
+const crossesWithTax = (amount, line) => amount * 11 >= line * 10;
+
+// 専任が要るときの技術者の選び方の1行(F67b)。条番号は書かず、根拠の折りたたみに出す(F62a)。
+// 第26条第5項は第2項の監理技術者(発注者から直接請け負う者が置く)の定めで、3か月の雇用はマニュアルの原文が「元請の」と書くので、下請けには出さない
+// 民間は3か月の定めが掛からず、専任かも確かめる段階なので、1行にせず確かめの文の中に資格の文だけを足す(dedicatedItem)
+function dedicatedPersonCheck() {
+  return {
+    key: 'dedicated',
+    label: '専任の技術者の資格と雇用関係',
+    basis: basisOf('q-kensetsu-26-5', 'q-mlit-manual-koyo'),
+    message: DEDICATED_ENGINEER_SENTENCE + '公共工事の元請けでは、専任の主任技術者・監理技術者などに、入札の申込の日以前に3か月以上の雇用関係が要ります(申込の無い指名競争は入札の執行日、随意契約は見積書の提出の日が基準です)。これは国土交通省の監理技術者制度運用マニュアルによる運用で、法令の条ではないので、この道具は判定していません。',
+  };
 }
 
 // 入力: { orderer: 'public'|'private', direct, workType: 'kenchiku-ikkatsu'|'other', contractAmount(円・税込み), hasSubcontract,
@@ -228,7 +245,13 @@ export function bidCheck(input = {}) {
   const ded = items[5];
   if (ded.status === 'required' && input.orderer === 'public') {
     // 文は平らな言葉にし、条番号と抜き書きは basis で根拠の折りたたみと CSV の根拠の列に出す(F62a)。画面の「公共」には国・地方公共団体でない発注者も含むので、言い切らず、確かめることを先に書く(F67a)
-    checks.push({ key: 'dedicated', label: ded.label, changes: true, basis: ded.basis, message: '公告で、発注者が国か地方公共団体か(独立行政法人・特殊法人・地方公社ではないか)を確かめてください。国か地方公共団体(都道府県・市区町村・一部事務組合など)なら専任が要ります。それ以外なら工事の目的物(施設・工作物の種類)で決まります。' + sharedSiteSentence(input, sharedSiteLimit()) });
+    // 公告は入札する者へ向けた文書なので、下請けの確かめる相手は元請けにする(F67b)
+    checks.push({ key: 'dedicated', label: ded.label, changes: true, basis: ded.basis, message: (input.direct === false ? '元請けに' : '公告で') + '、発注者が国か地方公共団体か(独立行政法人・特殊法人・地方公社ではないか)を確かめてください。国か地方公共団体(都道府県・市区町村・一部事務組合など)なら専任が要ります。それ以外なら工事の目的物(施設・工作物の種類)で決まります。' + sharedSiteSentence(input, sharedSiteLimit()) });
+    if (input.direct !== false) checks.push(dedicatedPersonCheck());
+  }
+  // 「要らない」の境目のすぐ下で、税抜きの入れ違いなら結論が変わる額のときだけ知らせる(F67b)
+  if (ded.status === 'not_required' && crossesWithTax(input.contractAmount, ded.threshold.amount)) {
+    checks.push({ key: 'dedicated', label: ded.label, changes: true, basis: basisOf('q-rei-27-1', 'q-mlit-guideline-tax'), message: '税抜きで入れていませんか(この欄は税込みです)。税抜きの額なら、消費税10%を足すと ' + yen(ded.threshold.amount) + ' 以上になり、専任が要るかどうかの答えが変わることがあります。' });
   }
   if (engineer.value === 'kanri' && input.engineerQualification !== 'kanri') {
     checks.push({ key: 'engineer', label: engineer.label, message: '受注したら監理技術者を置くが、置ける技術者の資格が「監理技術者」と入っていない。置ける人を確かめる' });

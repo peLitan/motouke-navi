@@ -394,6 +394,21 @@
       "license": "PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
     },
     {
+      "id": "mlit-kanri-manual",
+      "edition": "最終改正 令和7年1月28日",
+      "kind": "document",
+      "title": "監理技術者制度運用マニュアル(国土交通省。平成16年3月1日 国総建第316号、最終改正 令和7年1月28日 国不建技第147号。二－四(3) 恒常的な雇用関係の考え方)",
+      "publisher": "国土交通省",
+      "url": "https://www.mlit.go.jp/totikensangyo/const/content/001859191.pdf",
+      "pageUrl": "https://www.mlit.go.jp/totikensangyo/const/sosei_const_tk1_000002.html",
+      "section": "二－四(3)①",
+      "page": 9,
+      "fetchedAt": "2026-11-06",
+      "file": "mlit-kanri-manual-2-4-3.txt",
+      "excerpt": "9ページの「（３）恒常的な雇用関係の考え方」の見出しと①の本文(3段落)だけ。PDF の文字(ToUnicode)をそのまま取り出し、PDF の折り返しだけをつないだ",
+      "license": "PDF に権利表記が無いので、国土交通省ウェブサイト利用規約(https://www.mlit.go.jp/links/terms-of-use.html)により公共データ利用規約(第1.0版)(PDL1.0)として扱い、出典を表示する"
+    },
+    {
       "id": "mlit-doboku-spec-r8",
       "edition": "令和8年3月",
       "kind": "document",

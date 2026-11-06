@@ -80,7 +80,7 @@ test('見本: 今までどおり「確認が要る」の件で、副題は専任
   await page.click('sample-load');
   await page.click('confirm-go');
   const n = nextText(page.el('result-top').innerHTML);
-  assert.equal(n.title, '次にすること: 「確認が要る」の 1件を確かめる');
+  assert.equal(n.title, '次にすること: 「確認が要る」の 2件を確かめる');
   assert.equal(n.href, 'open-items');
   assert.match(n.sub, /^技術者を専任で置く必要があるか: 公告で、発注者が国か地方公共団体か/);
 });

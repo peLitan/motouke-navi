@@ -288,7 +288,7 @@ test('画面を動かす: 見本のあとに先頭のカードが出て、飛ぶ
   await page.click('sample-load');
   assert.equal(page.el('result-top').hidden, false);
   const t = page.text('result-top');
-  assert.ok(t.includes('● 6') && t.includes('! 1') && t.includes('次にすること'), t);
+  assert.ok(t.includes('● 6') && t.includes('! 2') && t.includes('次にすること'), t);
   await page.set('contract-amount', '1000');
   assert.ok(page.text('result-top').includes('もう一度「確認する」を押す'));
   await page.click('sample-reenter');

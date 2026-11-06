@@ -28,16 +28,16 @@ test('印: 要るは ×の仲間を使わず ●。4つの状態の印はどれ�
   assert.ok(statusBadge('required').includes('aria-hidden="true"'), '印を読み上げに渡している');
 });
 
-test('見本: 画面の結果に ✕ が出ず、印は ●。「確認が要る」0項目と確認が要る点 1件の違いを文で示す', () => {
+test('見本: 画面の結果に ✕ が出ず、印は ●。「確認が要る」0項目と確認が要る点 2件の違いを文で示す', () => {
   const values = SAMPLE.form;
   const bid = bidCheck(readBidForm(values));
   const sum = plain(renderSummary({ values, bid }));
   assert.match(sum, /● 要る 6項目/);
   assert.match(sum, /! 確認が要る 0項目/);
-  assert.match(sum, /確認が要る点 1件を入札前の確認の欄に出しています。うち 1件は、結論の出た項目について確かめる点です/);
+  assert.match(sum, /確認が要る点 2件を入札前の確認の欄に出しています。うち 2件は、結論の出た項目について確かめる点です/);
   const out = renderBidResult(bid, values);
   assert.ok(!(out + renderSummary({ values, bid })).includes('✕'));
-  assert.match(out, /<h3>確認が要る点\(1件\)<\/h3><p class="points-note">うち 1件は、結論の出た項目/);
+  assert.match(out, /<h3>確認が要る点\(2件\)<\/h3><p class="points-note">うち 2件は、結論の出た項目/);
 });
 
 test('数え方: まとめ・入札前の確認・最後の一覧の「確認が要る点」は、どの条件でも同じ数', () => {
@@ -97,9 +97,9 @@ test('呼び名と画面の流れ: 「確認が要る項目」が残らず、見
   await page.click('bid-run');
   const sum = page.text('summary');
   assert.match(sum, /● 要る/);
-  assert.match(sum, /確認が要る点 1件/);
-  assert.match(page.text('bid-result'), /確認が要る点\(1件\)/);
-  assert.match(page.text('open-items'), /確認が要る点\(1件\)/);
+  assert.match(sum, /確認が要る点 2件/);
+  assert.match(page.text('bid-result'), /確認が要る点\(2件\)/);
+  assert.match(page.text('open-items'), /確認が要る点\(2件\)/);
   assert.ok(!page.text('open-items').includes('確認が要る項目'));
 });
 

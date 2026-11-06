@@ -110,7 +110,7 @@ test('境目(45,000,000 と 44,999,999、建築一式 90,000,000 と 89,999,999)
   assert.equal(ded(input(44_999_999)).status, 'not_required');
   assert.equal(ded(input(90_000_000, kenchiku)).status, 'required');
   assert.equal(ded(input(89_999_999, kenchiku)).status, 'not_required');
-  assert.equal(check(input(44_999_999)), undefined, '要らないときは特例の文も出ない');
+  assert.ok(!bidCheck(input(44_999_999)).checks.some((c) => c.message.includes(SPECIAL)), '要らないときは特例の文も出ない');
 });
 
 test('民間: 確かめるときも特例の一文が出て、取り込んだ第15条を「無い」とは書かない', () => {
