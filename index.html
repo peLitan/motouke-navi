@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-qr1UUtVvzUOrfEFWYLZRdO6U88kXjObIQtOS2vkhtPE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-hi8EmuWmdnA2yhnFJ7GxuMTtmdlJKPWXCqR35hEqgPs='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -4011,9 +4011,66 @@ function judgeTaicho(input) {
 
 return { matchesValue, matchesCondition, missingInputs, resolveBasis, resolveQuoteIds, judgeWithTables, judgeTaicho };
 })();
+__m["src/brackets.mjs"] = (function () {
+// 公告の抜き書きを、括弧を崩さずに切る部品(F65b)。通信しない。語は変えない。
+// 括弧は「」『』()。丸括弧の半角と全角は同じ種類として対にする(PDF から写すと混ざることがある)。
+
+const OPENERS = { '「': '」', '『': '』', '(': ')', '（': ')' };
+const CLOSERS = { '」': '」', '』': '』', ')': ')', '）': ')' };
+
+// 対になった括弧の [開きの位置, 閉じの位置] の列。
+// 対の無い括弧(項の番号の「1)」や、閉じないまま終わる開き)は入れない。入れると、その後ろの文を全部飲み込む
+function bracketPairs(text) {
+  const open = [];
+  const pairs = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    if (Object.hasOwn(OPENERS, c)) open.push({ at: i, closer: OPENERS[c] });
+    else if (Object.hasOwn(CLOSERS, c)) {
+      const k = open.findLastIndex((o) => o.closer === CLOSERS[c]);
+      if (k < 0) continue;
+      pairs.push([open[k].at, i]);
+      open.length = k;
+    }
+  }
+  return pairs;
+}
+
+// 文の列。つなぐと元の文に戻る(空白も除かない)。対になった括弧の中の「。」では切らない。
+// 例外: 文の頭から始まって「。)」で閉じる丸括弧は、それだけで1文。「(…に限る。)なお、…」の前半の語を
+// 「なお」より後の文の判定に混ぜないため。文の途中の「(…をいう。以下同じ。)は、…」は続きなので切らない
+function splitSentences(text) {
+  const pairs = bracketPairs(text);
+  const inside = (i) => pairs.some(([open, close]) => open < i && i < close);
+  const closesAlone = (i, start) => (text[i] === ')' || text[i] === '）') && text[i - 1] === '。' && !inside(i)
+    && pairs.some(([open, close]) => close === i && !text.slice(start, open).trim())
+    && !/^\s*[。、]/.test(text.slice(i + 1));
+  const out = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if ((text[i] === '。' && !inside(i)) || closesAlone(i, start)) {
+      out.push(text.slice(start, i + 1));
+      start = i + 1;
+    }
+  }
+  if (start < text.length) out.push(text.slice(start));
+  return out;
+}
+
+// 長さで切る。切った所で開いたままの括弧は、元の文の閉じ括弧を「…」の後ろに足す。元の文で閉じていない括弧には足さない
+function cutQuote(text, max) {
+  if (text.length <= max) return text;
+  const closers = bracketPairs(text).filter(([open, close]) => open < max && close >= max)
+    .sort((a, b) => b[0] - a[0]).map(([, close]) => text[close]);
+  return text.slice(0, max) + '…' + closers.join('');
+}
+
+return { bracketPairs, splitSentences, cutQuote };
+})();
 __m["src/prime-experience.mjs"] = (function () {
 // 公告の参加の条件の文から「元請けとしての施工実績」を求める文を探す(F49a)。通信しない。AI も使わない。
 // 文ごとに語で見るだけなので、当たっても「確認が要る」として知らせ、参加できないとは言い切らない。
+const { splitSentences } = __m["src/brackets.mjs"];
 
 // 実績の条件の語
 const EXPERIENCE = /実績|同種(?:の)?工事|同等(?:の)?工事|類似(?:の)?工事/;
@@ -4036,8 +4093,8 @@ const NOT_CONDITION = /加点|評価点|評価項目|評価の対象|評価す�
 const ENGINEER_SENTENCE = /^[^、。]{0,16}技術者(?:は|が)/;
 const ITEM_HEAD = /\n(?=[\s　]*[(（]?[0-9０-９]+[)）.．])/;
 
-// 改行を除いた文の列。PDF の折り返しでは切らず、「。」と番号の付いた行の頭で切る
-const sentences = (text) => String(text ?? '').split(ITEM_HEAD).flatMap((part) => part.split(/(?<=。)/))
+// 改行を除いた文の列。PDF の折り返しと括弧の中の「。」では切らず、「。」と番号の付いた行の頭で切る
+const sentences = (text) => String(text ?? '').split(ITEM_HEAD).flatMap((part) => splitSentences(part))
   .map((s) => s.replace(/[\s　]*\n[\s　]*/g, '').trim()).filter(Boolean);
 
 function isPrimeCondition(s) {
@@ -6085,6 +6142,7 @@ __m["src/ui/confirm.mjs"] = (function () {
 // DOM には触らない。行の枠と「変更」のボタンは shell.html に静的にあり、ここは行の中身の文を作る。
 const { parseYen } = __m["src/ui/form.mjs"];
 const { esc } = __m["src/ui/view.mjs"];
+const { cutQuote } = __m["src/brackets.mjs"];
 const { WORK_KINDS } = __m["src/work-kinds.mjs"];
 
 const select = (key, label, options) => ({ key, label, kind: 'select', field: key, options });
@@ -6157,7 +6215,7 @@ const QUOTE_MAX = 80;
 const SOURCE_TEXT = { 未入力: '入れていません', 手入力: '手入力', 見本: '見本(架空の工事)' };
 const AMOUNT_NOTE = '予定価格は上限の見込みで、請負代金そのものではありません。';
 function renderConfirmRow(r) {
-  const quote = r.quote.length > QUOTE_MAX ? r.quote.slice(0, QUOTE_MAX) + '…' : r.quote;
+  const quote = cutQuote(r.quote, QUOTE_MAX);
   const source = r.source === '公告' ? '公告' + (quote ? '「' + quote + '」' : '') : SOURCE_TEXT[r.source];
   const value = r.state === 'bad' ? '<span class="errors">読めない値: ' + esc(r.text) + '。「変更」で直してください</span>' : esc(r.text);
   const estimated = r.estimated

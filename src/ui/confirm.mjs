@@ -2,6 +2,7 @@
 // DOM には触らない。行の枠と「変更」のボタンは shell.html に静的にあり、ここは行の中身の文を作る。
 import { parseYen } from './form.mjs';
 import { esc } from './view.mjs';
+import { cutQuote } from '../brackets.mjs';
 import { WORK_KINDS } from '../work-kinds.mjs';
 
 const select = (key, label, options) => ({ key, label, kind: 'select', field: key, options });
@@ -74,7 +75,7 @@ const QUOTE_MAX = 80;
 const SOURCE_TEXT = { 未入力: '入れていません', 手入力: '手入力', 見本: '見本(架空の工事)' };
 const AMOUNT_NOTE = '予定価格は上限の見込みで、請負代金そのものではありません。';
 export function renderConfirmRow(r) {
-  const quote = r.quote.length > QUOTE_MAX ? r.quote.slice(0, QUOTE_MAX) + '…' : r.quote;
+  const quote = cutQuote(r.quote, QUOTE_MAX);
   const source = r.source === '公告' ? '公告' + (quote ? '「' + quote + '」' : '') : SOURCE_TEXT[r.source];
   const value = r.state === 'bad' ? '<span class="errors">読めない値: ' + esc(r.text) + '。「変更」で直してください</span>' : esc(r.text);
   const estimated = r.estimated
