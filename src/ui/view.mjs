@@ -176,6 +176,28 @@ export function resultCountText(head, bid, values) {
   const un = provisionalUnanswered(bid, values);
   return un ? '＊ 仮の結果が出ました(未回答 ' + un + '問)。' : head + requiredCountText(bid);
 }
+// 前の結果と比べる形(F78a)。要るの数はカードと同じ見せ方にする(仮の結果は「−」。F62b)
+export function resultSnapshot(bid, values) {
+  return {
+    required: provisionalUnanswered(bid, values) ? '−' : requiredCount(bid),
+    points: needsCheckPoints(bid, values).length,
+    items: bid.items.map((it) => ({ key: it.key, label: it.label, status: displayStatus(it, values) })),
+  };
+}
+// 前の結果からの差の文(F78a)。変わった数と、状態が変わった項目(名前は2つまで)。何も変わらなければ空。
+// 項目名に「…必要があるか」のような問いの形があるので、「…が要らないに」でなく矢印で書く
+const CHANGED_NAMES_MAX = 2;
+export function resultDiffText(before, now) {
+  const counts = [];
+  if (before.required !== now.required) counts.push('要る ' + before.required + '→' + now.required);
+  if (before.points !== now.points) counts.push('確認が要る点 ' + before.points + '→' + now.points);
+  const prevStatus = new Map(before.items.map((it) => [it.key, it.status]));
+  const changed = now.items.filter((it) => prevStatus.get(it.key) !== it.status);
+  if (!counts.length && !changed.length) return '';
+  const names = changed.slice(0, CHANGED_NAMES_MAX).map((it) => it.label + ': ' + BID_STATUS[prevStatus.get(it.key)] + '→' + BID_STATUS[it.status]);
+  if (changed.length > CHANGED_NAMES_MAX) names.push('ほか ' + (changed.length - CHANGED_NAMES_MAX) + '項目');
+  return '前の結果から: ' + [counts.join('、'), names.join('、')].filter(Boolean).map((x) => x + '。').join('');
+}
 export function checkCountText(out) {
   const u = (out.undecidable ?? []).length;
   return '台帳の候補 ' + (out.candidates ?? []).length + '件' + (u ? '、判断できない ' + u + '件' : '') + '。';

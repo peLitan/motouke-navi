@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
+import { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -219,11 +219,25 @@ export function changeField(doc, key) {
   (el?.closest?.('.row') ?? el)?.scrollIntoView?.({ block: 'center' });
   el?.focus?.({ preventScroll: true });
 }
-// 「この内容で結果を見る」: 確かめた値で出し直して、段2 を開く
+// 前に見せた結果(F78a)。覚えるのは loadSample と confirmGo のときだけ。runBid で覚えると、「確認する」のあとの confirmGo で同じ値どうしを比べる
+let shownResult = null;
+const currentResult = () => (bidNotice(null) ? null : resultSnapshot(summary.bid, summary.values));
+// 「この内容で結果を見る」: 確かめた値で出し直して、段2 を開く。
+// 見本の帯が見えているときは、見本から変えた欄の数を帯に出し、前に見せた結果からの差を知らせの末尾に添える(F78a)
 function confirmGo(doc) {
   runBid(doc);
   openPanel(doc, 2);
-  setBidStatus(doc, resultNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
+  if (doc.getElementById('sample-banner')?.hidden !== false) {
+    setBidStatus(doc, resultNotice(BID_NOTICE_DONE));
+    return;
+  }
+  const changed = confirmRows(collect(doc), fieldSources, initialForm).filter((r) => r.source !== '見本').length;
+  const st = doc.getElementById('sample-status');
+  if (st) st.textContent = sampleStatusText(changed);
+  const now = currentResult();
+  const diff = now && shownResult ? resultDiffText(shownResult, now) : '';
+  shownResult = now ?? shownResult;
+  setBidStatus(doc, resultNotice(changed ? BID_NOTICE_DONE : SAMPLE_NOTICE_DONE) + diff);
 }
 // 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
@@ -793,6 +807,11 @@ export function exportPlanCsv(doc) {
   setPlanStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
+// 見本の帯の文。n は見本から変えた欄の数(F78a)。0 なら読み込んだときの文に戻す
+function sampleStatusText(n) {
+  if (n) return '見本「' + SAMPLE.title + '」から ' + n + '欄を変えました(架空の工事を元にしています。実在のものとは関係ありません)。';
+  return '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
+}
 // 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。
 // 書類の入力欄(台帳・目次)がある画面ならそこに入れ、見本の書類の欄にも中身を出す。
 export function loadSample(doc) {
@@ -814,7 +833,7 @@ export function loadSample(doc) {
     if (el) el.checked = true;
   }
   const st = doc.getElementById('sample-status');
-  if (st) st.textContent = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
+  if (st) st.textContent = sampleStatusText(0);
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
@@ -822,6 +841,7 @@ export function loadSample(doc) {
   // 見本のあとも入力の確かめを通る(F43d)。結果は隠れた段に書いておき、「この内容で結果を見る」で開く
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
+  shownResult = currentResult();
   setBidStatus(doc, resultNotice(SAMPLE_NOTICE_DONE));
   openConfirm(doc);
 }

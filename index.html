@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-BYnpjKkx76MR3myfig2yMLPfN9+GbZZIRoln/K+pnqs='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DZlxiNhKG1exjlWpp/lvCvR6EJD1uQFlzKhp1hax9Yg='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -2150,6 +2150,28 @@ function resultCountText(head, bid, values) {
   const un = provisionalUnanswered(bid, values);
   return un ? '＊ 仮の結果が出ました(未回答 ' + un + '問)。' : head + requiredCountText(bid);
 }
+// 前の結果と比べる形(F78a)。要るの数はカードと同じ見せ方にする(仮の結果は「−」。F62b)
+function resultSnapshot(bid, values) {
+  return {
+    required: provisionalUnanswered(bid, values) ? '−' : requiredCount(bid),
+    points: needsCheckPoints(bid, values).length,
+    items: bid.items.map((it) => ({ key: it.key, label: it.label, status: displayStatus(it, values) })),
+  };
+}
+// 前の結果からの差の文(F78a)。変わった数と、状態が変わった項目(名前は2つまで)。何も変わらなければ空。
+// 項目名に「…必要があるか」のような問いの形があるので、「…が要らないに」でなく矢印で書く
+const CHANGED_NAMES_MAX = 2;
+function resultDiffText(before, now) {
+  const counts = [];
+  if (before.required !== now.required) counts.push('要る ' + before.required + '→' + now.required);
+  if (before.points !== now.points) counts.push('確認が要る点 ' + before.points + '→' + now.points);
+  const prevStatus = new Map(before.items.map((it) => [it.key, it.status]));
+  const changed = now.items.filter((it) => prevStatus.get(it.key) !== it.status);
+  if (!counts.length && !changed.length) return '';
+  const names = changed.slice(0, CHANGED_NAMES_MAX).map((it) => it.label + ': ' + BID_STATUS[prevStatus.get(it.key)] + '→' + BID_STATUS[it.status]);
+  if (changed.length > CHANGED_NAMES_MAX) names.push('ほか ' + (changed.length - CHANGED_NAMES_MAX) + '項目');
+  return '前の結果から: ' + [counts.join('、'), names.join('、')].filter(Boolean).map((x) => x + '。').join('');
+}
 function checkCountText(out) {
   const u = (out.undecidable ?? []).length;
   return '台帳の候補 ' + (out.candidates ?? []).length + '件' + (u ? '、判断できない ' + u + '件' : '') + '。';
@@ -2469,7 +2491,7 @@ function renderSummary(state = {}) {
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
 
-return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, requiredCountText, resultCountText, checkCountText, planCountText, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
+return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, requiredCountText, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -8026,7 +8048,7 @@ __m["src/ui/app.mjs"] = (function () {
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
+const { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -8243,11 +8265,25 @@ function changeField(doc, key) {
   (el?.closest?.('.row') ?? el)?.scrollIntoView?.({ block: 'center' });
   el?.focus?.({ preventScroll: true });
 }
-// 「この内容で結果を見る」: 確かめた値で出し直して、段2 を開く
+// 前に見せた結果(F78a)。覚えるのは loadSample と confirmGo のときだけ。runBid で覚えると、「確認する」のあとの confirmGo で同じ値どうしを比べる
+let shownResult = null;
+const currentResult = () => (bidNotice(null) ? null : resultSnapshot(summary.bid, summary.values));
+// 「この内容で結果を見る」: 確かめた値で出し直して、段2 を開く。
+// 見本の帯が見えているときは、見本から変えた欄の数を帯に出し、前に見せた結果からの差を知らせの末尾に添える(F78a)
 function confirmGo(doc) {
   runBid(doc);
   openPanel(doc, 2);
-  setBidStatus(doc, resultNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
+  if (doc.getElementById('sample-banner')?.hidden !== false) {
+    setBidStatus(doc, resultNotice(BID_NOTICE_DONE));
+    return;
+  }
+  const changed = confirmRows(collect(doc), fieldSources, initialForm).filter((r) => r.source !== '見本').length;
+  const st = doc.getElementById('sample-status');
+  if (st) st.textContent = sampleStatusText(changed);
+  const now = currentResult();
+  const diff = now && shownResult ? resultDiffText(shownResult, now) : '';
+  shownResult = now ?? shownResult;
+  setBidStatus(doc, resultNotice(changed ? BID_NOTICE_DONE : SAMPLE_NOTICE_DONE) + diff);
 }
 // 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
@@ -8817,6 +8853,11 @@ function exportPlanCsv(doc) {
   setPlanStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
+// 見本の帯の文。n は見本から変えた欄の数(F78a)。0 なら読み込んだときの文に戻す
+function sampleStatusText(n) {
+  if (n) return '見本「' + SAMPLE.title + '」から ' + n + '欄を変えました(架空の工事を元にしています。実在のものとは関係ありません)。';
+  return '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
+}
 // 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。
 // 書類の入力欄(台帳・目次)がある画面ならそこに入れ、見本の書類の欄にも中身を出す。
 function loadSample(doc) {
@@ -8838,7 +8879,7 @@ function loadSample(doc) {
     if (el) el.checked = true;
   }
   const st = doc.getElementById('sample-status');
-  if (st) st.textContent = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
+  if (st) st.textContent = sampleStatusText(0);
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
@@ -8846,6 +8887,7 @@ function loadSample(doc) {
   // 見本のあとも入力の確かめを通る(F43d)。結果は隠れた段に書いておき、「この内容で結果を見る」で開く
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
+  shownResult = currentResult();
   setBidStatus(doc, resultNotice(SAMPLE_NOTICE_DONE));
   openConfirm(doc);
 }
