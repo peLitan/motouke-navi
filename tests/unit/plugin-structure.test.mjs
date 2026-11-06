@@ -64,7 +64,7 @@ test('hooks.json のコマンドが指すフック(プラグインの中の写�
   assert.equal(decide(null).block, true);
 });
 
-// F56b: Stop の hook は Skill の frontmatter に置く。予備の案の hooks.json へ移しても同じ試験が通るよう、両方を見る
+// F80a: Stop の hook は hooks/hooks.json に置く(F56b では SKILL.md の frontmatter に置いていた)。両方を数え、2か所で登録していないことも見る
 const skillFrontmatter = () => /^---\n([\s\S]*?)\n---\n/.exec(fs.readFileSync(path.join(PLUGIN, 'skills', 'construction-check', 'SKILL.md'), 'utf8'))[1];
 const checkDoneCommands = () => {
   const inSkill = [...skillFrontmatter().matchAll(/^\s*(?:- )?command:\s*(.+?)\s*$/gm)].map((m) => m[1]);
@@ -72,7 +72,7 @@ const checkDoneCommands = () => {
   return [...inSkill, ...inJson].filter((c) => c.includes('check-done'));
 };
 
-test('Stop の hook: command が指すファイルが plugin の中にあり、decide を読み込める。SKILL.md の frontmatter に once が無い', async () => {
+test('Stop の hook: hooks.json の Stop の command が check-done.mjs を指し、そのファイルが plugin の中にあり、decide を読み込める。SKILL.md の frontmatter に hooks: と once が無い', async () => {
   const commands = checkDoneCommands();
   assert.equal(commands.length, 1);
   assert.match(commands[0], /^node "\$\{CLAUDE_PLUGIN_ROOT\}\//);
@@ -85,7 +85,14 @@ test('Stop の hook: command が指すファイルが plugin の中にあり、d
   assert.equal(typeof decide, 'function');
   assert.equal(decide(null), null);
   assert.doesNotMatch(skillFrontmatter(), /^\s*(?:- )?once\s*:/m);
-  assert.match(skillFrontmatter(), /^hooks:\n  Stop:\n    - hooks:\n        - type: command\n          command: /m);
+  const stop = readJson('hooks/hooks.json').hooks.Stop;
+  assert.equal(stop.length, 1);
+  assert.equal(stop[0].matcher, undefined);
+  assert.deepEqual(stop[0].hooks, [{ type: 'command', command: 'node "${CLAUDE_PLUGIN_ROOT}/skills/construction-check/scripts/check-done.mjs"' }]);
+  assert.equal(file, path.join(PLUGIN, 'skills', 'construction-check', 'scripts', 'check-done.mjs'));
+  assert.doesNotMatch(skillFrontmatter(), /^\s*hooks\s*:/m);
+  assert.match(skillFrontmatter(), /^name: construction-check$/m);
+  assert.match(skillFrontmatter(), /^description: \S/m);
 });
 
 test('.mcp.json: プラグインの直下にあり、masked-files を ${CLAUDE_PLUGIN_ROOT} の写しで起動する。${CLAUDE_PROJECT_DIR} に頼らない', () => {

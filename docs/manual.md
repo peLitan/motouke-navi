@@ -514,7 +514,7 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 ### 確かめたことと限界
 - 確かめたこと(2026-11-04、Claude Code 2.1.317): 通信を止め、ログインもしていない環境で、架空の書類を置いて1回動かしました。Claude はここで「Not logged in」と答えて終わり、モデルは呼んでいません。その記録の最初の行で、指定がすべて受け付けられ、`permissionMode` が `dontAsk`、`apiKeySource` が `none`、MCP の接続、`list_masked`・`read_masked` の道具の名前、Skill と係の名前を見ました
 - 確かめたこと: 上の記録のとおり、架空の書類 E1 の2件では、許可の決まりが当たり、点検が最後まで通りました。ほかの書類では試していません。足りない許可があれば「断られた道具」の注意に出ます
-- 道具の一覧では係を呼ぶ道具が `Task` の名前で出るので、許可には `Agent(...)` と `Task(...)` の両方を挙げています
+- 道具の一覧では係を呼ぶ道具が `Task` の名前で出る(版 2.1.317 の記録。公式の名前は `Agent` で、`Task` は別名)ので、許可には `Agent(...)` と `Task(...)` の両方を挙げています
 - `--allowedTools`・`--disallowedTools`・`--permission-mode dontAsk`・`--max-budget-usd` は、`claude --help` の説明と上の確かめによります。公式のページ https://code.claude.com/docs/en/headless は作る係の環境から開けなかったので、ページとは照らしていません。`--max-budget-usd` の説明は API の呼び出しの額で、ログインのプランで上限として効くかは確かめていません
 - ログインのプランでの書類の扱いが、上の「API に送った内容の扱い」と同じとは限りません。使う前に Claude Code の公式の文書と、利用しているプランの規約で確かめてください
 - 記録には、置き換えた後の書類の中身が入ります。置き換えの漏れは0になりません。書類のファイル名は置き換えないので、そのまま Claude と記録に渡ります。記録は外へ渡さないでください
@@ -568,7 +568,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 上の「Claude Code に組み込む」の守り(フック)と道具(`masked-files`)を、作業フォルダに写さずに使えるよう、Claude Code のプラグインの形にまとめたものです。置き場は `plugin/` です。
 
 - `.claude-plugin/plugin.json`: プラグインの名前(`motouke-navi-guard`)などの宣言。`.claude-plugin/` にはこのファイルだけを置き、ほかの部品はプラグインの直下に置く。`version` はプラグインの版ですが、画面の足と印刷の頭に出す版も同じ番号にします(`node build.mjs` がここから読みます)。変更の記録は `CHANGELOG.md` にあります
-- `hooks/hooks.json`: PreToolUse(Read・Grep・Glob・Bash・PowerShell・Edit・Write・NotebookEdit)と UserPromptSubmit で `${CLAUDE_PLUGIN_ROOT}/scripts/guard-raw.mjs` を動かす。`raw/` を指すと終了コード 2 で止め、理由を標準エラーに出す
+- `hooks/hooks.json`: PreToolUse(Read・Grep・Glob・Bash・PowerShell・Edit・Write・NotebookEdit)と UserPromptSubmit で `${CLAUDE_PLUGIN_ROOT}/scripts/guard-raw.mjs` を動かす。`raw/` を指すと終了コード 2 で止め、理由を標準エラーに出す。Stop では手順の抜けを催促するフック `check-done` を動かす(下の `skills/construction-check/` の項)
 - `.mcp.json`: 道具 `masked-files` を `${CLAUDE_PLUGIN_ROOT}/mcp/masked-files.mjs` で起動する。`MASK_TOOL_DIR` にプラグインのフォルダを渡し、プラグインの中の `src/mask/` で置き換える。`env` の `"MASK_DICT": "${MASK_DICT:-}"` で、端末の環境変数 `MASK_DICT`(辞書のファイルのパス)を道具へ渡す(F35b)。入れないと空が渡り、辞書なしで動く。同じ書き方の使い捨てのプラグインを `claude --plugin-dir <フォルダ> mcp list` で起動し、Claude Code 2.1.317 が値と空を道具へ渡すことを確かめた(2026-11-04)。このプラグインで Claude に `read_masked` を呼ばせて通しては確かめていない(上の「使い方」の 3. は作業フォルダに置く `.mcp.json` の場合で、こちらの `env` には `MASK_DICT` が無いので足す必要がある。道具が `MASK_DICT` を読むことは、道具を直接動かす試験で確かめました)
 - `scripts/guard-raw.mjs`・`mcp/masked-files.mjs`・`src/mask/`: `integration/claude-code/` と `src/mask/` の写し。プラグインは入れたときに別の場所へ写されるので、置き換えの部品も中に置いている。元を直したら `node scripts/sync-plugin.mjs` で写しを作り直す(写しが元と同じことは `tests/unit/plugin-structure.test.mjs` で確かめる)
 
@@ -578,7 +578,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
   - `reference/sources/`: 取得した法令の原文と取得日の一覧(`data/sources/` の写し)
   - `scripts/check-articles.mjs`: 点検の結果(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる。Skill の手順では、MCP の道具 `check_articles`(引数 `text`)が同じ処理を呼び、条番号ごとに「ある」「無い」(取得していない条・無い項や号)「確かめられない」(「法第○条」「同条」のように法令名が無い)と数を返す(F56a)。道具の返事に原文の全文は入らない。部品か原文が見つからないときは、どの条番号も確かめていないと返す。項・号の切り出しは `src/quote-check.mjs` の写し(`lib/quote-check.mjs`)を使う
   - 端末で確かめる別の道: `node plugin/skills/construction-check/scripts/check-articles.mjs <指摘のファイル>` で同じ文が出る。1つでも「ある」以外があれば終了コード 1
-  - `scripts/check-done.mjs`: Stop のフック(F56b)。`read_masked` を呼んだ会話で、最後の返事に係の結果の数(残る・崩れた・確かめられない)も「反証の見直しをしていない」も無いとき、Claude に案内の文を渡して1回催促する。`SKILL.md` の frontmatter の `hooks:` で登録する。限界は下の「手順の抜けの催促の限界」
+  - `scripts/check-done.mjs`: Stop のフック(F56b・F80a)。`read_masked` を呼んだ会話で、最後の返事に係の結果の数(残る・崩れた・確かめられない)も「反証の見直しをしていない」も無いときと、数はあっても記録に反証の係 `refuter` の呼び出しが無いとき、Claude に案内の文を渡して1回催促する。プラグインの `hooks/hooks.json` の Stop で登録する。限界は下の「手順の抜けの催促の限界」
 
 - `skills/spec-to-rules/`: 発注者の仕様書の文から規則表の行を作る Skill(F26a)
 - `skills/bid-intake/`: 公告・入札説明書・仕様書から条件を拾う Skill(F41a。下の「公告から条件を拾う」)
@@ -618,14 +618,15 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - sub-agents https://code.claude.com/docs/en/sub-agents.md (プラグインの係で無視される項目: `permissionMode`・`hooks`・`mcpServers`・`initialPrompt`)
 
 ### 手順の抜けの催促の限界
-`check-done` は、Stop の時点で最後の返事の文を見て案内を渡す、一度だけの催促です。手順6・7 を守らせる仕組みではありません。止める所(`raw/` の読み取り)は `guard-raw` が持ちます。
+`check-done` は、Stop の時点で会話の記録と最後の返事の文を見て案内を渡す、一度だけの催促です。手順6・7 を守らせる仕組みではありません。止める所(`raw/` の読み取り)は `guard-raw` が持ちます。
 
-- 文しか見ません: 道具や係を実際に呼んだかは見ないので、数を書いた返事は、係を呼んでいなくても通ります
-- 催促しないとき: `read_masked` を呼ぶ前の停止(手順1 で利用者に聞いたときなど)、催促のあとの続き(`stop_hook_active` が true)、入力や記録が読めないとき。読めないときは止めない側に倒します。`guard-raw` は逆に止める側に倒します
+- 見るもの: 記録に `read_masked` と係の呼び出しがあるかと、最後の返事の文を見ます。係の呼び出しが無く数だけ書いた返事には1回催促します。催促の後に数だけ書けば通ります。係の呼び出しは、入力に `refuter` の語がある `Agent` か `Task` の呼び出しを数え(呼び出しが失敗したときや、頼む文に語があるだけのときも数えます)、同じ会話の前の点検で呼んだ分も数えます。係が何を返したか、数が係の結果と合うか、手順6 の `check_articles` を呼んだかは見ません
+- 催促しないとき: `read_masked` を呼ぶ前の停止(手順1 で利用者に聞いたときなど)、点検をしていない会話(記録に `read_masked` が無い)、返事に「反証の見直しをしていない」があるとき、催促のあとの続き(`stop_hook_active` が true)、入力や記録が読めないとき。読めないときは止めない側に倒します。`guard-raw` は逆に止める側に倒します
 - 止まり続けません: 催促の続きでは `stop_hook_active` で何もしません。Claude Code にも連続8回の上限があります(道具を呼ぶと数が戻ります)
-- 記録の遅れ: 会話の記録は非同期に書かれ、Stop の時点で今のターンの分がまだ無いことがあります。`read_masked` の呼び出しがまだ記録に無ければ、催促は出ません。返事の文は記録でなく Stop の入力の `last_assistant_message` から読みます
-- 余分に出るとき: 手順の途中で利用者に聞いて止まったとき、数を表の列など別の書き方で書いたとき、点検のあとに別の話をしたとき(記録に `read_masked` が残るので)は、1回余分に催促が出ることがあります。Skill の frontmatter の hook は呼んだときに登録され、会話の終わりまで残るので、別の話の返事ごとに出ることもあります。催促が出ると、`claude -p` や評価の回では1ターン増えます
-- 確かめたこと: 判断の関数の試験(`tests/unit/check-done.test.mjs`)と、合成の記録を渡して端末で6通り動かした1回だけです。Skill の frontmatter に Stop を置く例は公式のページに無く、Claude Code に登録されるか、`${CLAUDE_PLUGIN_ROOT}` が解けるかはまだ確かめていません。登録されないときは、同じコマンドを `hooks/hooks.json` の Stop に移します
+- 記録の遅れ: 会話の記録は非同期に書かれ、Stop の時点で今のターンの分がまだ無いことがあります。`read_masked` の呼び出しがまだ記録に無ければ、催促は出ません。係の呼び出しがまだ記録に無ければ、係を呼んだあとでも、数を書いた返事に1回催促が出ます(催促の文に、記録の遅れで見えないだけならそのまま終えるよう書いています)。返事の文は記録でなく Stop の入力の `last_assistant_message` から読みます
+- 余分に出るとき: 手順の途中で利用者に聞いて止まったとき、数を表の列など別の書き方で書いたとき、点検のあとに別の話をしたとき(記録に `read_masked` が残るので)は、1回余分に催促が出ることがあります。Skill を呼ばず `read_masked` を直に呼んだ会話でも、手順6・7 の催促が出ます。公式の説明では hook は plugin が有効な間は登録されるので、点検のあとの別の話では、返事ごとに出ることもあります。催促が出ると、`claude -p` や評価の回では1ターン増えます。評価の回で催促のあとに係を呼ぶと、係の呼び出しを見る検査は、手順でなく催促で呼んだ分でも通ることがあり、最後の返事は催促のあとの返事になります
+- 置き場: Stop は公式の既定の置き場 `hooks/hooks.json` に置きました(plugin が有効な間は登録され、Skill を呼んだかに左右されない。Skill の frontmatter から移した)。plugin を読み込んだ全部の会話で走りますが、記録に `read_masked` が無ければ何もしません。登録は /hooks で確かめます(まだ確かめていません)。置き場と登録の時は、公式の Plugin manifest reference https://code.claude.com/docs/en/plugins-reference と Hooks reference https://code.claude.com/docs/en/hooks によります(2026-11-06 に設計の係が開いた。作る係は開いていません)
+- 確かめたこと: 判断の関数の試験(`tests/unit/check-done.test.mjs`)と、合成の記録を渡して端末で動かした確かめ(F56b の6通りと、F80a の9通り: 係を `Agent`・`Task` で呼んだ記録と数、係の無い記録と数、数なし、読めない記録、`read_masked` の無い記録、見直しなしの語、`stop_hook_active`、壊れた入力。どちらも1回)だけです。Claude Code に読み込ませて動かしてはいません
 
 ## Claude Code での作り方
 この節に書く仕組み(自走キット・hook・subagent・機能の一覧)は、開始前に作ったもので、このリポジトリには入っていません(審査の対象外です)。作品の働きの説明ではなく、作り方の記録として書いています。
