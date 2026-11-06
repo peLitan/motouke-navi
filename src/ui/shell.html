@@ -248,6 +248,10 @@
   /* 説明の折りたたみ(F37b): 押す物の隣は1行にし、2行目からはここへ。文字は本文と同じ大きさのまま */
   details.fold { margin: 0.25rem 0; }
   details.fold > summary { color: var(--primary); }
+  /* 出典の一覧(F66a): 法令・資料ごとの1行。太字は名前だけで、取得日は途中で折り返さない */
+  #sources-list li { margin: 0.25rem 0; }
+  .source-name { font-weight: bold; }
+  .source-date { white-space: nowrap; }
   /* 狭い画面(F14e): 幅320〜400px でもページ全体は横に動かない。入力欄は枠の幅まで、表は枠(.table-scroll)の中だけで横に動く。
      ボタン・入力欄・折りたたみの見出しは指で押せる高さ(44px = 2.75rem)にする */
   *, *::before, *::after { box-sizing: border-box; }

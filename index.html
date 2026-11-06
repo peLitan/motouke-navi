@@ -248,6 +248,10 @@
   /* 説明の折りたたみ(F37b): 押す物の隣は1行にし、2行目からはここへ。文字は本文と同じ大きさのまま */
   details.fold { margin: 0.25rem 0; }
   details.fold > summary { color: var(--primary); }
+  /* 出典の一覧(F66a): 法令・資料ごとの1行。太字は名前だけで、取得日は途中で折り返さない */
+  #sources-list li { margin: 0.25rem 0; }
+  .source-name { font-weight: bold; }
+  .source-date { white-space: nowrap; }
   /* 狭い画面(F14e): 幅320〜400px でもページ全体は横に動かない。入力欄は枠の幅まで、表は枠(.table-scroll)の中だけで横に動く。
      ボタン・入力欄・折りたたみの見出しは指で押せる高さ(44px = 2.75rem)にする */
   *, *::before, *::after { box-sizing: border-box; }
@@ -810,7 +814,27 @@
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
 <div id="sources-dates">
-<ul>
+<ul id="sources-list">
+<li><span class="source-name">建設業法</span> 第2条・第3条・第20条・第24条の8・第25条の27・第26条 — 取得日 <span class="source-date">2026-11-02</span>・<span class="source-date">2026-11-06</span> — 2025年12月12日施行の改正までの条文 — <span class="source-url">https://laws.e-gov.go.jp/law/324AC0000000100</span></li>
+<li><span class="source-name">建設業法施行令</span> 第2条・第7条の4・第15条・第27条・第28条・第30条・第37条 — 取得日 <span class="source-date">2026-11-02</span>・<span class="source-date">2026-11-06</span> — 2026年4月1日施行の改正までの条文 — <span class="source-url">https://laws.e-gov.go.jp/law/331CO0000000273</span></li>
+<li><span class="source-name">公共工事の入札及び契約の適正化の促進に関する法律</span> 第15条 — 取得日 <span class="source-date">2026-11-02</span> — 2025年12月12日施行の改正までの条文 — <span class="source-url">https://laws.e-gov.go.jp/law/412AC0000000127</span></li>
+<li><span class="source-name">建設業法施行規則</span> 第14条の2 — 取得日 <span class="source-date">2026-11-03</span> — 2026年10月1日施行の改正までの条文 — <span class="source-url">https://laws.e-gov.go.jp/law/324M50004000014</span></li>
+<li><span class="source-name">労働安全衛生法施行令</span> 第6条・第7条 — 取得日 <span class="source-date">2026-11-05</span> — 2026年10月1日施行の改正までの条文 — <span class="source-url">https://laws.e-gov.go.jp/law/347CO0000000318</span></li>
+<li><span class="source-name">労働安全衛生法</span> 第14条・第15条・第15条の2・第16条・第29条・第29条の2・第30条・第88条 — 取得日 <span class="source-date">2026-11-05</span> — 2026年10月1日施行の改正までの条文 — <span class="source-url">https://laws.e-gov.go.jp/law/347AC0000000057</span></li>
+<li><span class="source-name">労働安全衛生規則</span> 第18条の2の2・第89条・第90条・第634条の2 — 取得日 <span class="source-date">2026-11-05</span> — 2026年10月1日施行の改正までの条文 — <span class="source-url">https://laws.e-gov.go.jp/law/347M50002000032</span></li>
+<li><span class="source-name">建設業許可事務ガイドライン</span>(国土交通省) — 取得日 <span class="source-date">2026-11-02</span> — 令和7年2月1日から適用 の版 — <span class="source-url">https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf</span></li>
+<li><span class="source-name">監理技術者制度運用マニュアル</span>(国土交通省) — 取得日 <span class="source-date">2026-11-06</span> — 最終改正 令和7年1月28日 の版 — <span class="source-url">https://www.mlit.go.jp/totikensangyo/const/content/001859191.pdf</span></li>
+<li><span class="source-name">土木工事共通仕様書(案)令和8年3月</span>(国土交通省) — 取得日 <span class="source-date">2026-11-02</span> — 令和8年3月 の版 — <span class="source-url">https://www.mlit.go.jp/tec/r08dobokukoujikyoutsuusiyousyo/honbun01_syo01_setsu01.html</span></li>
+<li><span class="source-name">施工体制台帳(作成例)</span>(国土交通省) — 取得日 <span class="source-date">2026-11-02</span> — 版の表示なし — <span class="source-url">https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx</span></li>
+<li><span class="source-name">公共建築工事標準仕様書(建築工事編)令和7年版</span>(国土交通省大臣官房官庁営繕部) — 取得日 <span class="source-date">2026-11-05</span> — 令和7年5月12日 最終改定 の版 — <span class="source-url">https://www.mlit.go.jp/gobuild/content/001888816.pdf</span></li>
+<li><span class="source-name">公共建築工事標準仕様書(電気設備工事編)令和7年版</span>(国土交通省大臣官房官庁営繕部) — 取得日 <span class="source-date">2026-11-06</span> — 令和7年5月12日 最終改定 の版 — <span class="source-url">https://www.mlit.go.jp/gobuild/content/001888825.pdf</span></li>
+<li><span class="source-name">公共建築工事標準仕様書(機械設備工事編)令和7年版</span>(国土交通省大臣官房官庁営繕部) — 取得日 <span class="source-date">2026-11-06</span> — 令和7年11月5日 修補版 の版 — <span class="source-url">https://www.mlit.go.jp/gobuild/content/001967513.pdf</span></li>
+<li><span class="source-name">公共建築工事共通費積算基準</span>(国土交通省大臣官房官庁営繕部) — 取得日 <span class="source-date">2026-11-06</span> — 令和8年3月11日 最終改定 の版 — <span class="source-url">https://www.mlit.go.jp/gobuild/content/001733141.pdf</span></li>
+<li><span class="source-name">電気通信設備工事共通仕様書 令和8年版</span>(国土交通省大臣官房技術調査課電気通信室) — 取得日 <span class="source-date">2026-11-06</span> — 令和8年 の版 — <span class="source-url">https://www.mlit.go.jp/tec/it/denki/gijyutukijyun/R0803kouji.pdf</span></li>
+<li><span class="source-name">公園緑地工事共通仕様書 令和6年5月</span>(国土交通省都市局公園緑地・景観課) — 取得日 <span class="source-date">2026-11-06</span> — 令和6年5月 の版 — <span class="source-url">https://www.mlit.go.jp/toshi/park/content/001742862.pdf</span></li>
+</ul>
+<details class="fold no-print" id="sources-detail"><summary>条ごとの取得日・版・URL を見る(39件)</summary>
+<ul id="sources-all">
 <li>建設業法 第3条（建設業の許可） — 取得日 2026-11-02・版 2025年12月12日施行の改正までの条文(e-Gov の版 324AC0000000100_20251212_506AC0000000049)<br>https://laws.e-gov.go.jp/law/324AC0000000100</li>
 <li>建設業法 第24条の8（施工体制台帳及び施工体系図の作成等） — 取得日 2026-11-02・版 2025年12月12日施行の改正までの条文(e-Gov の版 324AC0000000100_20251212_506AC0000000049)<br>https://laws.e-gov.go.jp/law/324AC0000000100</li>
 <li>建設業法 第26条（主任技術者及び監理技術者の設置等） — 取得日 2026-11-02・版 2025年12月12日施行の改正までの条文(e-Gov の版 324AC0000000100_20251212_506AC0000000049)<br>https://laws.e-gov.go.jp/law/324AC0000000100</li>
@@ -851,6 +875,7 @@
 <li>電気通信設備工事共通仕様書 令和8年版(国土交通省大臣官房技術調査課電気通信室。第1編 第1章 総則)(国土交通省大臣官房技術調査課電気通信室) — 取得日 2026-11-06・版 令和8年 の版<br>https://www.mlit.go.jp/tec/it/denki/gijyutukijyun/R0803kouji.pdf</li>
 <li>公園緑地工事共通仕様書 令和6年5月(国土交通省都市局公園緑地・景観課。表紙と目次の頁)(国土交通省都市局公園緑地・景観課) — 取得日 2026-11-06・版 令和6年5月 の版<br>https://www.mlit.go.jp/toshi/park/content/001742862.pdf</li>
 </ul>
+</details>
 <p>法令は改正されることがあります。取得日から時間がたって古くなったら、判定の前に e-Gov 法令検索や国土交通省の資料の原文を確かめ直してください。この画面は取得日の時点の原文の抜き書きで判定しています。</p>
 </div>
 </section>

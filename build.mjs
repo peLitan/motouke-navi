@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { sourceVersion } from './src/source-version.mjs';
+import { sourceVersion, revisionDate } from './src/source-version.mjs';
 import { parseRulesFile, tableCredit } from './src/rules-load.mjs';
 import { renderSafetyQuestions } from './src/ui/safety-view.mjs';
 import pluginManifest from './plugin/.claude-plugin/plugin.json' with { type: 'json' };
@@ -88,13 +88,77 @@ export function bundle(entry = ENTRY) {
 // ---- 使った法令と資料の一覧(本文に出す) ----
 const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// 条の番号の比べ方(F66a): 「24の8」は [24, 8] と読み、「の」の後ろも数で比べる
+const articleParts = (article) => String(article).split('の').map(Number);
+export function compareArticles(a, b) {
+  const [x, y] = [articleParts(a), articleParts(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] ?? 0) - (y[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+// 条の書き方は src/ui/view.mjs の basisLabel と同じ(「24の8」→「第24条の8」)
+export function articleLabel(article) {
+  const [main, ...subs] = String(article).split('の');
+  return '第' + main + '条' + subs.map((x) => 'の' + x).join('');
+}
+
+// 資料の題名から、発行者を含む括弧を外す。発行者が題名に無ければ題名のまま
+export function shortDocTitle(s) {
+  const at = s.publisher ? s.title.indexOf(s.publisher) : -1;
+  if (at < 0) return s.title;
+  const cut = Math.max(s.title.lastIndexOf('(', at), s.title.lastIndexOf('（', at));
+  return cut > 0 ? s.title.slice(0, cut) : s.title;
+}
+
+// 1行に出す版: 法令は施行日だけ(e-Gov の版の番号は折りたたみの中にだけ出す)。資料は sourceVersion のまま
+function shortVersion(s) {
+  const r = revisionDate(s.revisionId);
+  return r ? r.y + '年' + r.m + '月' + r.d + '日施行の改正までの条文' : sourceVersion(s);
+}
+
+const uniq = (list) => [...new Set(list)];
+
+// 法令は法令ごと、資料は1件ずつの行にまとめる。行の順は index.json で最初に出る順
+export function sourceGroups(sources) {
+  const groups = new Map();
+  for (const s of sources) {
+    const key = s.kind === 'law' ? 'law:' + s.law : 'doc:' + s.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(s);
+  }
+  return [...groups.values()].map((list) => {
+    const [first] = list;
+    const isLaw = first.kind === 'law';
+    return {
+      name: isLaw ? first.law : shortDocTitle(first),
+      tail: isLaw
+        ? ' ' + uniq(list.map((s) => s.article)).sort(compareArticles).map(articleLabel).join('・')
+        : (first.publisher ? '(' + first.publisher + ')' : ''),
+      dates: uniq(list.map((s) => s.fetchedAt)).sort(),
+      version: uniq(list.map(shortVersion)).join('・'),
+      urls: uniq(list.map((s) => s.url)),
+    };
+  });
+}
+
+function sourceLine(g) {
+  const dates = g.dates.map((d) => `<span class="source-date">${escHtml(d)}</span>`).join('・');
+  const urls = g.urls.map((u) => `<span class="source-url">${escHtml(u)}</span>`).join('・');
+  return `<li><span class="source-name">${escHtml(g.name)}</span>${escHtml(g.tail)} — 取得日 ${dates} — ${escHtml(g.version)} — ${urls}</li>`;
+}
+
 export function sourcesHtml() {
   const { sources } = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'sources', 'index.json'), 'utf8'));
   const items = sources.map((s) => {
     const name = s.kind === 'law' ? s.title : s.title + '(' + (s.publisher ?? '') + ')';
     return `<li>${escHtml(name)} — 取得日 ${escHtml(s.fetchedAt)}・版 ${escHtml(sourceVersion(s))}<br>${escHtml(s.url)}</li>`;
   });
-  return `<ul>\n${items.join('\n')}\n</ul>\n<p>法令は改正されることがあります。取得日から時間がたって古くなったら、判定の前に e-Gov 法令検索や国土交通省の資料の原文を確かめ直してください。この画面は取得日の時点の原文の抜き書きで判定しています。</p>`;
+  return `<ul id="sources-list">\n${sourceGroups(sources).map(sourceLine).join('\n')}\n</ul>\n`
+    + `<details class="fold no-print" id="sources-detail"><summary>条ごとの取得日・版・URL を見る(${sources.length}件)</summary>\n<ul id="sources-all">\n${items.join('\n')}\n</ul>\n</details>\n`
+    + '<p>法令は改正されることがあります。取得日から時間がたって古くなったら、判定の前に e-Gov 法令検索や国土交通省の資料の原文を確かめ直してください。この画面は取得日の時点の原文の抜き書きで判定しています。</p>';
 }
 
 // 冒頭の「このツールが見ている法令・資料」(F14f): data/sources/index.json の題名をそのまま並べる(取り込んでいない条は書かない)
