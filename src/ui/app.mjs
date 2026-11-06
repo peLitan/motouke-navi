@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
+import { esc, renderBidResult, renderTaichoResult, renderErrors, requiredCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -222,7 +222,7 @@ export function changeField(doc, key) {
 function confirmGo(doc) {
   runBid(doc);
   openPanel(doc, 2);
-  setBidStatus(doc, bidNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
+  setBidStatus(doc, resultNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
 }
 // 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
@@ -248,8 +248,8 @@ export function openPanelForLink(doc, href) {
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
 const NEXT_STEP = '下の「次にすること」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
-const BID_NOTICE_DONE = '✓ 結果が出ました。' + NEXT_STEP;
-const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。' + NEXT_STEP;
+const BID_NOTICE_DONE = '✓ 結果が出ました。';
+const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。';
 const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
 const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。下の「受注後の段取り」から読んでください。';
 const NOTICE_STALE = '＊ 条件が変わりました。もう一度「確認する」を押すと、新しい条件の結果が出ます。';
@@ -263,6 +263,10 @@ function bidNotice(done) {
   if (summary.stale) return NOTICE_STALE;
   if (!last || !lastSchedule) return '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
   return done;
+}
+// 結果が出たときの文: 頭・要る項目の数・次の一手(F57)。出ていなければ bidNotice の「＊」の文のまま
+function resultNotice(head) {
+  return bidNotice(null) ?? head + requiredCountText(summary.bid) + NEXT_STEP;
 }
 // 金額の欄の読めない値に印を付け、直ったら外す
 function markAmountFields(doc, values) {
@@ -349,6 +353,7 @@ function runSchedule(doc, input, errors = []) {
     out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
+    if (!detail.notRead) setScheduleStatus(doc, '段取り ' + detail.rows.length + '行。');
     // 全部の行(F37c)は条件から出した件数ではないので、まとめには載せない
     summary.scheduleCount = awardedAll || detail.notRead ? null : detail.rows.length;
     summary.scheduleNotRead = Boolean(detail.notRead);
@@ -546,6 +551,9 @@ export function printResult(doc, win) {
 // 台帳の点検(F05b): 貼った台帳の文を読み、点検の候補を出す。
 // 発注者(公共・民間)と工事の種類は上の選ぶ欄の値を使う。元請けの許可の種類は台帳の許可番号から読み、読めなければ上の欄の値を使う。
 let lastCheck = null;
+const CHECK_STALE = '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。';
+// 結果の枠は読み上げないので、止まったことも知らせの行に出す(F57)
+const RUN_STOPPED = '＊ 点検の途中で止まりました。下の知らせを読んでください。';
 function setCheckStatus(doc, text) {
   const el = doc.getElementById('check-status');
   if (el) el.textContent = text;
@@ -560,6 +568,7 @@ export function runLedgerCheck(doc) {
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') {
     outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、入口の「まず見本で試す」を押してください。']);
+    setCheckStatus(doc, '＊ 台帳の文が空です。');
     lastChecklist = null; checklistText = null; checklistChecked.clear();
     const cl = doc.getElementById('checklist-result');
     if (cl) cl.innerHTML = '<p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p>';
@@ -598,8 +607,10 @@ export function runLedgerCheck(doc) {
     outEl.innerHTML = renderCheckResult(out, warnings);
     lastCheck = out;
     summary.check = out;
+    setCheckStatus(doc, checkCountText(out));
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました(抜き書きの誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
+    setCheckStatus(doc, RUN_STOPPED);
   }
   runChecklist(doc, text);
   updateSummary(doc);
@@ -671,7 +682,7 @@ export async function loadLedgerFile(doc, file) {
     const r = await readLedgerXlsx(new Uint8Array(await file.arrayBuffer()));
     const input = doc.getElementById('ledger-input');
     if (input) input.value = ledgerToText(r.ledger);
-    lastCheck = null;
+    if (lastCheck) { lastCheck = null; setCheckStatus(doc, CHECK_STALE); }
     if (outEl) outEl.innerHTML = renderXlsxResult(r, FIELD_NAMES);
     if (status) status.textContent = file.name + ' を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。';
     return true;
@@ -696,7 +707,11 @@ export function runPlanCheck(doc) {
   summary.plan = null;
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。']); return; }
+  if (text.trim() === '') {
+    outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。']);
+    setPlanStatus(doc, '＊ 目次が空です。');
+    return;
+  }
   try {
     const form = readBidForm(collect(doc));
     const workKind = readWorkKind(collect(doc));
@@ -707,8 +722,10 @@ export function runPlanCheck(doc) {
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
     summary.plan = out;
+    setPlanStatus(doc, planCountText(out));
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました: ' + String(e && e.message ? e.message : e)]);
+    setPlanStatus(doc, RUN_STOPPED);
   }
   updateSummary(doc);
 }
@@ -748,7 +765,7 @@ export function loadSample(doc) {
   // 見本のあとも入力の確かめを通る(F43d)。結果は隠れた段に書いておき、「この内容で結果を見る」で開く
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
-  setBidStatus(doc, bidNotice(SAMPLE_NOTICE_DONE));
+  setBidStatus(doc, resultNotice(SAMPLE_NOTICE_DONE));
   openConfirm(doc);
 }
 
@@ -1052,7 +1069,7 @@ export function clearSample(doc) {
   } else if (lastCheck) {
     // 自分の台帳の点検は残すが、見本の条件で出した結果なので書き出さない
     lastCheck = null;
-    setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。');
+    setCheckStatus(doc, CHECK_STALE);
   }
   const plan = doc.getElementById('plan-input');
   if (plan && plan.value === SAMPLE.documents.planToc) {
@@ -1089,7 +1106,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (el) initialResult.set(id, el.innerHTML);
     }
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
-    on('bid-run', () => afterIntake(() => { runBid(doc); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); openConfirm(doc); }));
+    on('bid-run', () => afterIntake(() => { runBid(doc); setBidStatus(doc, resultNotice(BID_NOTICE_DONE)); openConfirm(doc); }));
     on('confirm-go', () => afterIntake(() => confirmGo(doc)));
     on('confirm-back', () => openPanel(doc, 1));
     for (const r of CONFIRM_ROWS) on('confirm-change-' + r.key, () => changeField(doc, r.key));
@@ -1160,7 +1177,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       const el = doc.getElementById(id);
       if (!el) continue;
       const changed = () => {
-        if (lastCheck) { lastCheck = null; setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。'); }
+        if (lastCheck) { lastCheck = null; setCheckStatus(doc, CHECK_STALE); }
         if (id === 'ledger-input' && lastChecklist && !checklistStale) { checklistStale = true; setChecklistStatus(doc, '台帳の文が変わりました。もう一度「台帳を点検する」を押してから書き出してください(同じ文に戻せばチェックは残ります)。'); }
       };
       el.addEventListener('input', changed);

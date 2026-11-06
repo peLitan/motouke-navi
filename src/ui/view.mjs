@@ -5,7 +5,7 @@ import { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } from '../checklis
 import { sourceVersion, versionText } from '../source-version.mjs';
 import { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } from '../work-kinds.mjs';
 import { PRIME_CHECK_KEY } from '../prime-experience.mjs';
-import { displayStatus, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
+import { displayStatus, requiredCount, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -167,6 +167,18 @@ export function renderTaichoResult(t) {
 
 export function renderErrors(list) {
   return '<div class="errors"><p>入力を読めませんでした。直してからもう一度押してください。</p><ul>' + list.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
+}
+
+// 知らせの行に書く件数(F57)。結果の枠には aria-live を付けないので、数はこの行で伝える。数え方はまとめの表と同じ
+export const requiredCountText = (bid) => '要る ' + requiredCount(bid) + '項目。';
+export function checkCountText(out) {
+  const u = (out.undecidable ?? []).length;
+  return '台帳の候補 ' + (out.candidates ?? []).length + '件' + (u ? '、判断できない ' + u + '件' : '') + '。';
+}
+// 判断できないときの目次は比べていないので、候補の数を出さない(「候補 0件」は抜けが無いように読める)
+export function planCountText(out) {
+  const u = (out.undecidable ?? []).length;
+  return u ? '目次: 判断できない ' + u + '件。' : '目次の候補 ' + (out.candidates ?? []).length + '件。';
 }
 
 // 台帳の点検(checkTaicho の返り値)の欄の名前(画面と CSV で使う)
@@ -410,7 +422,7 @@ export function renderResultTop(state = {}) {
   const n = nextStep(state, points, un);
   const next = '<div class="next-card no-print"><div class="next-text"><p class="next-title">次にすること: ' + esc(n.title) + '</p><p class="next-sub">' + esc(n.sub) + '</p></div><a class="next-go" href="#' + esc(n.href) + '">' + esc(n.go) + '</a></div>';
   if (errors) return next;
-  const required = state.bid.items.filter((it) => (vals ? displayStatus(it, vals) : it.status) === 'required').length;
+  const required = requiredCount(state.bid);
   const safety = state.safety?.count;
   const stat = (cls, href, num, lab, sub, li = '<li>') => li + '<a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
   // スマホ幅だけの4つ目の行(F54a)。国の例などの件数で自分の工事の判定ではないので、印を付けず名前に「例」を入れる

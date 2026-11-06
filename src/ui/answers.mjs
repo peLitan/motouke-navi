@@ -59,6 +59,9 @@ export function displayStatus(item, values = {}) {
   return deps.some((id) => answerState(values, id) === 'unanswered') ? 'unanswered' : 'needs_check';
 }
 
+// 「要る」と決まった項目の数。カードと知らせの行で同じ数を出す(displayStatus は決まった項目を変えない)
+export const requiredCount = (bid) => (bid?.items ?? []).filter((it) => it.status === 'required').length;
+
 // 理由の「入れた条件」: 項目が使う質問と、その答え
 const VALUE_WORDS = {
   orderer: { public: '公共', private: '民間' },

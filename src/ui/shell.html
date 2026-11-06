@@ -530,9 +530,9 @@
 <p id="field-note" class="note phone-only no-print">この画面は通信も保存もしません。閉じたり読み直されたりすると、入れた内容は消えます。ほかの端末で入れた内容は、この端末には出ません。</p>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
-<div id="bid-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="bid-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
-<div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="taicho-result" class="result"><p>条件を入れて「確認する」を押してください。</p></div>
 </details>
 <h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p id="work-kind-schedule"></p>
@@ -556,7 +556,7 @@
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
-<div id="schedule-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="schedule-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
@@ -572,8 +572,8 @@
 <div id="safety-result" class="result-plain"><p>条件を入れると、ここに候補を出します。</p></div>
 <p class="note" id="safety-version"></p>
 </details>
-<div id="open-items" class="result open-items" aria-live="polite" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
-<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
+<div id="open-items" class="result open-items" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
+<div id="summary" class="summary" aria-labelledby="summary-title" hidden></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -625,7 +625,7 @@
 <p class="note" id="ledger-file-note">ファイルはこの端末の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
 </details>
 <p id="ledger-file-status" aria-live="polite"></p>
-<div id="ledger-unreadable" class="result" aria-live="polite"></div>
+<div id="ledger-unreadable" class="result"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
 <textarea id="ledger-input" name="ledger-input" rows="12" cols="80"></textarea></div>
 <div class="row"><label for="taikeizu-input">施工体系図の文(任意)</label><br>
@@ -636,7 +636,7 @@
 <div class="row"><button type="button" id="ledger-run">台帳を点検する</button>
 <button type="button" id="check-csv-btn">点検の結果を CSV に書き出す</button></div>
 <p id="check-status" aria-live="polite"></p>
-<div id="check-result" class="result" aria-live="polite"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
+<div id="check-result" class="result"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
 <div id="checklist-section">
 <h3>台帳の記載事項の表(建設業法施行規則 第14条の2 第1項)</h3>
 <p>「台帳を点検する」を押すと、記載事項ごとに、台帳の値か「空」か「判断できない」かを表で出します。</p>
@@ -662,7 +662,7 @@
 <div class="row"><button type="button" id="plan-run">目次を点検する</button>
 <button type="button" id="plan-csv-btn">目次の点検の結果を CSV に書き出す</button></div>
 <p id="plan-status" aria-live="polite"></p>
-<div id="plan-result" class="result" aria-live="polite"><p>目次を貼って「目次を点検する」を押してください。</p></div>
+<div id="plan-result" class="result"><p>目次を貼って「目次を点検する」を押してください。</p></div>
 </section>
 </section>
 <details class="other-tools" id="other-tools">
@@ -758,7 +758,7 @@
 <div class="row drop" data-drop="ai-load"><label for="ai-load">AI の候補を読み込む</label>
 <input type="file" id="ai-load" name="ai-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="ai-status" aria-live="polite"></p>
-<div id="ai-result" class="result" aria-live="polite"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
+<div id="ai-result" class="result"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
 </section>
 </details>
 <section id="sources">

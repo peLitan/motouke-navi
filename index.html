@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-78Ahv6VwADVbIlnZ6Si+XVkxODqPYw06SVAsXuovIUc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1a9QHgfiUG9mF+r3qLT2Xw4xKcwOQNCd3xEfxy0ACw8='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -566,9 +566,9 @@
 <p id="field-note" class="note phone-only no-print">この画面は通信も保存もしません。閉じたり読み直されたりすると、入れた内容は消えます。ほかの端末で入れた内容は、この端末には出ません。</p>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
-<div id="bid-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="bid-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
-<div id="taicho-result" class="result" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="taicho-result" class="result"><p>条件を入れて「確認する」を押してください。</p></div>
 </details>
 <h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p id="work-kind-schedule"></p>
@@ -592,7 +592,7 @@
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
-<div id="schedule-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
+<div id="schedule-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
@@ -608,8 +608,8 @@
 <div id="safety-result" class="result-plain"><p>条件を入れると、ここに候補を出します。</p></div>
 <p class="note" id="safety-version"></p>
 </details>
-<div id="open-items" class="result open-items" aria-live="polite" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
-<div id="summary" class="summary" aria-live="polite" aria-labelledby="summary-title" hidden></div>
+<div id="open-items" class="result open-items" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
+<div id="summary" class="summary" aria-labelledby="summary-title" hidden></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -661,7 +661,7 @@
 <p class="note" id="ledger-file-note">ファイルはこの端末の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
 </details>
 <p id="ledger-file-status" aria-live="polite"></p>
-<div id="ledger-unreadable" class="result" aria-live="polite"></div>
+<div id="ledger-unreadable" class="result"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
 <textarea id="ledger-input" name="ledger-input" rows="12" cols="80"></textarea></div>
 <div class="row"><label for="taikeizu-input">施工体系図の文(任意)</label><br>
@@ -672,7 +672,7 @@
 <div class="row"><button type="button" id="ledger-run">台帳を点検する</button>
 <button type="button" id="check-csv-btn">点検の結果を CSV に書き出す</button></div>
 <p id="check-status" aria-live="polite"></p>
-<div id="check-result" class="result" aria-live="polite"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
+<div id="check-result" class="result"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
 <div id="checklist-section">
 <h3>台帳の記載事項の表(建設業法施行規則 第14条の2 第1項)</h3>
 <p>「台帳を点検する」を押すと、記載事項ごとに、台帳の値か「空」か「判断できない」かを表で出します。</p>
@@ -698,7 +698,7 @@
 <div class="row"><button type="button" id="plan-run">目次を点検する</button>
 <button type="button" id="plan-csv-btn">目次の点検の結果を CSV に書き出す</button></div>
 <p id="plan-status" aria-live="polite"></p>
-<div id="plan-result" class="result" aria-live="polite"><p>目次を貼って「目次を点検する」を押してください。</p></div>
+<div id="plan-result" class="result"><p>目次を貼って「目次を点検する」を押してください。</p></div>
 </section>
 </section>
 <details class="other-tools" id="other-tools">
@@ -794,7 +794,7 @@
 <div class="row drop" data-drop="ai-load"><label for="ai-load">AI の候補を読み込む</label>
 <input type="file" id="ai-load" name="ai-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="ai-status" aria-live="polite"></p>
-<div id="ai-result" class="result" aria-live="polite"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
+<div id="ai-result" class="result"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
 </section>
 </details>
 <section id="sources">
@@ -1785,6 +1785,9 @@ function displayStatus(item, values = {}) {
   return deps.some((id) => answerState(values, id) === 'unanswered') ? 'unanswered' : 'needs_check';
 }
 
+// 「要る」と決まった項目の数。カードと知らせの行で同じ数を出す(displayStatus は決まった項目を変えない)
+const requiredCount = (bid) => (bid?.items ?? []).filter((it) => it.status === 'required').length;
+
 // 理由の「入れた条件」: 項目が使う質問と、その答え
 const VALUE_WORDS = {
   orderer: { public: '公共', private: '民間' },
@@ -1853,7 +1856,7 @@ function openItems(bid, values = {}) {
   };
 }
 
-return { QUESTIONS, UNKNOWN, unknownId, answerState, answerStates, unansweredQuestions, unknownQuestions, ITEM_DEPS, displayStatus, answerText, itemConditions, CONTACTS, contactsFor, needsCheckPoints, openItems };
+return { QUESTIONS, UNKNOWN, unknownId, answerState, answerStates, unansweredQuestions, unknownQuestions, ITEM_DEPS, displayStatus, requiredCount, answerText, itemConditions, CONTACTS, contactsFor, needsCheckPoints, openItems };
 })();
 __m["src/ui/view.mjs"] = (function () {
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
@@ -1863,7 +1866,7 @@ const { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } = __m["src/checkli
 const { sourceVersion, versionText } = __m["src/source-version.mjs"];
 const { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } = __m["src/work-kinds.mjs"];
 const { PRIME_CHECK_KEY } = __m["src/prime-experience.mjs"];
-const { displayStatus, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } = __m["src/ui/answers.mjs"];
+const { displayStatus, requiredCount, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } = __m["src/ui/answers.mjs"];
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -2025,6 +2028,18 @@ function renderTaichoResult(t) {
 
 function renderErrors(list) {
   return '<div class="errors"><p>入力を読めませんでした。直してからもう一度押してください。</p><ul>' + list.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
+}
+
+// 知らせの行に書く件数(F57)。結果の枠には aria-live を付けないので、数はこの行で伝える。数え方はまとめの表と同じ
+const requiredCountText = (bid) => '要る ' + requiredCount(bid) + '項目。';
+function checkCountText(out) {
+  const u = (out.undecidable ?? []).length;
+  return '台帳の候補 ' + (out.candidates ?? []).length + '件' + (u ? '、判断できない ' + u + '件' : '') + '。';
+}
+// 判断できないときの目次は比べていないので、候補の数を出さない(「候補 0件」は抜けが無いように読める)
+function planCountText(out) {
+  const u = (out.undecidable ?? []).length;
+  return u ? '目次: 判断できない ' + u + '件。' : '目次の候補 ' + (out.candidates ?? []).length + '件。';
 }
 
 // 台帳の点検(checkTaicho の返り値)の欄の名前(画面と CSV で使う)
@@ -2268,7 +2283,7 @@ function renderResultTop(state = {}) {
   const n = nextStep(state, points, un);
   const next = '<div class="next-card no-print"><div class="next-text"><p class="next-title">次にすること: ' + esc(n.title) + '</p><p class="next-sub">' + esc(n.sub) + '</p></div><a class="next-go" href="#' + esc(n.href) + '">' + esc(n.go) + '</a></div>';
   if (errors) return next;
-  const required = state.bid.items.filter((it) => (vals ? displayStatus(it, vals) : it.status) === 'required').length;
+  const required = requiredCount(state.bid);
   const safety = state.safety?.count;
   const stat = (cls, href, num, lab, sub, li = '<li>') => li + '<a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
   // スマホ幅だけの4つ目の行(F54a)。国の例などの件数で自分の工事の判定ではないので、印を付けず名前に「例」を入れる
@@ -2335,7 +2350,7 @@ function renderSummary(state = {}) {
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
 
-return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
+return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, requiredCountText, checkCountText, planCountText, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -7785,7 +7800,7 @@ __m["src/ui/app.mjs"] = (function () {
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { esc, renderBidResult, renderTaichoResult, renderErrors, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
+const { esc, renderBidResult, renderTaichoResult, renderErrors, requiredCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -8005,7 +8020,7 @@ function changeField(doc, key) {
 function confirmGo(doc) {
   runBid(doc);
   openPanel(doc, 2);
-  setBidStatus(doc, bidNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
+  setBidStatus(doc, resultNotice(doc.getElementById('sample-banner')?.hidden === false ? SAMPLE_NOTICE_DONE : BID_NOTICE_DONE));
 }
 // 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
@@ -8031,8 +8046,8 @@ function openPanelForLink(doc, href) {
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
 const NEXT_STEP = '下の「次にすること」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
-const BID_NOTICE_DONE = '✓ 結果が出ました。' + NEXT_STEP;
-const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。' + NEXT_STEP;
+const BID_NOTICE_DONE = '✓ 結果が出ました。';
+const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。';
 const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
 const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。下の「受注後の段取り」から読んでください。';
 const NOTICE_STALE = '＊ 条件が変わりました。もう一度「確認する」を押すと、新しい条件の結果が出ます。';
@@ -8046,6 +8061,10 @@ function bidNotice(done) {
   if (summary.stale) return NOTICE_STALE;
   if (!last || !lastSchedule) return '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
   return done;
+}
+// 結果が出たときの文: 頭・要る項目の数・次の一手(F57)。出ていなければ bidNotice の「＊」の文のまま
+function resultNotice(head) {
+  return bidNotice(null) ?? head + requiredCountText(summary.bid) + NEXT_STEP;
 }
 // 金額の欄の読めない値に印を付け、直ったら外す
 function markAmountFields(doc, values) {
@@ -8132,6 +8151,7 @@ function runSchedule(doc, input, errors = []) {
     out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
+    if (!detail.notRead) setScheduleStatus(doc, '段取り ' + detail.rows.length + '行。');
     // 全部の行(F37c)は条件から出した件数ではないので、まとめには載せない
     summary.scheduleCount = awardedAll || detail.notRead ? null : detail.rows.length;
     summary.scheduleNotRead = Boolean(detail.notRead);
@@ -8329,6 +8349,9 @@ function printResult(doc, win) {
 // 台帳の点検(F05b): 貼った台帳の文を読み、点検の候補を出す。
 // 発注者(公共・民間)と工事の種類は上の選ぶ欄の値を使う。元請けの許可の種類は台帳の許可番号から読み、読めなければ上の欄の値を使う。
 let lastCheck = null;
+const CHECK_STALE = '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。';
+// 結果の枠は読み上げないので、止まったことも知らせの行に出す(F57)
+const RUN_STOPPED = '＊ 点検の途中で止まりました。下の知らせを読んでください。';
 function setCheckStatus(doc, text) {
   const el = doc.getElementById('check-status');
   if (el) el.textContent = text;
@@ -8343,6 +8366,7 @@ function runLedgerCheck(doc) {
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') {
     outEl.innerHTML = renderErrors(['台帳の文が空です。台帳を貼るか、入口の「まず見本で試す」を押してください。']);
+    setCheckStatus(doc, '＊ 台帳の文が空です。');
     lastChecklist = null; checklistText = null; checklistChecked.clear();
     const cl = doc.getElementById('checklist-result');
     if (cl) cl.innerHTML = '<p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p>';
@@ -8381,8 +8405,10 @@ function runLedgerCheck(doc) {
     outEl.innerHTML = renderCheckResult(out, warnings);
     lastCheck = out;
     summary.check = out;
+    setCheckStatus(doc, checkCountText(out));
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました(抜き書きの誤りの可能性があります): ' + String(e && e.message ? e.message : e)]);
+    setCheckStatus(doc, RUN_STOPPED);
   }
   runChecklist(doc, text);
   updateSummary(doc);
@@ -8454,7 +8480,7 @@ async function loadLedgerFile(doc, file) {
     const r = await readLedgerXlsx(new Uint8Array(await file.arrayBuffer()));
     const input = doc.getElementById('ledger-input');
     if (input) input.value = ledgerToText(r.ledger);
-    lastCheck = null;
+    if (lastCheck) { lastCheck = null; setCheckStatus(doc, CHECK_STALE); }
     if (outEl) outEl.innerHTML = renderXlsxResult(r, FIELD_NAMES);
     if (status) status.textContent = file.name + ' を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。';
     return true;
@@ -8479,7 +8505,11 @@ function runPlanCheck(doc) {
   summary.plan = null;
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
-  if (text.trim() === '') { outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。']); return; }
+  if (text.trim() === '') {
+    outEl.innerHTML = renderErrors(['目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。']);
+    setPlanStatus(doc, '＊ 目次が空です。');
+    return;
+  }
   try {
     const form = readBidForm(collect(doc));
     const workKind = readWorkKind(collect(doc));
@@ -8490,8 +8520,10 @@ function runPlanCheck(doc) {
     outEl.innerHTML = renderPlanResult(out);
     lastPlan = out;
     summary.plan = out;
+    setPlanStatus(doc, planCountText(out));
   } catch (e) {
     outEl.innerHTML = renderErrors(['点検の途中で止まりました: ' + String(e && e.message ? e.message : e)]);
+    setPlanStatus(doc, RUN_STOPPED);
   }
   updateSummary(doc);
 }
@@ -8531,7 +8563,7 @@ function loadSample(doc) {
   // 見本のあとも入力の確かめを通る(F43d)。結果は隠れた段に書いておき、「この内容で結果を見る」で開く
   const banner = doc.getElementById('sample-banner');
   if (banner) banner.hidden = false;
-  setBidStatus(doc, bidNotice(SAMPLE_NOTICE_DONE));
+  setBidStatus(doc, resultNotice(SAMPLE_NOTICE_DONE));
   openConfirm(doc);
 }
 
@@ -8835,7 +8867,7 @@ function clearSample(doc) {
   } else if (lastCheck) {
     // 自分の台帳の点検は残すが、見本の条件で出した結果なので書き出さない
     lastCheck = null;
-    setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。');
+    setCheckStatus(doc, CHECK_STALE);
   }
   const plan = doc.getElementById('plan-input');
   if (plan && plan.value === SAMPLE.documents.planToc) {
@@ -8872,7 +8904,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       if (el) initialResult.set(id, el.innerHTML);
     }
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
-    on('bid-run', () => afterIntake(() => { runBid(doc); setBidStatus(doc, bidNotice(BID_NOTICE_DONE)); openConfirm(doc); }));
+    on('bid-run', () => afterIntake(() => { runBid(doc); setBidStatus(doc, resultNotice(BID_NOTICE_DONE)); openConfirm(doc); }));
     on('confirm-go', () => afterIntake(() => confirmGo(doc)));
     on('confirm-back', () => openPanel(doc, 1));
     for (const r of CONFIRM_ROWS) on('confirm-change-' + r.key, () => changeField(doc, r.key));
@@ -8943,7 +8975,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
       const el = doc.getElementById(id);
       if (!el) continue;
       const changed = () => {
-        if (lastCheck) { lastCheck = null; setCheckStatus(doc, '台帳か条件が変わりました。もう一度「台帳を点検する」を押してから書き出してください。'); }
+        if (lastCheck) { lastCheck = null; setCheckStatus(doc, CHECK_STALE); }
         if (id === 'ledger-input' && lastChecklist && !checklistStale) { checklistStale = true; setChecklistStatus(doc, '台帳の文が変わりました。もう一度「台帳を点検する」を押してから書き出してください(同じ文に戻せばチェックは残ります)。'); }
       };
       el.addEventListener('input', changed);
