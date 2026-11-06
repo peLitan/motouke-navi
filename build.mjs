@@ -1,5 +1,5 @@
 // src/ui/shell.html から、ファイル1つで開ける index.html を組み立てる
-// 使い方: node build.mjs
+// 使い方: node build.mjs   (引数は取らない。--help で使い方。知らない引数では書かずに 2 で終わる)
 // - 画面のスクリプト(src/ui/app.mjs)と、それが読む部品・データ(.mjs・.json)を、import を使わない1つのスクリプトにまとめて埋め込む
 // - 使った法令と資料の名前・取得日を data/sources/index.json から本文に書く
 // - CSP は外部と通信しない設定にする。インラインのスクリプトは中身のハッシュ(sha256)でだけ許す
@@ -11,6 +11,7 @@ import { sourceVersion, revisionDate } from './src/source-version.mjs';
 import { parseRulesFile, tableCredit } from './src/rules-load.mjs';
 import { renderSafetyQuestions } from './src/ui/safety-view.mjs';
 import pluginManifest from './plugin/.claude-plugin/plugin.json' with { type: 'json' };
+import { readArgs, handleArgs, runMain } from './scripts/cli.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SHELL = path.join(ROOT, 'src', 'ui', 'shell.html');
@@ -204,7 +205,27 @@ export function buildHtml() {
   return withBody.replace('{{CSP}}', () => makeCsp(withBody));
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+export const USAGE_LINE = '使い方: node build.mjs(引数は取りません。くわしくは --help)';
+export const USAGE = [
+  '使い方: node build.mjs',
+  '',
+  'src/ui/shell.html と、画面のスクリプト・部品・データ(src/・data/)から、ファイル1つで開ける index.html を組み立てます。',
+  '読むもの: src/ui/shell.html・src/ui/app.mjs と、それが読む .mjs・.json・data/sources/index.json・plugin/.claude-plugin/plugin.json',
+  '書くもの: リポジトリの直下の index.html(上書きします)',
+  '',
+  '引数:',
+  '  --help, -h  この使い方を出す',
+  '',
+  '例: node build.mjs',
+].join('\n');
+
+// 引数を確かめてから組み立てる。知らない引数では index.html を書かない
+export function main(argv, io) {
+  const done = handleArgs(readArgs(argv), io, { usage: USAGE, usageLine: USAGE_LINE });
+  if (done !== null) return done;
   fs.writeFileSync(path.join(ROOT, 'index.html'), buildHtml());
-  console.log('index.html を書いた');
+  io.log('index.html を書いた');
+  return 0;
 }
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) runMain(main);

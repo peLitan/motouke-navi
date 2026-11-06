@@ -3,10 +3,12 @@
 // 数え方は2つを並べて出す(F65d): 1つの欄で拾った全部の行で判定する(主)・欄の最初の1行だけで判定する(前の数え方)
 // 使い方: node scripts/measure-bid-intake.mjs <拾った条件のフォルダ>(N1.json〜 が入っている)
 // リポジトリに写さない公告を測るとき: ... <拾った条件のフォルダ> --answers <正解の表のフォルダ> --notices <原文のフォルダ>
+// --help で使い方。無いフォルダは、正解の表を読む前に1行で知らせて 1 で終わる(F83a5)
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkConditions, STATUS } from '../plugin/skills/bid-intake/scripts/check-conditions.mjs';
+import { readArgs, handleArgs, needPath, resolveIn, runMain } from './cli.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const NOTICES = path.join(ROOT, 'fixtures/bid-intake/公告');
@@ -104,10 +106,44 @@ export function reportLines(r) {
   return out;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const args = process.argv.slice(2);
-  const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? path.resolve(args[i + 1]) : undefined; };
-  const given = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'));
-  const r = measure(path.resolve(given ?? 'docs/samples/bid-intake/測り'), { answers: opt('--answers'), notices: opt('--notices') });
-  console.log(reportLines(r).join('\n'));
+export const USAGE_LINE = '使い方: node scripts/measure-bid-intake.mjs [拾った条件のフォルダ] [--answers 正解の表のフォルダ] [--notices 原文のフォルダ](くわしくは --help)';
+export const USAGE = [
+  '使い方: node scripts/measure-bid-intake.mjs [拾った条件のフォルダ] [--answers 正解の表のフォルダ] [--notices 原文のフォルダ]',
+  '',
+  '公告から拾った条件(N1.json など)を正解の表と比べて数え、標準出力に出します。ファイルは書きません。AI も通信も使いません。',
+  '読むもの: 拾った条件のフォルダの <番号>.json・正解の表のフォルダの .md・原文のフォルダの公告の文',
+  '',
+  '引数:',
+  '  拾った条件のフォルダ        省くと docs/samples/bid-intake/測り',
+  '  --answers 正解の表のフォルダ  省くと docs/samples/bid-intake/測り/正解',
+  '  --notices 原文のフォルダ      省くと fixtures/bid-intake/公告',
+  '  --help, -h                   この使い方を出す',
+  '',
+  '例: node scripts/measure-bid-intake.mjs docs/samples/bid-intake/測り',
+].join('\n');
+
+export function main(argv, io) {
+  const r = readArgs(argv, { values: ['--answers', '--notices'], max: 1 });
+  const done = handleArgs(r, io, { usage: USAGE, usageLine: USAGE_LINE });
+  if (done !== null) return done;
+  // 入力のフォルダを先に確かめる(正解の表はその後で読む)
+  const dir = resolveIn(io, r.positional[0] ?? path.join(ROOT, 'docs/samples/bid-intake/測り'));
+  const answers = r.opts['--answers'] ? resolveIn(io, r.opts['--answers']) : undefined;
+  const notices = r.opts['--notices'] ? resolveIn(io, r.opts['--notices']) : undefined;
+  for (const p of [dir, answers, notices].filter(Boolean)) {
+    const missing = needPath(p, io, { dir: true });
+    if (missing !== null) return missing;
+  }
+  let result;
+  try {
+    result = measure(dir, { answers, notices });
+  } catch (e) {
+    // フォルダはあっても中の1つが無いとき(N3.json が無いなど)。スタックは出さない
+    if (e?.code === 'ENOENT') { io.error('ファイルがありません: ' + e.path); return 1; }
+    throw e;
+  }
+  io.log(reportLines(result).join('\n'));
+  return 0;
 }
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) runMain(main);
