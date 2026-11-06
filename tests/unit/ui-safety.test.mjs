@@ -18,7 +18,8 @@ test('見出しと注記は折りたたみの外で、断り書きも閉じた�
   const openTag = body.slice(fold, body.indexOf('>', fold) + 1);
   assert.doesNotMatch(openTag, /\sopen/);
   for (const id of ['safety-heading', 'safety-note']) assert.ok(body.indexOf('id="' + id + '"') < fold, id);
-  assert.ok(body.indexOf('id="disclaimer"') < body.indexOf('<details'), '画面の断り書きは最初の折りたたみより前');
+  // 短い注意の行(F83a4)は入口で隠れ、中身を持たない折りたたみなので、最初の折りたたみに数えない
+  assert.ok(body.indexOf('id="disclaimer"') < body.indexOf('<details', body.indexOf('</details>', body.indexOf('id="notice-more"'))), '画面の断り書きは最初の折りたたみより前');
   assert.ok(body.indexOf('id="schedule-result"') < fold && fold < body.indexOf('id="open-items"'), '受注後の段取りと同じ段にある');
   assert.match(body.slice(body.indexOf('id="safety-note"'), fold), /労働基準監督署長、大規模なものは厚生労働大臣/);
   assert.match(body.slice(body.indexOf('id="safety-note"'), fold), /この一覧だけでは現場の安全は確保できません/);

@@ -155,11 +155,13 @@ test('上の帯: 作品名を端まで塗った帯に置き、字と地は 4.5:1
 });
 
 test('断り書き: 帯のすぐ下の印つきの1行。文はそのままで、閉じた中にも隠れた段の中にも無い', () => {
-  const p = body.match(/<\/header>\s*<div class="wrap page">\s*<p class="disclaimer" id="disclaimer">([\s\S]*?)<\/p>/);
+  // 帯との間に置いてよいのは、入口と段1 で隠れている短い注意の行だけ(F83a4)。開いた直後の画面では帯のすぐ下に見える
+  const row = /<details class="notice-more no-print" id="notice-more" hidden>[\s\S]*?<\/details>/;
+  const p = body.replace(row, '').match(/<\/header>\s*<div class="wrap page">\s*<p class="disclaimer" id="disclaimer">([\s\S]*?)<\/p>/);
   assert.ok(p, '断り書きが帯のすぐ下に無い');
   assert.match(p[1], /^<svg [^>]*aria-hidden="true"[\s\S]*?<\/svg><span>/, '印が無い');
   assert.equal(p[1].replace(/<[^>]+>/g, ''), '指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください');
-  const before = body.slice(0, body.indexOf('id="disclaimer"'));
+  const before = body.replace(row, '').slice(0, body.replace(row, '').indexOf('id="disclaimer"'));
   assert.equal((before.match(/<details\b/g) ?? []).length, 0, '断り書きが閉じた中にある');
   assert.ok(!/\shidden[\s>=]/.test(before), '断り書きが隠れる物の中にある');
   // 枠はやめても弱くしない: 濃い字の太字。消す決まりが無い(画面でも紙でも)
@@ -168,7 +170,11 @@ test('断り書き: 帯のすぐ下の印つきの1行。文はそのままで�
   assert.equal(color(prop(r, 'color')), vars['--ink']);
   assert.equal(prop(r, 'font-weight'), 'bold');
   assert.ok(!/visibility|opacity/.test(r), '断り書きを消せる決まりがある');
-  assert.ok(!rules.some((x) => x.sel.includes('.disclaimer') && /display: none/.test(x.body)));
+  // 消す決まりは、段2・段3 で短い注意の行を閉じている間の画面の決まりだけ(F83a4)
+  const hide = rules.filter((x) => /\.disclaimer|#disclaimer/.test(x.sel) && /display: none/.test(x.body));
+  assert.equal(hide.length, 1);
+  assert.ok(hide[0].sel.includes('#notice-more:not([hidden]):not([open]) ~ #disclaimer'));
+  assert.ok(!hide[0].sel.split(',').some((x) => /\.disclaimer|#disclaimer/.test(x) && !x.includes('#notice-more:not([hidden]):not([open]) ~')));
 });
 
 test('進み具合: 番号の丸と線で、全部の段の名前を出す。段の切り替えはボタンのまま', () => {

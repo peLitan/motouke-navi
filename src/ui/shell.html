@@ -56,6 +56,15 @@
   /* 断り書き(F43a): 帯のすぐ下に、印つきの1行として常に出す。文はそのまま。太字と濃い字で弱くならないようにする(黒い太枠はやめた。作者の承認 2026-11-05) */
   .disclaimer { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.75rem 0 0.5rem; color: var(--ink); font-weight: bold; }
   .disclaimer svg { flex: none; width: 1.25rem; height: 1.25rem; margin-top: 0.25rem; }
+  /* 結果と段3 の短い注意(F83a4)。showPanel が hidden を外す。行は全文より前に置いて中身を持たず、閉じている間だけ後ろの全文を消す。開けば同じ全文が出るので文を2か所に持たない */
+  .notice-more { margin: 0.5rem 0 0; color: var(--ink); font-weight: bold; }
+  .notice-more > summary { display: flex; gap: 0.5rem; align-items: flex-start; }
+  .notice-more svg { flex: none; width: 1.25rem; height: 1.25rem; margin-top: 0.25rem; }
+  .notice-more-open { color: var(--primary); font-weight: normal; text-decoration: underline; }
+  /* 消すのは画面だけ。紙とまとめの紙の出し方は今のまま(全文が出る) */
+  @media screen {
+    #notice-more:not([hidden]):not([open]) ~ #disclaimer, #notice-more:not([hidden]):not([open]) ~ #lead, #notice-more:not([hidden]):not([open]) ~ #scope-not-line, #notice-more:not([hidden]):not([open]) ~ #scope, #notice-more:not([hidden]):not([open]) ~ main #offline-note { display: none; }
+  }
   /* 太い黒の枠は、対応表の警告(元の名前が入ったファイル)の1つだけ。ほかの注意は灰色の左線の注記(.note) */
   .warning-box { border: 3px solid var(--line-strong); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 0.75rem 1rem; font-weight: bold; }
   .note { border-left: 4px solid var(--line); padding: 0.25rem 0 0.25rem 0.75rem; margin: 0.5rem 0; color: var(--ink-2); }
@@ -421,6 +430,7 @@
 <p id="print-head" class="print-only" data-version="{{VERSION}}"></p>
 </div></header>
 <div class="wrap page">
+<details class="notice-more no-print" id="notice-more" hidden><summary><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 5.5v6M10 14v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>指摘の候補です。最終の確認は担当者と発注者との協議で行ってください<span class="notice-more-open">(くわしく)</span></span></summary></details>
 <p class="disclaimer" id="disclaimer"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 5.5v6M10 14v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</span></p>
 <div class="lead" id="lead">
 <p>工事の条件から要るものと段取りを、台帳・目次から抜けの候補を、根拠の条つきで出します。</p>
@@ -469,7 +479,7 @@
 </ol>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </div>
-<p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの端末の中だけで扱います。</p>
+<p class="no-print note" id="offline-note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの端末の中だけで扱います。</p>
 <p id="drop-status" class="no-print" aria-live="polite"></p>
 <section id="panel-1" hidden>
 <section id="bid">

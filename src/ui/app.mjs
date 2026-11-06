@@ -177,6 +177,12 @@ export function showPanel(doc, n) {
   if (entry) entry.hidden = true;
   const back = doc.getElementById('entry-back');
   if (back) back.hidden = false;
+  setNoticeCompact(doc, n === 2 || n === 3);
+}
+// 常に出る注意を、結果と段3 では1行にまとめる(F83a4)。行の hidden を外すと CSS が全文を消す。「くわしく」を開いた形は段を移っても残す
+function setNoticeCompact(doc, on) {
+  const row = doc.getElementById('notice-more');
+  if (row) row.hidden = !on;
 }
 // 入口に戻す: タイルを見せ、段を隠し、段階の表示を押せない形にする。入れた値と結果は消さない
 export function showEntry(doc) {
@@ -194,6 +200,7 @@ export function showEntry(doc) {
   if (entry) entry.hidden = false;
   const back = doc.getElementById('entry-back');
   if (back) back.hidden = true;
+  setNoticeCompact(doc, false);
   setBidStatus(doc, '');
   doc.getElementById('sample-load')?.focus?.();
 }
