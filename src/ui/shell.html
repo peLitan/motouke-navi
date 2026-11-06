@@ -48,7 +48,10 @@
   h4 { font-size: 1rem; line-height: 1.4; margin: 0.75rem 0 0.25rem; }
   a { color: var(--primary); }
   /* 焦点(F38b): どの部品でも同じ2重の輪。内の黄は濃い地で、外の黒は白地で見える。outline は焦点のためだけに使う */
-  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible, h2:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring); }
+  /* 本文へ飛ぶ(F83a10): いつもは画面の外に置き、焦点が来たときだけ出す。読み上げとキーボードから届くよう display: none にしない */
+  .skip-link { position: absolute; top: -4rem; left: 0.5rem; z-index: 10; display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1rem; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 8px; }
+  .skip-link:focus { top: 0.5rem; }
   /* ボタンの形(F38b): 既定は副の形。主は下の入口の節で塗る。押せないときは灰色にする */
   button:hover { background: var(--primary-bg); }
   button:active { background: var(--primary-bg); border-color: var(--primary-dark); }
@@ -430,6 +433,7 @@
 </style>
 </head>
 <body>
+<a class="skip-link no-print" href="#main">本文へ飛ぶ</a>
 <header class="topbar"><div class="wrap">
 <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="3" y="24" width="26" height="4" rx="1" fill="currentColor"/><path d="M6 24V13l10-8 10 8v11" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
 <h1><span class="topbar-name">Motouke Navi</span><span class="topbar-sub">(はじめての元請けの確認ツール)</span></h1>

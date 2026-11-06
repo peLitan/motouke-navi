@@ -39,8 +39,8 @@ function foldsAround(id) {
 }
 
 test('最初の画面(題から、段の前の通信しない表示まで)の折りたたみの外の文字は 450字以内', () => {
-  // 短い注意の行(F83a4)は、この画面では隠れているので数えない
-  const first = body.slice(body.indexOf('<body>'), body.indexOf('<section id="panel-1"')).replace(/<details class="notice-more no-print" id="notice-more" hidden>[\s\S]*?<\/details>/, '');
+  // 短い注意の行(F83a4)は、この画面では隠れているので数えない。本文へ飛ぶリンク(F83a10)も、焦点が来るまで画面の外にあるので数えない
+  const first = body.slice(body.indexOf('<body>'), body.indexOf('<section id="panel-1"')).replace(/<details class="notice-more no-print" id="notice-more" hidden>[\s\S]*?<\/details>/, '').replace('<a class="skip-link no-print" href="#main">本文へ飛ぶ</a>', '');
   const n = chars(outsideFolds(first));
   console.log('# 折りたたみの外の文字 ' + n + '字');
   assert.ok(n <= 450, '多い: ' + n + '字');

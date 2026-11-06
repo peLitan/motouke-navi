@@ -143,7 +143,7 @@ test('文字と余白の段階: 文字は 16・19・24・32px、余白は 4・8�
 });
 
 test('上の帯: 作品名を端まで塗った帯に置き、字と地は 4.5:1 以上、印刷では白地に黒', () => {
-  assert.match(body, /^\s*<header class="topbar"><div class="wrap">/);
+  assert.match(body, /^\s*<a class="skip-link no-print" href="#main">本文へ飛ぶ<\/a>\s*<header class="topbar"><div class="wrap">/);
   const bar = ruleOf('.topbar');
   atLeast(color(prop(bar, 'color')), color(prop(bar, 'background')), 4.5, '帯の字');
   assert.equal(prop(ruleOf('body'), 'max-width'), undefined, '帯が端まで塗れない');
