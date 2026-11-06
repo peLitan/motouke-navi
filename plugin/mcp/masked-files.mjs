@@ -13,13 +13,15 @@
 //   check_conditions { data, files }  公告から拾った条件の JSON の文(data)を、原文のファイル(files。作業フォルダからのパスの配列)と照らす(F76a)。
 //                         原文はこの道具が読む(Claude が写した文を照合に持ち込まないため)。読めるのは作業フォルダの中の文のファイルだけで、
 //                         raw/・secrets/・.claude/・.git/ の下と、名前が . で始まる部分のあるパスは断る。
+//                         read_masked と同じく、名前に : のあるパスと Windows のデバイス名のパスも断る(F83b3)。
 //                         1つ目の文は check-conditions.mjs の CLI の --md の表と最後の行、2つ目の文は --out と同じ形の JSON。
 //
 // 環境変数(どれも任意):
 //   MASK_ROOT      作業フォルダ(raw/ のある所)。既定は起動したときのフォルダ(Claude Code はプロジェクトのフォルダで起動する)
 //   MASK_TOOL_DIR  このツール(src/mask/ のあるフォルダ)。既定はこのファイルから3つ上(リポジトリの integration/claude-code/mcp/ に置いたときの直下)。
 //                  作業フォルダに写したときは指定する。plugin/mcp/ の写しは .mcp.json がプラグインの直下を渡す
-//   MASK_MAP       画面の「対応表を書き出す」で保存した対応表の JSON。指定すると、その語(人名・現場名など)も同じ記号で置き換える
+//   MASK_MAP       画面の「対応表を書き出す」で保存した対応表の JSON。指定すると、その語(人名・現場名など)も同じ記号で置き換える。
+//                  相対パスは作業フォルダから解く(MASK_DICT も同じ。F83b3)
 //   MASK_DICT      画面の「辞書を書き出す」で保存した辞書の JSON(format: "mask-dict")。指定すると、足した語(人名・現場名など)も置き換える(F28c)。
 //                  MASK_MAP と両方を指定したときは、対応表を読んでから辞書の語を加える。読めないときは理由の種類だけを返し、辞書の中身(語)は返事にも記録にも出さない
 //
@@ -94,6 +96,22 @@ export const __testHooks = { afterOpen: null, afterResolve: null };
 
 const within = (dir, p) => { const r = path.relative(dir, p); return r !== '' && !r.startsWith('..') && !path.isAbsolute(r); };
 
+// Windows のデバイス名。拡張子が付いても、末尾に点や空白があっても同じ名前として開かれる
+const DEVICE_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
+// 作業フォルダからのパスの名前の決まり(F83b3)。read_masked と check_conditions の両方で、開く前の字と開いた後の実体のパスに当てる。
+// 作業フォルダからの相対のパスだけを見るので、絶対パスのドライブの C: には当たらない。
+// : は Windows の代替データストリーム。raw:s.txt は raw という名前のファイルの別の中身で、パスの字では raw/ の下に見えない。どの OS でも断る
+// デバイス名は開くだけで止まるおそれがある。Windows は名前の最初の点より後を見ない(CON.a.txt も CON)
+function refuseBadName(relPath, rel) {
+  if (relPath.includes(':')) throw new ToolError('名前に : のあるパスは読めません: ' + rel);
+  const isDevice = (part) => DEVICE_NAME.test(part.split('.')[0].replace(/ +$/, ''));
+  if (relPath.split(/[\\/]/).some(isDevice)) throw new ToolError('Windows のデバイス名(CON・PRN・AUX・NUL・COM1〜COM9・LPT1〜LPT9)のパスは読めません: ' + rel);
+}
+
+// MASK_MAP・MASK_DICT のパスを作業フォルダから絶対パスに解く1つの関数(F83b3)。読むファイルと読まないファイルが分かれないよう、makeMasker に渡す値と確かめの両方がこれを通る。指定なしはそのまま返す
+const maskFilePath = (root, p) => (p ? path.resolve(root, p) : p);
+
 const OUTSIDE_RAW = 'raw/ の中のファイルだけを読めます。';
 
 // read_masked の決まり: raw/ の中のファイルだけを許す(.. やシンボリックリンクで外へ出るものは断る)。返す物の形は sourceRule と同じ
@@ -102,10 +120,13 @@ function rawRule(root, rel) {
   const rawDir = path.resolve(root, 'raw');
   const target = path.resolve(root, rel.replace(/\\/g, '/'));
   if (!within(rawDir, target)) throw new ToolError(OUTSIDE_RAW);
+  refuseBadName(path.relative(path.resolve(root), target), rel);
   const checkReal = (real) => {
     let realRaw;
     try { realRaw = fs.realpathSync.native(rawDir); } catch { throw new ToolError('raw/ がありません。'); }
     if (!within(realRaw, real)) throw new ToolError(OUTSIDE_RAW);
+    // raw/ そのものがリンクでもよいので、実体の raw/ からのパスを見る
+    refuseBadName(path.relative(realRaw, real), rel);
     if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです。Excel・Word は画面か表計算で文にしてから raw/ に置いてください。');
   };
   return { target, checkReal, tooLarge: 'ファイルが大きすぎます(1MB まで)。' };
@@ -129,15 +150,18 @@ function sourceRule(root, rel) {
   const base = path.resolve(root);
   const target = path.resolve(base, rel.replace(/\\/g, '/'));
   if (!within(base, target)) throw new ToolError(OUTSIDE_WORK);
+  refuseBadName(path.relative(base, target), rel);
   refuseDeniedPart(path.relative(base, target));
   let realBase;
   try { realBase = fs.realpathSync.native(base); } catch { throw new ToolError('作業フォルダがありません。'); }
-  // 作業フォルダそのものが断る所のとき。guard-raw も作業フォルダが raw/ の中なら止める。worktree は .claude/ の下に置かれるので、.claude・.git は作業フォルダの名前だけを見る
+  // 作業フォルダそのものが断る所のとき。guard-raw も作業フォルダが raw/ の中なら止める。.git はどの階層でも断り、.claude は worktree の置き場(.claude/worktrees/<名前>)の下だけ許す
   const baseParts = realBase.split(path.sep).map((p) => p.toLowerCase());
   if (baseParts.includes('raw')) refuseDeniedPart('raw');
-  if (baseParts.includes('secrets') || ['.claude', '.git'].includes(baseParts.at(-1))) refuseDeniedPart('secrets');
+  const outsideWorktree = (p, i) => p === '.claude' && (baseParts[i + 1] !== 'worktrees' || baseParts[i + 2] === undefined);
+  if (baseParts.includes('secrets') || baseParts.includes('.git') || baseParts.some(outsideWorktree)) refuseDeniedPart('secrets');
   const checkReal = (real) => {
     if (!within(realBase, real)) throw new ToolError(OUTSIDE_WORK);
+    refuseBadName(path.relative(realBase, real), rel);
     refuseDeniedPart(path.relative(realBase, real));
     // raw/ などそのものが作業フォルダの中の別のフォルダへのリンクのとき、実体のパスに raw の字が出ないので、リンクの先と比べる
     for (const dir of DENIED_DIRS) {
@@ -148,7 +172,7 @@ function sourceRule(root, rel) {
     // 対応表と辞書には元の語が入るので、raw/ の外に置かれていても読まない
     for (const p of [process.env.MASK_MAP, process.env.MASK_DICT]) {
       let realMask;
-      try { realMask = p ? fs.realpathSync.native(path.resolve(base, p)) : null; } catch { continue; }
+      try { realMask = p ? fs.realpathSync.native(maskFilePath(base, p)) : null; } catch { continue; }
       if (real === realMask) throw new ToolError('MASK_MAP・MASK_DICT のファイルは読めません。');
     }
     if (!TEXT_EXT.includes(path.extname(real).toLowerCase())) throw new ToolError('読めるのは文のファイル(' + TEXT_EXT.join(' ') + ')だけです: ' + rel);
@@ -340,7 +364,7 @@ export function readMaskedWithCheck(root, rel, { mapPath = process.env.MASK_MAP,
   const text = toText(readChecked(root, rel, 'raw'));
   // 空の返事を「書類が白紙」と読まれないように断る。check_conditions の readSource と同じ見方(BOM だけ・空白だけも空)
   if (!text.trim()) throw new ToolError('ファイルが空です');
-  const m = makeMasker(mapPath, dictPath);
+  const m = makeMasker(maskFilePath(root, mapPath), maskFilePath(root, dictPath));
   const { masked } = m.mask(text);
   const check = checkDecoys(m, text, rand ? { rand } : {});
   return { masked, check };

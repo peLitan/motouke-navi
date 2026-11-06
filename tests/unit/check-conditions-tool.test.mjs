@@ -292,14 +292,14 @@ test('原文の読み方: 無い・フォルダ・文でない形・大きい・
   write(dir, '公告/図.pdf', 'x');
   write(dir, '公告/大きい.txt', Buffer.alloc(1024 * 1024 + 1, 0x61));
   write(dir, '公告/ちょうど.txt', Buffer.alloc(1024 * 1024, 0x61));
-  write(dir, '公告/nul.txt', 'a\u0000b');
+  write(dir, '公告/null文字.txt', 'a\u0000b');
   write(dir, '公告/壊れ.txt', Buffer.from([0x81]));
   const cases = [
     ['公告/無い.md', /^ファイルがありません: 公告\/無い\.md$/],
     ['公告', /^ファイルではありません: 公告$/],
     ['公告/図.pdf', /読めるのは文のファイル.*: 公告\/図\.pdf$/],
     ['公告/大きい.txt', /1MB まで.*公告\/大きい\.txt$/],
-    ['公告/nul.txt', /^公告\/nul\.txt: 文のファイルではないようです/],
+    ['公告/null文字.txt', /^公告\/null文字\.txt: 文のファイルではないようです/],
     ['公告/壊れ.txt', /^公告\/壊れ\.txt: 文字のファイルとして読めません/],
   ];
   for (const [p, re] of cases) assert.match(refused(await call(dir, { data: DATA, files: [p] }), p), re, p);
