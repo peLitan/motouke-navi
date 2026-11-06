@@ -21,11 +21,11 @@ test('知らせの行は結果の見出しの直下にあり、aria-live で、�
   assert.match(shell, /<h2>結果<\/h2>\n<p id="bid-status" class="no-print" aria-live="polite"><\/p>/);
 });
 
-test('確認する: 結果が出たことと次の一手が ✓ 付きで入る', async () => {
+test('確認する: 何も入れないと未回答だけなので、仮の結果と次の一手が ＊ 付きで入る', async () => {
   const page = runPage();
   assert.equal(status(page), '');
   await page.click('bid-run');
-  assert.ok(status(page).startsWith('✓ 結果が出ました。'), status(page));
+  assert.ok(status(page).startsWith('＊ 仮の結果が出ました(未回答 7問)。'), status(page));
   assert.ok(status(page).includes(NEXT), status(page));
 });
 
@@ -77,7 +77,7 @@ test('条件を変えたら、前の「結果が出ました」を残さない�
   await page.click('entry-awarded');
   assert.ok(status(page).startsWith('＊ 条件が変わりました。'), status(page));
   await page.click('bid-run');
-  assert.ok(status(page).startsWith('✓ 結果が出ました。'), status(page));
+  assert.ok(status(page).startsWith('＊ 仮の結果が出ました(未回答 6問)。'), status(page));
 });
 
 test('全部の行のときは条件を変えても知らせを書き換えない(全部の行は条件から出していない)', async () => {

@@ -40,6 +40,9 @@ export function answerStates(values = {}) {
 }
 export const unansweredQuestions = (values = {}) => QUESTIONS.filter((q) => answerState(values, q.id) === 'unanswered');
 export const unknownQuestions = (values = {}) => QUESTIONS.filter((q) => answerState(values, q.id) === 'unknown');
+// 仮の結果の未回答の数(F62b)。未回答が残り、決まった「要る」の項目が無いときだけ 0 より大きい。
+//   このときの「要る 0」は答えていないから 0 なので、カードと知らせの行は数を言わない。欄の値が無いときは未回答を数えない
+export const provisionalUnanswered = (bid, values) => (values && requiredCount(bid) === 0 ? unansweredQuestions(values).length : 0);
 
 // 結果の項目ごとに、判定に使う質問(src/bid-check.mjs・src/taicho.mjs が読む入力)
 export const ITEM_DEPS = {

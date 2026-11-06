@@ -5,7 +5,7 @@ import { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } from '../checklis
 import { sourceVersion, versionText } from '../source-version.mjs';
 import { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } from '../work-kinds.mjs';
 import { PRIME_CHECK_KEY } from '../prime-experience.mjs';
-import { displayStatus, requiredCount, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
+import { displayStatus, requiredCount, provisionalUnanswered, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -171,6 +171,11 @@ export function renderErrors(list) {
 
 // 知らせの行に書く件数(F57)。結果の枠には aria-live を付けないので、数はこの行で伝える。数え方はまとめの表と同じ
 export const requiredCountText = (bid) => '要る ' + requiredCount(bid) + '項目。';
+// 未回答が残り要る項目が無いときは、頭ごと仮の結果の文にする(F62b)。「✓」は付けず、「要る 0項目」も書かない
+export function resultCountText(head, bid, values) {
+  const un = provisionalUnanswered(bid, values);
+  return un ? '＊ 仮の結果が出ました(未回答 ' + un + '問)。' : head + requiredCountText(bid);
+}
 export function checkCountText(out) {
   const u = (out.undecidable ?? []).length;
   return '台帳の候補 ' + (out.candidates ?? []).length + '件' + (u ? '、判断できない ' + u + '件' : '') + '。';
@@ -423,6 +428,7 @@ export function renderResultTop(state = {}) {
   const next = '<div class="next-card no-print"><div class="next-text"><p class="next-title">次にすること: ' + esc(n.title) + '</p><p class="next-sub">' + esc(n.sub) + '</p></div><a class="next-go" href="#' + esc(n.href) + '">' + esc(n.go) + '</a></div>';
   if (errors) return next;
   const required = requiredCount(state.bid);
+  const provisional = provisionalUnanswered(state.bid, vals) > 0; // 答えていないから 0 のときは「● 0」にしない(F62b)
   const safety = state.safety?.count;
   const stat = (cls, href, num, lab, sub, li = '<li>') => li + '<a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
   // スマホ幅だけの4つ目の行(F54a)。国の例などの件数で自分の工事の判定ではないので、印を付けず名前に「例」を入れる
@@ -430,7 +436,7 @@ export function renderResultTop(state = {}) {
     : typeof state.scheduleCount === 'number' ? ['schedule-result', state.scheduleCount + '件', 'いつ・何を・誰にの行。自分の発注者の仕様書で確かめてください']
     : ['schedule-heading', '−', '条件を入れると出ます'];
   return '<ul class="stats" aria-label="結果の件数と段取りの例(候補)">'
-    + stat('required', 'bid-result', STATUS_MARK.required + ' ' + required, '要るものの候補', '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
+    + stat('required', 'bid-result', provisional ? '−' : STATUS_MARK.required + ' ' + required, '要るものの候補', provisional ? '質問に答えると出ます' : '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
     + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る', '自分で確かめる点(件)')
     + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
     + stat('schedule', schedule[0], schedule[1], '受注後の段取りの例', schedule[2], '<li class="phone-only">')

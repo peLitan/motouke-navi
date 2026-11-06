@@ -163,6 +163,19 @@ test('数字のカード: 要るものの候補・確認が要る・安全の法
   assert.ok(none.includes(SAFETY_MARK + ' −') && none.includes('問いに答えると出ます'));
 });
 
+test('数字のカード: 未回答が残り要る項目が無いときは「● 0」にせず「−」。要る項目があるか、全問に答えたら数を出す', () => {
+  const NONE = { items: [{ key: 'c', label: '項目C', status: 'not_required' }], checks: TOP_BID.checks };
+  const ALL_ANSWERED = { orderer: 'unknown', 'work-type': 'unknown', license: 'unknown', 'engineer-qualification': 'unknown', 'contract-amount-unknown': true, 'subcontract-total-unknown': true, 'direct-unknown': true };
+  const first = (state) => statCards(renderResultTop(state))[0];
+  assert.deepEqual(first({ bid: NONE, values: {} }), ['required', 'bid-result', '−', '要るものの候補', '質問に答えると出ます']);
+  assert.deepEqual(first({ bid: TOP_BID, values: {} }), ['required', 'bid-result', '● 2', '要るものの候補', '受注したら要るものの候補(項目)。仮の一覧']);
+  assert.deepEqual(first({ bid: NONE, values: ALL_ANSWERED }), ['required', 'bid-result', '● 0', '要るものの候補', '受注したら要るものの候補(項目)']);
+  assert.equal(first({ bid: NONE })[2], '● 0', '欄の値が無い形は未回答を数えていない');
+  // ほかの3枚は変えない
+  const rest = statCards(renderResultTop({ bid: NONE, values: {}, safety: { count: 3 } })).slice(1).map((c) => c.slice(0, 3));
+  assert.deepEqual(rest, [['check', 'open-items', '! 1'], ['safety', 'safety-fold', SAFETY_MARK + ' 3'], ['schedule', 'schedule-heading', '−']]);
+});
+
 test('4つ目の行「受注後の段取りの例」: スマホ幅だけに出し、件数・飛び先・説明は段取りの状態で変わる', () => {
   const noCount = renderResultTop({ bid: TOP_BID });
   assert.equal(statCards(noCount)[3][4], '条件を入れると出ます');

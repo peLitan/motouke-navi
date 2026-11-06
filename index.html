@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1a9QHgfiUG9mF+r3qLT2Xw4xKcwOQNCd3xEfxy0ACw8='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-4PVTrHrPdDXho7cGbaQzSvlJUhl0SSJ0cgmxS+otYjo='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -1766,6 +1766,9 @@ function answerStates(values = {}) {
 }
 const unansweredQuestions = (values = {}) => QUESTIONS.filter((q) => answerState(values, q.id) === 'unanswered');
 const unknownQuestions = (values = {}) => QUESTIONS.filter((q) => answerState(values, q.id) === 'unknown');
+// 仮の結果の未回答の数(F62b)。未回答が残り、決まった「要る」の項目が無いときだけ 0 より大きい。
+//   このときの「要る 0」は答えていないから 0 なので、カードと知らせの行は数を言わない。欄の値が無いときは未回答を数えない
+const provisionalUnanswered = (bid, values) => (values && requiredCount(bid) === 0 ? unansweredQuestions(values).length : 0);
 
 // 結果の項目ごとに、判定に使う質問(src/bid-check.mjs・src/taicho.mjs が読む入力)
 const ITEM_DEPS = {
@@ -1856,7 +1859,7 @@ function openItems(bid, values = {}) {
   };
 }
 
-return { QUESTIONS, UNKNOWN, unknownId, answerState, answerStates, unansweredQuestions, unknownQuestions, ITEM_DEPS, displayStatus, requiredCount, answerText, itemConditions, CONTACTS, contactsFor, needsCheckPoints, openItems };
+return { QUESTIONS, UNKNOWN, unknownId, answerState, answerStates, unansweredQuestions, unknownQuestions, provisionalUnanswered, ITEM_DEPS, displayStatus, requiredCount, answerText, itemConditions, CONTACTS, contactsFor, needsCheckPoints, openItems };
 })();
 __m["src/ui/view.mjs"] = (function () {
 // 判定の結果を画面の HTML にする(F05a)。DOM には触らず、文字列を返す。
@@ -1866,7 +1869,7 @@ const { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } = __m["src/checkli
 const { sourceVersion, versionText } = __m["src/source-version.mjs"];
 const { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } = __m["src/work-kinds.mjs"];
 const { PRIME_CHECK_KEY } = __m["src/prime-experience.mjs"];
-const { displayStatus, requiredCount, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } = __m["src/ui/answers.mjs"];
+const { displayStatus, requiredCount, provisionalUnanswered, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } = __m["src/ui/answers.mjs"];
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -2032,6 +2035,11 @@ function renderErrors(list) {
 
 // 知らせの行に書く件数(F57)。結果の枠には aria-live を付けないので、数はこの行で伝える。数え方はまとめの表と同じ
 const requiredCountText = (bid) => '要る ' + requiredCount(bid) + '項目。';
+// 未回答が残り要る項目が無いときは、頭ごと仮の結果の文にする(F62b)。「✓」は付けず、「要る 0項目」も書かない
+function resultCountText(head, bid, values) {
+  const un = provisionalUnanswered(bid, values);
+  return un ? '＊ 仮の結果が出ました(未回答 ' + un + '問)。' : head + requiredCountText(bid);
+}
 function checkCountText(out) {
   const u = (out.undecidable ?? []).length;
   return '台帳の候補 ' + (out.candidates ?? []).length + '件' + (u ? '、判断できない ' + u + '件' : '') + '。';
@@ -2284,6 +2292,7 @@ function renderResultTop(state = {}) {
   const next = '<div class="next-card no-print"><div class="next-text"><p class="next-title">次にすること: ' + esc(n.title) + '</p><p class="next-sub">' + esc(n.sub) + '</p></div><a class="next-go" href="#' + esc(n.href) + '">' + esc(n.go) + '</a></div>';
   if (errors) return next;
   const required = requiredCount(state.bid);
+  const provisional = provisionalUnanswered(state.bid, vals) > 0; // 答えていないから 0 のときは「● 0」にしない(F62b)
   const safety = state.safety?.count;
   const stat = (cls, href, num, lab, sub, li = '<li>') => li + '<a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
   // スマホ幅だけの4つ目の行(F54a)。国の例などの件数で自分の工事の判定ではないので、印を付けず名前に「例」を入れる
@@ -2291,7 +2300,7 @@ function renderResultTop(state = {}) {
     : typeof state.scheduleCount === 'number' ? ['schedule-result', state.scheduleCount + '件', 'いつ・何を・誰にの行。自分の発注者の仕様書で確かめてください']
     : ['schedule-heading', '−', '条件を入れると出ます'];
   return '<ul class="stats" aria-label="結果の件数と段取りの例(候補)">'
-    + stat('required', 'bid-result', STATUS_MARK.required + ' ' + required, '要るものの候補', '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
+    + stat('required', 'bid-result', provisional ? '−' : STATUS_MARK.required + ' ' + required, '要るものの候補', provisional ? '質問に答えると出ます' : '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
     + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る', '自分で確かめる点(件)')
     + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
     + stat('schedule', schedule[0], schedule[1], '受注後の段取りの例', schedule[2], '<li class="phone-only">')
@@ -2350,7 +2359,7 @@ function renderSummary(state = {}) {
     + '<p class="human">まとめは下の各結果の数を並べたものです。中身と根拠の条は、リンク先の各結果で確かめてください。</p>';
 }
 
-return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, requiredCountText, checkCountText, planCountText, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
+return { esc, scrollTable, basisLabel, basisList, BID_STATUS, STATUS_MARK, statusBadge, bidItemId, ENGINEER, renderBidResult, renderOpenItems, TAICHO_STATUS, COPY_STATUS, renderTaichoResult, renderErrors, requiredCountText, resultCountText, checkCountText, planCountText, CHECK_FIELD, fieldLabel, renderCheckResult, XLSX_CAUSE, renderXlsxResult, renderAiCandidates, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, SCHEDULE_NOTE_WARNING, scheduleNoteKey, renderSchedule, CHECKLIST_NOTICE, CHECKLIST_SCOPE, CHECKLIST_STATUS_CLASS, checklistBoxId, checklistReferenceText, renderChecklist, renderPlanResult, SUMMARY_FIELDS, SAFETY_MARK, renderResultTop, renderSummary };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -7800,7 +7809,7 @@ __m["src/ui/app.mjs"] = (function () {
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
-const { esc, renderBidResult, renderTaichoResult, renderErrors, requiredCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
+const { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -8062,9 +8071,9 @@ function bidNotice(done) {
   if (!last || !lastSchedule) return '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
   return done;
 }
-// 結果が出たときの文: 頭・要る項目の数・次の一手(F57)。出ていなければ bidNotice の「＊」の文のまま
+// 結果が出たときの文: 頭・要る項目の数(仮の結果なら未回答の数)・次の一手(F57・F62b)。出ていなければ bidNotice の「＊」の文のまま
 function resultNotice(head) {
-  return bidNotice(null) ?? head + requiredCountText(summary.bid) + NEXT_STEP;
+  return bidNotice(null) ?? resultCountText(head, summary.bid, summary.values) + NEXT_STEP;
 }
 // 金額の欄の読めない値に印を付け、直ったら外す
 function markAmountFields(doc, values) {

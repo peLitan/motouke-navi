@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { esc, renderBidResult, renderTaichoResult, renderErrors, requiredCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
+import { esc, renderBidResult, renderTaichoResult, renderErrors, resultCountText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -264,9 +264,9 @@ function bidNotice(done) {
   if (!last || !lastSchedule) return '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
   return done;
 }
-// 結果が出たときの文: 頭・要る項目の数・次の一手(F57)。出ていなければ bidNotice の「＊」の文のまま
+// 結果が出たときの文: 頭・要る項目の数(仮の結果なら未回答の数)・次の一手(F57・F62b)。出ていなければ bidNotice の「＊」の文のまま
 function resultNotice(head) {
-  return bidNotice(null) ?? head + requiredCountText(summary.bid) + NEXT_STEP;
+  return bidNotice(null) ?? resultCountText(head, summary.bid, summary.values) + NEXT_STEP;
 }
 // 金額の欄の読めない値に印を付け、直ったら外す
 function markAmountFields(doc, values) {
