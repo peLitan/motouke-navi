@@ -1,5 +1,5 @@
 // F14c: 折りたたみと印刷。根拠の原文と段取りの表は details で閉じ、見出しは中身が分かる言葉にする。
-// 結論は閉じない。表の中に折りたたみを入れない。印刷ではボタンを消し、details をすべて開き、終わったら元に戻す
+// 結論は閉じない。表の中に折りたたみを入れない。全部を印刷ではボタンを消し、details をすべて開き、終わったら元に戻す。まとめの印刷は print-buttons.test.mjs と print-brief.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildHtml } from '../../build.mjs';

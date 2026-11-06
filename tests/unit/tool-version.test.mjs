@@ -41,7 +41,9 @@ test('印刷の頭: ボタンで版と日時を描き、PC の時計の時刻で
     const fmt = (d) => d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
     const page = runPage();
     assert.equal(page.el('print-head').textContent, '', '印刷の前は空');
-    const from = fmt(new Date());
+    await page.click('sample-load');
+    await page.click('confirm-go');
+    const from = fmt(new Date()); // 見本の読み込みで分の境をまたがないよう、押す直前に取る
     await page.click('print-btn');
     const to = fmt(new Date());
     assert.equal(page.printed.count, 1);

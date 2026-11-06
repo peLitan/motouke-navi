@@ -82,6 +82,11 @@
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 0.75rem; }
   footer { margin-top: 2rem; border-top: 1px solid var(--line); font-size: 1rem; color: var(--ink); }
   .export { margin: 0.5rem 0 1rem; }
+  .export-lead { margin: 0.5rem 0; }
+  .export-item { margin: 0.5rem 0; }
+  .export-item p { margin: 0.25rem 0 0; color: var(--ink-2); }
+  .export button .btn-sub { display: block; font-size: 1rem; font-weight: normal; }
+  #export-status { scroll-margin: 4.5rem 0; }
   .mask-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
   #mask-map table { border-collapse: collapse; }
   #mask-map td, #mask-map th { border: 1px solid var(--line); padding: 0.25rem 0.5rem; }
@@ -299,7 +304,7 @@
     .stat-schedule { border-left-color: var(--ink-2); }
     .next-card { padding: 0.75rem 1rem; }
     .next-go { width: 100%; justify-content: center; }
-    #bid-run, #ledger-run, #plan-run, .rules-switch button, .sample-banner button { width: 100%; margin: 0.25rem 0; }
+    #bid-run, #ledger-run, #plan-run, #print-btn, #print-all-btn, #csv-btn, .rules-switch button, .sample-banner button { width: 100%; margin: 0.25rem 0; }
     .sample-banner { padding: 0.5rem 0.75rem; }
     /* 下に止まる帯(F43c)は段ごとに1つ(#confirm-go・#next-step-3)。同時には出ない。sticky の決まりは1つ。流れの中の行なので、下まで動かせば本文は隠れない */
     .step-next { position: sticky; bottom: 0; margin: 1rem 0 0; padding: 0.5rem 0; background: var(--paper); border-top: 1px solid var(--line); }
@@ -436,7 +441,7 @@
 <p>「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
 </details>
 <details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
-<p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。通信も保存もしません。</p>
+<p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。外へ送らず、入れた内容を残しません。</p>
 <div class="row drop" data-drop="intake-load"><label for="intake-load">拾った条件のファイル(.json)</label>
 <input type="file" id="intake-load" name="intake-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="intake-status" aria-live="polite"></p>
@@ -537,7 +542,7 @@
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>
 </div>
 <div id="result-top" hidden></div>
-<p id="field-note" class="note phone-only no-print">この画面は通信も保存もしません。閉じたり読み直されたりすると、入れた内容は消えます。ほかの端末で入れた内容は、この端末には出ません。</p>
+<p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
@@ -592,10 +597,14 @@
 <pre id="sample-plan"></pre>
 </details>
 <div class="export">
-<button type="button" id="print-btn">結果を印刷する</button>
-<button type="button" id="csv-btn">結果を CSV に書き出す</button>
-<p id="csv-note">Excel で開ける CSV として、この端末に保存します(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
+<p class="export-lead" id="export-lead">残すときは PDF か CSV にしてください(入れた内容は画面を閉じると消えます。どれも外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
+<div class="export-item"><button type="button" id="print-btn" aria-describedby="print-note">PDF で保存・印刷<span class="btn-sub">要点のまとめ(数枚)</span></button>
+<p id="print-note">開く印刷の画面で、プリンター(送信先)を「PDF」の付く項目に替えると PDF に、そのまま「印刷」を押すと紙に出ます。</p></div>
+<div class="export-item"><button type="button" id="print-all-btn" aria-describedby="print-all-note">全部を印刷する<span class="btn-sub">根拠の条文・段取りまで(数十枚)。PDF にもできます</span></button>
+<p id="print-all-note">折りたたみを全部開いて出します。PDF にする手順は上と同じです。</p></div>
+<div class="export-item"><button type="button" id="csv-btn" aria-describedby="csv-note">結果を CSV に書き出す</button>
+<p id="csv-note">Excel で開ける CSV として、この端末に保存します(外へは送りません)。</p></div>
 </div>
 <div class="row no-print step-next"><button type="button" id="next-step-3">次へ: 3 書類を確かめる</button></div>
 </section>
@@ -674,6 +683,7 @@
 <p id="plan-status" aria-live="polite"></p>
 <div id="plan-result" class="result"><p>目次を貼って「目次を点検する」を押してください。</p></div>
 </section>
+<p class="note no-print" id="panel-3-print-note">紙や PDF にするときは、上の進み具合の「2 結果を見る」に戻り、「全部を印刷する」を押してください。この書類の点検の結果も入ります。</p>
 </section>
 <details class="other-tools" id="other-tools">
 <summary class="no-print"><h2>ここからは別の道具</h2><span class="other-tools-sub">A 文の置き換え・B AI の候補の読み込み</span></summary>

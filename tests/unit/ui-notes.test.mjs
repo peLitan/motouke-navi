@@ -203,7 +203,7 @@ test('07 の決まり: 外部の読み込み・通信が無く、断り書きと
 
 // F54b: スマホ幅だけの注記2つと、空の知らせの欄
 test('F54b: 2つの注記は phone-only と no-print を持ち、決まった位置にあり、言わない語が無い', () => {
-  const FIELD = '<p id="field-note" class="note phone-only no-print">この画面は通信も保存もしません。閉じたり読み直されたりすると、入れた内容は消えます。ほかの端末で入れた内容は、この端末には出ません。</p>';
+  const FIELD = '<p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>';
   const PC = '<p id="panel-3-pc-note" class="note phone-only no-print">書類の点検はパソコンの方が楽です(台帳の文を貼る・Excel を読む・印刷)。スマホでも使えます。</p>';
   assert.ok(html.includes('<div id="result-top" hidden></div>\n' + FIELD + '\n<details class="fold" id="bid-fold">'), '#field-note が #result-top と #bid-fold の間に無い');
   const panel3 = html.slice(html.indexOf('<section id="panel-3"'));

@@ -81,7 +81,7 @@ test('根拠のすべてに取得日と版が付き、data/sources/index.json �
   assert.deepEqual([...kinds].sort(), ['document', 'law']);
 });
 
-test('画面: 抜き書きの近く(同じ項目の中)に取得日と版が出る。印刷は画面の折りたたみを開いて出すので同じ文が紙に出る', () => {
+test('画面: 抜き書きの近く(同じ項目の中)に取得日と版が出る。全部を印刷は画面の折りたたみを開いて出すので同じ文が紙に出る', () => {
   const { bid, t, sched, plan, chk, bid2 } = allBasis();
   const htmls = [
     [renderBidResult(bid2), bid2.amountBasis.basis],

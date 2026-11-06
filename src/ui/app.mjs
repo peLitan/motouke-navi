@@ -511,15 +511,26 @@ export function exportScheduleCsv(doc) {
 
 function setExportStatus(doc, text) {
   const el = doc.getElementById('export-status');
-  if (el) el.textContent = text;
+  if (!el) return;
+  el.textContent = text;
+  // 押したボタンから離れた所に出るので、書いたら画面に入れる(幅390 で見えないままにしない)
+  if (text) el.scrollIntoView?.({ block: 'nearest' });
 }
 
 // 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)。
 // 印刷のために開いたものだけを覚えておき、印刷が終わったら(afterprint)閉じ直す
 let openedForPrint = [];
+function openForPrint(d) {
+  if (!d.open) { d.open = true; if (!openedForPrint.includes(d)) openedForPrint.push(d); }
+}
 export function openDetailsForPrint(doc) {
-  for (const d of doc.querySelectorAll('details')) {
-    if (!d.open) { d.open = true; if (!openedForPrint.includes(d)) openedForPrint.push(d); }
+  for (const d of doc.querySelectorAll('details')) openForPrint(d);
+}
+// まとめの印刷は、まとめの2つのカードだけを開く(F66b)。描いていないときは飛ばす
+export function openSummaryForPrint(doc) {
+  for (const id of SUMMARY_FOLDS) {
+    const d = doc.getElementById(id);
+    if (d) openForPrint(d);
   }
 }
 export function restoreDetailsAfterPrint() {
@@ -541,10 +552,33 @@ export function stampPrintHead(doc) {
   el.textContent = '版 ' + el.getAttribute('data-version') + '・印刷した日時 ' + today(d) + ' ' + z2(d.getHours()) + ':' + z2(d.getMinutes());
 }
 
+// 印刷の種類(F66b)。'all' は全部、'brief' はまとめ。ブラウザのメニューからの印刷は押した種類が分からないので全部のまま
+let printMode = 'all';
+let titleBeforePrint = null; // 印刷の間だけ替えた題名の元。afterprint が来なくても、最初に覚えた題名を使う
+
 // 紙に出す直前の準備。ボタンからもブラウザのメニューからも通る
 function prepareForPrint(doc) {
   stampPrintHead(doc);
-  openDetailsForPrint(doc);
+  if (printMode === 'brief') openSummaryForPrint(doc);
+  else openDetailsForPrint(doc);
+}
+
+// ボタンから印刷するときだけ通る。PDF の既定のファイル名が題名になるので、種類と日付を入れる
+function beginPrint(doc, mode) {
+  printMode = mode;
+  doc.body?.classList?.toggle('print-brief', mode === 'brief');
+  if (titleBeforePrint === null) titleBeforePrint = doc.title;
+  const sample = doc.getElementById('sample-banner')?.hidden === false;
+  doc.title = 'Motouke Navi ' + (mode === 'brief' ? 'まとめ' : '全部') + (sample ? ' 見本' : '') + ' ' + today();
+}
+
+// 印刷が終わったら(afterprint)、開いたものを閉じ、種類と題名を戻す
+export function endPrint(doc) {
+  restoreDetailsAfterPrint();
+  printMode = 'all';
+  doc?.body?.classList?.remove('print-brief');
+  if (doc && titleBeforePrint !== null) doc.title = titleBeforePrint;
+  titleBeforePrint = null;
 }
 
 export function exportCsv(doc) {
@@ -555,8 +589,18 @@ export function exportCsv(doc) {
   setExportStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
+// まとめの印刷。結果が無いまま印刷の画面を開くと、空の PDF を残したと思い込むので開かない
 export function printResult(doc, win) {
+  if (!last) { setExportStatus(doc, stale ? STALE : '結果がまだありません。「1 条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。'); return; }
+  beginPrint(doc, 'brief');
+  prepareForPrint(doc);
+  win.print();
+}
+
+// 全部の印刷。もう受注した方の段取りの一覧は結果が無くても出るので、知らせを書いて印刷の画面を開く
+export function printAll(doc, win) {
   if (!last) setExportStatus(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
+  beginPrint(doc, 'all');
   prepareForPrint(doc);
   win.print();
 }
@@ -1149,6 +1193,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (a) openPanelForLink(doc, a.getAttribute('href'));
     });
     on('print-btn', () => printResult(doc, win));
+    on('print-all-btn', () => printAll(doc, win));
     on('csv-btn', () => exportCsv(doc));
     on('ledger-run', () => runLedgerCheck(doc));
     on('check-csv-btn', () => exportCheckCsv(doc));
@@ -1248,7 +1293,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     // ブラウザのメニューから印刷したときも、日時を描いて折りたたみを開く
     if (win && win.addEventListener) {
       win.addEventListener('beforeprint', () => prepareForPrint(doc));
-      win.addEventListener('afterprint', () => restoreDetailsAfterPrint());
+      win.addEventListener('afterprint', () => endPrint(doc));
     }
   };
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start);
