@@ -341,7 +341,7 @@
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
   @media print {
-    @page { margin: 15mm; }
+    @page { size: A4; margin: 15mm; }
     :root { --ink: #000; --ink-2: #000; --paper-2: #fff; --line: #000; --line-strong: #000; --primary: #000; --primary-dark: #000; --primary-bg: #fff; --need: #000; --need-line: #000; --check: #000; --check-line: #000; --ok: #000; --ok-line: #000; --bar-bg: #fff; --bar-ink: #000; --shadow: none; }
     body { font-size: 10.5pt; }
     .wrap, .topbar .wrap { max-width: none; padding: 0; }
@@ -386,6 +386,10 @@
     body.print-brief .summary-items { display: flex; flex-wrap: wrap; gap: 0 1.5em; }
     body.print-brief .summary-row, body.print-brief .item { padding: 1pt 0; }
     body.print-brief #sources-list li { margin: 0; }
+    /* まとめの紙を見本の工事で3枚に収める(F66d)。出典の字は ul に書いて li が受け継ぐ。字を縮めても押す所の高さが残ると縮まないので、紙に要らない高さと余白を外す。消す物は無い */
+    body.print-brief #sources-list, body.print-brief details.basis > summary { font-size: 9pt; line-height: 1.3; }
+    body.print-brief details > summary { padding: 0; min-height: 0; }
+    body.print-brief .summary a { display: inline; padding: 0; }
     /* 足の字も紙の本文と同じ大きさにする。画面の 1rem のままだと紙で大きい */
     footer { font-size: 10.5pt; }
     /* 画面の「閉じる ▴」の規則は [open] の分だけ上の content: none より強いので、同じ強さで消す */

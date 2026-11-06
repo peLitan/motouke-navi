@@ -394,7 +394,7 @@ const printVars = { ...vars, ...Object.fromEntries([...printRules.find((r) => r.
 const printHidden = printRules.filter((r) => /display: none !important/.test(r.body)).flatMap((r) => selectors(r.sel));
 
 test('印刷: 余白があり、文字と線はどれも黒、塗りは白(ボタンは紙に出ない)', () => {
-  assert.match(printCss, /@page \{ margin: 15mm; \}/);
+  assert.match(printCss, /@page \{ size: A4; margin: 15mm; \}/);
   let lines = 0;
   for (const r of rules) {
     if (r.sel === ':root') continue;
