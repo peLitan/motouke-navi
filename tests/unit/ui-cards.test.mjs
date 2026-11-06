@@ -36,6 +36,15 @@ test('段取りの表: すべての td に、その列の見出しと同じ data
   }
 });
 
+test('段取りの表: 状態の列は data-label="状態" の欄で、折り返さない決まりと ui-awarded の否定の検査が実際の欄を見る(F79a)', () => {
+  const d = buildScheduleDetail(COND);
+  const h = renderSchedule(d.rows, d);
+  const cells = [...h.matchAll(/<td data-label="状態">([^<]*)<\/td>/g)].map((m) => m[1]);
+  assert.equal(cells.length, d.rows.length);
+  assert.ok(cells.includes('行う') && cells.includes('確かめる'), cells.join(','));
+  assert.ok(css.includes('table.schedule td[data-label="状態"]'));
+});
+
 test('読み込んだ表の名前が data-label の属性を壊さない', () => {
   const d = buildScheduleDetail(COND);
   const h = renderSchedule(d.rows, { ...d, docLabel: '"><img src=x onerror=alert(1)>' });
@@ -82,8 +91,8 @@ test('CSS: 幅 40rem 以下で行ごとのカードになり、列の名前を d
   // 空の欄は項目名だけが残らないように隠す
   assert.match(narrowRule('table.schedule td:empty'), /display: none/);
   assert.ok(!/table\.schedule \{[^}]*min-width/.test(css), '段取りの表に min-width が残っている');
-  // 台帳の記載事項の表は対象の外(設計の案)
-  assert.ok(!narrow.includes('checklist-table'));
+  // 台帳の記載事項の表も同じカードにする(F79a。F37f の設計では対象の外だった。細かい決まりは ui-mobile の試験)
+  assert.match(narrowRule('table.checklist-table td::before'), /content: attr\(data-label\)/);
   // 広い画面と印刷は表のまま: カードの決まりは幅の決まりの中だけ
   assert.equal(css.replace(narrow, '').includes('attr(data-label)'), false);
 });

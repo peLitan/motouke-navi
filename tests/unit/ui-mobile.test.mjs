@@ -19,7 +19,7 @@ const ruleOf = (sel) => rules.find((r) => r.sel === sel)?.body;
 const html = buildHtml();
 const body = html.split('<body>')[1].replace(/<script\b[\s\S]*?<\/script>/g, '');
 const REM = 16;
-const toPx = (v) => { const m = String(v).match(/^([\d.]+)(rem|px)$/); return m ? Number(m[1]) * (m[2] === 'rem' ? REM : 1) : NaN; };
+const toPx = (v) => { const m = String(v).match(/^([\d.]+)(rem|em|px)$/); return m ? Number(m[1]) * (m[2] === 'px' ? 1 : REM) : NaN; };
 
 // 狭い画面の決まり(@media (max-width: …))の中身と、その幅(px)
 function narrowMedia() {
@@ -203,4 +203,55 @@ test('F54a (7) pointer の @media は @media print より前', () => {
   const found = [...css.matchAll(/@media \((?:any-)?pointer:/g)];
   assert.ok(found.length > 0);
   for (const m of found) assert.ok(m.index < print, m[0]);
+});
+
+test('F79a 状態の列は折り返さず、6em は 320px の決まりの内側。印刷の min-width: 0 は残す', () => {
+  const r = rules.find((x) => x.sel.split(',').map((s) => s.trim()).includes('.checklist-table .cl-status'));
+  assert.ok(r, '.cl-status の決まりが無い');
+  assert.ok(r.sel.includes('table.schedule td[data-label="状態"]'), '段取りの表の状態の列が同じ決まりに無い');
+  assert.equal(prop(r.body, 'white-space'), 'nowrap');
+  assert.equal(prop(r.body, 'min-width'), '6em');
+  assert.ok(toPx('6em') > 0 && toPx('6em') <= 320 - 2 * REM);
+  assert.ok(!phoneRules().some((x) => /cl-status|data-label=/.test(x.sel)), '狭い画面で状態の列の決まりを変えている');
+  assert.ok(printCss.includes('.table-scroll table.checklist-table { min-width: 0; }'));
+});
+
+test('F79a 40rem の中で、記載事項の表は最小の幅を戻し、段取りの表と同じカードになる', () => {
+  assert.equal(prop(phoneRule('.table-scroll table.checklist-table'), 'min-width'), '0', '幅 48rem のまま横に流れる');
+  const block = phoneRules().find((r) => r.sel.split(',').map((s) => s.trim()).includes('table.checklist-table td'));
+  assert.ok(block, 'td をカードにする決まりが無い');
+  for (const s of ['table.checklist-table', 'table.checklist-table caption', 'table.checklist-table tbody', 'table.checklist-table tr']) assert.ok(block.sel.split(',').map((x) => x.trim()).includes(s), s);
+  assert.equal(prop(block.body, 'display'), 'block');
+  assert.equal(prop(block.body, 'width'), '100%');
+  assert.equal(prop(phoneRule('table.checklist-table thead'), 'display'), 'none');
+  assert.equal(prop(phoneRule('table.checklist-table td:empty'), 'display'), 'none');
+  assert.equal(prop(phoneRule('table.checklist-table td::before'), 'content'), 'attr(data-label)');
+  // 枠線・余白・項目名は段取りの表と同じ
+  for (const part of ['tr', 'td', 'td::before']) assert.equal(phoneRule('table.checklist-table ' + part), phoneRule('table.schedule ' + part), part);
+  // 40rem の中の決まりは字下げ4つの1行ずつで、入れ子にしない
+  for (const line of mediaBody('max-width: 40rem').split('\n').filter((l) => l.trim())) assert.match(line, /^ {4}\S/, line);
+});
+
+test('F79a 中身の無い枠は隠すが、aria-live の知らせは隠さない。紙に出す空の欄は対象の外', () => {
+  const sel = '.result:empty, pre:empty, .note:empty:not([aria-live])';
+  assert.equal(prop(ruleOf(sel), 'display'), 'none');
+  for (const id of ['mask-decoy', 'mask-residual']) {
+    const tag = body.match(new RegExp('<p id="' + id + '"[^>]*>'))?.[0];
+    assert.match(tag ?? '', /class="note"/, id);
+    assert.match(tag ?? '', /aria-live="polite"/, id);
+  }
+  // :empty で隠す決まりは、この1つとカードの空の欄だけ(知らせの行を隠す決まりを足していない)
+  const hidden = rules.filter((r) => /:empty/.test(r.sel) && /display: none/.test(r.body)).map((r) => r.sel);
+  assert.deepEqual(hidden.sort(), [sel, 'table.checklist-table td:empty', 'table.schedule td:empty'].sort());
+  // 隠す枠に知らせの行は無い。.note で role="status" の #mask-unchecked は、空のとき今も hidden
+  for (const m of body.matchAll(/<(\w+)\b([^>]*)><\/\1>/g)) {
+    const [, tag, attrs] = m;
+    const cls = attrs.match(/class="([^"]*)"/)?.[1].split(' ') ?? [];
+    const target = tag === 'pre' || cls.includes('result') || (cls.includes('note') && !/aria-live/.test(attrs));
+    if (!target) continue;
+    assert.ok(!/aria-live/.test(attrs), attrs);
+    if (/role="status"/.test(attrs)) assert.match(attrs, /\shidden\b/, attrs);
+    assert.ok(!cls.includes('print-only'), '紙に出す枠を隠している: ' + attrs);
+  }
+  for (const id of ['print-head', 'sign-off']) assert.ok(!/class="[^"]*\b(result|note)\b/.test(body.match(new RegExp('<\\w+ id="' + id + '"[^>]*>'))[0]), id);
 });

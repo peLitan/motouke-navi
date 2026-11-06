@@ -8,8 +8,9 @@ import { fileURLToPath } from 'node:url';
 import { buildHtml } from '../../build.mjs';
 import { checkChecklistText, CHECKLIST_REFERENCE, CHECKLIST_LAW } from '../../src/checklist.mjs';
 import { renderChecklist, CHECKLIST_NOTICE, checklistBoxId } from '../../src/ui/view.mjs';
+import { runPage } from '../acceptance/_helpers.mjs';
 import { checklistRows, CHECKLIST_COLUMNS, toCsv } from '../../src/export.mjs';
-import { runLedgerCheck, setChecklistChecked, checklistState, exportChecklistCsv } from '../../src/ui/app.mjs';
+import { runLedgerCheck, setChecklistChecked, checklistState, exportChecklistCsv, openDetailsForPrint, restoreDetailsAfterPrint } from '../../src/ui/app.mjs';
 import { SAMPLE } from '../../src/sample.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -171,4 +172,139 @@ test('画面の動き: 「台帳を点検する」で表が出て、チェック
   // 結果に無い行の id はチェックにしない
   setChecklistChecked(doc, 'no-such-row', true);
   assert.deepEqual([...checklistState().checked], []);
+});
+
+// F79a: 「空」の行の一覧・閉じた表・描き直しても残る開閉・カードの項目名
+const COLS = ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所'];
+const FOLD_OPEN_TAG = '<details class="fold checklist-fold" id="checklist-fold">';
+const sampleOut = () => checkChecklistText(SAMPLE.documents.ledger);
+
+test('F79a 見本の台帳: 件数の行の下に「空」の行の ul があり、表は閉じた details の中にある', () => {
+  const out = sampleOut();
+  const html = renderChecklist(out, new Set());
+  assert.ok(html.includes('記載事項 50行: 値 0・空 1・判断できない 49(確認した 0行)'), '件数の行が変わった');
+  const at = ['class="checklist-counts"', '<ul class="checklist-empty">', FOLD_OPEN_TAG, '<table class="checklist-table">', '</table>'].map((s) => html.indexOf(s));
+  assert.ok(at.every((n) => n >= 0), at.join(','));
+  assert.deepEqual([...at].sort((a, b) => a - b), at, '順が違う');
+  const closeAt = html.indexOf('</details>', at[4]);
+  assert.equal(html.slice(at[4] + '</table>'.length, closeAt).replace(/<\/div>/g, ''), '', '表と details の閉じの間に別の物がある');
+  assert.ok(html.indexOf('根拠: 建設業法施行規則') > closeAt, '根拠の原文が表の折りたたみの中にある');
+  // 表の中に details は無い(F14c)
+  assert.ok(!/<details|<blockquote/.test(html.match(/<table[\s\S]*?<\/table>/)[0]));
+  // 見出しに行の数。最初は閉じている
+  assert.ok(html.includes(FOLD_OPEN_TAG + '<summary>記載事項の表を開く(' + out.rows.length + '行)</summary>'));
+  // 一覧は「空」の行だけで、相手 — 記載事項 の形
+  const list = html.match(/<ul class="checklist-empty">([\s\S]*?)<\/ul>/)[1];
+  const items = [...list.matchAll(/<li>([^<]*)<\/li>/g)].map((m) => m[1]);
+  assert.deepEqual(items, out.rows.filter((r) => r.status === 'empty').map((r) => esc(r.entity) + ' — ' + esc(r.label)));
+  assert.equal(items.length, out.counts.empty);
+  assert.ok(items.length > 0);
+});
+
+test('F79a 表の列・行・文は変えず、各 td に見出しと同じ data-label が付く。状態の列は class が先', () => {
+  const out = sampleOut();
+  const html = renderChecklist(out, new Set());
+  const ths = [...html.matchAll(/<th scope="col">([^<]*)<\/th>/g)].map((m) => m[1]);
+  assert.deepEqual(ths, COLS);
+  const trs = [...html.matchAll(/<tr class="cl-(?:value|empty|unknown)" data-row-id="[^"]+">([\s\S]*?)<\/tr>/g)].map((m) => m[1]);
+  assert.equal(trs.length, out.rows.length);
+  trs.forEach((tr, i) => {
+    const r = out.rows[i];
+    const tds = [...tr.matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/g)];
+    assert.deepEqual(tds.map((m) => m[1].match(/ data-label="([^"]*)"/)?.[1]), COLS);
+    assert.deepEqual(tds.slice(1).map((m) => m[2]), [r.entity, r.label, r.statusLabel, r.value, r.reason, r.basis.where].map(esc));
+  });
+  assert.equal((html.match(/<td class="cl-status" data-label="状態">/g) ?? []).length, out.rows.length);
+  assert.equal((html.match(/<td class="cl-check" data-label="確認した">/g) ?? []).length, out.rows.length);
+  // CSV の行は表の行と同じ数のまま
+  assert.equal(checklistRows(out, new Set(), '候補です').slice(1, -1).length, out.rows.length);
+});
+
+test('F79a 「空」の行が無ければ一覧は出さず、行が無ければ折りたたみも出さない。名前は書いてあるままエスケープする', () => {
+  const out = sampleOut();
+  const noEmpty = renderChecklist({ ...out, rows: out.rows.filter((r) => r.status !== 'empty'), counts: { ...out.counts, empty: 0 } });
+  assert.ok(!noEmpty.includes('checklist-empty'));
+  assert.ok(noEmpty.includes(FOLD_OPEN_TAG));
+  const none = renderChecklist({ rows: [], counts: { value: 0, empty: 0, unknown: 0 } });
+  assert.ok(!none.includes('<details'));
+  assert.ok(none.includes('表にする事項がありません'));
+  const bad = out.rows.find((r) => r.status === 'empty');
+  const h = renderChecklist({ ...out, rows: [{ ...bad, entity: '<img src=x>', label: '"x"' }] });
+  assert.ok(h.includes('<li>&lt;img src=x&gt; — &quot;x&quot;</li>'), h.match(/<ul class="checklist-empty">[\s\S]*?<\/ul>/)?.[0]);
+});
+
+// 本物の DOM と同じく、innerHTML を入れ替えると中の details は描いた印のとおりの新しい要素になる
+function foldDoc() {
+  const { doc, els } = fakeDoc();
+  let current = '';
+  Object.defineProperty(els['checklist-result'], 'innerHTML', {
+    get: () => current,
+    set: (v) => {
+      current = v;
+      const m = v.match(/<details class="fold checklist-fold" id="checklist-fold"( open)?>/);
+      if (m) els['checklist-fold'] = { open: m[1] === ' open' };
+      else delete els['checklist-fold'];
+    },
+  });
+  return { doc, els };
+}
+
+test('F79a 「確認した」を押して描き直しても、開いた表は開いたまま、閉じた表は閉じたまま。チェックとフォーカスも残る', () => {
+  const { doc, els } = foldDoc();
+  els['ledger-input'].value = SAMPLE.documents.ledger + '\n\n'; // 前の試験のチェックを持ち越さない
+  runLedgerCheck(doc);
+  assert.equal(els['checklist-fold'].open, false, '最初は閉じている');
+  const [a, b] = checklistState().out.rows;
+  setChecklistChecked(doc, a.id, true);
+  assert.equal(els['checklist-fold'].open, false, '閉じていたのに開いた');
+  const before = els['checklist-fold'];
+  before.open = true;
+  let openAtFocus = null;
+  doc.querySelector = () => ({ focus() { openAtFocus = els['checklist-fold'].open; } });
+  setChecklistChecked(doc, b.id, true);
+  assert.notEqual(els['checklist-fold'], before, '描き直していない(試験が何も見ていない)');
+  assert.equal(els['checklist-fold'].open, true, '描き直すと閉じた');
+  assert.equal(openAtFocus, true, 'フォーカスを当てるときに閉じている');
+  assert.deepEqual([...checklistState().checked].sort(), [a.id, b.id].sort());
+  assert.ok(els['checklist-result'].innerHTML.includes('(確認した 2行)'));
+  // 同じ台帳で点検し直しても残る。人が閉じたら閉じたまま
+  runLedgerCheck(doc);
+  assert.equal(els['checklist-fold'].open, true);
+  els['checklist-fold'].open = false;
+  setChecklistChecked(doc, a.id, false);
+  assert.equal(els['checklist-fold'].open, false);
+  // 台帳の文を消すと表ごと無くなる
+  els['ledger-input'].value = '';
+  runLedgerCheck(doc);
+  assert.equal(els['checklist-fold'], undefined);
+});
+
+test('F79a 印刷: 閉じた表は openDetailsForPrint で開き、終わると閉じる。人が開いていたら開いたまま。「開く」の見出しは紙に出ない', () => {
+  const { doc, els } = foldDoc();
+  els['ledger-input'].value = SAMPLE.documents.ledger + '\n\n\n';
+  runLedgerCheck(doc);
+  doc.querySelectorAll = (sel) => (sel === 'details' ? [els['checklist-fold']] : []);
+  openDetailsForPrint(doc);
+  assert.equal(els['checklist-fold'].open, true, '閉じたままだと表が紙に出ない');
+  restoreDetailsAfterPrint();
+  assert.equal(els['checklist-fold'].open, false);
+  els['checklist-fold'].open = true;
+  openDetailsForPrint(doc);
+  restoreDetailsAfterPrint();
+  assert.equal(els['checklist-fold'].open, true);
+  // class の fold で、紙では見出しを隠す決まりに乗る(表には caption が残る)
+  const print = buildHtml().match(/@media print \{([\s\S]*)\n {2}\}/)[1];
+  assert.match(print, /details\.fold > summary \{ display: none; \}/);
+  assert.ok(renderChecklist(sampleOut()).includes('<caption>施工体制台帳の記載事項'));
+  assert.ok(!/#checklist-fold|checklist-fold[^{]*\{[^}]*display: none/.test(print), '表を紙から消している');
+});
+
+test('F79a 見本の画面の道でも、「台帳を点検する」で閉じた表と「空」の一覧が出る', async () => {
+  const page = runPage(buildHtml());
+  await page.click('sample-load');
+  await page.click('ledger-run');
+  const h = page.el('checklist-result').innerHTML;
+  assert.ok(h.includes('<ul class="checklist-empty">'), h.slice(0, 200));
+  assert.ok(h.includes(FOLD_OPEN_TAG));
+  assert.ok(h.includes('<table class="checklist-table">'));
 });

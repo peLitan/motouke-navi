@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DZlxiNhKG1exjlWpp/lvCvR6EJD1uQFlzKhp1hax9Yg='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Jcc0zQDi6q4+tnDS6yFHfOKs7WslgNzCxBobIa1cSGs='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -158,6 +158,8 @@
   /* 空の状態の文(F38d): 結果と見分ける */
   .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   .result-plain > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
+  /* 中身の無い枠は出さない(入力欄に見えるため。F79a)。aria-live の知らせは除く(隠すと、文が入っても読み上げが出ないことがある) */
+  .result:empty, pre:empty, .note:empty:not([aria-live]) { display: none; }
   /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; border-radius: 8px; padding: 0 0.5rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
@@ -283,6 +285,10 @@
   .checklist-table .cl-check { white-space: nowrap; }
   .checklist-table .cl-check label { display: inline-block; min-height: 44px; line-height: 44px; }
   .checklist-table tr.cl-empty .cl-status { font-weight: 700; }
+  /* 状態の列は折り返さない(F79a)。6em は「判断できない」の6字の幅。段取りの表は HTML を変えないよう data-label で選ぶ */
+  .checklist-table .cl-status, table.schedule td[data-label="状態"] { white-space: nowrap; min-width: 6em; }
+  .checklist-empty-lead { margin-bottom: 0.25rem; }
+  .checklist-empty { margin-top: 0.25rem; }
   .checklist-notice { font-weight: 700; }
   /* スマホ幅だけに出す部品(F54a)。パソコン幅と紙には出さない */
   .phone-only { display: none; }
@@ -324,6 +330,14 @@
     table.schedule td { padding: 0.25rem 0; border-bottom: none; }
     table.schedule td:empty { display: none; }
     table.schedule td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
+    /* 記載事項の表も同じカードにする(F79a)。min-width を戻さないと、カードでも幅 48rem のまま横に流れる */
+    .table-scroll table.checklist-table { min-width: 0; }
+    table.checklist-table, table.checklist-table caption, table.checklist-table tbody, table.checklist-table tr, table.checklist-table td { display: block; width: 100%; }
+    table.checklist-table thead { display: none; }
+    table.checklist-table tr { border: 1px solid var(--line); border-radius: 8px; padding: 0.25rem 0.75rem; margin: 0 0 0.75rem; }
+    table.checklist-table td { padding: 0.25rem 0; border-bottom: none; }
+    table.checklist-table td:empty { display: none; }
+    table.checklist-table td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
   }
   /* 指の端末は押す所を 48px にする(F54a)。ここには min-height だけを書く */
   @media (pointer: coarse) {
@@ -2327,17 +2341,20 @@ function renderChecklist(out = {}, checked = new Set()) {
     + '<p class="note">' + esc(CHECKLIST_SCOPE) + '</p>'
     + '<p class="checklist-counts">記載事項 ' + rows.length + '行: 値 ' + c.value + '・空 ' + c.empty + '・判断できない ' + c.unknown + '(確認した ' + rows.filter((r) => checked.has(r.id)).length + '行)</p>';
   if (!rows.length) return head + '<p>表にする事項がありません。</p>';
+  // 列の名前は1か所で持ち、見出しと各 td の data-label を同じにする。狭い画面ではカードの項目名に data-label を使う(F79a)
+  const cols = ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所'];
+  const td = (i, inner, cls) => '<td' + (cls ? ' class="' + cls + '"' : '') + ' data-label="' + cols[i] + '">' + inner + '</td>';
   const body = rows.map((r) => {
     const id = checklistBoxId(r.id);
     const on = checked.has(r.id);
     return '<tr class="' + (CHECKLIST_STATUS_CLASS[r.status] ?? '') + '" data-row-id="' + esc(r.id) + '">'
-      + '<td class="cl-check"><input type="checkbox" class="checklist-check" id="' + esc(id) + '" data-row-id="' + esc(r.id) + '"' + (on ? ' checked' : '')
-      + ' aria-label="' + esc(r.entity + ' ' + r.label + ' を確認した') + '"> <label for="' + esc(id) + '" class="cl-mark">' + (on ? '確認した' : '未確認') + '</label></td>'
-      + '<td>' + esc(r.entity) + '</td><td>' + esc(r.label) + '</td><td class="cl-status">' + esc(r.statusLabel) + '</td>'
-      + '<td>' + esc(r.value) + '</td><td>' + esc(r.reason) + '</td><td>' + esc(r.basis?.where ?? '') + '</td></tr>';
+      + td(0, '<input type="checkbox" class="checklist-check" id="' + esc(id) + '" data-row-id="' + esc(r.id) + '"' + (on ? ' checked' : '')
+        + ' aria-label="' + esc(r.entity + ' ' + r.label + ' を確認した') + '"> <label for="' + esc(id) + '" class="cl-mark">' + (on ? '確認した' : '未確認') + '</label>', 'cl-check')
+      + td(1, esc(r.entity)) + td(2, esc(r.label)) + td(3, esc(r.statusLabel), 'cl-status')
+      + td(4, esc(r.value)) + td(5, esc(r.reason)) + td(6, esc(r.basis?.where ?? '')) + '</tr>';
   }).join('');
   const inner = '<caption>施工体制台帳の記載事項(建設業法施行規則 第14条の2 第1項)</caption><thead><tr>'
-    + ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所'].map((h) => '<th scope="col">' + h + '</th>').join('')
+    + cols.map((h) => '<th scope="col">' + h + '</th>').join('')
     + '</tr></thead><tbody>' + body + '</tbody>';
   // 根拠の原文は表の外に、事項ごとに1回だけ(表の中に折りたたみを入れない。F14c)
   const seen = new Map();
@@ -2345,7 +2362,15 @@ function renderChecklist(out = {}, checked = new Set()) {
   const quotes = '<details class="basis checklist-basis"><summary>根拠: 建設業法施行規則 第14条の2 第1項の原文(' + seen.size + '件)</summary><p>' + esc(versionText({ fetchedAt: CHECKLIST_LAW.fetchedAt, version: sourceVersion(CHECKLIST_LAW) })) + '(e-Gov 法令 API)</p><ul>'
     + [...seen.values()].map((b) => '<li><strong>' + esc(b.where) + '</strong><blockquote>' + esc(b.quote) + '</blockquote></li>').join('') + '</ul></details>';
   const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
-  return head + notes + scrollTable('施工体制台帳の記載事項の表', '<table class="checklist-table">' + inner + '</table>') + quotes;
+  // 「空」の行だけを先に出し、表は閉じた折りたたみに入れる(F79a)。表の中には入れない(F14c)。
+  // class の fold は、印刷で見出しを隠す決まり(details.fold > summary)に乗せるため。開閉は app.mjs の keepOpen で描き直しても残す
+  const empties = rows.filter((r) => r.status === 'empty');
+  const emptyList = empties.length
+    ? '<p class="checklist-empty-lead">「空」の行:</p><ul class="checklist-empty">' + empties.map((r) => '<li>' + esc(r.entity) + ' — ' + esc(r.label) + '</li>').join('') + '</ul>'
+    : '';
+  const fold = '<details class="fold checklist-fold" id="checklist-fold"><summary>記載事項の表を開く(' + rows.length + '行)</summary>'
+    + scrollTable('施工体制台帳の記載事項の表', '<table class="checklist-table">' + inner + '</table>') + '</details>';
+  return head + emptyList + notes + fold + quotes;
 }
 
 function renderPlanResult(out = {}) {
@@ -8089,15 +8114,19 @@ let stale = false; // 結果を出したあとに条件を変えたか
 const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, scheduleNotRead: false, check: null, plan: null, stale: false };
 let summaryShown = false;
 const SUMMARY_FOLDS = ['summary-docs', 'summary-conditions']; // 描き直しても開いたままにするカード
+// 枠の innerHTML を入れ替えると中の details は閉じるので、開いていたものを開き直す
+function keepOpen(doc, ids, draw) {
+  const opened = ids.filter((id) => doc.getElementById(id)?.open === true);
+  draw();
+  for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
+}
 function updateSummary(doc) {
   const el = doc.getElementById('summary');
   if (!el) return;
   const state = { ...summary, values: summary.values ?? collect(doc) };
   const top = doc.getElementById('result-top');
   if (top) { const h = renderResultTop(state); top.innerHTML = h; top.hidden = !h; }
-  const opened = SUMMARY_FOLDS.filter((id) => doc.getElementById(id)?.open === true);
-  el.innerHTML = renderSummary(state);
-  for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
+  keepOpen(doc, SUMMARY_FOLDS, () => { el.innerHTML = renderSummary(state); });
   el.hidden = false;
   summaryShown = true;
 }
@@ -8749,7 +8778,7 @@ function checklistState() {
 }
 function drawChecklist(doc) {
   const el = doc.getElementById('checklist-result');
-  if (el && lastChecklist) el.innerHTML = renderChecklist(lastChecklist, checklistChecked);
+  if (el && lastChecklist) keepOpen(doc, ['checklist-fold'], () => { el.innerHTML = renderChecklist(lastChecklist, checklistChecked); });
 }
 function runChecklist(doc, text) {
   const el = doc.getElementById('checklist-result');

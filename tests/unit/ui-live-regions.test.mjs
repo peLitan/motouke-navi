@@ -48,6 +48,7 @@ test('CSS の決まりは変えていない。見た目が結果の枠の属性�
     '.note[aria-live]:not(:empty)',
     '.sample-banner p[aria-live]:not(:empty)',
     'p[aria-live][data-kind="error"]:not(:empty)',
+    '.result:empty, pre:empty, .note:empty:not([aria-live])', // F79a: 空の枠を隠す決まり。知らせの行を除くために aria-live を見る
     'p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status)',
   ]);
 });

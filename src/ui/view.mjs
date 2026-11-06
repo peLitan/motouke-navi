@@ -353,17 +353,20 @@ export function renderChecklist(out = {}, checked = new Set()) {
     + '<p class="note">' + esc(CHECKLIST_SCOPE) + '</p>'
     + '<p class="checklist-counts">記載事項 ' + rows.length + '行: 値 ' + c.value + '・空 ' + c.empty + '・判断できない ' + c.unknown + '(確認した ' + rows.filter((r) => checked.has(r.id)).length + '行)</p>';
   if (!rows.length) return head + '<p>表にする事項がありません。</p>';
+  // 列の名前は1か所で持ち、見出しと各 td の data-label を同じにする。狭い画面ではカードの項目名に data-label を使う(F79a)
+  const cols = ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所'];
+  const td = (i, inner, cls) => '<td' + (cls ? ' class="' + cls + '"' : '') + ' data-label="' + cols[i] + '">' + inner + '</td>';
   const body = rows.map((r) => {
     const id = checklistBoxId(r.id);
     const on = checked.has(r.id);
     return '<tr class="' + (CHECKLIST_STATUS_CLASS[r.status] ?? '') + '" data-row-id="' + esc(r.id) + '">'
-      + '<td class="cl-check"><input type="checkbox" class="checklist-check" id="' + esc(id) + '" data-row-id="' + esc(r.id) + '"' + (on ? ' checked' : '')
-      + ' aria-label="' + esc(r.entity + ' ' + r.label + ' を確認した') + '"> <label for="' + esc(id) + '" class="cl-mark">' + (on ? '確認した' : '未確認') + '</label></td>'
-      + '<td>' + esc(r.entity) + '</td><td>' + esc(r.label) + '</td><td class="cl-status">' + esc(r.statusLabel) + '</td>'
-      + '<td>' + esc(r.value) + '</td><td>' + esc(r.reason) + '</td><td>' + esc(r.basis?.where ?? '') + '</td></tr>';
+      + td(0, '<input type="checkbox" class="checklist-check" id="' + esc(id) + '" data-row-id="' + esc(r.id) + '"' + (on ? ' checked' : '')
+        + ' aria-label="' + esc(r.entity + ' ' + r.label + ' を確認した') + '"> <label for="' + esc(id) + '" class="cl-mark">' + (on ? '確認した' : '未確認') + '</label>', 'cl-check')
+      + td(1, esc(r.entity)) + td(2, esc(r.label)) + td(3, esc(r.statusLabel), 'cl-status')
+      + td(4, esc(r.value)) + td(5, esc(r.reason)) + td(6, esc(r.basis?.where ?? '')) + '</tr>';
   }).join('');
   const inner = '<caption>施工体制台帳の記載事項(建設業法施行規則 第14条の2 第1項)</caption><thead><tr>'
-    + ['確認した', '相手', '記載事項', '状態', '台帳の値(書いてあるまま)', '理由', '根拠の場所'].map((h) => '<th scope="col">' + h + '</th>').join('')
+    + cols.map((h) => '<th scope="col">' + h + '</th>').join('')
     + '</tr></thead><tbody>' + body + '</tbody>';
   // 根拠の原文は表の外に、事項ごとに1回だけ(表の中に折りたたみを入れない。F14c)
   const seen = new Map();
@@ -371,7 +374,15 @@ export function renderChecklist(out = {}, checked = new Set()) {
   const quotes = '<details class="basis checklist-basis"><summary>根拠: 建設業法施行規則 第14条の2 第1項の原文(' + seen.size + '件)</summary><p>' + esc(versionText({ fetchedAt: CHECKLIST_LAW.fetchedAt, version: sourceVersion(CHECKLIST_LAW) })) + '(e-Gov 法令 API)</p><ul>'
     + [...seen.values()].map((b) => '<li><strong>' + esc(b.where) + '</strong><blockquote>' + esc(b.quote) + '</blockquote></li>').join('') + '</ul></details>';
   const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
-  return head + notes + scrollTable('施工体制台帳の記載事項の表', '<table class="checklist-table">' + inner + '</table>') + quotes;
+  // 「空」の行だけを先に出し、表は閉じた折りたたみに入れる(F79a)。表の中には入れない(F14c)。
+  // class の fold は、印刷で見出しを隠す決まり(details.fold > summary)に乗せるため。開閉は app.mjs の keepOpen で描き直しても残す
+  const empties = rows.filter((r) => r.status === 'empty');
+  const emptyList = empties.length
+    ? '<p class="checklist-empty-lead">「空」の行:</p><ul class="checklist-empty">' + empties.map((r) => '<li>' + esc(r.entity) + ' — ' + esc(r.label) + '</li>').join('') + '</ul>'
+    : '';
+  const fold = '<details class="fold checklist-fold" id="checklist-fold"><summary>記載事項の表を開く(' + rows.length + '行)</summary>'
+    + scrollTable('施工体制台帳の記載事項の表', '<table class="checklist-table">' + inner + '</table>') + '</details>';
+  return head + emptyList + notes + fold + quotes;
 }
 
 export function renderPlanResult(out = {}) {

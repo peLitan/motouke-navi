@@ -158,6 +158,8 @@
   /* 空の状態の文(F38d): 結果と見分ける */
   .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   .result-plain > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
+  /* 中身の無い枠は出さない(入力欄に見えるため。F79a)。aria-live の知らせは除く(隠すと、文が入っても読み上げが出ないことがある) */
+  .result:empty, pre:empty, .note:empty:not([aria-live]) { display: none; }
   /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; border-radius: 8px; padding: 0 0.5rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
@@ -283,6 +285,10 @@
   .checklist-table .cl-check { white-space: nowrap; }
   .checklist-table .cl-check label { display: inline-block; min-height: 44px; line-height: 44px; }
   .checklist-table tr.cl-empty .cl-status { font-weight: 700; }
+  /* 状態の列は折り返さない(F79a)。6em は「判断できない」の6字の幅。段取りの表は HTML を変えないよう data-label で選ぶ */
+  .checklist-table .cl-status, table.schedule td[data-label="状態"] { white-space: nowrap; min-width: 6em; }
+  .checklist-empty-lead { margin-bottom: 0.25rem; }
+  .checklist-empty { margin-top: 0.25rem; }
   .checklist-notice { font-weight: 700; }
   /* スマホ幅だけに出す部品(F54a)。パソコン幅と紙には出さない */
   .phone-only { display: none; }
@@ -324,6 +330,14 @@
     table.schedule td { padding: 0.25rem 0; border-bottom: none; }
     table.schedule td:empty { display: none; }
     table.schedule td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
+    /* 記載事項の表も同じカードにする(F79a)。min-width を戻さないと、カードでも幅 48rem のまま横に流れる */
+    .table-scroll table.checklist-table { min-width: 0; }
+    table.checklist-table, table.checklist-table caption, table.checklist-table tbody, table.checklist-table tr, table.checklist-table td { display: block; width: 100%; }
+    table.checklist-table thead { display: none; }
+    table.checklist-table tr { border: 1px solid var(--line); border-radius: 8px; padding: 0.25rem 0.75rem; margin: 0 0 0.75rem; }
+    table.checklist-table td { padding: 0.25rem 0; border-bottom: none; }
+    table.checklist-table td:empty { display: none; }
+    table.checklist-table td::before { content: attr(data-label); display: block; font-weight: bold; color: var(--ink-2); }
   }
   /* 指の端末は押す所を 48px にする(F54a)。ここには min-height だけを書く */
   @media (pointer: coarse) {

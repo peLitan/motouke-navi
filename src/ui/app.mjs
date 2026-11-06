@@ -43,15 +43,19 @@ let stale = false; // 結果を出したあとに条件を変えたか
 const summary = { values: null, errors: [], bid: null, taicho: null, scheduleCount: null, scheduleNotRead: false, check: null, plan: null, stale: false };
 let summaryShown = false;
 const SUMMARY_FOLDS = ['summary-docs', 'summary-conditions']; // 描き直しても開いたままにするカード
+// 枠の innerHTML を入れ替えると中の details は閉じるので、開いていたものを開き直す
+function keepOpen(doc, ids, draw) {
+  const opened = ids.filter((id) => doc.getElementById(id)?.open === true);
+  draw();
+  for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
+}
 function updateSummary(doc) {
   const el = doc.getElementById('summary');
   if (!el) return;
   const state = { ...summary, values: summary.values ?? collect(doc) };
   const top = doc.getElementById('result-top');
   if (top) { const h = renderResultTop(state); top.innerHTML = h; top.hidden = !h; }
-  const opened = SUMMARY_FOLDS.filter((id) => doc.getElementById(id)?.open === true);
-  el.innerHTML = renderSummary(state);
-  for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
+  keepOpen(doc, SUMMARY_FOLDS, () => { el.innerHTML = renderSummary(state); });
   el.hidden = false;
   summaryShown = true;
 }
@@ -703,7 +707,7 @@ export function checklistState() {
 }
 function drawChecklist(doc) {
   const el = doc.getElementById('checklist-result');
-  if (el && lastChecklist) el.innerHTML = renderChecklist(lastChecklist, checklistChecked);
+  if (el && lastChecklist) keepOpen(doc, ['checklist-fold'], () => { el.innerHTML = renderChecklist(lastChecklist, checklistChecked); });
 }
 export function runChecklist(doc, text) {
   const el = doc.getElementById('checklist-result');
