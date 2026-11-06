@@ -6,6 +6,7 @@
 // 置き換えで見つからなかった会社・団体の名前らしい語は「辞書に足す候補」として出す(F36b)。候補は自動で置き換えず、利用者が1つずつ選ぶ。
 import { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } from '../mask/core.mjs';
 import { downloadText } from './download.mjs';
+import { writeNotice } from './notice.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
 import { MEDICAL_DICT } from '../mask/dict-medical.mjs';
 import { esc, scrollTable } from './view.mjs';
@@ -30,7 +31,7 @@ export const currentIndustry = () => industry;
 export const INDUSTRY_SWITCH_NOTICE = '業界を切り替えると、今の対応表は消えます(足した語は残します)。あとで戻す文があるときは、先に「対応表を書き出す」で保存してください。';
 const getMasker = () => (masker ||= createMasker({ dictionaries: [INDUSTRIES[industry]] }));
 
-const setText = (doc, id, text) => { const el = doc.getElementById(id); if (el) el.textContent = text; };
+const setText = (doc, id, text) => writeNotice(doc.getElementById(id), text);
 const valueOf = (doc, id) => { const el = doc.getElementById(id); return el ? String(el.value ?? '') : ''; };
 
 // 境目の欄(「50,000,000 80,000,000」「5000万、8000万」など。空白・読点・改行で区切る)を数の並びにする
@@ -393,15 +394,15 @@ export async function loadMaskFile(doc, file) {
 
 // ボタンで選んでも、ドラッグして置いても、この関数で読む(F54d)
 export async function readDictFile(doc, f) {
-  if (f.size > DICT_MAX_BYTES) { setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。'); return; }
+  if (f.size > DICT_MAX_BYTES) { setText(doc, 'dict-file-status', '読み込めませんでした: 辞書のファイルとしては大きすぎます(1MB まで)。今の辞書はそのままです。'); return false; }
   let text;
   try {
     text = await f.text();
   } catch {
     setText(doc, 'dict-file-status', '読み込めませんでした: ファイルを読めません。今の辞書はそのままです。');
-    return;
+    return false;
   }
-  importDictFile(doc, text, f.name);
+  return importDictFile(doc, text, f.name);
 }
 export async function readMapFile(doc, f) {
   let text;
@@ -409,9 +410,9 @@ export async function readMapFile(doc, f) {
     text = await f.text();
   } catch {
     setText(doc, 'map-status', '読み込めませんでした: ファイルを読めません。今の対応表はそのままです。');
-    return;
+    return false;
   }
-  importMaskMap(doc, text, f.name);
+  return importMaskMap(doc, text, f.name);
 }
 
 export function startMask(doc) {

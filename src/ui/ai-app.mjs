@@ -1,6 +1,7 @@
 // 画面の「B. Claude で点検した結果(AI の候補)」(F12a)。
 // 画面は通信しない。手元のプログラム(tools/claude-check.mjs)が書き出した結果の JSON を、利用者が選んで読み込み、別の欄に出すだけ。
 import { renderAiCandidates } from './view.mjs';
+import { writeNotice } from './notice.mjs';
 
 export const RESULT_FORMAT = 'ai-candidates';
 
@@ -24,9 +25,11 @@ export function loadAiResult(doc, text, name) {
   try {
     const r = parseAiResult(text);
     out.innerHTML = renderAiCandidates(r.candidates, r.warnings);
-    if (status) status.textContent = (typeof name === 'string' ? name + ' を読みました(AI の候補 ' + r.candidates.length + ' 件)。' : 'AI の候補を ' + r.candidates.length + ' 件読み込みました。');
+    writeNotice(status, typeof name === 'string' ? name + ' を読みました(AI の候補 ' + r.candidates.length + ' 件)。' : 'AI の候補を ' + r.candidates.length + ' 件読み込みました。');
+    return true;
   } catch (e) {
-    if (status) status.textContent = '読み込めませんでした: ' + e.message;
+    writeNotice(status, '読み込めませんでした: ' + e.message);
+    return false;
   }
 }
 
@@ -36,9 +39,8 @@ export async function readAiFile(doc, f) {
   try {
     text = await f.text();
   } catch {
-    const status = doc.getElementById('ai-status');
-    if (status) status.textContent = '読み込めませんでした: ファイルを読めません。';
-    return;
+    writeNotice(doc.getElementById('ai-status'), '読み込めませんでした: ファイルを読めません。');
+    return false;
   }
-  loadAiResult(doc, text, f.name);
+  return loadAiResult(doc, text, f.name);
 }

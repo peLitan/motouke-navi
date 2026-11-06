@@ -77,6 +77,7 @@
   .summary a, .result a, .result-plain a { display: inline-block; padding: 0.25rem 0; }
   .human { font-weight: bold; }
   .errors { color: var(--need); }
+  div.errors { border-left: 4px solid var(--need); padding-left: 0.75rem; }
   .field-error { color: var(--need); margin: 0.25rem 0 0; }
   blockquote { margin: 0.25rem 0 0.5rem 1rem; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 0.75rem; }
   footer { margin-top: 2rem; border-top: 1px solid var(--line); font-size: 1rem; color: var(--ink); }
@@ -147,6 +148,8 @@
   p[aria-live]:not(:empty) { border-left: 4px solid var(--primary); padding: 0.25rem 0 0.25rem 0.75rem; margin: 0.5rem 0; font-weight: bold; }
   .note[aria-live]:not(:empty) { border-left-color: var(--line); font-weight: normal; }
   .sample-banner p[aria-live]:not(:empty) { border: none; padding: 0; margin: 0.25rem 0; font-weight: normal; }
+  /* 失敗の知らせ(F58a): 左線と字を「要る」の色にする。線と文の頭の語でも分かるので、色だけには頼らない */
+  p[aria-live][data-kind="error"]:not(:empty) { border-left-color: var(--need); color: var(--need); }
   /* 空の状態の文(F38d): 結果と見分ける */
   .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   .result-plain > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }

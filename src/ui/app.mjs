@@ -28,6 +28,7 @@ import { SAMPLE } from '../sample.mjs';
 import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
 import { startMask, loadMaskFile, readDictFile, readMapFile } from './mask-app.mjs';
 import { readAiFile, RESULT_FORMAT } from './ai-app.mjs';
+import { writeNotice, markFailed } from './notice.mjs';
 import { downloadText } from './download.mjs';
 
 // 書き出しの最後に入れる文(画面の上の注意と同じ)
@@ -253,15 +254,20 @@ const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。';
 const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
 const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。下の「受注後の段取り」から読んでください。';
 const NOTICE_STALE = '＊ 条件が変わりました。もう一度「確認する」を押すと、新しい条件の結果が出ます。';
+const NOTICE_AMOUNT = '＊ 金額の欄を読めませんでした。「1 条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
+const NOTICE_HALTED = '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
+// 失敗の文だけに印を付ける(F58a)。同じ「＊」でも、条件が変わった文と仮の結果の文は失敗ではないので付けない
+const BID_FAILED = new Set([NOTICE_AMOUNT, NOTICE_HALTED]);
 function setBidStatus(doc, text) {
   const el = doc.getElementById('bid-status');
-  if (el) el.textContent = text;
+  writeNotice(el, text);
+  if (BID_FAILED.has(text)) markFailed(el);
 }
 // 今の結果で done と言えるかを見て、言えなければ何が起きたかと次の一手を返す
 function bidNotice(done) {
-  if (summary.errors.length) return '＊ 金額の欄を読めませんでした。「1 条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
+  if (summary.errors.length) return NOTICE_AMOUNT;
   if (summary.stale) return NOTICE_STALE;
-  if (!last || !lastSchedule) return '＊ 判定の途中で止まりました。結果の欄の知らせを読んでください。';
+  if (!last || !lastSchedule) return NOTICE_HALTED;
   return done;
 }
 // 結果が出たときの文: 頭・要る項目の数(仮の結果なら未回答の数)・次の一手(F57・F62b)。出ていなければ bidNotice の「＊」の文のまま
@@ -463,8 +469,7 @@ function applyRulesTable(doc) {
   }
 }
 function setRulesStatus(doc, text) {
-  const el = doc.getElementById('rules-status');
-  if (el) el.textContent = text;
+  writeNotice(doc.getElementById('rules-status'), text);
 }
 // 壊れたファイルは理由を出して拒み、今の表はそのままにする
 export function loadRulesFile(doc, text, name) {
@@ -692,11 +697,11 @@ export async function loadLedgerFile(doc, file) {
     if (input) input.value = ledgerToText(r.ledger);
     if (lastCheck) { lastCheck = null; setCheckStatus(doc, CHECK_STALE); }
     if (outEl) outEl.innerHTML = renderXlsxResult(r, FIELD_NAMES);
-    if (status) status.textContent = file.name + ' を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。';
+    writeNotice(status, file.name + ' を読みました(読めない欄 ' + r.unreadable.length + ' 件)。台帳の文の欄を確かめ、足りない行を書き足してから「台帳を点検する」を押してください。');
     return true;
   } catch (e) {
     if (outEl) outEl.innerHTML = '';
-    if (status) status.textContent = '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e));
+    writeNotice(status, '「' + file.name + '」を読めませんでした: ' + (e && e.message ? e.message : String(e)));
     return false;
   }
 }
@@ -779,8 +784,7 @@ export function loadSample(doc) {
 
 // 公告から拾った条件のファイルを読み、入れてよい欄だけ入れる(F41a)。壊れたファイルは何も変えない
 function setIntakeStatus(doc, text, lines = []) {
-  const st = doc.getElementById('intake-status');
-  if (st) st.textContent = text;
+  writeNotice(doc.getElementById('intake-status'), text);
   const out = doc.getElementById('intake-result');
   if (out) out.innerHTML = lines.length ? '<ul>' + lines.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
 }
@@ -790,18 +794,20 @@ let intakeReading = null;
 const afterIntake = (f) => (intakeReading ? intakeReading.then(f) : f());
 function queueIntake(doc, f) {
   // 違う口の確かめも読み込みの順番の中でする(確かめている間に「確認する」が先へ進まないように)
-  const reading = (intakeReading ?? Promise.resolve()).then(() => readChecked(doc, 'intake-load', f, readIntake)).then(() => {
+  const reading = (intakeReading ?? Promise.resolve()).then(() => readChecked(doc, 'intake-load', f, readIntake)).then((ok) => {
     if (intakeReading === reading) intakeReading = null;
+    return ok;
   });
   intakeReading = reading;
   return reading;
 }
 async function readIntake(doc, f) {
-  if (f.size > INTAKE_MAX_BYTES) { setIntakeStatus(doc, '読み込めませんでした: ファイルが大きすぎます(1MB まで)。入力欄はそのままです。'); return; }
+  if (f.size > INTAKE_MAX_BYTES) { setIntakeStatus(doc, '読み込めませんでした: ファイルが大きすぎます(1MB まで)。入力欄はそのままです。'); return false; }
   try {
-    loadIntakeFile(doc, await f.text(), f.name);
+    return loadIntakeFile(doc, await f.text(), f.name);
   } catch {
     setIntakeStatus(doc, '読み込めませんでした: ファイルを読めません。入力欄はそのままです。');
+    return false;
   }
 }
 export function loadIntakeFile(doc, text, name) {
@@ -843,29 +849,25 @@ export function loadIntakeFile(doc, text, name) {
 // ファイルの読み込み口(F54c)。ボタンで選んでも、ドラッグして置いても、同じ関数で読む。
 // value = '' のリセットはボタンの側だけ。input.files には代入しない
 async function readRules(doc, f) {
-  if (f.size > RULES_MAX_BYTES) { setRulesStatus(doc, '読み込めませんでした: 表のファイルとしては大きすぎます(1MB まで)。今の表はそのままです。'); return; }
+  if (f.size > RULES_MAX_BYTES) { setRulesStatus(doc, '読み込めませんでした: 表のファイルとしては大きすぎます(1MB まで)。今の表はそのままです。'); return false; }
   try {
-    loadRulesFile(doc, await f.text(), f.name);
+    return loadRulesFile(doc, await f.text(), f.name);
   } catch {
     setRulesStatus(doc, '読み込めませんでした: ファイルを読めません。今の表はそのままです。');
+    return false;
   }
 }
-const setLedgerFileStatus = (doc, text) => {
-  const el = doc.getElementById('ledger-file-status');
-  if (el) el.textContent = text;
-};
-const sayIn = (id) => (doc, text) => {
-  const el = doc.getElementById(id);
-  if (el) el.textContent = text;
-};
+const sayIn = (id) => (doc, text) => writeNotice(doc.getElementById(id), text);
+// status は知らせの欄の id。失敗の印(F58a)はこの欄に付ける
+const filePort = (status, read, say = sayIn(status)) => ({ status, read, say });
 const FILE_PORTS = {
-  'intake-load': { read: queueIntake, say: setIntakeStatus },
-  'rules-load': { read: (doc, f) => readChecked(doc, 'rules-load', f, readRules), say: setRulesStatus },
-  'ledger-file': { read: loadLedgerFile, say: setLedgerFileStatus },
-  'dict-import': { read: (doc, f) => readChecked(doc, 'dict-import', f, readDictFile), say: sayIn('dict-file-status') },
-  'mask-file': { read: loadMaskFile, say: sayIn('mask-file-status') },
-  'map-import': { read: (doc, f) => readChecked(doc, 'map-import', f, readMapFile), say: sayIn('map-status') },
-  'ai-load': { read: (doc, f) => readChecked(doc, 'ai-load', f, readAiFile), say: sayIn('ai-status') },
+  'intake-load': filePort('intake-status', queueIntake, setIntakeStatus),
+  'rules-load': filePort('rules-status', (doc, f) => readChecked(doc, 'rules-load', f, readRules)),
+  'ledger-file': filePort('ledger-file-status', loadLedgerFile),
+  'dict-import': filePort('dict-file-status', (doc, f) => readChecked(doc, 'dict-import', f, readDictFile)),
+  'mask-file': filePort('mask-file-status', loadMaskFile),
+  'map-import': filePort('map-status', (doc, f) => readChecked(doc, 'map-import', f, readMapFile)),
+  'ai-load': filePort('ai-status', (doc, f) => readChecked(doc, 'ai-load', f, readAiFile)),
 };
 const DROP_IDS = Object.keys(FILE_PORTS);
 const WRONG_PORT_MAX_BYTES = 1024 * 1024;
@@ -915,11 +917,22 @@ export function fileTypeMessage(doc, id, file) {
   const again = /\.xls$/.test(name) ? 'Excel で .xlsx に保存し直してください。' : '';
   return '選んだファイルは ' + exts.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
 }
+// 読まなかったことを知らせる(F58a)。文は変えず、書いたあとで印を付ける
+function sayNotRead(doc, port, text) {
+  port.say(doc, text);
+  markFailed(doc.getElementById(port.status));
+}
+// 読む関数が false を返したら失敗。文はその関数が書いてあるので、印だけを付ける。成功の文を書くときに印は外れる
+async function readMarked(doc, port, file) {
+  const ok = await port.read(doc, file);
+  if (ok === false) markFailed(doc.getElementById(port.status));
+  return ok;
+}
 function readPortFile(doc, id, file) {
   const port = FILE_PORTS[id];
   const bad = fileTypeMessage(doc, id, file);
-  if (bad) { port.say(doc, bad); return Promise.resolve(false); }
-  return port.read(doc, file);
+  if (bad) { sayNotRead(doc, port, bad); return Promise.resolve(false); }
+  return readMarked(doc, port, file);
 }
 
 // 口の名前は label の文の括弧の前から取る(「台帳の Excel を読む(…」→「台帳の Excel」)
@@ -969,7 +982,7 @@ function endDrag(doc) {
   setDragOver(null);
   setDragReady(doc, false);
 }
-const sayDropStatus = sayIn('drop-status');
+const TILE_PORT = filePort('drop-status');
 const isShown = (doc, id) => { const el = doc.getElementById(id); return Boolean(el) && !el.hidden; };
 const frameName = (doc, id) => dropPortName(findDropTarget(doc.getElementById(id))?.querySelector?.('label')?.textContent);
 // 枠のある閉じた折りたたみを開く。開いたときだけ、その名前を返す
@@ -1000,26 +1013,27 @@ function sayOutside(doc) {
   const [id, text] = outsideNotice(doc);
   if (id === 'intake-status') setIntakeStatus(doc, text);
   else sayIn(id)(doc, text);
+  markFailed(doc.getElementById(id));
   doc.getElementById(id)?.scrollIntoView?.({ block: 'nearest' });
 }
 export function handleFileDrop(doc, ev) {
   if (!hasFiles(ev)) return Promise.resolve(false);
   ev.preventDefault?.();
   endDrag(doc);
-  sayDropStatus(doc, '');
+  TILE_PORT.say(doc, '');
   const frame = findDropTarget(ev.target);
   if (!frame) { sayOutside(doc); return Promise.resolve(false); }
   const id = frame.getAttribute('data-drop');
   const onTile = frame.id === 'entry-intake';
-  const say = onTile ? sayDropStatus : FILE_PORTS[id].say;
+  const port = onTile ? TILE_PORT : FILE_PORTS[id];
   const files = Array.from(ev.dataTransfer.files ?? []);
-  if (files.length !== 1) { say(doc, files.length ? ONE_FILE : NO_FILE); return Promise.resolve(false); }
+  if (files.length !== 1) { sayNotRead(doc, port, files.length ? ONE_FILE : NO_FILE); return Promise.resolve(false); }
   if (!onTile) return readPortFile(doc, id, files[0]);
   // タイルは種類を確かめてから段1へ移る。違えば入口に留まる
   const bad = fileTypeMessage(doc, id, files[0]);
-  if (bad) { say(doc, bad); return Promise.resolve(false); }
+  if (bad) { sayNotRead(doc, port, bad); return Promise.resolve(false); }
   openIntake(doc);
-  return FILE_PORTS[id].read(doc, files[0]);
+  return readMarked(doc, FILE_PORTS[id], files[0]);
 }
 export function startDrop(doc) {
   doc.addEventListener?.('dragenter', (ev) => handleDragMove(doc, ev));

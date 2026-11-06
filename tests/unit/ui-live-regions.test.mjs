@@ -47,6 +47,7 @@ test('CSS の決まりは変えていない。見た目が結果の枠の属性�
     'p[aria-live]:not(:empty)',
     '.note[aria-live]:not(:empty)',
     '.sample-banner p[aria-live]:not(:empty)',
+    'p[aria-live][data-kind="error"]:not(:empty)',
     'p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status)',
   ]);
 });
