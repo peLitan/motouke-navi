@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-a6LN9ja7L/v7e5UTZp+n9XH+/NhDN9NF4AXtvE5YgN4='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-RtMCq17nW8Xc6xU3Y3fyzJrp3ZxJR9dBUG4paMxg0+c='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -6455,7 +6455,7 @@ const { CHECKLIST_LAW } = __m["src/checklist.mjs"];
 const { sourceVersion, NO_VERSION } = __m["src/source-version.mjs"];
 const { kindNote, kindSource, kindSourceText } = __m["src/work-kind-tables.mjs"];
 const { NOT_READ, workKindLabel } = __m["src/work-kinds.mjs"];
-const { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, scheduleNoteKey } = __m["src/ui/view.mjs"];
+const { basisLabel, SUMMARY_FIELDS, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, scheduleNoteKey } = __m["src/ui/view.mjs"];
 
 // すべての結果で共通の列
 const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '版(何年何月時点の条文・資料か)', '例外・読み方の注意'];
@@ -6517,9 +6517,59 @@ function workKindRows(kind) {
   return [row('工種', workKindLabel(kind), '', '', [], [])];
 }
 
+// 書き出した日時を ISO 8601 の端末の時刻(時差つき)で書く(F83a8)。例 2026-11-07T08:45:12+09:00
+const z2 = (n) => String(n).padStart(2, '0');
+function isoLocal(d) {
+  const off = -d.getTimezoneOffset();
+  const a = Math.abs(off);
+  return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate()) + 'T' + z2(d.getHours()) + ':' + z2(d.getMinutes()) + ':' + z2(d.getSeconds())
+    + (off >= 0 ? '+' : '-') + z2(Math.floor(a / 60)) + ':' + z2(a % 60);
+}
+
+// 入れた条件の要約(F83a8)。input は readBidForm の返り値。値の入っている物だけを、まとめの枠と同じ名前で並べる。
+// 参加の条件の本文(participationConditions)は写さない(F82c)
+const yen = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円';
+const fieldName = (id) => SUMMARY_FIELDS.find((f) => f[0] === id)?.[1] ?? id;
+const fieldMap = (id) => SUMMARY_FIELDS.find((f) => f[0] === id)?.[2] ?? {};
+function conditionSummary(input = {}) {
+  const parts = [];
+  const orderer = fieldMap('orderer')[input.orderer];
+  if (orderer) parts.push(fieldName('orderer') + ' ' + orderer);
+  if (input.direct === true || input.direct === false) parts.push(fieldName('direct') + ' ' + (input.direct ? '元請け' : '下請け'));
+  if (Number.isFinite(input.contractAmount)) parts.push(fieldName('contract-amount') + ' ' + yen(input.contractAmount));
+  if (Number.isFinite(input.subcontractTotal)) parts.push(fieldName('subcontract-total') + ' ' + yen(input.subcontractTotal));
+  const workType = fieldMap('work-type')[input.workType];
+  if (workType) parts.push(fieldName('work-type') + ' ' + workType);
+  return parts.join('・');
+}
+
+// 根拠の出典の URL。根拠の行で使った物を、出た順に重なりを除いて並べる
+function sourceUrls(bid, t) {
+  const lists = [
+    ...bid.items.map((it) => it.basis), ...(bid.checks ?? []).map((c) => c.basis), ...(bid.duties ?? []).map((d) => d.basis), bid.amountBasis?.basis,
+    ...t.reasons.map((r) => r.basis), t.amountBasis?.basis,
+  ];
+  return uniq(lists.flatMap((l) => l ?? []).map((b) => b.url).filter(Boolean));
+}
+
+// 注意の行に足す書き出しの情報(F83a8)。meta = { version: 道具の版, exportedAt: Date, input: readBidForm の返り値 }。
+// 日時は取得日の列ではなく、注意の行の説明の列に入れる
+function exportMetaLines(meta, bid, t) {
+  if (!meta) return [];
+  const cond = meta.input ? conditionSummary(meta.input) : '';
+  const urls = sourceUrls(bid, t);
+  return [
+    meta.version ? '道具の版: ' + meta.version : null,
+    meta.exportedAt ? '書き出した日時: ' + isoLocal(meta.exportedAt) + '(この端末の時計)' : null,
+    meta.input ? '入れた条件: ' + (cond || '入っていません') : null,
+    urls.length ? '出典の URL:\n' + urls.join('\n') : null,
+  ].filter(Boolean);
+}
+
 // 1段目(入札前と台帳)の書き出しの行。最後に、候補であって最後は人が判断する旨を入れる
 // ここでの最後は stage1Rows の中の話で、入札前の CSV のファイルは、このあとに工種と安全の法令の候補の行をつなぐ(F61a)
-function stage1Rows(bid, t, notice) {
+// meta を渡すと、注意の行の説明の列に版・書き出した日時・入れた条件・出典の URL を足す(F83a8。行の数と列は変えない)
+function stage1Rows(bid, t, notice, meta) {
   return [
     ...bidRows(bid),
     ...bidCheckRows(bid),
@@ -6527,7 +6577,7 @@ function stage1Rows(bid, t, notice) {
     ...amountBasisRows(bid.amountBasis, '入札前の確認'),
     ...taichoRows(t).slice(1),
     ...amountBasisRows(t.amountBasis, '施工体制台帳'),
-    row('注意', '注意', '', [notice, bid.disclaimer].filter(Boolean).join('\n'), [], []),
+    row('注意', '注意', '', [notice, bid.disclaimer, ...exportMetaLines(meta, bid, t)].filter(Boolean).join('\n'), [], []),
   ];
 }
 
@@ -6604,7 +6654,7 @@ function checklistRows(out = {}, checked = new Set(), notice) {
   ];
 }
 
-return { COLUMNS, bidRows, bidCheckRows, bidDutyRows, taichoRows, amountBasisRows, workKindRows, stage1Rows, safetyRows, checkRows, SCHEDULE_COLUMNS, scheduleRows, PLAN_COLUMNS, planRows, toCsv, CHECKLIST_COLUMNS, checklistRows };
+return { COLUMNS, bidRows, bidCheckRows, bidDutyRows, taichoRows, amountBasisRows, workKindRows, isoLocal, conditionSummary, stage1Rows, safetyRows, checkRows, SCHEDULE_COLUMNS, scheduleRows, PLAN_COLUMNS, planRows, toCsv, CHECKLIST_COLUMNS, checklistRows };
 })();
 __m["data/safety.json"] = {"note":"労働安全衛生法の候補の規則表(F40a)。境目の数は書かず、measure の pattern で抜き書き(data/quotes.json)の漢数字から読む。「要らない」の結論は持たない。当てはまらない行は候補に出さない","fields":{"subcontract":"仕事の一部を他社(個人を含む)に請け負わせるか","workers":"同じ場所で常時働く人の数","plan":"工事の中に次のものがあるか","works":"行う作業"},"subLine":{"text":"下請けとして入る工事なので、元方事業者の措置・統括安全衛生責任者・法 第八十八条第二項から第四項の届出(数次の請負では、仕事を自ら行う発注者か元請負人に掛かります)は出していません(第三十条の指名があるときは別です)。下請けにも掛かるものを出します","basis":[{"quoteId":"q-anei-15-1-motokata"},{"quoteId":"q-anei-15-1-sennin"},{"quoteId":"q-anei-15-3"},{"quoteId":"q-anei-88-5"}]},"candidates":[{"id":"safety-motokata","label":"元方事業者(元請けの会社)の措置","action":"下請け(関係請負人)とその作業従事者が、その仕事について労働安全衛生法とこれに基づく命令に違反しないよう必要な指導を行い、違反を認めたら是正のため必要な指示を行う","basis":[{"quoteId":"q-anei-15-1-motokata"},{"quoteId":"q-anei-29-1"},{"quoteId":"q-anei-29-2"},{"quoteId":"q-anei-29_2"},{"quoteId":"q-ansoku-634_2-1"},{"quoteId":"q-ansoku-634_2-1_2"},{"quoteId":"q-ansoku-634_2-2"},{"quoteId":"q-ansoku-634_2-3"},{"quoteId":"q-ansoku-634_2-4"}],"note":"建設業の元方事業者は、土砂等の崩壊や機械等の転倒のおそれのある場所などで下請けの作業従事者が作業するときは、下請けの措置が適正に講じられるよう技術上の指導などの措置も講じます(法 第二十九条の二)。場所は根拠の則 第六百三十四条の二で確かめてください"},{"id":"safety-tokutei","label":"特定元方事業者(建設業などの元方事業者)の措置","action":"協議組織(下請けも入る話し合いの場)の設置と運営、作業間の連絡と調整、作業場所の巡視(見て回ること)、下請けが行う安全衛生教育の指導と援助などの措置を講じる","note":"工程と機械・設備の配置の計画は、第三十条第一項第五号の業種に当たるときの措置です(業種を定める省令の条は取り込んでいません)。発注者が仕事を分けて複数の請負人に請け負わせているときは、指名された事業者が措置を講じることがあります","basis":[{"quoteId":"q-anei-15-1-tokutei"},{"quoteId":"q-anei-30-1"},{"quoteId":"q-anei-30-1-1"},{"quoteId":"q-anei-30-1-2"},{"quoteId":"q-anei-30-1-3"},{"quoteId":"q-anei-30-1-4"},{"quoteId":"q-anei-30-1-5"},{"quoteId":"q-anei-30-4"}]}],"supervisor":{"id":"safety-supervisor","label":"統括安全衛生責任者の選任","action":"統括安全衛生責任者を選任し、元方安全衛生管理者の指揮と、法 第三十条第一項各号の事項の統括管理をさせる","note":"第三十条の指名がされ、全ての作業従事者の数が政令で定める数以上のときは、指名された事業者が選任します","workersPattern":"常時(.+?)人$","lowQuoteId":"q-anrei-7-2-1","highQuoteId":"q-anrei-7-2-2","basis":[{"quoteId":"q-anei-15-1-sennin"},{"quoteId":"q-anei-15-3"},{"quoteId":"q-anrei-7-2-1"},{"quoteId":"q-anrei-7-2-2"}]},"notice":{"id":"safety-notice","label":"工事の計画の届出","note":"数次の請負で仕事を自ら行う発注者がいるときは、その発注者に掛かります","scopeQuoteId":"q-anei-88-5","daysPattern":"開始の日の(.+?)日前まで","minister":{"to":"厚生労働大臣","quoteId":"q-anei-88-2"},"office":{"to":"労働基準監督署長","quoteId":"q-anei-88-3"}},"planItems":[{"id":"plan-tower","route":"minister","quoteId":"q-ansoku-89-1","measure":{"field":"towerHeightM","op":"gte","pattern":"高さが(.+?)メートル以上の塔"}},{"id":"plan-dam","route":"minister","quoteId":"q-ansoku-89-2","measure":{"field":"damHeightM","op":"gte","pattern":"）が(.+?)メートル以上のダム"}},{"id":"plan-bridge-large","route":"minister","quoteId":"q-ansoku-89-3","measure":{"field":"bridgeSpanM","op":"gte","pattern":"最大支間(.+?)メートル（","whenField":"bridgeSuspension","whenPattern":"つり橋にあつては、(.+?)メートル"}},{"id":"plan-tunnel-long","route":"minister","quoteId":"q-ansoku-89-4","lowerWorkers":true,"measure":{"field":"tunnelLengthM","op":"gte","pattern":"長さが(.+?)メートル以上のずい道等"}},{"id":"plan-tunnel-shaft","route":"minister","quoteId":"q-ansoku-89-5","lowerWorkers":true},{"id":"plan-pressure-high","route":"minister","quoteId":"q-ansoku-89-6","lowerWorkers":true,"measure":{"field":"pressureMPa","op":"gte","pattern":"ゲージ圧力が(.+?)メガパスカル以上"}},{"id":"plan-structure","route":"office","quoteId":"q-ansoku-90-1","measure":{"field":"structureHeightM","op":"gt","pattern":"高さ(.+?)メートルを超える"}},{"id":"plan-bridge","route":"office","quoteId":"q-ansoku-90-2","measure":{"field":"bridgeSpanM","op":"gte","pattern":"最大支間(.+?)メートル以上"}},{"id":"plan-bridge-place","route":"office","quoteId":"q-ansoku-90-2_2","alsoQuoteId":"q-ansoku-18_2_2-1","lowerWorkers":true,"measure":{"field":"bridgeSpanM","op":"gte","pattern":"最大支間(.+?)メートル以上"}},{"id":"plan-tunnel","route":"office","quoteId":"q-ansoku-90-3","caveat":"ずい道等の内部に労働者が立ち入らないものを除く","lowerWorkers":true,"measure":{"excludedBy":"tunnelNoEntry"}},{"id":"plan-excavation","route":"office","quoteId":"q-ansoku-90-4","caveat":"掘削機械を用いる作業で、掘削面の下方に労働者が立ち入らないものを除く","measure":{"field":"excavationM","op":"gte","pattern":"高さ又は深さが(.+?)メートル以上である地山","excludedBy":"excavationNoEntry"}},{"id":"plan-pressure","route":"office","quoteId":"q-ansoku-90-5","lowerWorkers":true},{"id":"plan-asbestos-spray","route":"office","quoteId":"q-ansoku-90-5_2"},{"id":"plan-asbestos-cover","route":"office","quoteId":"q-ansoku-90-5_3"},{"id":"plan-incinerator","route":"office","quoteId":"q-ansoku-90-5_4"},{"id":"plan-quarry","route":"office","quoteId":"q-ansoku-90-6","measure":{"field":"quarryDepthM","op":"gte","pattern":"高さ又は深さが(.+?)メートル以上の土石"}},{"id":"plan-quarry-mine","route":"office","quoteId":"q-ansoku-90-7"},{"id":"plan-bridge-narrow","route":null,"quoteId":"q-anrei-7-2-1","alsoQuoteId":"q-ansoku-18_2_2-1","lowerWorkers":true},{"id":"plan-tunnel-noentry","route":null,"quoteId":"q-anrei-7-2-1","lowerWorkers":true,"label":"ずい道等の建設の仕事で、内部に人が立ち入らないもの"}],"chief":{"label":"作業主任者の選任","action":"政令で定める作業ごとに、技能講習を修了した者などのうちから作業主任者(その作業の指揮などをする人)を選任する","note":"第十四条の義務は「事業者」に掛かります。下請けがその作業を行うときは、下請けにも掛かります","basis":[{"quoteId":"q-anei-14-1"}],"works":[{"id":"excavation","label":"地山の掘削","quoteId":"q-anrei-6-9","caveat":"ずい道及びたて坑以外の坑の掘削を除く","caveat2":"第十一号に掲げる作業を除く","measure":{"field":"excavationFaceM","op":"gte","pattern":"掘削面の高さが(.+?)メートル以上","excludedBy":"excavationRock"},"alsoQuoteId":"q-anrei-6-11"},{"id":"shoring","label":"土止め支保工","quoteId":"q-anrei-6-10"},{"id":"formwork","label":"型枠支保工","quoteId":"q-anrei-6-14"},{"id":"scaffold","label":"足場","quoteId":"q-anrei-6-15","caveat":"ゴンドラのつり足場を除く","measure":{"field":"scaffoldHeightM","op":"gte","pattern":"高さが(.+?)メートル以上の構造の足場","unlessField":"scaffoldHungOrCantilever"}},{"id":"steel-frame","label":"金属製の建築物の骨組み・塔","quoteId":"q-anrei-6-15_2","measure":{"field":"steelFrameHeightM","op":"gte","pattern":"その高さが(.+?)メートル以上"}},{"id":"wood-frame","label":"木造建築物の構造部材の組立て等","quoteId":"q-anrei-6-15_4","note":"「軒の高さ」の決まりは建築基準法施行令にあり、この道具には取り込んでいません。原文で確かめてください","measure":{"field":"woodEaveHeightM","op":"gte","pattern":"軒の高さが(.+?)メートル以上"}},{"id":"concrete-demolition","label":"コンクリート造の工作物の解体・破壊","quoteId":"q-anrei-6-15_5","measure":{"field":"concreteDemolitionHeightM","op":"gte","pattern":"その高さが(.+?)メートル以上"}},{"id":"oxygen","label":"酸素欠乏危険場所","quoteId":"q-anrei-6-21","note":"「酸素欠乏危険場所」の一覧は令 別表第六にあり、この道具には取り込んでいません。原文で確かめてください"},{"id":"asbestos","label":"石綿等の取扱い","quoteId":"q-anrei-6-23","caveat":"試験研究のため取り扱う作業を除く"}]},"notOnList":"見ていないもの: 機械等の設置の届出(法 第八十八条第一項。足場・型枠支保工など。下請けにも掛かります)、計画への資格者の参画(同条第四項)、店社安全衛生管理者、救護の措置、問いに挙げたほかの作業主任者の作業(ずい道・橋の上部構造・高圧室内作業など)。別に確かめてください","manager":{"id":"safety-manager","label":"元方安全衛生管理者の選任","action":"統括安全衛生責任者を選任した事業者で、建設業その他政令で定める業種に属する事業を行うものは、省令で定める資格を有する者のうちから元方安全衛生管理者を選任し、第三十条第一項各号の事項のうち技術的事項を管理させる","note":"統括安全衛生責任者と対で掛かります。資格を定める省令の条は取り込んでいません","basis":[{"quoteId":"q-anei-15_2-1"},{"quoteId":"q-anei-15-1-sennin"},{"quoteId":"q-anei-15-3"},{"quoteId":"q-anrei-7-1"}]},"responsible":{"id":"safety-responsible","label":"安全衛生責任者の選任","action":"統括安全衛生責任者を選任すべき事業者以外の請負人で、その仕事を自ら行う場合に、安全衛生責任者を選任して統括安全衛生責任者との連絡などを行わせ、選任したことを遅滞なく通報する","note":"元請けが統括安全衛生責任者を選任すべき現場かどうかで決まります。元請けに確かめてください。行わせる事項を定める省令の条は取り込んでいません","basis":[{"quoteId":"q-anei-16-1"},{"quoteId":"q-anei-16-2"},{"quoteId":"q-anei-15-1-sennin"},{"quoteId":"q-anei-15-3"}]},"question":{"main":["plan-tunnel","plan-tunnel-noentry","plan-pressure","plan-excavation","plan-structure"],"more":["plan-tower","plan-dam","plan-tunnel-long","plan-tunnel-shaft","plan-pressure-high","plan-asbestos-spray","plan-asbestos-cover","plan-incinerator","plan-quarry","plan-quarry-mine"]}};
 __m["src/safety.mjs"] = (function () {
@@ -9599,7 +9649,7 @@ function runBid(doc) {
     // 結果の最後に「確認が要る点」と「未回答」の一覧(F14f)
     if (openEl) openEl.innerHTML = renderOpenItems(bid, values);
     taichoOut.innerHTML = renderTaichoResult(taicho);
-    last = { bid, taicho };
+    last = { bid, taicho, input };
     summary.bid = bid;
     summary.taicho = taicho;
     stale = false;
@@ -9822,6 +9872,13 @@ function today(d = new Date()) {
   return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate());
 }
 
+// 道具の版(F61a)。build.mjs が版の番号を入れた印刷の頭の data-version を読む。画面の足の #tool-version と同じ値
+function toolVersionOf(doc) {
+  const v = doc.getElementById('print-head')?.getAttribute('data-version');
+  if (v) return v;
+  return (doc.getElementById('tool-version')?.textContent ?? '').replace(/^道具の版\s*/, '').trim();
+}
+
 // 印刷の頭の行(F61a)。紙がどの版のいつの結果かを残す。日時は PC の時計。画面には出さない行なので、印刷の直前に描く
 function stampPrintHead(doc) {
   const el = doc.getElementById('print-head');
@@ -9862,7 +9919,9 @@ function endPrint(doc) {
 function exportCsv(doc) {
   if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
   const snap = safetySnapshot(doc);
-  const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE), ...workKindRows(shownKind.schedule), ...safetyRows(snap.result, snap.answerRows)]);
+  // 注意の行に、画面の足の「道具の版」と同じ値・書き出した日時・入れた条件・出典を足す(F83a8)
+  const meta = { version: toolVersionOf(doc), exportedAt: new Date(), input: last.input };
+  const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE, meta), ...workKindRows(shownKind.schedule), ...safetyRows(snap.result, snap.answerRows)]);
   downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
   setExportStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }

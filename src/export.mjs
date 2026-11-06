@@ -6,7 +6,7 @@ import { CHECKLIST_LAW } from './checklist.mjs';
 import { sourceVersion, NO_VERSION } from './source-version.mjs';
 import { kindNote, kindSource, kindSourceText } from './work-kind-tables.mjs';
 import { NOT_READ, workKindLabel } from './work-kinds.mjs';
-import { basisLabel, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, scheduleNoteKey } from './ui/view.mjs';
+import { basisLabel, SUMMARY_FIELDS, BID_STATUS, ENGINEER, TAICHO_STATUS, COPY_STATUS, fieldLabel, SCHEDULE_STATUS, SCHEDULE_PHASE, SCHEDULE_NOTE_LABEL, scheduleNoteKey } from './ui/view.mjs';
 
 // すべての結果で共通の列
 export const COLUMNS = ['区分', '項目', '状態', '説明', '根拠の条', '根拠の原文(抜き書き)', '取得日', '版(何年何月時点の条文・資料か)', '例外・読み方の注意'];
@@ -68,9 +68,59 @@ export function workKindRows(kind) {
   return [row('工種', workKindLabel(kind), '', '', [], [])];
 }
 
+// 書き出した日時を ISO 8601 の端末の時刻(時差つき)で書く(F83a8)。例 2026-11-07T08:45:12+09:00
+const z2 = (n) => String(n).padStart(2, '0');
+export function isoLocal(d) {
+  const off = -d.getTimezoneOffset();
+  const a = Math.abs(off);
+  return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate()) + 'T' + z2(d.getHours()) + ':' + z2(d.getMinutes()) + ':' + z2(d.getSeconds())
+    + (off >= 0 ? '+' : '-') + z2(Math.floor(a / 60)) + ':' + z2(a % 60);
+}
+
+// 入れた条件の要約(F83a8)。input は readBidForm の返り値。値の入っている物だけを、まとめの枠と同じ名前で並べる。
+// 参加の条件の本文(participationConditions)は写さない(F82c)
+const yen = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円';
+const fieldName = (id) => SUMMARY_FIELDS.find((f) => f[0] === id)?.[1] ?? id;
+const fieldMap = (id) => SUMMARY_FIELDS.find((f) => f[0] === id)?.[2] ?? {};
+export function conditionSummary(input = {}) {
+  const parts = [];
+  const orderer = fieldMap('orderer')[input.orderer];
+  if (orderer) parts.push(fieldName('orderer') + ' ' + orderer);
+  if (input.direct === true || input.direct === false) parts.push(fieldName('direct') + ' ' + (input.direct ? '元請け' : '下請け'));
+  if (Number.isFinite(input.contractAmount)) parts.push(fieldName('contract-amount') + ' ' + yen(input.contractAmount));
+  if (Number.isFinite(input.subcontractTotal)) parts.push(fieldName('subcontract-total') + ' ' + yen(input.subcontractTotal));
+  const workType = fieldMap('work-type')[input.workType];
+  if (workType) parts.push(fieldName('work-type') + ' ' + workType);
+  return parts.join('・');
+}
+
+// 根拠の出典の URL。根拠の行で使った物を、出た順に重なりを除いて並べる
+function sourceUrls(bid, t) {
+  const lists = [
+    ...bid.items.map((it) => it.basis), ...(bid.checks ?? []).map((c) => c.basis), ...(bid.duties ?? []).map((d) => d.basis), bid.amountBasis?.basis,
+    ...t.reasons.map((r) => r.basis), t.amountBasis?.basis,
+  ];
+  return uniq(lists.flatMap((l) => l ?? []).map((b) => b.url).filter(Boolean));
+}
+
+// 注意の行に足す書き出しの情報(F83a8)。meta = { version: 道具の版, exportedAt: Date, input: readBidForm の返り値 }。
+// 日時は取得日の列ではなく、注意の行の説明の列に入れる
+function exportMetaLines(meta, bid, t) {
+  if (!meta) return [];
+  const cond = meta.input ? conditionSummary(meta.input) : '';
+  const urls = sourceUrls(bid, t);
+  return [
+    meta.version ? '道具の版: ' + meta.version : null,
+    meta.exportedAt ? '書き出した日時: ' + isoLocal(meta.exportedAt) + '(この端末の時計)' : null,
+    meta.input ? '入れた条件: ' + (cond || '入っていません') : null,
+    urls.length ? '出典の URL:\n' + urls.join('\n') : null,
+  ].filter(Boolean);
+}
+
 // 1段目(入札前と台帳)の書き出しの行。最後に、候補であって最後は人が判断する旨を入れる
 // ここでの最後は stage1Rows の中の話で、入札前の CSV のファイルは、このあとに工種と安全の法令の候補の行をつなぐ(F61a)
-export function stage1Rows(bid, t, notice) {
+// meta を渡すと、注意の行の説明の列に版・書き出した日時・入れた条件・出典の URL を足す(F83a8。行の数と列は変えない)
+export function stage1Rows(bid, t, notice, meta) {
   return [
     ...bidRows(bid),
     ...bidCheckRows(bid),
@@ -78,7 +128,7 @@ export function stage1Rows(bid, t, notice) {
     ...amountBasisRows(bid.amountBasis, '入札前の確認'),
     ...taichoRows(t).slice(1),
     ...amountBasisRows(t.amountBasis, '施工体制台帳'),
-    row('注意', '注意', '', [notice, bid.disclaimer].filter(Boolean).join('\n'), [], []),
+    row('注意', '注意', '', [notice, bid.disclaimer, ...exportMetaLines(meta, bid, t)].filter(Boolean).join('\n'), [], []),
   ];
 }
 

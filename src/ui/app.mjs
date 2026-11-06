@@ -364,7 +364,7 @@ export function runBid(doc) {
     // 結果の最後に「確認が要る点」と「未回答」の一覧(F14f)
     if (openEl) openEl.innerHTML = renderOpenItems(bid, values);
     taichoOut.innerHTML = renderTaichoResult(taicho);
-    last = { bid, taicho };
+    last = { bid, taicho, input };
     summary.bid = bid;
     summary.taicho = taicho;
     stale = false;
@@ -587,6 +587,13 @@ function today(d = new Date()) {
   return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate());
 }
 
+// 道具の版(F61a)。build.mjs が版の番号を入れた印刷の頭の data-version を読む。画面の足の #tool-version と同じ値
+function toolVersionOf(doc) {
+  const v = doc.getElementById('print-head')?.getAttribute('data-version');
+  if (v) return v;
+  return (doc.getElementById('tool-version')?.textContent ?? '').replace(/^道具の版\s*/, '').trim();
+}
+
 // 印刷の頭の行(F61a)。紙がどの版のいつの結果かを残す。日時は PC の時計。画面には出さない行なので、印刷の直前に描く
 export function stampPrintHead(doc) {
   const el = doc.getElementById('print-head');
@@ -627,7 +634,9 @@ export function endPrint(doc) {
 export function exportCsv(doc) {
   if (!last) { setExportStatus(doc, stale ? STALE : '先に「確認する」を押して結果を出してください。'); return; }
   const snap = safetySnapshot(doc);
-  const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE), ...workKindRows(shownKind.schedule), ...safetyRows(snap.result, snap.answerRows)]);
+  // 注意の行に、画面の足の「道具の版」と同じ値・書き出した日時・入れた条件・出典を足す(F83a8)
+  const meta = { version: toolVersionOf(doc), exportedAt: new Date(), input: last.input };
+  const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE, meta), ...workKindRows(shownKind.schedule), ...safetyRows(snap.result, snap.answerRows)]);
   downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
   setExportStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
