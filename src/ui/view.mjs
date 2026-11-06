@@ -5,6 +5,7 @@ import { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } from '../checklis
 import { sourceVersion, versionText } from '../source-version.mjs';
 import { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } from '../work-kinds.mjs';
 import { PRIME_CHECK_KEY } from '../prime-experience.mjs';
+import { nextStepText } from './next-steps.mjs';
 import { displayStatus, requiredCount, provisionalUnanswered, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
@@ -95,14 +96,16 @@ export function renderBidResult(bid, values) {
           ? '<p class="contact"><span class="part">確かめ先:</span> 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します。</p>'
           : '<p class="contact"><span class="part">確かめ先:</span> 根拠の原文に相手の定めが無いので、出していません。</p>';
     }
-    // 1行のカード(F43c): 見えるのは結論と、確認が要る点のある項目の1行だけ。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
+    // 1行のカード(F43c・F83a3): 見えるのは結論と、要るの項目の次にすることの1行と、確認が要る点のある項目の1行だけ。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
+    const step = s === 'required' ? nextStepText(it) : null;
+    const nextLine = step ? '<p class="item-next">次にすること: ' + esc(step) + '。<span class="item-next-note">当てはまるかは「根拠を見る」で確かめてください。</span></p>' : '';
     const own = s === 'required' || s === 'not_required' ? (bid.checks ?? []).filter((c) => c.key === it.key) : [];
     const depends = own.some((c) => c.changes)
       ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、<a href="#open-items">確認が要る点</a>の答えで変わることがあります。</p>'
       : own.length ? '<p class="item-depends">＊ この項目には<a href="#open-items">確認が要る点</a>があります。</p>' : '';
     const basis = it.basis ?? [];
     const basisPart = basis.length ? basisItems(basis) : '<p class="basis-none">根拠: 無し</p>';
-    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + depends + unansweredNote
+    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + nextLine + depends + unansweredNote
       + '<details class="basis"><summary>' + (basis.length ? '根拠を見る: ' + basisLabels(basis) : '理由を見る') + '</summary>'
       + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';

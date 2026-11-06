@@ -169,10 +169,13 @@
   .badge-unanswered { color: var(--ink-2); background: var(--paper); border-color: var(--line); border-style: dashed; }
   /* 答えの状態と結果の順(F14f): 理由・入れた条件・確かめ先の見出し語、仮の一覧の知らせ、見ている法令の範囲、印刷だけに出す確認の欄 */
   .items { padding-left: 0; list-style: none; }
-  /* 要る項目のカード(F43c): 見えるのは結論の1行と「根拠を見る」。中身は今の details のまま */
+  /* 要る項目のカード(F43c・F83a3): 見えるのは結論の1行と、要るの項目の次にすることの1行と「根拠を見る」。中身は今の details のまま */
   .item { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .item h4 { margin: 0.25rem 0; }
   .item-depends { margin: 0.25rem 0; font-weight: bold; }
+  /* 後ろの決まった文は補足の色で下げる。字の大きさは本文のまま(16px より小さくしない。紙では本文の pt に連動する) */
+  .item-next { margin: 0.25rem 0; }
+  .item-next-note { color: var(--ink-2); }
   /* 結果の先頭(F43c): 数字のカードは押すとその節へ飛ぶ。安全の法令の候補は印を付け、青にしない(「問題なし」「押せる字」に読めないように) */
   .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; list-style: none; margin: 0.75rem 0 1rem; padding: 0; }
   .stat { display: block; height: 100%; padding: 0.75rem 1rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-top: 6px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); text-decoration: none; }

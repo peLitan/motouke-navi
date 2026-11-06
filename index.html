@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-55otDWM7XYJb026mGgRY0Myq5rewl6T3x/FFLfLwh8g='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-NWn/vuhTcg3uIPIy0p1MaxCwl2qbJXdQb7zopNDBv3c='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -169,10 +169,13 @@
   .badge-unanswered { color: var(--ink-2); background: var(--paper); border-color: var(--line); border-style: dashed; }
   /* 答えの状態と結果の順(F14f): 理由・入れた条件・確かめ先の見出し語、仮の一覧の知らせ、見ている法令の範囲、印刷だけに出す確認の欄 */
   .items { padding-left: 0; list-style: none; }
-  /* 要る項目のカード(F43c): 見えるのは結論の1行と「根拠を見る」。中身は今の details のまま */
+  /* 要る項目のカード(F43c・F83a3): 見えるのは結論の1行と、要るの項目の次にすることの1行と「根拠を見る」。中身は今の details のまま */
   .item { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .item h4 { margin: 0.25rem 0; }
   .item-depends { margin: 0.25rem 0; font-weight: bold; }
+  /* 後ろの決まった文は補足の色で下げる。字の大きさは本文のまま(16px より小さくしない。紙では本文の pt に連動する) */
+  .item-next { margin: 0.25rem 0; }
+  .item-next-note { color: var(--ink-2); }
   /* 結果の先頭(F43c): 数字のカードは押すとその節へ飛ぶ。安全の法令の候補は印を付け、青にしない(「問題なし」「押せる字」に読めないように) */
   .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; list-style: none; margin: 0.75rem 0 1rem; padding: 0; }
   .stat { display: block; height: 100%; padding: 0.75rem 1rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-top: 6px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); text-decoration: none; }
@@ -1923,6 +1926,37 @@ const primeMessage = (quote) => 'この工事は元請けとしての施工実�
 
 return { findPrimeExperience, PRIME_CHECK_KEY, PRIME_CHECK_LABEL, primeMessage };
 })();
+__m["src/ui/next-steps.mjs"] = (function () {
+// 「要る」の項目のカードに出す「次にすること」の文(F83a3)。
+// 文は判定の note にある語句だけで作り、期限・書類名・宛先・数字・括弧の根拠を足さない(根拠は折りたたみの中にある)。
+// 語句だけでは動作の文にならない行(note が名詞で終わる行)は、語句に「があるかを確かめる」を続けて人が書く。
+// 1つの key に枝がいくつかあるときは、どの枝でも本当の語句だけを使う(施工体系図の掲げる場所は公共と民間で違うので、共通の語句にした)。
+// note を変えたら、ここの文も見直す(tests/unit/next-steps.test.mjs が枝を集めて照らす)。
+const NEXT_STEPS = {
+  'tokutei-license': '特定建設業の許可があるかを確かめる',
+  taicho: '施工体制台帳を作り、工事現場ごとに備え置く',
+  'taicho-copy': '作った施工体制台帳の写しを発注者に出す',
+  'engineer:kanri': '監理技術者を置く',
+  'engineer:shunin': '主任技術者を置く',
+  taikeizu: '施工体系図を作り、見やすい場所に掲げる',
+  dedicated: '国又は地方公共団体が注文者に当たるものとして専任があるかを確かめる',
+};
+
+const EXCEPTION_WORDS = /ただし|を除き|この限りでない/;
+
+// 表の引き方。監理技術者か主任技術者かは同じ項目の結論の値で分かれるので、key に値を続ける
+const stepKey = (it) => (it.value ? it.key + ':' + it.value : it.key);
+
+// 項目の文。例外があるか、note に例外を表す語があれば、文の末尾で知らせる。表に無い項目は null
+function nextStepText(it) {
+  const key = stepKey(it);
+  if (!Object.hasOwn(NEXT_STEPS, key)) return null;
+  const hasException = (it.exceptions?.length ?? 0) > 0 || EXCEPTION_WORDS.test(it.note ?? '');
+  return NEXT_STEPS[key] + (hasException ? '(例外あり)' : '');
+}
+
+return { NEXT_STEPS, stepKey, nextStepText };
+})();
 __m["src/ui/answers.mjs"] = (function () {
 // 入力の質問への答えの状態と、結果の項目の見せ方(F14f)。DOM には触らない。
 // 質問の答えは3つに分ける: 答えた(answered)/「分からない」を選んだ(unknown)/まだ答えていない(unanswered)。
@@ -2069,6 +2103,7 @@ const { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } = __m["src/checkli
 const { sourceVersion, versionText } = __m["src/source-version.mjs"];
 const { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } = __m["src/work-kinds.mjs"];
 const { PRIME_CHECK_KEY } = __m["src/prime-experience.mjs"];
+const { nextStepText } = __m["src/ui/next-steps.mjs"];
 const { displayStatus, requiredCount, provisionalUnanswered, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } = __m["src/ui/answers.mjs"];
 
 function esc(s) {
@@ -2159,14 +2194,16 @@ function renderBidResult(bid, values) {
           ? '<p class="contact"><span class="part">確かめ先:</span> 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します。</p>'
           : '<p class="contact"><span class="part">確かめ先:</span> 根拠の原文に相手の定めが無いので、出していません。</p>';
     }
-    // 1行のカード(F43c): 見えるのは結論と、確認が要る点のある項目の1行だけ。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
+    // 1行のカード(F43c・F83a3): 見えるのは結論と、要るの項目の次にすることの1行と、確認が要る点のある項目の1行だけ。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
+    const step = s === 'required' ? nextStepText(it) : null;
+    const nextLine = step ? '<p class="item-next">次にすること: ' + esc(step) + '。<span class="item-next-note">当てはまるかは「根拠を見る」で確かめてください。</span></p>' : '';
     const own = s === 'required' || s === 'not_required' ? (bid.checks ?? []).filter((c) => c.key === it.key) : [];
     const depends = own.some((c) => c.changes)
       ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、<a href="#open-items">確認が要る点</a>の答えで変わることがあります。</p>'
       : own.length ? '<p class="item-depends">＊ この項目には<a href="#open-items">確認が要る点</a>があります。</p>' : '';
     const basis = it.basis ?? [];
     const basisPart = basis.length ? basisItems(basis) : '<p class="basis-none">根拠: 無し</p>';
-    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + depends + unansweredNote
+    return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + nextLine + depends + unansweredNote
       + '<details class="basis"><summary>' + (basis.length ? '根拠を見る: ' + basisLabels(basis) : '理由を見る') + '</summary>'
       + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
