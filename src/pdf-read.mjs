@@ -1,18 +1,68 @@
 // 試作: 外の部品なしで PDF の文字を読む(F82 の設計の材料)。Node と Edge で同じコードが動く(Buffer・zlib・fs を使わない)。
 // 読むのは文字だけ。画像・注釈・フォームの値は読まない。読めない物は読めないと返す(status)。
 // 使う組み込み: DecompressionStream('deflate')・TextDecoder('shift_jis'|'euc-jp'|'windows-1252')。
+// 外から来たファイルを画面の主スレッドで読むので、固まらない・タブが落ちないよう、下の上限を越えたら too-big で止める。
 
 export const LIMITS = {
   file: 30 * 1024 * 1024,      // 読むファイルの上限(extract.mjs の MAX_FILE と同じ)
   stream: 64 * 1024 * 1024,    // 1つのストリームを開いた後の上限
-  total: 256 * 1024 * 1024,    // 開いた後の合計の上限(圧縮爆弾の止め)
+  total: 128 * 1024 * 1024,    // 開いた後の合計の上限(圧縮爆弾の止め。フィルタの無い物も、同じ物を開き直した分も数える)
   pages: 3000,
   depth: 8,                    // Form XObject の入れ子
+  formDo: 50000,               // Form の Do の合計
+  pageChars: 50000,            // 1頁の字(空白と見えない字も数える。文に入らなくても時間を使う)
+  docChars: 3000000,           // 全体の字(同じ)
+  ms: 30000,                   // 読み始めからの経過時間
+  values: 20000000,            // 覚える値の数(メモリの止め。dict は重いので 10 と数える)
   cmapEntries: 300000,         // ToUnicode の行の上限
   stack: 4096,
 };
 
+const SPINS = 2048;            // 中の繰り返しがこの回数になるごとに時計を見る(重い1回は重さの分を数える)
+const HAND_BACK_MS = 50;       // 前に手を返してからこれより経っていれば、画面に手を返す
+const LZW_DICT = 4096;         // LZW の符号は 12 ビットまでなので、これより先の語は呼ばれない
+const CODESPACES = 100;        // CMap の codespacerange の数(仕様の上限)
+
 export class PdfError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
+
+// 時計を見て、時間を越えていれば止める。主スレッドを持ち続けていれば画面に手を返す
+async function breathe(ctx) {
+  ctx.spins = 0;
+  const now = performance.now();
+  if (now - ctx.started > ctx.limits.ms) throw new PdfError('too-big', '読むのに時間がかかりすぎます');
+  if (now - ctx.handedBack > HAND_BACK_MS) {
+    await new Promise((r) => setTimeout(r, 0));
+    ctx.handedBack = performance.now();
+  }
+}
+
+// 開いた分を、そのストリームの大きさと合計の両方で数える
+function charge(ctx, n, streamSize) {
+  ctx.inflated += n;
+  if (streamSize > ctx.limits.stream || ctx.inflated > ctx.limits.total) throw new PdfError('too-big', '開いた中身が大きすぎます');
+}
+
+// 覚える値を数える。ファイルの1字が何十バイトもの値になるので、開いた大きさの上限だけではメモリを止められない
+function hold(tally, n) {
+  if ((tally.values += n) > tally.limits.values) throw new PdfError('too-big', '中の値が多すぎます');
+}
+
+// 開いた中身を数えながらためる(JS の配列に1バイトずつ入れると 8倍の場所を取る)
+class ByteOut {
+  constructor(ctx) { this.ctx = ctx; this.buf = new Uint8Array(4096); this.n = 0; }
+  room(k) {
+    const need = this.n + k;
+    charge(this.ctx, k, need);
+    if (need > this.buf.length) {
+      const b = new Uint8Array(Math.max(this.buf.length * 2, need));
+      b.set(this.buf.subarray(0, this.n));
+      this.buf = b;
+    }
+  }
+  add(list) { this.room(list.length); this.buf.set(list, this.n); this.n += list.length; }
+  fill(v, k) { this.room(k); this.buf.fill(v, this.n, this.n + k); this.n += k; }
+  done() { return this.buf.subarray(0, this.n); }
+}
 
 // ---- バイト列 ----
 // TextDecoder('latin1') は仕様で windows-1252 になり 0x80〜0x9F が別の字に化けるので使わない
@@ -42,8 +92,10 @@ async function inflate(data, ctx) {
       try { step = await r.read(); } catch { damaged = true; break; }
       if (step.done) break;
       total += step.value.length;
-      ctx.inflated += step.value.length;
-      if (total > LIMITS.stream || ctx.inflated > LIMITS.total) { r.cancel().catch(() => {}); throw new PdfError('too-big', '開いた中身が大きすぎます'); }
+      try {
+        charge(ctx, step.value.length, total);
+        if ((ctx.spins += step.value.length) >= SPINS) await breathe(ctx);
+      } catch (e) { r.cancel().catch(() => {}); throw e; }
       chunks.push(step.value);
     }
     return { out: concat(chunks, total), damaged };
@@ -54,59 +106,69 @@ async function inflate(data, ctx) {
   return res.out;
 }
 
-function ascii85(data) {
-  const out = [];
+async function ascii85(data, ctx) {
+  const out = new ByteOut(ctx);
   let tuple = 0, n = 0;
   for (const c of data) {
+    if (++ctx.spins >= SPINS) await breathe(ctx);
     if (c === 0x7e) break;
     if (c <= 32) continue;
-    if (c === 0x7a && n === 0) { out.push(0, 0, 0, 0); continue; }
+    if (c === 0x7a && n === 0) { out.fill(0, 4); continue; }
     tuple = tuple * 85 + (c - 33);
-    if (++n === 5) { out.push((tuple / 16777216) & 255, (tuple / 65536) & 255, (tuple / 256) & 255, tuple & 255); tuple = 0; n = 0; }
+    if (++n === 5) { out.add([(tuple / 16777216) & 255, (tuple / 65536) & 255, (tuple / 256) & 255, tuple & 255]); tuple = 0; n = 0; }
   }
   if (n > 1) {
     for (let i = n; i < 5; i++) tuple = tuple * 85 + 84;
     const b = [(tuple / 16777216) & 255, (tuple / 65536) & 255, (tuple / 256) & 255];
-    out.push(...b.slice(0, n - 1));
+    out.add(b.slice(0, n - 1));
   }
-  return Uint8Array.from(out);
+  return out.done();
 }
-function asciiHex(data) {
-  const s = toBinary(data).replace(/>[\s\S]*$/, '').replace(/[^0-9A-Fa-f]/g, '');
-  const out = new Uint8Array(Math.ceil(s.length / 2));
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(i * 2, 2).padEnd(2, '0'), 16);
+const hexDigit = (c) => (c <= 57 ? c - 48 : (c | 32) - 87); // 0-9・a-f・A-F の字の番号を値にする
+// 16進の字だけの文字列をバイトにする。字の数が奇数なら最後の字の後ろに 0 を補う
+function hexBytes(h) {
+  const out = new Uint8Array(Math.ceil(h.length / 2));
+  for (let i = 0; i < h.length; i += 2) out[i >> 1] = hexDigit(h.charCodeAt(i)) * 16 + (i + 1 < h.length ? hexDigit(h.charCodeAt(i + 1)) : 0);
   return out;
 }
-function lzw(data, early = 1) {
-  const out = [];
-  let dict = [], bits = 9, code, prev = null, buf = 0, nb = 0;
-  const reset = () => { dict = Array.from({ length: 258 }, (_, i) => (i < 256 ? [i] : [])); bits = 9; prev = null; };
-  reset();
+function asciiHex(data) {
+  return hexBytes(toBinary(data).replace(/>[\s\S]*$/, '').replace(/[^0-9A-Fa-f]/g, ''));
+}
+async function lzw(data, early, ctx) {
+  const out = new ByteOut(ctx);
+  const dict = Array.from({ length: 258 }, (_, i) => (i < 256 ? [i] : []));
+  let bits = 9, code, prev = null, buf = 0, nb = 0;
   for (const b of data) {
     buf = (buf << 8) | b; nb += 8;
     while (nb >= bits) {
       code = (buf >>> (nb - bits)) & ((1 << bits) - 1); nb -= bits;
-      if (code === 256) { reset(); continue; }
-      if (code === 257) return Uint8Array.from(out);
+      if (code === 256) {
+        dict.length = 258; bits = 9; prev = null;
+        if (++ctx.spins >= SPINS) await breathe(ctx);
+        continue;
+      }
+      if (code === 257) return out.done();
       const cur = code < dict.length ? dict[code] : prev ? [...prev, prev[0]] : [];
-      out.push(...cur);
-      if (prev) dict.push([...prev, cur[0]]);
+      out.add(cur);
+      if (prev && dict.length < LZW_DICT) dict.push([...prev, cur[0]]);
       prev = cur;
       const n = dict.length + early;
       bits = n >= 2048 ? 12 : n >= 1024 ? 11 : n >= 512 ? 10 : 9;
+      if ((ctx.spins += 1 + cur.length) >= SPINS) await breathe(ctx);
     }
     buf &= (1 << nb) - 1;
   }
-  return Uint8Array.from(out);
+  return out.done();
 }
-function runLength(data) {
-  const out = [];
+async function runLength(data, ctx) {
+  const out = new ByteOut(ctx);
   for (let i = 0; i < data.length;) {
     const n = data[i++];
     if (n === 128) break;
-    if (n < 128) { for (let k = 0; k <= n && i < data.length; k++) out.push(data[i++]); } else { const v = data[i++]; for (let k = 0; k < 257 - n; k++) out.push(v); }
+    if (n < 128) { out.add(data.subarray(i, i + n + 1)); i += n + 1; } else out.fill(data[i++], 257 - n);
+    if (++ctx.spins >= SPINS) await breathe(ctx);
   }
-  return Uint8Array.from(out);
+  return out.done();
 }
 function unpredict(data, parms) {
   const pred = parms?.get?.('Predictor') ?? 1;
@@ -138,7 +200,8 @@ const isDelim = (c) => c === 40 || c === 41 || c === 60 || c === 62 || c === 91 
 const REF_TAIL = /[\s\0]+(\d+)[\s\0]+R(?![A-Za-z0-9])/y;
 
 class Lex {
-  constructor(s, p = 0, end = s.length, refs = true) { this.s = s; this.p = p; this.end = end; this.refs = refs; }
+  // tally を渡すと、読んだ値を hold で数える
+  constructor(s, p = 0, end = s.length, refs = true, tally = null) { this.s = s; this.p = p; this.end = Math.min(end, s.length); this.refs = refs; this.tally = tally; }
   ws() {
     const s = this.s;
     while (this.p < this.end) {
@@ -149,6 +212,7 @@ class Lex {
   }
   value() {
     const s = this.s;
+    if (this.tally) hold(this.tally, 1);
     for (;;) {
       this.ws();
       if (this.p >= this.end) return undefined;
@@ -195,6 +259,7 @@ class Lex {
     }
   }
   dict() {
+    if (this.tally) hold(this.tally, 9);
     this.p += 2;
     const d = new Map();
     for (;;) {
@@ -222,16 +287,15 @@ class Lex {
     const end = close < 0 || close > this.end ? this.end : close;
     const h = this.s.slice(this.p + 1, end).replace(/[^0-9A-Fa-f]/g, '');
     this.p = end + 1;
-    let out = '';
-    for (let i = 0; i < h.length; i += 2) out += String.fromCharCode(parseInt(h.substr(i, 2).padEnd(2, '0'), 16));
-    return out;
+    return toBinary(hexBytes(h));
   }
   lit() {
     const s = this.s;
-    let depth = 1, out = '', i = this.p + 1;
-    for (; i < this.end && depth > 0; i++) {
+    let depth = 1, out = '', i = this.p + 1, from = i; // 1字ずつ足すと長い文字列で時間とメモリが伸びるので、まとめて切り出す
+    for (; i < this.end; i++) {
       const ch = s[i];
       if (ch === '\\') {
+        out += s.slice(from, i);
         const n = s[++i];
         if (n >= '0' && n <= '7') {
           let v = 0, k = 0;
@@ -239,24 +303,25 @@ class Lex {
           i--;
           out += String.fromCharCode(v & 255);
         } else if (n === '\r') { if (s[i + 1] === '\n') i++; } else if (n !== '\n') out += { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f' }[n] ?? n;
+        from = i + 1;
         continue;
       }
       if (ch === '(') depth++;
       else if (ch === ')') { if (--depth === 0) break; }
-      out += ch;
     }
     this.p = i + 1;
-    return out;
+    return out + s.slice(from, i);
   }
 }
 
 // ---- 文書 ----
 class Doc {
-  constructor(bytes) {
+  constructor(bytes, limits) {
+    const now = performance.now();
     this.bytes = bytes;
     this.s = toBinary(bytes);
     this.objs = new Map();
-    this.ctx = { inflated: 0, damagedStreams: 0, unknownFilters: new Set() };
+    this.ctx = { inflated: 0, damagedStreams: 0, unknownFilters: new Set(), limits, started: now, handedBack: now, spins: 0, forms: 0, glyphs: 0, values: 0 };
     this.fonts = new Map();
     this.fontStats = new Map();
   }
@@ -264,15 +329,16 @@ class Doc {
     const old = this.objs.get(n);
     if (!old || old.at <= entry.at) this.objs.set(n, entry);
   }
-  scan() {
-    const s = this.s, re = /(?<![0-9])(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+obj\b/g;
+  async scan() {
+    const s = this.s, ctx = this.ctx, re = /(?<![0-9])(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+obj\b/g;
     let m;
     const stms = [];
     while ((m = re.exec(s))) {
-      const lx = new Lex(s, re.lastIndex);
-      let v;
-      try { v = lx.value(); } catch { continue; }
-      if (v instanceof Op) continue;
+      const from = re.lastIndex, lx = new Lex(s, from, s.length, true, ctx);
+      let v, bad = false;
+      try { v = lx.value(); } catch (e) { if (e instanceof PdfError) throw e; bad = true; }
+      if ((ctx.spins += 1 + lx.p - from) >= SPINS) await breathe(ctx);
+      if (bad || v instanceof Op) continue;
       lx.ws();
       const entry = { v, at: m.index };
       if (v instanceof Map && s.startsWith('stream', lx.p)) {
@@ -281,7 +347,8 @@ class Doc {
         if (s[st] === '\n') st++;
         const len = v.get('Length');
         let en = -1;
-        if (typeof len === 'number' && st + len <= s.length && /^[\s\0]*endstream/.test(s.slice(st + len, st + len + 24))) en = st + len;
+        // 負の /Length は使わない。手前の endstream に当たると、同じ obj へ戻って読み続ける
+        if (typeof len === 'number' && len >= 0 && st + len <= s.length && /^[\s\0]*endstream/.test(s.slice(st + len, st + len + 24))) en = st + len;
         if (en < 0) {
           en = s.indexOf('endstream', st);
           if (en < 0) en = s.length;
@@ -302,8 +369,8 @@ class Doc {
     return v instanceof Ref ? undefined : v;
   }
   async stream(entry) {
-    const d = entry.v;
-    let data = this.bytes.subarray(entry.start, entry.end);
+    const d = entry.v, raw = this.bytes.subarray(entry.start, entry.end);
+    let data = raw;
     const fv = this.r(d.get('Filter') ?? d.get('F'));
     const filters = fv === undefined || fv === null ? [] : Array.isArray(fv) ? fv.map((x) => this.r(x)) : [fv];
     const pv = this.r(d.get('DecodeParms') ?? d.get('DP'));
@@ -311,34 +378,46 @@ class Doc {
     for (let i = 0; i < filters.length; i++) {
       const f = filters[i]?.name;
       if (f === 'FlateDecode' || f === 'Fl') data = unpredict(await inflate(data, this.ctx), parms[i]);
-      else if (f === 'ASCII85Decode' || f === 'A85') data = ascii85(data);
-      else if (f === 'ASCIIHexDecode' || f === 'AHx') data = asciiHex(data);
-      else if (f === 'LZWDecode' || f === 'LZW') data = unpredict(lzw(data, parms[i]?.get?.('EarlyChange') ?? 1), parms[i]);
-      else if (f === 'RunLengthDecode' || f === 'RL') data = runLength(data);
+      else if (f === 'ASCII85Decode' || f === 'A85') data = await ascii85(data, this.ctx);
+      else if (f === 'ASCIIHexDecode' || f === 'AHx') { data = asciiHex(data); charge(this.ctx, data.length, data.length); }
+      else if (f === 'LZWDecode' || f === 'LZW') data = unpredict(await lzw(data, parms[i]?.get?.('EarlyChange') ?? 1, this.ctx), parms[i]);
+      else if (f === 'RunLengthDecode' || f === 'RL') data = await runLength(data, this.ctx);
       else if (f === 'Crypt') continue;
       else { this.ctx.unknownFilters.add(String(f)); return null; }
     }
+    // フィルタの無い物も数える。同じ物を /Contents に何度も並べると、開かなくてもメモリが尽きる
+    if (data === raw) charge(this.ctx, raw.length, raw.length);
     return data;
   }
   async load() {
-    const stms = this.scan();
+    const ctx = this.ctx;
+    const stms = await this.scan();
     for (const n of stms) {
       const entry = this.objs.get(n);
       if (!entry?.v?.get) continue;
       const data = await this.stream(entry);
       if (!data) continue;
-      const body = toBinary(data);
       const N = this.r(entry.v.get('N')), first = this.r(entry.v.get('First'));
-      const head = new Lex(body, 0, first, false);
+      if (typeof N !== 'number' || typeof first !== 'number') continue;
+      const body = toBinary(data);
+      const head = new Lex(body, 0, first, false, ctx);
       const pairs = [];
-      for (let i = 0; i < N; i++) { const a = head.value(), b = head.value(); if (typeof a === 'number' && typeof b === 'number') pairs.push([a, b]); }
+      // /N はファイルの値のまま回さない。1組は少なくとも4字(「1 0 」)
+      const count = Math.min(N, body.length / 4);
+      for (let i = 0; i < count; i++) {
+        const a = head.value(), b = head.value();
+        if (typeof a === 'number' && typeof b === 'number') pairs.push([a, b]);
+        if (++ctx.spins >= SPINS) await breathe(ctx);
+      }
       for (const [num, off] of pairs) {
-        const lx = new Lex(body, first + off);
-        try { this.put(num, { v: lx.value(), at: entry.at }); } catch { /* 壊れた1件は飛ばす */ }
+        const start = first + off, lx = new Lex(body, start, body.length, true, ctx);
+        try { this.put(num, { v: lx.value(), at: entry.at }); } catch (e) { if (e instanceof PdfError) throw e; /* 壊れた1件は飛ばす */ }
+        if ((ctx.spins += 1 + Math.max(0, lx.p - start)) >= SPINS) await breathe(ctx);
       }
     }
     for (const m of this.s.matchAll(/trailer[\s\0]*<</g)) {
       if (this.s.slice(m.index, m.index + 4096).includes('/Encrypt')) this.encrypted = true;
+      if ((ctx.spins += 64) >= SPINS) await breathe(ctx);
     }
   }
   catalog() {
@@ -353,7 +432,7 @@ class Doc {
     if (!cat) throw new PdfError('broken', 'PDF の目次が読めません');
     const out = [], seen = new Set();
     const walk = (nodeV, inherited, depth) => {
-      if (depth > 64 || out.length > LIMITS.pages) return;
+      if (depth > 64) return;
       const id = nodeV instanceof Ref ? nodeV.n : null;
       if (id !== null) { if (seen.has(id)) return; seen.add(id); }
       const node = this.r(nodeV);
@@ -363,6 +442,8 @@ class Doc {
       const kids = this.r(node.get('Kids'));
       if (Array.isArray(kids) && node.get('Type')?.name !== 'Page') { for (const k of kids) walk(k, inh, depth + 1); return; }
       out.push({ node, ...inh });
+      // 前の頁だけを ok で返すと、欠けたことが分からない
+      if (out.length > this.ctx.limits.pages) throw new PdfError('too-big', '頁が多すぎます');
     };
     walk(cat.get('Pages'), {}, 0);
     return out;
@@ -372,37 +453,69 @@ class Doc {
 // ---- 字の対応 ----
 function utf16hex(h) {
   let out = '';
-  for (let i = 0; i + 3 < h.length; i += 4) out += String.fromCharCode(parseInt(h.substr(i, 4), 16));
+  // 1字が長い文字列に化けると、字の数の上限の中でも頁の文が膨らむ。合字でも 64 字には届かない
+  for (let i = 0; i + 3 < h.length && i < 64 * 4; i += 4) out += String.fromCharCode(parseInt(h.substr(i, 4), 16));
   if (h.length === 2) out = String.fromCharCode(parseInt(h, 16));
   return out;
 }
-function parseCMap(t) {
+// begin〜end の間を順に返す。end の無い begin が並んでも、同じ所を読み直さない
+function* cmapBlocks(t, name) {
+  const open = 'begin' + name, close = 'end' + name;
+  for (let p = t.indexOf(open); p >= 0;) {
+    const from = p + open.length, to = t.indexOf(close, from);
+    if (to < 0) return;
+    yield t.slice(from, to);
+    p = t.indexOf(open, to + close.length);
+  }
+}
+// <…> の16進(中の空白は捨てる)を n 個ずつ返す。arrays なら [ … ] を1つの配列にする。1字ずつ進むので、正規表現と違い < の後の長い空白でも時間が伸びない
+function* cmapGroups(t, n, arrays = false) {
+  let list = null, group = [];
+  const put = (v) => { if (list) list.push(v); else group.push(v); };
+  for (let i = 0; i < t.length;) {
+    const c = t[i];
+    if (c === '<') {
+      const close = t.indexOf('>', i);
+      if (close < 0) return;
+      put(t.slice(i + 1, close).replace(/[^0-9A-Fa-f]/g, ''));
+      i = close + 1;
+    } else {
+      if (arrays && c === '[') list = [];
+      else if (c === ']' && list) { const v = list; list = null; group.push(v); }
+      i++;
+    }
+    if (group.length === n) { yield group; group = []; }
+  }
+}
+function parseCMap(t, limits) {
   const map = new Map(), spaces = [];
   let count = 0;
-  for (const b of t.matchAll(/begincodespacerange([\s\S]*?)endcodespacerange/g)) {
-    for (const m of b[1].matchAll(/<\s*([0-9A-Fa-f ]+?)\s*>\s*<\s*([0-9A-Fa-f ]+?)\s*>/g)) {
-      const lo = m[1].replace(/ /g, ''), hi = m[2].replace(/ /g, '');
-      spaces.push({ n: lo.length / 2, lo: parseInt(lo, 16), hi: parseInt(hi, 16) });
+  for (const b of cmapBlocks(t, 'codespacerange')) {
+    for (const [lo, hi] of cmapGroups(b, 2)) {
+      if (spaces.length < CODESPACES) spaces.push({ n: lo.length / 2, lo: parseInt(lo, 16), hi: parseInt(hi, 16) });
     }
   }
-  for (const b of t.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)) {
-    for (const m of b[1].matchAll(/<\s*([0-9A-Fa-f ]+?)\s*>\s*<\s*([0-9A-Fa-f ]*?)\s*>/g)) {
-      if (++count > LIMITS.cmapEntries) return { map, spaces };
-      map.set(parseInt(m[1].replace(/ /g, ''), 16), utf16hex(m[2].replace(/ /g, '')));
+  for (const b of cmapBlocks(t, 'bfchar')) {
+    for (const [code, u] of cmapGroups(b, 2)) {
+      if (++count > limits.cmapEntries) return { map, spaces };
+      map.set(parseInt(code, 16), utf16hex(u));
     }
   }
-  for (const b of t.matchAll(/beginbfrange([\s\S]*?)endbfrange/g)) {
-    for (const m of b[1].matchAll(/<\s*([0-9A-Fa-f ]+?)\s*>\s*<\s*([0-9A-Fa-f ]+?)\s*>\s*(?:<\s*([0-9A-Fa-f ]+?)\s*>|\[([^\]]*)\])/g)) {
-      const from = parseInt(m[1].replace(/ /g, ''), 16), to = parseInt(m[2].replace(/ /g, ''), 16);
+  for (const b of cmapBlocks(t, 'bfrange')) {
+    for (const [lo, hi, dst] of cmapGroups(b, 3, true)) {
+      const from = parseInt(lo, 16), to = parseInt(hi, 16);
       if (to < from || to - from > 0xffff) continue;
-      if (m[4] !== undefined) {
-        [...m[4].matchAll(/<\s*([0-9A-Fa-f ]*?)\s*>/g)].forEach((u, i) => { if (from + i <= to) map.set(from + i, utf16hex(u[1].replace(/ /g, ''))); });
+      if (Array.isArray(dst)) {
+        for (let i = 0; i < dst.length && from + i <= to; i++) {
+          if (++count > limits.cmapEntries) return { map, spaces };
+          map.set(from + i, utf16hex(dst[i]));
+        }
         continue;
       }
-      const hex = m[3].replace(/ /g, ''), head = utf16hex(hex);
+      const head = utf16hex(dst);
       const last = head.charCodeAt(head.length - 1);
       for (let i = 0; i <= to - from; i++) {
-        if (++count > LIMITS.cmapEntries) return { map, spaces };
+        if (++count > limits.cmapEntries) return { map, spaces };
         map.set(from + i, head.slice(0, -1) + String.fromCharCode(last + i));
       }
     }
@@ -440,7 +553,11 @@ async function loadFont(doc, ref) {
   const tuEntry = tu instanceof Ref ? doc.objs.get(tu.n) : null;
   if (tuEntry && tuEntry.start !== undefined) {
     const data = await doc.stream(tuEntry);
-    if (data) toUni = parseCMap(toBinary(data));
+    if (data) {
+      toUni = parseCMap(toBinary(data), doc.ctx.limits);
+      hold(doc.ctx, toUni.map.size); // フォントを並べて同じ表を何度も作っても止める
+      doc.ctx.spins += data.length;
+    }
     if (toUni && toUni.map.size === 0) toUni = null;
   }
   const enc = doc.r(d.get('Encoding'));
@@ -451,10 +568,20 @@ async function loadFont(doc, ref) {
     const widths = new Map();
     const W = doc.r(desc?.get('W'));
     if (Array.isArray(W)) {
+      let left = doc.ctx.limits.cmapEntries; // 範囲や同じ配列を並べても広げすぎない
       for (let i = 0; i < W.length;) {
         const a = doc.r(W[i]), b = doc.r(W[i + 1]);
-        if (Array.isArray(b)) { b.forEach((x, k) => widths.set(a + k, doc.r(x))); i += 2; } else { const w = doc.r(W[i + 2]); if (b - a < 70000) for (let c = a; c <= b; c++) widths.set(c, w); i += 3; }
+        if (Array.isArray(b)) {
+          if (left > 0) { b.forEach((x, k) => widths.set(a + k, doc.r(x))); left -= b.length; }
+          i += 2;
+        } else {
+          const w = doc.r(W[i + 2]);
+          if (b - a < 70000) for (let c = a; c <= b && left > 0; c++, left--) widths.set(c, w);
+          i += 3;
+        }
       }
+      hold(doc.ctx, widths.size);
+      doc.ctx.spins += W.length;
     }
     const encName = enc?.name ?? 'stream';
     const family = /RKSJ/.test(encName) ? 'sjis' : /UTF16|UCS2/.test(encName) ? 'utf16' : /EUC/.test(encName) ? 'euc' : /^[HV]$/.test(encName) ? 'jis' : 'identity';
@@ -540,7 +667,9 @@ const mul = (a, b) => [
 const isMatrix = (a) => Array.isArray(a) && a.length === 6 && a.every((x) => typeof x === 'number');
 
 async function runContent(doc, bin, res, sink, ctm0, depth, active, tr0 = 0) {
-  const lx = new Lex(bin, 0, bin.length, false);
+  const ctx = doc.ctx, { limits } = ctx;
+  const tally = { values: 0, limits }; // 演算子の引数は実行すると捨てるので、演算子ごとに数え直す
+  const lx = new Lex(bin, 0, bin.length, false, tally);
   const st = [], stack = [];
   let g = { ctm: ctm0, font: null, fs: 0, tc: 0, tw: 0, tz: 1, tl: 0, rise: 0, tr: tr0 };
   let tm = I, tlm = I;
@@ -549,7 +678,14 @@ async function runContent(doc, bin, res, sink, ctm0, depth, active, tr0 = 0) {
 
   const show = (raw) => {
     if (!g.font) { sink.noFont += raw.length; return; }
-    for (const gl of g.font.decode(raw)) {
+    // 1字は多くて2バイト。長い並びを字の配列にする前に、バイトの数で見る
+    const overLimit = (n) => sink.glyphs + n > limits.pageChars || ctx.glyphs + n > limits.docChars;
+    if (overLimit(raw.length / 2)) throw new PdfError('too-big', '字が多すぎます');
+    const glyphs = g.font.decode(raw);
+    if (overLimit(glyphs.length)) throw new PdfError('too-big', '字が多すぎます');
+    sink.glyphs += glyphs.length;
+    ctx.glyphs += glyphs.length;
+    for (const gl of glyphs) {
       const trm = mul([g.fs * g.tz, 0, 0, g.fs, 0, g.rise], mul(tm, g.ctm));
       const hx = Math.hypot(trm[0], trm[1]), hy = Math.hypot(trm[2], trm[3]);
       const ang = ((Math.round(Math.atan2(trm[1], trm[0]) * 180 / Math.PI / 90) * 90) % 360 + 360) % 360;
@@ -569,9 +705,11 @@ async function runContent(doc, bin, res, sink, ctm0, depth, active, tr0 = 0) {
   const nextLine = (x, y) => { tlm = mul([1, 0, 0, 1, x, y], tlm); tm = tlm; };
 
   for (;;) {
+    const from = lx.p;
     const v = lx.value();
     if (v === undefined) break;
-    if (!(v instanceof Op)) { st.push(v); if (st.length > LIMITS.stack) st.length = 0; continue; }
+    if ((ctx.spins += 1 + lx.p - from) >= SPINS) await breathe(ctx);
+    if (!(v instanceof Op)) { st.push(v); if (st.length > limits.stack) { st.length = 0; tally.values = 0; } continue; }
     switch (v.op) {
       case 'q': stack.push({ ...g }); if (stack.length > 512) stack.shift(); break;
       case 'Q': if (stack.length) g = stack.pop(); break;
@@ -609,6 +747,7 @@ async function runContent(doc, bin, res, sink, ctm0, depth, active, tr0 = 0) {
               const adj = -e / 1000 * g.fs;
               tm = mul(g.font?.vertical ? [1, 0, 0, 1, 0, adj] : [1, 0, 0, 1, adj * g.tz, 0], tm);
             }
+            if (++ctx.spins >= SPINS) await breathe(ctx);
           }
           countFont(doc, g.fontKey, sink.length - n);
         }
@@ -624,7 +763,9 @@ async function runContent(doc, bin, res, sink, ctm0, depth, active, tr0 = 0) {
         if (sub === 'Image') {
           const c = g.ctm;
           sink.imageArea += Math.abs(c[0] * c[3] - c[1] * c[2]);
-        } else if (sub === 'Form' && depth < LIMITS.depth && !active.has(id)) {
+        } else if (sub === 'Form') {
+          if (++ctx.forms > limits.formDo) throw new PdfError('too-big', 'Form の呼び出しが多すぎます');
+          if (depth >= limits.depth || active.has(id)) break;
           const data = await doc.stream(entry);
           if (data) {
             const mx = doc.r(entry.v.get('Matrix'));
@@ -646,6 +787,7 @@ async function runContent(doc, bin, res, sink, ctm0, depth, active, tr0 = 0) {
       default: break;
     }
     st.length = 0;
+    tally.values = 0;
   }
 }
 function countFont(doc, key, n) {
@@ -744,12 +886,14 @@ function layout(chars) {
 const fromKangxi = (t) => t.replace(/[\u2F00-\u2FD5]/g, (c) => c.normalize('NFKC'));
 
 // ---- 入口 ----
-export async function readPdf(input) {
+// options: limits(LIMITS の一部を上書きする)・onProgress(page, pageCount)(頁を読み始めるごとに呼ぶ。無くてもよい)
+export async function readPdf(input, options) {
   try {
+    const limits = { ...LIMITS, ...options?.limits };
     const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
-    if (bytes.length > LIMITS.file) return { status: 'too-big', pageCount: 0, pages: [], text: '', stats: {} };
+    if (bytes.length > limits.file) return { status: 'too-big', pageCount: 0, pages: [], text: '', stats: {} };
     if (toBinary(bytes.subarray(0, 1024)).indexOf('%PDF-') < 0) return { status: 'not-pdf', pageCount: 0, pages: [], text: '', stats: {} };
-    const doc = new Doc(bytes);
+    const doc = new Doc(bytes, limits), { ctx } = doc;
     await doc.load();
     if (doc.encrypted) return { status: 'encrypted', pageCount: 0, pages: [], text: '', stats: {} };
     // 末尾の %%EOF が無い物は途中で切れた物。残った頁だけを ok にすると、欠けたことが分からない
@@ -758,13 +902,16 @@ export async function readPdf(input) {
     if (!list.length) return { status: 'broken', pageCount: 0, pages: [], text: '', stats: {} };
     const pages = [];
     for (let i = 0; i < list.length; i++) {
+      await breathe(ctx);
+      options?.onProgress?.(i + 1, list.length);
       const pg = list[i];
       const sink = [];
-      sink.imageArea = 0; sink.noFont = 0; sink.hidden = 0;
+      sink.imageArea = 0; sink.noFont = 0; sink.hidden = 0; sink.glyphs = 0;
       const cv = doc.r(pg.node.get('Contents'));
       const ids = Array.isArray(cv) ? cv : pg.node.get('Contents') !== undefined ? [pg.node.get('Contents')] : [];
       const parts = [];
       for (const id of ids) {
+        if (++ctx.spins >= SPINS) await breathe(ctx);
         const entry = id instanceof Ref ? doc.objs.get(id.n) : null;
         if (entry?.start === undefined) continue;
         const data = await doc.stream(entry);
