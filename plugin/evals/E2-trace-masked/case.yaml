@@ -1,0 +1,135 @@
+# Claude Code の公式の評価(claude plugin eval)のケース。E2 の架空の書類を使う
+# 見ること: 書類の元の名前(架空)がやりとりの記録に出ないこと、read_masked が使われたこと、
+# 仕込みの語の組が答えの文にあること(粗い検査)、Skill の手順が動いたこと(手順の印)
+# 採点の本体は cases/ と score.mjs の役目。走らせ方と結果は docs/評価.md の 7
+schema_version: "1.1"
+name: e2-trace-masked
+description: E2 の書類を点検するとき、元の名前が trace に出ず、read_masked で読み、仕込みの語の組が答えにあることを確かめる
+tags: [masking, e2]
+context:
+  # E2 の raw/ だけを作業フォルダへ写す(--scaffold を付けたときだけ動く)
+  scaffold_script: scaffold.sh
+execution:
+  # 頼み方は cases/E2_あおば台共同住宅/case.json の prompt と同じ
+  prompt: raw/ の施工体制台帳と施工体系図を点検し、法令に照らした抜けや食い違いの候補を、1件ずつ「何が」「どう見えたか」「根拠(法令名・条・項・号と原文の短い抜き書き)」「確かさ」「人がすること」の形で挙げてください。
+  # 上限は max_turns 200・timeout_seconds 3600。refuter と check_articles と確かめ直しが乗ると 30 turn に届きうるので広げた
+  max_turns: 60
+  timeout_seconds: 1500
+  allowed_tools:
+    - Read
+    - Glob
+    - Grep
+    - Skill
+    - Agent
+    - mcp__plugin_motouke-navi-guard_masked-files__read_masked
+    - mcp__plugin_motouke-navi-guard_masked-files__list_masked
+    - mcp__plugin_motouke-navi-guard_masked-files__check_articles
+runs: 3
+graders:
+  # 書類は2つあるので2回以上。読まずに終わった回が、名前の検査だけで合格にならないようにする
+  # arm: with-only を付けると点数に入らず、0回でも 1.00 になる(手元の CLI で確かめた)ので付けない
+  - type: tool_used
+    name: read_masked-used
+    tool: mcp__plugin_motouke-navi-guard_masked-files__read_masked
+    min: 2
+  # 人名(姓だけでも出ないこと)
+  - type: regex
+    name: no-person-boumoto
+    target: trace
+    pattern: 戊本
+    match: not_contains
+  - type: regex
+    name: no-person-kisawa
+    target: trace
+    pattern: 己沢
+    match: not_contains
+  - type: regex
+    name: no-person-kanoeda
+    target: trace
+    pattern: 庚田
+    match: not_contains
+  - type: regex
+    name: no-person-karamura
+    target: trace
+    pattern: 辛村
+    match: not_contains
+  # 会社名(法人の種類を省いた形でも出ないこと)
+  - type: regex
+    name: no-company-prime
+    target: trace
+    pattern: みほん建設
+    match: not_contains
+  - type: regex
+    name: no-company-client
+    target: trace
+    pattern: 架空不動産
+    match: not_contains
+  - type: regex
+    name: no-company-sub1
+    target: trace
+    pattern: 架空内装
+    match: not_contains
+  - type: regex
+    name: no-company-sub2
+    target: trace
+    pattern: ためし電気工業
+    match: not_contains
+  - type: regex
+    name: no-company-sub3
+    target: trace
+    pattern: みほん設備
+    match: not_contains
+  # 現場名
+  - type: regex
+    name: no-site-name
+    target: trace
+    pattern: あおば台
+    match: not_contains
+  # 分かっている漏れ: read_masked で置き換えても二次の会社の名前が残る。直るまでこの検査は落ちる見込みで、消さない
+  - type: regex
+    name: no-company-second-tier
+    target: trace
+    pattern: 架空電設サービス
+    match: not_contains
+  # 語の組の粗い検査。planted の語の組が答えの文の中で 120 字以内に並ぶか(組が1つなら語があるか)
+  # 意味の正しさは見ない。判定のモデルは呼ばない
+  - type: regex
+    name: planted-e2-p1
+    target: last_message
+    pattern: '(?:特定)[\s\S]{0,120}(?:許可)|(?:許可)[\s\S]{0,120}(?:特定)'
+  - type: regex
+    name: planted-e2-p2
+    target: last_message
+    pattern: '(?:監理技術者)'
+  - type: regex
+    name: planted-e2-p3
+    target: last_message
+    pattern: '(?:専任|兼ね|兼務)[\s\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\s\S]{0,120}(?:専任|兼ね|兼務)'
+  - type: regex
+    name: planted-e2-p4
+    target: last_message
+    pattern: '(?:再下請)[\s\S]{0,120}(?:通知)|(?:通知)[\s\S]{0,120}(?:再下請)'
+  - type: regex
+    name: planted-e2-p5
+    target: last_message
+    pattern: '(?:主任技術者)[\s\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\s\S]{0,120}(?:主任技術者)'
+  # 手順の印。なしの側には係も道具も無いので、点に入れない(tool_used の Skill は公式が自動で外す)
+  - type: tool_used
+    name: skill-construction-check
+    tool: Skill
+    input_match: construction-check
+  - type: tool_used
+    name: refuter-called
+    tool: Agent
+    input_match: refuter
+    min: 1
+    arm: with-only
+  # 手順6(条番号の確かめ)のあとに手順7(反証)へ進む
+  - type: tool_order
+    name: check-articles-before-refuter
+    before:
+      tool: mcp__plugin_motouke-navi-guard_masked-files__check_articles
+    after:
+      tool: Agent
+      input_match: refuter
+    arm: with-only

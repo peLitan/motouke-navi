@@ -1,10 +1,10 @@
 # Claude Code の公式の評価(claude plugin eval)のケース。E1 の架空の書類を使う
-# 見ること: 書類の元の名前(架空)がやりとりの記録に出ないことと、read_masked が使われたこと
-# 仕込みの見落としは数えない(それは cases/ と score.mjs の役目)
-# 走らせ方と結果は docs/評価.md の 7
-schema_version: "1.0"
+# 見ること: 書類の元の名前(架空)がやりとりの記録に出ないこと、read_masked が使われたこと、
+# 仕込みの語の組が答えの文にあること(粗い検査)、Skill の手順が動いたこと(手順の印)
+# 採点の本体は cases/ と score.mjs の役目。走らせ方と結果は docs/評価.md の 7
+schema_version: "1.1"
 name: e1-trace-masked
-description: E1 の書類を点検するとき、元の名前が trace に出ず、read_masked で読むことを確かめる
+description: E1 の書類を点検するとき、元の名前が trace に出ず、read_masked で読み、仕込みの語の組が答えにあることを確かめる
 tags: [masking, e1]
 context:
   # E1 の raw/ だけを作業フォルダへ写す(--scaffold を付けたときだけ動く)
@@ -12,13 +12,15 @@ context:
 execution:
   # 頼み方は cases/E1_しおかぜ町下水道/case.json の prompt と同じ
   prompt: raw/ の施工体制台帳と施工計画書の抜粋を点検し、法令に照らした抜けや食い違いの候補を、1件ずつ「何が」「どう見えたか」「根拠(法令名・条・項・号と原文の短い抜き書き)」「確かさ」「人がすること」の形で挙げてください。
-  max_turns: 30
-  timeout_seconds: 900
+  # 上限は max_turns 200・timeout_seconds 3600。refuter と check_articles と確かめ直しが乗ると 30 turn に届きうるので広げた
+  max_turns: 60
+  timeout_seconds: 1500
   allowed_tools:
     - Read
     - Glob
     - Grep
     - Skill
+    - Agent
     - mcp__plugin_motouke-navi-guard_masked-files__read_masked
     - mcp__plugin_motouke-navi-guard_masked-files__list_masked
     - mcp__plugin_motouke-navi-guard_masked-files__check_articles
@@ -73,3 +75,45 @@ graders:
     target: trace
     pattern: 第5号幹線
     match: not_contains
+  # 語の組の粗い検査。planted の語の組が答えの文の中で 120 字以内に並ぶか(組が1つなら語があるか)
+  # 意味の正しさは見ない。判定のモデルは呼ばない
+  - type: regex
+    name: planted-e1-p1
+    target: last_message
+    pattern: '(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\s\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\s\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)'
+  - type: regex
+    name: planted-e1-p2
+    target: last_message
+    pattern: '(?:監理技術者)[\s\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\s\S]{0,120}(?:監理技術者)'
+  - type: regex
+    name: planted-e1-p3
+    target: last_message
+    pattern: '(?:工期)[\s\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\s\S]{0,120}(?:工期)'
+  - type: regex
+    name: planted-e1-p4
+    target: last_message
+    pattern: '(?:写し)[\s\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\s\S]{0,120}(?:写し)'
+  - type: regex
+    name: planted-e1-p5
+    target: last_message
+    pattern: '(?:施工体系図)[\s\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\s\S]{0,120}(?:施工体系図)'
+  # 手順の印。なしの側には係も道具も無いので、点に入れない(tool_used の Skill は公式が自動で外す)
+  - type: tool_used
+    name: skill-construction-check
+    tool: Skill
+    input_match: construction-check
+  - type: tool_used
+    name: refuter-called
+    tool: Agent
+    input_match: refuter
+    min: 1
+    arm: with-only
+  # 手順6(条番号の確かめ)のあとに手順7(反証)へ進む
+  - type: tool_order
+    name: check-articles-before-refuter
+    before:
+      tool: mcp__plugin_motouke-navi-guard_masked-files__check_articles
+    after:
+      tool: Agent
+      input_match: refuter
+    arm: with-only
