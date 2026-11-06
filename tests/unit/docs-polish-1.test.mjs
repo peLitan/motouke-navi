@@ -16,9 +16,12 @@ test('場面の数: README と台本の見出しの数が、台本の表の行�
   assert.ok(readme.includes(`${rows}場面・`));
 });
 
-test('実在の公告の外れた欄: overview が評価.md の 15欄のうち1欄と同じ', () => {
+test('実在の公告の外れた欄: overview が評価.md の 30欄のうち1欄(岡山の15欄のうち1欄)と同じ', () => {
   assert.ok(hyouka.includes('15欄のうち1欄が外れ'));
-  assert.ok(overview.includes('実在の公開の公告1件(15欄)は 1欄が外れ'));
+  assert.ok(hyouka.includes('全部の行の数え方で30欄のうち1欄が外れ'));
+  assert.ok(hyouka.includes('最初の1行の数え方で30欄のうち3欄が外れ'));
+  assert.ok(overview.includes('実在の公開の公告2件(30欄)は 1欄が外れ'));
+  assert.ok(overview.includes('欄の最初の1行だけで判定すると 3欄'));
   assert.ok(!overview.includes('2欄'));
 });
 
