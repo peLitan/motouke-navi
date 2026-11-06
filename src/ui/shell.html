@@ -214,6 +214,7 @@
   #bid > h2 { margin: 0.75rem 0 0.5rem; }
   .start p { margin: 0.25rem 0; }
   .print-only { display: none; }
+  .brief-only { display: none; }
   .sign-table { border-collapse: collapse; width: 100%; }
   .sign-table th, .sign-table td { border: 1px solid var(--line-strong); padding: 0.5rem; height: 2.5rem; text-align: left; }
   .sign-table th { width: 8rem; }
@@ -344,6 +345,8 @@
     :root { --ink: #000; --ink-2: #000; --paper-2: #fff; --line: #000; --line-strong: #000; --primary: #000; --primary-dark: #000; --primary-bg: #fff; --need: #000; --need-line: #000; --check: #000; --check-line: #000; --ok: #000; --ok-line: #000; --bar-bg: #fff; --bar-ink: #000; --shadow: none; }
     body { font-size: 10.5pt; }
     .wrap, .topbar .wrap { max-width: none; padding: 0; }
+    /* 帯の副題は紙に出さない。紙の帯は作品名だけ(F66c) */
+    .topbar-sub { display: none !important; }
     button, .export, .no-print { display: none !important; }
     .phone-only { display: none !important; }
     .drop-hint { display: none !important; }
@@ -371,6 +374,22 @@
     .print-only { display: block; }
     #print-head { margin: 0 0 0 auto; }
     .sign-off { break-inside: avoid; margin-top: 1.5rem; }
+    /* まとめの紙(F66c)。print-brief は「PDF で保存・印刷」の間だけ body に付くので、全部の紙とブラウザのメニューからの印刷は変わらない。rem は紙の字の大きさに連動しないので pt で書く */
+    body.print-brief #lead, body.print-brief #scope, body.print-brief #panel-1, body.print-brief #bid-fold, body.print-brief #schedule-heading, body.print-brief #work-kind-schedule, body.print-brief #awarded-notice, body.print-brief #schedule-notice, body.print-brief #schedule-about-fold, body.print-brief #schedule-result, body.print-brief #safety-heading, body.print-brief #safety-note, body.print-brief #safety-prime-note, body.print-brief #safety-fold, body.print-brief #panel-3, body.print-brief #other-tools, body.print-brief .stats, body.print-brief .human, body.print-brief ul.print-only + p { display: none !important; }
+    body.print-brief .brief-only { display: block; }
+    body.print-brief { line-height: 1.4; }
+    body.print-brief h2 { font-size: 13pt; margin: 8pt 0 2pt; }
+    body.print-brief h3 { font-size: 11.5pt; margin: 6pt 0 2pt; }
+    body.print-brief h4 { margin: 4pt 0 1pt; }
+    body.print-brief p, body.print-brief ul, body.print-brief dl { margin-top: 0; margin-bottom: 0; }
+    body.print-brief .summary { border: none; padding: 0; margin: 0; }
+    body.print-brief .summary-items { display: flex; flex-wrap: wrap; gap: 0 1.5em; }
+    body.print-brief .summary-row, body.print-brief .item { padding: 1pt 0; }
+    body.print-brief #sources-list li { margin: 0; }
+    /* 足の字も紙の本文と同じ大きさにする。画面の 1rem のままだと紙で大きい */
+    footer { font-size: 10.5pt; }
+    /* 画面の「閉じる ▴」の規則は [open] の分だけ上の content: none より強いので、同じ強さで消す */
+    details.open-card[open] > summary::after, details#bid-fold[open] > summary::after, details.schedule-table[open] > summary::after, details.safety-fold[open] > summary::after { content: none; }
   }
 </style>
 </head>
@@ -541,6 +560,7 @@
 <p id="sample-status" aria-live="polite"></p>
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>
 </div>
+<p class="brief-only" id="brief-note">この紙は Motouke Navi の結果の要点です。入れた条件は「まとめ」の最後にあります。各項目の理由と根拠の条文の抜き書き、受注後の段取り、安全の法令の候補、書類の点検の中身は入っていません(全部を印刷した版にあります)。</p>
 <div id="result-top" hidden></div>
 <p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
