@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-REmH0vviawOOqYK0LBjtrJnFqK9ZhFHsoDdk46WJRcs='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Vtziu8Z16FcQIXG1dA3n6Chfy4kzWtyMuk/a3O4y7/g='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -3178,6 +3178,10 @@ const MAP_NOTICE = 'このファイルには元の名前が入っています。
 
 const isText = (v) => typeof v === 'string' && v.trim() !== '';
 
+// このツールのファイルでないときの文(F58b)。形が違っても版が違っても同じ文にし、キーの名前は出さない
+const NOT_MAP_FILE = 'このツールで書き出した対応表ではないか、版が違います。書き出した対応表のファイルを選んでください。';
+const NOT_DICT_FILE = 'このツールで書き出した辞書ではないか、版が違います。書き出した辞書のファイルを選んでください。';
+
 // 対応表のファイルを読んで確かめる。おかしければ、どこがおかしいかを書いた Error を投げる
 function parseMapFile(text) {
   let data;
@@ -3186,13 +3190,11 @@ function parseMapFile(text) {
   } catch {
     throw new Error('対応表のファイルとして読めません(JSON の形になっていません)。書き出した対応表のファイルを選んでください。');
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT) {
-    throw new Error('対応表のファイルではありません(format が "' + MAP_FORMAT + '" ではありません)。');
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT || data.version !== MAP_VERSION || !Array.isArray(data.entries)) {
+    throw new Error(NOT_MAP_FILE);
   }
-  if (data.version !== MAP_VERSION) throw new Error('対応表のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
-  if (!Array.isArray(data.entries)) throw new Error('対応表のファイルに entries(対応表の行)がありません。');
   const terms = data.terms === undefined ? [] : data.terms;
-  if (!Array.isArray(terms)) throw new Error('対応表のファイルの terms(足した語)が並びになっていません。');
+  if (!Array.isArray(terms)) throw new Error(NOT_MAP_FILE);
   const tokens = new Set();
   const originals = new Set();
   const entries = data.entries.map((e, i) => {
@@ -3230,11 +3232,9 @@ function parseDictFile(text, kinds) {
   } catch {
     throw new Error('辞書のファイルとして読めません(JSON の形になっていません)。書き出した辞書のファイルを選んでください。');
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('辞書のファイルではありません(中身が JSON のオブジェクトではありません)。');
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error(NOT_DICT_FILE);
   if (data.format === MAP_FORMAT) throw new Error('これは対応表のファイルです。対応表は「対応表を読み込む」で読み込んでください。');
-  if (data.format !== DICT_FORMAT) throw new Error('辞書のファイルではありません(format が "' + DICT_FORMAT + '" ではありません)。');
-  if (data.version !== DICT_VERSION) throw new Error('辞書のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
-  if (!Array.isArray(data.terms)) throw new Error('辞書のファイルに terms(足した語の並び)がありません。');
+  if (data.format !== DICT_FORMAT || data.version !== DICT_VERSION || !Array.isArray(data.terms)) throw new Error(NOT_DICT_FILE);
   if (!data.terms.length) throw new Error('辞書のファイルに語が1つもありません。');
   if (data.terms.length > DICT_MAX_TERMS) throw new Error('辞書のファイルの語が多すぎます(' + data.terms.length + ' 件。' + DICT_MAX_TERMS + ' 件まで)。');
   const known = new Set(kinds || []);
@@ -3242,9 +3242,7 @@ function parseDictFile(text, kinds) {
   const out = [];
   data.terms.forEach((t, i) => {
     const at = '辞書の ' + (i + 1) + ' 番目の語';
-    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new Error(at + 'が読めません。');
-    if (!isText(t.word)) throw new Error(at + 'に word(語)がありません。');
-    if (!isText(t.kind)) throw new Error(at + 'に kind(種類)がありません。');
+    if (!t || typeof t !== 'object' || Array.isArray(t) || !isText(t.word) || !isText(t.kind)) throw new Error(at + 'が読めません。' + NOT_DICT_FILE);
     const word = t.word.trim();
     const kind = t.kind.trim();
     if (word.length > DICT_MAX_WORD) throw new Error(at + 'が長すぎます(' + DICT_MAX_WORD + ' 字まで)。');
@@ -3527,7 +3525,7 @@ const u16 = (b, o) => b[o] | (b[o + 1] << 8);
 const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
 
 async function inflateRaw(data, limit) {
-  if (typeof DecompressionStream !== 'function') throw new Error('この環境では .docx・.xlsx を開けません(DecompressionStream がありません)');
+  if (typeof DecompressionStream !== 'function') throw new Error('このブラウザでは .xlsx/.docx を開けません。文字をコピーして貼り付けてください');
   const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
   const reader = stream.getReader();
   const parts = [];
@@ -6067,12 +6065,115 @@ function tidyPdfText(text) {
 
 return { tidyPdfText };
 })();
+__m["src/ui/confirm.mjs"] = (function () {
+// 入力の確かめ(F43d): 結果の前に、入れた条件を全部の行で並べる。行ごとに値・出どころ(公告・見本・手入力)を出し、公告から推定した値には「推定」を付ける。
+// DOM には触らない。行の枠と「変更」のボタンは shell.html に静的にあり、ここは行の中身の文を作る。
+const { parseYen, readWorkKind } = __m["src/ui/form.mjs"];
+const { esc, statusBadge } = __m["src/ui/view.mjs"];
+const { cutQuote } = __m["src/brackets.mjs"];
+const { DEFAULT_WORK_KIND, WORK_KINDS } = __m["src/work-kinds.mjs"];
+
+const select = (key, label, options) => ({ key, label, kind: 'select', field: key, options });
+const amount = (key, label) => ({ key, label, kind: 'amount', field: key });
+const CONFIRM_ROWS = [
+  select('orderer', '発注者', { public: '公共', private: '民間' }),
+  { key: 'role', label: '元請けか下請けか', kind: 'role' },
+  select('work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }),
+  select('work-kind', '工種', Object.fromEntries(WORK_KINDS.map((k) => [k.id, k.label]))),
+  amount('contract-amount', '請負代金の見込み'),
+  amount('subcontract-total', '下請けの総額'),
+  select('license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }),
+  select('engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }),
+  { key: 'ict-measure', label: '発注者が台帳を閲覧できる措置', kind: 'check', field: 'ict-measure' },
+  { key: 'participation-conditions', label: '公告の参加の条件', kind: 'text', field: 'participation-conditions' },
+];
+
+const ROLES = [['direct', '元請け'], ['direct-sub', '下請け'], ['direct-unknown', '分からない']];
+const UNKNOWN = '分からない';
+const UNSET = 'まだ選んでいません';
+const on = (v) => v === true;
+
+// 行の答え。raw は出どころの突き合わせに使う(読み込んだときと同じ値なら、その出どころのまま)
+function answer(row, values) {
+  if (row.kind === 'role') {
+    const hit = ROLES.find(([id]) => on(values[id]));
+    return hit ? { text: hit[1], raw: hit[0], state: hit[0] === 'direct-unknown' ? 'unknown' : 'set' } : { text: UNSET, raw: '', state: 'unset' };
+  }
+  if (row.kind === 'check') return on(values[row.field]) ? { text: '講じる', raw: true, state: 'set' } : { text: '講じない(印なし)', raw: false, state: 'set' };
+  if (row.kind === 'text') {
+    const raw = String(values[row.field] ?? '').trim();
+    return { text: raw || '入れていません(任意)', raw, state: 'set' };
+  }
+  if (row.kind === 'amount') {
+    if (on(values[row.field + '-unknown'])) return { text: UNKNOWN, raw: 'unknown', state: 'unknown' };
+    const raw = String(values[row.field] ?? '');
+    const { value, error } = parseYen(raw);
+    if (error) return { text: raw, raw, state: 'bad' };
+    if (value === null) return { text: 'まだ入れていません', raw: '', state: 'unset' };
+    return { text: value.toLocaleString('ja-JP') + '円(税込み)', raw: value, state: 'set' };
+  }
+  const raw = String(values[row.field] ?? '');
+  if (raw === 'unknown') return { text: UNKNOWN, raw, state: 'unknown' };
+  return Object.hasOwn(row.options, raw) ? { text: row.options[raw], raw, state: 'set' } : { text: UNSET, raw: '', state: 'unset' };
+}
+
+// 建築一式の工事なのに工種が既定の土木のままなら、その注意の文(F59)。値は変えない。where は選び直す所
+function workKindWarning(values, where = '「変更」') {
+  const left = values['work-type'] === 'kenchiku-ikkatsu' && readWorkKind(values) === DEFAULT_WORK_KIND;
+  return left ? '工種が土木のままです。建築の工事なら' + where + 'で選び直してください。' : '';
+}
+
+// 読み込んだ値の出どころを覚える形。fields を渡すと、その欄の行だけ
+function markSources(values, kind, quotes = {}, fields = null) {
+  const out = {};
+  for (const row of CONFIRM_ROWS) {
+    if (fields && !fields.includes(row.field)) continue;
+    out[row.key] = { kind, raw: answer(row, values).raw, quote: quotes[row.field] ?? '' };
+  }
+  return out;
+}
+
+// 画面の1行の中身。読み込んだあとに値を変えた行は手入力になる。
+// initial は画面を開いたときの値。読み込みの記録が無く、その値のままの欄は「最初の値」(F59)
+function confirmRows(values = {}, sources = {}, initial = null) {
+  return CONFIRM_ROWS.map((row) => {
+    const a = answer(row, values);
+    const s = sources[row.key];
+    const kept = s && s.raw === a.raw ? s : null;
+    const empty = a.state === 'unset' || (row.kind === 'text' && !a.raw && !kept);
+    const first = !s && initial && answer(row, initial).raw === a.raw;
+    const source = empty ? '未入力' : kept ? kept.kind : first ? '最初の値' : '手入力';
+    const warning = row.key === 'work-kind' ? workKindWarning(values) : '';
+    return { key: row.key, label: row.label, field: row.field ?? null, text: a.text, state: a.state, source, quote: kept?.quote ?? '', estimated: source === '公告', warning };
+  });
+}
+
+const QUOTE_MAX = 80;
+const SOURCE_TEXT = { 未入力: '入れていません', 手入力: '手入力', 見本: '見本(架空の工事)', 最初の値: '最初の値(変えていません)' };
+const AMOUNT_NOTE = '予定価格は上限の見込みで、請負代金そのものではありません。';
+function renderConfirmRow(r) {
+  const quote = cutQuote(r.quote, QUOTE_MAX);
+  const source = r.source === '公告' ? '公告' + (quote ? '「' + quote + '」' : '') : SOURCE_TEXT[r.source];
+  const value = r.state === 'bad' ? '<span class="errors">読めない値: ' + esc(r.text) + '。「変更」で直してください</span>' : esc(r.text);
+  const unset = r.state === 'unset' ? statusBadge('unanswered') + ' ' : '';
+  const warning = r.warning
+    ? '<small class="confirm-est"><span class="badge badge-needs_check"><span class="mark" aria-hidden="true">!</span> 注意</span> ' + esc(r.warning) + '</small>'
+    : '';
+  const estimated = r.estimated
+    ? '<small class="confirm-est"><span class="badge badge-needs_check"><span class="mark" aria-hidden="true">!</span> 推定</span> 公告から推定した値です。確認が要ります。原文で確かめてください。' + (r.key === 'contract-amount' ? AMOUNT_NOTE : '') + '</small>'
+    : '';
+  return '<strong>' + unset + value + '</strong><small>出どころ: ' + esc(source) + '</small>' + warning + estimated;
+}
+
+return { CONFIRM_ROWS, workKindWarning, markSources, confirmRows, renderConfirmRow };
+})();
 __m["src/intake-load.mjs"] = (function () {
 // 画面の「公告から拾った条件を読み込む」(F41a): Skill bid-intake の check-conditions.mjs --out のファイルを読む。
 // 通信しない。保存しない。入れるのは、確かめが要らなかった値だけ。
 const INTAKE_MAX_BYTES = 1024 * 1024;
 const { findPrimeExperience, PRIME_CHECK_LABEL } = __m["src/prime-experience.mjs"];
 const { tidyPdfText } = __m["src/pdf-text.mjs"];
+const { CONFIRM_ROWS } = __m["src/ui/confirm.mjs"];
 
 const OK = '拾えた';
 // 画面の欄 → 値の確かめと、値の元の行
@@ -6082,11 +6183,14 @@ const FIELDS = {
   'contract-amount': { row: 'budget', valid: (v) => /^[0-9]{1,15}$/.test(v) },
 };
 
-const list = (v, name) => {
+const list = (v) => {
   if (v == null) return [];
-  if (!Array.isArray(v)) throw new Error(name + ' の形が違います');
+  if (!Array.isArray(v)) throw new Error('このファイルの中身の形が違います(公告を読んだ AI がまとめた条件のファイルを選んでください)');
   return v;
 };
+
+// 誤りの文に出す欄の名前。確かめの画面の行の名前を使い、欄の id は出さない(F58b)
+const rowLabel = (id) => CONFIRM_ROWS.find((r) => r.key === id).label;
 
 // 画面の「公告の参加の条件」の欄に入れる文(F49a)。原文と照らした施工実績の抜き書き。
 // 行ごとに PDF の空白と折り返しを詰めて、行の区切りは残す(F65c)。rows の抜き書きは原文のまま
@@ -6100,18 +6204,18 @@ function parseIntakeFile(text) {
   if (data?.kind !== 'bid-intake') throw new Error('公告から拾った条件のファイルではありません(公告を読んだ AI がまとめた条件のファイルを選んでください)');
   const title = data.source?.title;
   if (typeof title !== 'string' || !title.trim()) throw new Error('公告の題名がありません');
-  const rows = list(data.rows, 'rows');
+  const rows = list(data.rows);
   const form = {};
   for (const [id, value] of Object.entries(data.form ?? {})) {
     const f = Object.hasOwn(FIELDS, id) ? FIELDS[id] : null;
-    if (!f) throw new Error('画面に無い欄です: ' + id);
-    if (typeof value !== 'string' || !f.valid(value)) throw new Error('欄 ' + id + ' の値が違います');
-    if (!rows.some((r) => r?.key === f.row && r.status === OK)) throw new Error('欄 ' + id + ' の元の値が「' + OK + '」ではありません');
+    if (!f) throw new Error('公告を読んだ AI がまとめた条件のファイルではないようです(画面に無い欄があります)');
+    if (typeof value !== 'string' || !f.valid(value)) throw new Error('『' + rowLabel(id) + '』の値が読めません(欄に手で入れてください)');
+    if (!rows.some((r) => r?.key === f.row && r.status === OK)) throw new Error('『' + rowLabel(id) + '』は公告から拾えていないので入れません(公告の原文で確かめて、欄に手で入れてください)');
     form[id] = value;
   }
   // 入力の確かめ(F43d)に出す、欄の値の元の抜き書き
   const quotes = Object.fromEntries(Object.keys(form).map((id) => [id, String(rows.find((r) => r?.key === FIELDS[id].row && r.status === OK)?.quote ?? '')]));
-  return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
+  return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped), company: list(data.companyFields) };
 }
 
 // 読み込んだあとに人が見る行
@@ -6236,108 +6340,6 @@ const SAMPLE = {
 };
 
 return { SAMPLE };
-})();
-__m["src/ui/confirm.mjs"] = (function () {
-// 入力の確かめ(F43d): 結果の前に、入れた条件を全部の行で並べる。行ごとに値・出どころ(公告・見本・手入力)を出し、公告から推定した値には「推定」を付ける。
-// DOM には触らない。行の枠と「変更」のボタンは shell.html に静的にあり、ここは行の中身の文を作る。
-const { parseYen, readWorkKind } = __m["src/ui/form.mjs"];
-const { esc, statusBadge } = __m["src/ui/view.mjs"];
-const { cutQuote } = __m["src/brackets.mjs"];
-const { DEFAULT_WORK_KIND, WORK_KINDS } = __m["src/work-kinds.mjs"];
-
-const select = (key, label, options) => ({ key, label, kind: 'select', field: key, options });
-const amount = (key, label) => ({ key, label, kind: 'amount', field: key });
-const CONFIRM_ROWS = [
-  select('orderer', '発注者', { public: '公共', private: '民間' }),
-  { key: 'role', label: '元請けか下請けか', kind: 'role' },
-  select('work-type', '工事の種類', { 'kenchiku-ikkatsu': '建築一式工事', other: 'それ以外の工事' }),
-  select('work-kind', '工種', Object.fromEntries(WORK_KINDS.map((k) => [k.id, k.label]))),
-  amount('contract-amount', '請負代金の見込み'),
-  amount('subcontract-total', '下請けの総額'),
-  select('license', '元請けの許可の種類', { tokutei: '特定建設業', ippan: '一般建設業' }),
-  select('engineer-qualification', '置ける技術者の資格', { kanri: '監理技術者', shunin: '主任技術者' }),
-  { key: 'ict-measure', label: '発注者が台帳を閲覧できる措置', kind: 'check', field: 'ict-measure' },
-  { key: 'participation-conditions', label: '公告の参加の条件', kind: 'text', field: 'participation-conditions' },
-];
-
-const ROLES = [['direct', '元請け'], ['direct-sub', '下請け'], ['direct-unknown', '分からない']];
-const UNKNOWN = '分からない';
-const UNSET = 'まだ選んでいません';
-const on = (v) => v === true;
-
-// 行の答え。raw は出どころの突き合わせに使う(読み込んだときと同じ値なら、その出どころのまま)
-function answer(row, values) {
-  if (row.kind === 'role') {
-    const hit = ROLES.find(([id]) => on(values[id]));
-    return hit ? { text: hit[1], raw: hit[0], state: hit[0] === 'direct-unknown' ? 'unknown' : 'set' } : { text: UNSET, raw: '', state: 'unset' };
-  }
-  if (row.kind === 'check') return on(values[row.field]) ? { text: '講じる', raw: true, state: 'set' } : { text: '講じない(印なし)', raw: false, state: 'set' };
-  if (row.kind === 'text') {
-    const raw = String(values[row.field] ?? '').trim();
-    return { text: raw || '入れていません(任意)', raw, state: 'set' };
-  }
-  if (row.kind === 'amount') {
-    if (on(values[row.field + '-unknown'])) return { text: UNKNOWN, raw: 'unknown', state: 'unknown' };
-    const raw = String(values[row.field] ?? '');
-    const { value, error } = parseYen(raw);
-    if (error) return { text: raw, raw, state: 'bad' };
-    if (value === null) return { text: 'まだ入れていません', raw: '', state: 'unset' };
-    return { text: value.toLocaleString('ja-JP') + '円(税込み)', raw: value, state: 'set' };
-  }
-  const raw = String(values[row.field] ?? '');
-  if (raw === 'unknown') return { text: UNKNOWN, raw, state: 'unknown' };
-  return Object.hasOwn(row.options, raw) ? { text: row.options[raw], raw, state: 'set' } : { text: UNSET, raw: '', state: 'unset' };
-}
-
-// 建築一式の工事なのに工種が既定の土木のままなら、その注意の文(F59)。値は変えない。where は選び直す所
-function workKindWarning(values, where = '「変更」') {
-  const left = values['work-type'] === 'kenchiku-ikkatsu' && readWorkKind(values) === DEFAULT_WORK_KIND;
-  return left ? '工種が土木のままです。建築の工事なら' + where + 'で選び直してください。' : '';
-}
-
-// 読み込んだ値の出どころを覚える形。fields を渡すと、その欄の行だけ
-function markSources(values, kind, quotes = {}, fields = null) {
-  const out = {};
-  for (const row of CONFIRM_ROWS) {
-    if (fields && !fields.includes(row.field)) continue;
-    out[row.key] = { kind, raw: answer(row, values).raw, quote: quotes[row.field] ?? '' };
-  }
-  return out;
-}
-
-// 画面の1行の中身。読み込んだあとに値を変えた行は手入力になる。
-// initial は画面を開いたときの値。読み込みの記録が無く、その値のままの欄は「最初の値」(F59)
-function confirmRows(values = {}, sources = {}, initial = null) {
-  return CONFIRM_ROWS.map((row) => {
-    const a = answer(row, values);
-    const s = sources[row.key];
-    const kept = s && s.raw === a.raw ? s : null;
-    const empty = a.state === 'unset' || (row.kind === 'text' && !a.raw && !kept);
-    const first = !s && initial && answer(row, initial).raw === a.raw;
-    const source = empty ? '未入力' : kept ? kept.kind : first ? '最初の値' : '手入力';
-    const warning = row.key === 'work-kind' ? workKindWarning(values) : '';
-    return { key: row.key, label: row.label, field: row.field ?? null, text: a.text, state: a.state, source, quote: kept?.quote ?? '', estimated: source === '公告', warning };
-  });
-}
-
-const QUOTE_MAX = 80;
-const SOURCE_TEXT = { 未入力: '入れていません', 手入力: '手入力', 見本: '見本(架空の工事)', 最初の値: '最初の値(変えていません)' };
-const AMOUNT_NOTE = '予定価格は上限の見込みで、請負代金そのものではありません。';
-function renderConfirmRow(r) {
-  const quote = cutQuote(r.quote, QUOTE_MAX);
-  const source = r.source === '公告' ? '公告' + (quote ? '「' + quote + '」' : '') : SOURCE_TEXT[r.source];
-  const value = r.state === 'bad' ? '<span class="errors">読めない値: ' + esc(r.text) + '。「変更」で直してください</span>' : esc(r.text);
-  const unset = r.state === 'unset' ? statusBadge('unanswered') + ' ' : '';
-  const warning = r.warning
-    ? '<small class="confirm-est"><span class="badge badge-needs_check"><span class="mark" aria-hidden="true">!</span> 注意</span> ' + esc(r.warning) + '</small>'
-    : '';
-  const estimated = r.estimated
-    ? '<small class="confirm-est"><span class="badge badge-needs_check"><span class="mark" aria-hidden="true">!</span> 推定</span> 公告から推定した値です。確認が要ります。原文で確かめてください。' + (r.key === 'contract-amount' ? AMOUNT_NOTE : '') + '</small>'
-    : '';
-  return '<strong>' + unset + value + '</strong><small>出どころ: ' + esc(source) + '</small>' + warning + estimated;
-}
-
-return { CONFIRM_ROWS, workKindWarning, markSources, confirmRows, renderConfirmRow };
 })();
 __m["src/ui/download.mjs"] = (function () {
 // 画面の書き出し(F05e・F11d が使う)

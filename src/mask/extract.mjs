@@ -41,7 +41,7 @@ const u16 = (b, o) => b[o] | (b[o + 1] << 8);
 const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
 
 async function inflateRaw(data, limit) {
-  if (typeof DecompressionStream !== 'function') throw new Error('この環境では .docx・.xlsx を開けません(DecompressionStream がありません)');
+  if (typeof DecompressionStream !== 'function') throw new Error('このブラウザでは .xlsx/.docx を開けません。文字をコピーして貼り付けてください');
   const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
   const reader = stream.getReader();
   const parts = [];

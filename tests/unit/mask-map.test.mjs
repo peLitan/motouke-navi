@@ -33,7 +33,7 @@ test('読み込んだあとに新しく作る記号は、読み込んだ記号�
 test('壊れた対応表を読み込もうとしても、今の対応表は変わらない', () => {
   const b = fresh();
   const r = b.mask('丙川建設株式会社。');
-  assert.throws(() => b.importMap('[]'), /対応表のファイルではありません/);
+  assert.throws(() => b.importMap('[]'), /このツールで書き出した対応表ではないか、版が違います/);
   const bad = JSON.stringify({ format: 'mask-map', version: 1, entries: [{ token: '〔会社名1〕', original: 'A', kind: 'company' }, { token: '〔会社名1〕', original: 'B', kind: 'company' }] });
   assert.throws(() => b.importMap(bad), /重なって/);
   assert.equal(b.unmask(r.masked), '丙川建設株式会社。');

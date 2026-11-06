@@ -196,10 +196,11 @@ test('画面の読み込み: 壊れたファイル・違う種類・知らない
   assert.throws(() => parseIntakeFile('{'), /JSON/);
   assert.throws(() => parseIntakeFile('{"rows":[]}'), /ファイルではありません/);
   assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, source: {} })), /題名/);
-  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, form: { license: 'tokutei' } })), /画面に無い欄/);
-  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, form: { constructor: 'x' } })), /画面に無い欄/);
-  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, form: { 'contract-amount': '1万円' } })), /値が違います/);
-  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, rows: [{ key: 'budget', status: '確かめが要る' }] })), /拾えた/);
+  const notIntake = /公告を読んだ AI がまとめた条件のファイルではないようです\(画面に無い欄があります\)/;
+  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, form: { license: 'tokutei' } })), notIntake);
+  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, form: { constructor: 'x' } })), notIntake);
+  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, form: { 'contract-amount': '1万円' } })), /『請負代金の見込み』の値が読めません/);
+  assert.throws(() => parseIntakeFile(JSON.stringify({ ...base, rows: [{ key: 'budget', status: '確かめが要る' }] })), /『請負代金の見込み』は公告から拾えていないので入れません/);
   const doc = fakeDoc();
   doc.getElementById('contract-amount').value = '500';
   assert.equal(loadIntakeFile(doc, '{'), false);

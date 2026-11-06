@@ -112,6 +112,10 @@ export const MAP_NOTICE = 'このファイルには元の名前が入ってい�
 
 const isText = (v) => typeof v === 'string' && v.trim() !== '';
 
+// このツールのファイルでないときの文(F58b)。形が違っても版が違っても同じ文にし、キーの名前は出さない
+const NOT_MAP_FILE = 'このツールで書き出した対応表ではないか、版が違います。書き出した対応表のファイルを選んでください。';
+const NOT_DICT_FILE = 'このツールで書き出した辞書ではないか、版が違います。書き出した辞書のファイルを選んでください。';
+
 // 対応表のファイルを読んで確かめる。おかしければ、どこがおかしいかを書いた Error を投げる
 export function parseMapFile(text) {
   let data;
@@ -120,13 +124,11 @@ export function parseMapFile(text) {
   } catch {
     throw new Error('対応表のファイルとして読めません(JSON の形になっていません)。書き出した対応表のファイルを選んでください。');
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT) {
-    throw new Error('対応表のファイルではありません(format が "' + MAP_FORMAT + '" ではありません)。');
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== MAP_FORMAT || data.version !== MAP_VERSION || !Array.isArray(data.entries)) {
+    throw new Error(NOT_MAP_FILE);
   }
-  if (data.version !== MAP_VERSION) throw new Error('対応表のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
-  if (!Array.isArray(data.entries)) throw new Error('対応表のファイルに entries(対応表の行)がありません。');
   const terms = data.terms === undefined ? [] : data.terms;
-  if (!Array.isArray(terms)) throw new Error('対応表のファイルの terms(足した語)が並びになっていません。');
+  if (!Array.isArray(terms)) throw new Error(NOT_MAP_FILE);
   const tokens = new Set();
   const originals = new Set();
   const entries = data.entries.map((e, i) => {
@@ -164,11 +166,9 @@ export function parseDictFile(text, kinds) {
   } catch {
     throw new Error('辞書のファイルとして読めません(JSON の形になっていません)。書き出した辞書のファイルを選んでください。');
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('辞書のファイルではありません(中身が JSON のオブジェクトではありません)。');
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error(NOT_DICT_FILE);
   if (data.format === MAP_FORMAT) throw new Error('これは対応表のファイルです。対応表は「対応表を読み込む」で読み込んでください。');
-  if (data.format !== DICT_FORMAT) throw new Error('辞書のファイルではありません(format が "' + DICT_FORMAT + '" ではありません)。');
-  if (data.version !== DICT_VERSION) throw new Error('辞書のファイルの版(version: ' + JSON.stringify(data.version) + ')に対応していません。');
-  if (!Array.isArray(data.terms)) throw new Error('辞書のファイルに terms(足した語の並び)がありません。');
+  if (data.format !== DICT_FORMAT || data.version !== DICT_VERSION || !Array.isArray(data.terms)) throw new Error(NOT_DICT_FILE);
   if (!data.terms.length) throw new Error('辞書のファイルに語が1つもありません。');
   if (data.terms.length > DICT_MAX_TERMS) throw new Error('辞書のファイルの語が多すぎます(' + data.terms.length + ' 件。' + DICT_MAX_TERMS + ' 件まで)。');
   const known = new Set(kinds || []);
@@ -176,9 +176,7 @@ export function parseDictFile(text, kinds) {
   const out = [];
   data.terms.forEach((t, i) => {
     const at = '辞書の ' + (i + 1) + ' 番目の語';
-    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new Error(at + 'が読めません。');
-    if (!isText(t.word)) throw new Error(at + 'に word(語)がありません。');
-    if (!isText(t.kind)) throw new Error(at + 'に kind(種類)がありません。');
+    if (!t || typeof t !== 'object' || Array.isArray(t) || !isText(t.word) || !isText(t.kind)) throw new Error(at + 'が読めません。' + NOT_DICT_FILE);
     const word = t.word.trim();
     const kind = t.kind.trim();
     if (word.length > DICT_MAX_WORD) throw new Error(at + 'が長すぎます(' + DICT_MAX_WORD + ' 字まで)。');

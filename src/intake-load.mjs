@@ -3,6 +3,7 @@
 export const INTAKE_MAX_BYTES = 1024 * 1024;
 import { findPrimeExperience, PRIME_CHECK_LABEL } from './prime-experience.mjs';
 import { tidyPdfText } from './pdf-text.mjs';
+import { CONFIRM_ROWS } from './ui/confirm.mjs';
 
 const OK = '拾えた';
 // 画面の欄 → 値の確かめと、値の元の行
@@ -12,11 +13,14 @@ const FIELDS = {
   'contract-amount': { row: 'budget', valid: (v) => /^[0-9]{1,15}$/.test(v) },
 };
 
-const list = (v, name) => {
+const list = (v) => {
   if (v == null) return [];
-  if (!Array.isArray(v)) throw new Error(name + ' の形が違います');
+  if (!Array.isArray(v)) throw new Error('このファイルの中身の形が違います(公告を読んだ AI がまとめた条件のファイルを選んでください)');
   return v;
 };
+
+// 誤りの文に出す欄の名前。確かめの画面の行の名前を使い、欄の id は出さない(F58b)
+const rowLabel = (id) => CONFIRM_ROWS.find((r) => r.key === id).label;
 
 // 画面の「公告の参加の条件」の欄に入れる文(F49a)。原文と照らした施工実績の抜き書き。
 // 行ごとに PDF の空白と折り返しを詰めて、行の区切りは残す(F65c)。rows の抜き書きは原文のまま
@@ -30,18 +34,18 @@ export function parseIntakeFile(text) {
   if (data?.kind !== 'bid-intake') throw new Error('公告から拾った条件のファイルではありません(公告を読んだ AI がまとめた条件のファイルを選んでください)');
   const title = data.source?.title;
   if (typeof title !== 'string' || !title.trim()) throw new Error('公告の題名がありません');
-  const rows = list(data.rows, 'rows');
+  const rows = list(data.rows);
   const form = {};
   for (const [id, value] of Object.entries(data.form ?? {})) {
     const f = Object.hasOwn(FIELDS, id) ? FIELDS[id] : null;
-    if (!f) throw new Error('画面に無い欄です: ' + id);
-    if (typeof value !== 'string' || !f.valid(value)) throw new Error('欄 ' + id + ' の値が違います');
-    if (!rows.some((r) => r?.key === f.row && r.status === OK)) throw new Error('欄 ' + id + ' の元の値が「' + OK + '」ではありません');
+    if (!f) throw new Error('公告を読んだ AI がまとめた条件のファイルではないようです(画面に無い欄があります)');
+    if (typeof value !== 'string' || !f.valid(value)) throw new Error('『' + rowLabel(id) + '』の値が読めません(欄に手で入れてください)');
+    if (!rows.some((r) => r?.key === f.row && r.status === OK)) throw new Error('『' + rowLabel(id) + '』は公告から拾えていないので入れません(公告の原文で確かめて、欄に手で入れてください)');
     form[id] = value;
   }
   // 入力の確かめ(F43d)に出す、欄の値の元の抜き書き
   const quotes = Object.fromEntries(Object.keys(form).map((id) => [id, String(rows.find((r) => r?.key === FIELDS[id].row && r.status === OK)?.quote ?? '')]));
-  return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped, 'formSkipped'), company: list(data.companyFields, 'companyFields') };
+  return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped), company: list(data.companyFields) };
 }
 
 // 読み込んだあとに人が見る行
