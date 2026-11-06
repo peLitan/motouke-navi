@@ -25,9 +25,15 @@ const REQUIRED = /有する|有して|有し|あること|ある者|あるもの
 // 参加の条件ではない文(加点の説明、技術者の経験)
 const NOT_CONDITION = /加点|評価点|評価項目|評価の対象|評価する|評価します|望ましい/;
 // 技術者への条件の文。最初の読点までに技術者が主語か見出しとして来る文と、「…を有する監理技術者を配置する」の形の文。
-// 読点までに会社の語があれば、会社と技術者を並べた文とみて、会社への条件として残す
+// 会社の語の直後に並べる語が続く文は、会社と技術者を並べた文とみて、会社への条件として残す。
+// 「共同企業体の配置予定技術者は」のように会社の語が技術者を修飾するだけなら、技術者の文のまま。
+// 「入札参加者と雇用関係にある技術者は」の「と」は並べる語ではない
 const ENGINEER_HEAD = /技術者(?:等|など)?(?:は|が|の要件|の経験|の資格)/;
-const COMPANY_HEAD = /入札参加者|企業|会社|法人|申請者/;
+const COMPANY = '(?:入札参加者|企業体?|会社|法人|申請者)';
+const LIST_WORD = '(?:及び|および|並びに|ならびに|又は|または|若しくは|もしくは)';
+const COMPANY_LISTED = new RegExp(`${COMPANY}(?:等|など)?[\\s　]*(?:${LIST_WORD}|・|と(?![^、。]*(?:関係|雇用)))`);
+// 実績の条件が先に来て閉じた形。「…実績を有する配置予定技術者は」のように実績が技術者を修飾する形は含めない
+const PAST_WORK_FIRST = new RegExp(`実績(?:.*(?:こと|もの|(?<!技術)者))?(?:${LIST_WORD}|かつ)|実績.*(?:有し(?![てた])|あり|${COMPANY})`);
 const ENGINEER_HOLDER = /有する(?:専任の)?(?:監理|主任)技術者(?:(?:又は|または|若しくは|もしくは|及び|および|・)(?:監理|主任)技術者)?(?:を[^、。]{0,12}(?:配置|置く)|であること)/;
 // 次の文で下請けの実績も認める形。否定は SUB_EXCLUDED より広く見る(語の間が12字を超える文、「含めない」)。
 // 「許可」「認可」の字は認める語にしない
@@ -42,7 +48,13 @@ const sentences = (text) => String(text ?? '').split(ITEM_HEAD).flatMap((part) =
 
 function isEngineerSentence(s) {
   const head = s.split(/[、。]/)[0];
-  return (ENGINEER_HEAD.test(head) && !COMPANY_HEAD.test(head)) || ENGINEER_HOLDER.test(s);
+  const at = head.search(ENGINEER_HEAD);
+  if (at >= 0 && !COMPANY_LISTED.test(head.slice(0, at)) && !PAST_WORK_FIRST.test(head.slice(0, at))) return true;
+  const holder = s.search(ENGINEER_HOLDER);
+  if (holder < 0) return false;
+  // 実績の条件が先に来た形として見るのは、読点の無い文だけ
+  const before = s.slice(0, holder);
+  return before.includes('、') || !PAST_WORK_FIRST.test(before);
 }
 
 function isPrimeCondition(s) {

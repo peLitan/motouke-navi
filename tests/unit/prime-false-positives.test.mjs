@@ -44,9 +44,8 @@ test('技術者の文: 読点までの語で見る。会社の語があれば会
     '法人及び配置予定技術者が、元請として同種工事の施工実績を有すること。',
     '申請者及び配置予定技術者が、元請として同種工事の施工実績を有すること。',
   ]) assert.equal(findPrimeExperience(s), s, s);
-  // 会社の語の扱いの限界: 技術者が主語でも、読点までに会社の語があれば出る(評価.md に書いた)
-  const owner = '入札参加者の配置する技術者は、元請として同種工事の施工実績を有すること。';
-  assert.equal(findPrimeExperience(owner), owner);
+  // F77c: 会社の語が技術者を修飾するだけの文は、技術者の文(試験は prime-regressions.test.mjs)
+  assert.equal(findPrimeExperience('入札参加者の配置する技術者は、元請として同種工事の施工実績を有すること。'), null);
   // 読点より後の技術者は見ない
   const later = '元請として同種工事の施工実績を有し、配置予定技術者は専任であること。';
   assert.equal(findPrimeExperience(later), later);
