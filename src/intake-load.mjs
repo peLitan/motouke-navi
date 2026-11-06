@@ -2,6 +2,7 @@
 // 通信しない。保存しない。入れるのは、確かめが要らなかった値だけ。
 export const INTAKE_MAX_BYTES = 1024 * 1024;
 import { findPrimeExperience, PRIME_CHECK_LABEL } from './prime-experience.mjs';
+import { tidyPdfText } from './pdf-text.mjs';
 
 const OK = '拾えた';
 // 画面の欄 → 値の確かめと、値の元の行
@@ -17,10 +18,11 @@ const list = (v, name) => {
   return v;
 };
 
-// 画面の「公告の参加の条件」の欄に入れる文(F49a)。原文と照らした施工実績の抜き書き
+// 画面の「公告の参加の条件」の欄に入れる文(F49a)。原文と照らした施工実績の抜き書き。
+// 行ごとに PDF の空白と折り返しを詰めて、行の区切りは残す(F65c)。rows の抜き書きは原文のまま
 const participationText = (rows) => rows
   .filter((r) => r?.key === 'past-work' && (r.status === OK || r.status === '確かめが要る'))
-  .map((r) => String(r.quote || r.value || '').trim()).filter(Boolean).join('\n');
+  .map((r) => tidyPdfText(r.quote || r.value)).filter(Boolean).join('\n');
 
 export function parseIntakeFile(text) {
   let data;
