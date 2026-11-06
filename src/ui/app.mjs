@@ -112,7 +112,7 @@ export function renderSafety(doc) {
   const title = doc.getElementById('safety-title');
   if (title) title.textContent = safetyTitle(r);
   const stage1El = doc.getElementById('safety-stage1');
-  if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">段1 で直す</a>';
+  if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">「1 条件を入れる」で直す</a>';
   const qSub = doc.getElementById('safety-q-subcontract');
   if (qSub) qSub.hidden = r.mode === 'sub';
   // 問い2 は下請けを使う・まだ分からないとき、下請けの道で出す

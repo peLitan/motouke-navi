@@ -4,6 +4,7 @@ import { readDirect } from './form.mjs';
 import { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } from '../checklist.mjs';
 import { sourceVersion, versionText } from '../source-version.mjs';
 import { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } from '../work-kinds.mjs';
+import { PRIME_CHECK_KEY } from '../prime-experience.mjs';
 import { displayStatus, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } from './answers.mjs';
 
 export function esc(s) {
@@ -33,6 +34,10 @@ export function basisList(list = []) {
   // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
   return '<details class="basis"><summary>根拠: ' + basisLabels(list) + '</summary>' + basisItems(list) + '</details>';
 }
+
+// 確認が要る点の1行。根拠のある点(専任の確認。F62a)は、文の下に条番号と抜き書きの折りたたみを添える
+const pointLine = (c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message)
+  + (c.basis?.length ? '<details class="basis"><summary>根拠を見る: ' + basisLabels(c.basis) + '</summary>' + basisItems(c.basis) + '</details>' : '') + '</li>';
 
 function exceptionList(list = []) {
   if (!list.length) return '';
@@ -101,7 +106,7 @@ export function renderBidResult(bid, values) {
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
   const checks = points.length
-    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
+    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map(pointLine).join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
   // 労務費と処遇の候補(F50a): 上の「確認が要る点」の件数には混ぜない
   const dutyList = bid.duties ?? [];
@@ -122,7 +127,7 @@ export function renderBidResult(bid, values) {
 export function renderOpenItems(bid, values = {}) {
   const o = openItems(bid, values);
   const need = o.needsCheck.length
-    ? '<ul class="open-checks">' + o.needsCheck.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
+    ? '<ul class="open-checks">' + o.needsCheck.map(pointLine).join('') + '</ul>'
     : '<p>ありません(入れた条件の範囲で。このツールが見ていない法令・資料の確認は別に要ります)。</p>';
   const known = o.unknown.length
     ? '<p>「分からない」を選んだ質問: ' + o.unknown.map((q) => esc(q.name) + (q.items.length ? '(使う項目: ' + esc(q.items.join('・')) + ')' : '')).join('、') + '。この質問を使う項目は「確認が要る」にしています。</p>'
@@ -390,6 +395,8 @@ export const SAFETY_MARK = '▲';
 function nextStep(state, points, un) {
   if (state.errors?.length) return { title: '金額の欄を直す', sub: '読めない欄に印を付けました。直してから、もう一度「確認する」を押してください。', href: 'bid-form', go: '1 条件に戻る' };
   if (state.stale) return { title: 'もう一度「確認する」を押す', sub: '条件が変わりました。下の数は前の条件の結果です。', href: 'bid-run', go: '1 条件に戻る' };
+  // 元請けの実績の知らせは法令の項目ではないので checks の最後にあるが、参加の条件なので未回答より先に出す(F62a)。参加できないとは言い切らない(F49)
+  if ((state.bid?.checks ?? []).some((c) => c.key === PRIME_CHECK_KEY)) return { title: '元請けとしての施工実績が参加の条件です', sub: '公告の抜き書きを確かめ、認められる実績の範囲を発注者の公告と説明書で確かめてください。', href: 'open-items', go: '確認が要る点を見る' };
   if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '1 条件に戻る' };
   if (points.length) return { title: '「確認が要る」の ' + points.length + '件を確かめる', sub: points[0].label + ': ' + points[0].message, href: 'open-items', go: '確認が要る点を見る' };
   return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '3 書類を確かめる' };

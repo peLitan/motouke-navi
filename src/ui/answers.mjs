@@ -108,7 +108,7 @@ export function needsCheckPoints(bid, values) {
   for (const c of bid?.checks ?? []) {
     const it = items.find((x) => x.key === c.key);
     const status = !it ? 'needs_check' : values ? displayStatus(it, values) : it.status;
-    if (status !== 'unanswered') points.push({ label: c.label, message: c.message, status });
+    if (status !== 'unanswered') points.push({ label: c.label, message: c.message, status, ...(c.basis ? { basis: c.basis } : {}) });
   }
   return points;
 }

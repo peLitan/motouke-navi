@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-mxRKWQVmhMNJo+gyHRRAHoDGyB5Kpe6zjOOqLa/sBA4='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-78Ahv6VwADVbIlnZ6Si+XVkxODqPYw06SVAsXuovIUc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -1616,6 +1616,113 @@ function versionText(b = {}) {
 
 return { NO_VERSION, revisionDate, sourceVersion, versionText };
 })();
+__m["src/brackets.mjs"] = (function () {
+// 公告の抜き書きを、括弧を崩さずに切る部品(F65b)。通信しない。語は変えない。
+// 括弧は「」『』()。丸括弧の半角と全角は同じ種類として対にする(PDF から写すと混ざることがある)。
+
+const OPENERS = { '「': '」', '『': '』', '(': ')', '（': ')' };
+const CLOSERS = { '」': '」', '』': '』', ')': ')', '）': ')' };
+
+// 対になった括弧の [開きの位置, 閉じの位置] の列。
+// 対の無い括弧(項の番号の「1)」や、閉じないまま終わる開き)は入れない。入れると、その後ろの文を全部飲み込む
+function bracketPairs(text) {
+  const open = [];
+  const pairs = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    if (Object.hasOwn(OPENERS, c)) open.push({ at: i, closer: OPENERS[c] });
+    else if (Object.hasOwn(CLOSERS, c)) {
+      const k = open.findLastIndex((o) => o.closer === CLOSERS[c]);
+      if (k < 0) continue;
+      pairs.push([open[k].at, i]);
+      open.length = k;
+    }
+  }
+  return pairs;
+}
+
+// 文の列。つなぐと元の文に戻る(空白も除かない)。対になった括弧の中の「。」では切らない。
+// 例外: 文の頭から始まって「。)」で閉じる丸括弧は、それだけで1文。「(…に限る。)なお、…」の前半の語を
+// 「なお」より後の文の判定に混ぜないため。文の途中の「(…をいう。以下同じ。)は、…」は続きなので切らない
+function splitSentences(text) {
+  const pairs = bracketPairs(text);
+  const inside = (i) => pairs.some(([open, close]) => open < i && i < close);
+  const closesAlone = (i, start) => (text[i] === ')' || text[i] === '）') && text[i - 1] === '。' && !inside(i)
+    && pairs.some(([open, close]) => close === i && !text.slice(start, open).trim())
+    && !/^\s*[。、]/.test(text.slice(i + 1));
+  const out = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if ((text[i] === '。' && !inside(i)) || closesAlone(i, start)) {
+      out.push(text.slice(start, i + 1));
+      start = i + 1;
+    }
+  }
+  if (start < text.length) out.push(text.slice(start));
+  return out;
+}
+
+// 長さで切る。切った所で開いたままの括弧は、元の文の閉じ括弧を「…」の後ろに足す。元の文で閉じていない括弧には足さない
+function cutQuote(text, max) {
+  if (text.length <= max) return text;
+  const closers = bracketPairs(text).filter(([open, close]) => open < max && close >= max)
+    .sort((a, b) => b[0] - a[0]).map(([, close]) => text[close]);
+  return text.slice(0, max) + '…' + closers.join('');
+}
+
+return { bracketPairs, splitSentences, cutQuote };
+})();
+__m["src/prime-experience.mjs"] = (function () {
+// 公告の参加の条件の文から「元請けとしての施工実績」を求める文を探す(F49a)。通信しない。AI も使わない。
+// 文ごとに語で見るだけなので、当たっても「確認が要る」として知らせ、参加できないとは言い切らない。
+const { splitSentences } = __m["src/brackets.mjs"];
+
+// 実績の条件の語
+const EXPERIENCE = /実績|同種(?:の)?工事|同等(?:の)?工事|類似(?:の)?工事/;
+// 元請けの語を使わずに同じことを書く形(「発注者から直接請け負った」「国、地方公共団体等から直接受注した」)
+const DIRECT = '(?:発注者|国|地方公共団体等?)から直接(?:請け?負|受注)';
+const PRIME = new RegExp(`元請|${DIRECT}`);
+// 元請け・下請けを問わない
+const EITHER = [
+  new RegExp(`(?:元請|${DIRECT})[^。]{0,15}下請[^。]{0,10}(?:問わ|問いません|別なく|かかわらず|関わらず|いずれ)`),
+  /元請[けの負]?(?:業者|人)?(?:又は|または|若しくは|もしくは|及び|および|・|、|,|，)\s*下請/,
+  // 読点では続けない(「…に限り、下請工事は認めない」は問わない文ではない)
+  new RegExp(`${DIRECT}[^。、]{0,10}(?:又は|または|若しくは|もしくは|及び|および)\\s*下請`),
+  /下請[^。]{0,12}(?:含む|含みます|含め(?!な|ず|ま)|も可|でも可|でもよい|も認め|でも差し支え|も対象)/,
+];
+// 実績そのものを求めていない
+// 表の「元請けとしての実績 不要」のように、語のあいだに空白が入ることがある
+const NOT_REQUIRED = /実績(?:の有無)?[\s　]*(?:は|を|について(?:は)?)?[\s　]*(?:問わ|問いません|求めない|求めません|要しない|要しません|不要|必要としない|必要ありません)/;
+// 下請けの実績を認めないと書いてある(語が「元請」でなくても同じ条件)
+const SUB_EXCLUDED = /下請[^。]{0,12}(?:含まない|含みません|含まず|認めない|認めません|認められない|除く|除きます|不可)/;
+// 求めている形の語。実績の語があるだけの文(「…のものは本施工実績とはならない」)は条件にしない
+const REQUIRED = /有する|有して|有し|あること|ある者|あるもの|必要|求める|求めます|条件|限る|限り|のみ|実績[\s　:：]*(?:要|有)/;
+// 参加の条件ではない文(加点の説明、技術者の経験)
+const NOT_CONDITION = /加点|評価点|評価項目|評価の対象|評価する|評価します|望ましい/;
+const ENGINEER_SENTENCE = /^[^、。]{0,16}技術者(?:等|など)?(?:は|が)/;
+const ITEM_HEAD = /\n(?=[\s　]*[(（]?[0-9０-９]+[)）.．])/;
+
+// 改行を除いた文の列。PDF の折り返しと括弧の中の「。」では切らず、「。」と番号の付いた行の頭で切る
+const sentences = (text) => String(text ?? '').split(ITEM_HEAD).flatMap((part) => splitSentences(part))
+  .map((s) => s.replace(/[\s　]*\n[\s　]*/g, '').trim()).filter(Boolean);
+
+function isPrimeCondition(s) {
+  if (!EXPERIENCE.test(s) || !REQUIRED.test(s) || NOT_REQUIRED.test(s) || NOT_CONDITION.test(s) || ENGINEER_SENTENCE.test(s)) return false;
+  if (EITHER.some((re) => re.test(s))) return false;
+  return PRIME.test(s) || SUB_EXCLUDED.test(s);
+}
+
+// 当たった最初の文を返す。無ければ null
+function findPrimeExperience(text) {
+  return sentences(text).find(isPrimeCondition) ?? null;
+}
+
+const PRIME_CHECK_KEY = 'prime-experience';
+const PRIME_CHECK_LABEL = '元請けの施工実績';
+const primeMessage = (quote) => 'この工事は元請けとしての施工実績を参加の条件にしています。初めて元請けをする会社は参加できない場合があります。発注者が認める実績の範囲は、公告と説明書で確かめてください。公告の文: 「' + quote + '」';
+
+return { findPrimeExperience, PRIME_CHECK_KEY, PRIME_CHECK_LABEL, primeMessage };
+})();
 __m["src/ui/answers.mjs"] = (function () {
 // 入力の質問への答えの状態と、結果の項目の見せ方(F14f)。DOM には触らない。
 // 質問の答えは3つに分ける: 答えた(answered)/「分からない」を選んだ(unknown)/まだ答えていない(unanswered)。
@@ -1727,7 +1834,7 @@ function needsCheckPoints(bid, values) {
   for (const c of bid?.checks ?? []) {
     const it = items.find((x) => x.key === c.key);
     const status = !it ? 'needs_check' : values ? displayStatus(it, values) : it.status;
-    if (status !== 'unanswered') points.push({ label: c.label, message: c.message, status });
+    if (status !== 'unanswered') points.push({ label: c.label, message: c.message, status, ...(c.basis ? { basis: c.basis } : {}) });
   }
   return points;
 }
@@ -1755,6 +1862,7 @@ const { readDirect } = __m["src/ui/form.mjs"];
 const { CHECKLIST_REFERENCE, CHECKLIST_LAW, CHECKLIST_ITEMS } = __m["src/checklist.mjs"];
 const { sourceVersion, versionText } = __m["src/source-version.mjs"];
 const { NOT_READ, ALWAYS_SHOWN, WORK_KINDS, workKindLabel } = __m["src/work-kinds.mjs"];
+const { PRIME_CHECK_KEY } = __m["src/prime-experience.mjs"];
 const { displayStatus, itemConditions, contactsFor, openItems, needsCheckPoints, unansweredQuestions, CONTACTS, answerState } = __m["src/ui/answers.mjs"];
 
 function esc(s) {
@@ -1784,6 +1892,10 @@ function basisList(list = []) {
   // 見出しは中身が分かる言葉にする(F14c)。原文の抜き書きは閉じておき、開くと読める
   return '<details class="basis"><summary>根拠: ' + basisLabels(list) + '</summary>' + basisItems(list) + '</details>';
 }
+
+// 確認が要る点の1行。根拠のある点(専任の確認。F62a)は、文の下に条番号と抜き書きの折りたたみを添える
+const pointLine = (c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message)
+  + (c.basis?.length ? '<details class="basis"><summary>根拠を見る: ' + basisLabels(c.basis) + '</summary>' + basisItems(c.basis) + '</details>' : '') + '</li>';
 
 function exceptionList(list = []) {
   if (!list.length) return '';
@@ -1852,7 +1964,7 @@ function renderBidResult(bid, values) {
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
   const checks = points.length
-    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
+    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<ul class="checks">' + points.map(pointLine).join('') + '</ul>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
   // 労務費と処遇の候補(F50a): 上の「確認が要る点」の件数には混ぜない
   const dutyList = bid.duties ?? [];
@@ -1873,7 +1985,7 @@ function renderBidResult(bid, values) {
 function renderOpenItems(bid, values = {}) {
   const o = openItems(bid, values);
   const need = o.needsCheck.length
-    ? '<ul class="open-checks">' + o.needsCheck.map((c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + '</li>').join('') + '</ul>'
+    ? '<ul class="open-checks">' + o.needsCheck.map(pointLine).join('') + '</ul>'
     : '<p>ありません(入れた条件の範囲で。このツールが見ていない法令・資料の確認は別に要ります)。</p>';
   const known = o.unknown.length
     ? '<p>「分からない」を選んだ質問: ' + o.unknown.map((q) => esc(q.name) + (q.items.length ? '(使う項目: ' + esc(q.items.join('・')) + ')' : '')).join('、') + '。この質問を使う項目は「確認が要る」にしています。</p>'
@@ -2141,6 +2253,8 @@ const SAFETY_MARK = '▲';
 function nextStep(state, points, un) {
   if (state.errors?.length) return { title: '金額の欄を直す', sub: '読めない欄に印を付けました。直してから、もう一度「確認する」を押してください。', href: 'bid-form', go: '1 条件に戻る' };
   if (state.stale) return { title: 'もう一度「確認する」を押す', sub: '条件が変わりました。下の数は前の条件の結果です。', href: 'bid-run', go: '1 条件に戻る' };
+  // 元請けの実績の知らせは法令の項目ではないので checks の最後にあるが、参加の条件なので未回答より先に出す(F62a)。参加できないとは言い切らない(F49)
+  if ((state.bid?.checks ?? []).some((c) => c.key === PRIME_CHECK_KEY)) return { title: '元請けとしての施工実績が参加の条件です', sub: '公告の抜き書きを確かめ、認められる実績の範囲を発注者の公告と説明書で確かめてください。', href: 'open-items', go: '確認が要る点を見る' };
   if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '1 条件に戻る' };
   if (points.length) return { title: '「確認が要る」の ' + points.length + '件を確かめる', sub: points[0].label + ': ' + points[0].message, href: 'open-items', go: '確認が要る点を見る' };
   return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '3 書類を確かめる' };
@@ -4014,113 +4128,6 @@ function judgeTaicho(input) {
 
 return { matchesValue, matchesCondition, missingInputs, resolveBasis, resolveQuoteIds, judgeWithTables, judgeTaicho };
 })();
-__m["src/brackets.mjs"] = (function () {
-// 公告の抜き書きを、括弧を崩さずに切る部品(F65b)。通信しない。語は変えない。
-// 括弧は「」『』()。丸括弧の半角と全角は同じ種類として対にする(PDF から写すと混ざることがある)。
-
-const OPENERS = { '「': '」', '『': '』', '(': ')', '（': ')' };
-const CLOSERS = { '」': '」', '』': '』', ')': ')', '）': ')' };
-
-// 対になった括弧の [開きの位置, 閉じの位置] の列。
-// 対の無い括弧(項の番号の「1)」や、閉じないまま終わる開き)は入れない。入れると、その後ろの文を全部飲み込む
-function bracketPairs(text) {
-  const open = [];
-  const pairs = [];
-  for (let i = 0; i < text.length; i += 1) {
-    const c = text[i];
-    if (Object.hasOwn(OPENERS, c)) open.push({ at: i, closer: OPENERS[c] });
-    else if (Object.hasOwn(CLOSERS, c)) {
-      const k = open.findLastIndex((o) => o.closer === CLOSERS[c]);
-      if (k < 0) continue;
-      pairs.push([open[k].at, i]);
-      open.length = k;
-    }
-  }
-  return pairs;
-}
-
-// 文の列。つなぐと元の文に戻る(空白も除かない)。対になった括弧の中の「。」では切らない。
-// 例外: 文の頭から始まって「。)」で閉じる丸括弧は、それだけで1文。「(…に限る。)なお、…」の前半の語を
-// 「なお」より後の文の判定に混ぜないため。文の途中の「(…をいう。以下同じ。)は、…」は続きなので切らない
-function splitSentences(text) {
-  const pairs = bracketPairs(text);
-  const inside = (i) => pairs.some(([open, close]) => open < i && i < close);
-  const closesAlone = (i, start) => (text[i] === ')' || text[i] === '）') && text[i - 1] === '。' && !inside(i)
-    && pairs.some(([open, close]) => close === i && !text.slice(start, open).trim())
-    && !/^\s*[。、]/.test(text.slice(i + 1));
-  const out = [];
-  let start = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    if ((text[i] === '。' && !inside(i)) || closesAlone(i, start)) {
-      out.push(text.slice(start, i + 1));
-      start = i + 1;
-    }
-  }
-  if (start < text.length) out.push(text.slice(start));
-  return out;
-}
-
-// 長さで切る。切った所で開いたままの括弧は、元の文の閉じ括弧を「…」の後ろに足す。元の文で閉じていない括弧には足さない
-function cutQuote(text, max) {
-  if (text.length <= max) return text;
-  const closers = bracketPairs(text).filter(([open, close]) => open < max && close >= max)
-    .sort((a, b) => b[0] - a[0]).map(([, close]) => text[close]);
-  return text.slice(0, max) + '…' + closers.join('');
-}
-
-return { bracketPairs, splitSentences, cutQuote };
-})();
-__m["src/prime-experience.mjs"] = (function () {
-// 公告の参加の条件の文から「元請けとしての施工実績」を求める文を探す(F49a)。通信しない。AI も使わない。
-// 文ごとに語で見るだけなので、当たっても「確認が要る」として知らせ、参加できないとは言い切らない。
-const { splitSentences } = __m["src/brackets.mjs"];
-
-// 実績の条件の語
-const EXPERIENCE = /実績|同種(?:の)?工事|同等(?:の)?工事|類似(?:の)?工事/;
-// 元請けの語を使わずに同じことを書く形(「発注者から直接請け負った」「国、地方公共団体等から直接受注した」)
-const DIRECT = '(?:発注者|国|地方公共団体等?)から直接(?:請け?負|受注)';
-const PRIME = new RegExp(`元請|${DIRECT}`);
-// 元請け・下請けを問わない
-const EITHER = [
-  new RegExp(`(?:元請|${DIRECT})[^。]{0,15}下請[^。]{0,10}(?:問わ|問いません|別なく|かかわらず|関わらず|いずれ)`),
-  /元請[けの負]?(?:業者|人)?(?:又は|または|若しくは|もしくは|及び|および|・|、|,|，)\s*下請/,
-  // 読点では続けない(「…に限り、下請工事は認めない」は問わない文ではない)
-  new RegExp(`${DIRECT}[^。、]{0,10}(?:又は|または|若しくは|もしくは|及び|および)\\s*下請`),
-  /下請[^。]{0,12}(?:含む|含みます|含め(?!な|ず|ま)|も可|でも可|でもよい|も認め|でも差し支え|も対象)/,
-];
-// 実績そのものを求めていない
-// 表の「元請けとしての実績 不要」のように、語のあいだに空白が入ることがある
-const NOT_REQUIRED = /実績(?:の有無)?[\s　]*(?:は|を|について(?:は)?)?[\s　]*(?:問わ|問いません|求めない|求めません|要しない|要しません|不要|必要としない|必要ありません)/;
-// 下請けの実績を認めないと書いてある(語が「元請」でなくても同じ条件)
-const SUB_EXCLUDED = /下請[^。]{0,12}(?:含まない|含みません|含まず|認めない|認めません|認められない|除く|除きます|不可)/;
-// 求めている形の語。実績の語があるだけの文(「…のものは本施工実績とはならない」)は条件にしない
-const REQUIRED = /有する|有して|有し|あること|ある者|あるもの|必要|求める|求めます|条件|限る|限り|のみ|実績[\s　:：]*(?:要|有)/;
-// 参加の条件ではない文(加点の説明、技術者の経験)
-const NOT_CONDITION = /加点|評価点|評価項目|評価の対象|評価する|評価します|望ましい/;
-const ENGINEER_SENTENCE = /^[^、。]{0,16}技術者(?:等|など)?(?:は|が)/;
-const ITEM_HEAD = /\n(?=[\s　]*[(（]?[0-9０-９]+[)）.．])/;
-
-// 改行を除いた文の列。PDF の折り返しと括弧の中の「。」では切らず、「。」と番号の付いた行の頭で切る
-const sentences = (text) => String(text ?? '').split(ITEM_HEAD).flatMap((part) => splitSentences(part))
-  .map((s) => s.replace(/[\s　]*\n[\s　]*/g, '').trim()).filter(Boolean);
-
-function isPrimeCondition(s) {
-  if (!EXPERIENCE.test(s) || !REQUIRED.test(s) || NOT_REQUIRED.test(s) || NOT_CONDITION.test(s) || ENGINEER_SENTENCE.test(s)) return false;
-  if (EITHER.some((re) => re.test(s))) return false;
-  return PRIME.test(s) || SUB_EXCLUDED.test(s);
-}
-
-// 当たった最初の文を返す。無ければ null
-function findPrimeExperience(text) {
-  return sentences(text).find(isPrimeCondition) ?? null;
-}
-
-const PRIME_CHECK_KEY = 'prime-experience';
-const PRIME_CHECK_LABEL = '元請けの施工実績';
-const primeMessage = (quote) => 'この工事は元請けとしての施工実績を参加の条件にしています。初めて元請けをする会社は参加できない場合があります。発注者が認める実績の範囲は、公告と説明書で確かめてください。公告の文: 「' + quote + '」';
-
-return { findPrimeExperience, PRIME_CHECK_KEY, PRIME_CHECK_LABEL, primeMessage };
-})();
 __m["src/labor-duty.mjs"] = (function () {
 // 労務費と処遇の確認(F50a)。規則表(data/rules.json の laborDuties)の行を当てはめるだけで、条件をここに書き込まない。
 // 通信しない。AI も使わない。どの行も「確認が要る」候補で、当たる・当たらないは判定しない。
@@ -4343,7 +4350,7 @@ function dedicatedItem(input, t) {
 
 // 入力: { orderer: 'public'|'private', direct, workType: 'kenchiku-ikkatsu'|'other', contractAmount(円・税込み), hasSubcontract,
 //         subcontractTotal(円・税込み), license: 'tokutei'|'ippan', engineerQualification: 'kanri'|'shunin', ictMeasure, participationConditions(公告の参加の条件の文。任意) }
-// 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message }], duties(労務費と処遇の候補), amountBasis, disclaimer }
+// 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message, changes?, basis? }], duties(労務費と処遇の候補), amountBasis, disclaimer }
 function bidCheck(input = {}) {
   const lt = licenseThreshold();
   const dt = dedicatedThreshold();
@@ -4358,7 +4365,8 @@ function bidCheck(input = {}) {
   }
   const ded = items[5];
   if (ded.status === 'required' && input.orderer === 'public') {
-    checks.push({ key: 'dedicated', label: ded.label, changes: true, message: '注文者が国又は地方公共団体である工事として専任と判定した(施行令 第27条第1項第1号)。注文者がそれ以外(特殊法人など)なら第1号に当たらないので、施設・工作物の種類(第2号・第3号)を確かめる' });
+    // 文は平らな言葉にし、条番号と抜き書きは basis で根拠の折りたたみと CSV の根拠の列に出す(F62a)。画面の「公共」には国・地方公共団体でない発注者も含むので、言い切らず「と見て」と書く
+    checks.push({ key: 'dedicated', label: ded.label, changes: true, basis: ded.basis, message: '発注者は国か地方公共団体(都道府県・市区町村・一部事務組合など)と見て、専任としました。独立行政法人・特殊法人・地方公社などの発注なら、工事の目的物(施設・工作物の種類)で決まるので、発注者に確かめてください。' });
   }
   if (engineer.value === 'kanri' && input.engineerQualification !== 'kanri') {
     checks.push({ key: 'engineer', label: engineer.label, message: '受注したら監理技術者を置くが、置ける技術者の資格が「監理技術者」と入っていない。置ける人を確かめる' });
@@ -5496,7 +5504,7 @@ function stage1Line(values = {}, stage1 = {}) {
   const amount = values['subcontract-total-unknown'] === true ? '分からない' : raw ? raw + ' 円' : '入れていません';
   const t = stage1.subcontractTotal;
   const to = typeof t === 'number' ? (t > 0 ? '使う' : '使わない') : 'まだ分からない';
-  return '段1 の答え: 下請けの総額 ' + amount + ' → ' + to + '。';
+  return '「1 条件を入れる」の答え: 下請けの総額 ' + amount + ' → ' + to + '。';
 }
 
 const FIELD_ANCHOR = { subcontract: 'safety-q-subcontract', workers: 'safety-q-workers', plan: 'safety-q-plan', works: 'safety-q-works' };
@@ -7887,7 +7895,7 @@ function renderSafety(doc) {
   const title = doc.getElementById('safety-title');
   if (title) title.textContent = safetyTitle(r);
   const stage1El = doc.getElementById('safety-stage1');
-  if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">段1 で直す</a>';
+  if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">「1 条件を入れる」で直す</a>';
   const qSub = doc.getElementById('safety-q-subcontract');
   if (qSub) qSub.hidden = r.mode === 'sub';
   // 問い2 は下請けを使う・まだ分からないとき、下請けの道で出す

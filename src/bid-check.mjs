@@ -190,7 +190,7 @@ function dedicatedItem(input, t) {
 
 // 入力: { orderer: 'public'|'private', direct, workType: 'kenchiku-ikkatsu'|'other', contractAmount(円・税込み), hasSubcontract,
 //         subcontractTotal(円・税込み), license: 'tokutei'|'ippan', engineerQualification: 'kanri'|'shunin', ictMeasure, participationConditions(公告の参加の条件の文。任意) }
-// 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message }], duties(労務費と処遇の候補), amountBasis, disclaimer }
+// 返り値: { items: [{ key, label, status, value?, basis, exceptions, note }], checks: [{ key, label, message, changes?, basis? }], duties(労務費と処遇の候補), amountBasis, disclaimer }
 export function bidCheck(input = {}) {
   const lt = licenseThreshold();
   const dt = dedicatedThreshold();
@@ -205,7 +205,8 @@ export function bidCheck(input = {}) {
   }
   const ded = items[5];
   if (ded.status === 'required' && input.orderer === 'public') {
-    checks.push({ key: 'dedicated', label: ded.label, changes: true, message: '注文者が国又は地方公共団体である工事として専任と判定した(施行令 第27条第1項第1号)。注文者がそれ以外(特殊法人など)なら第1号に当たらないので、施設・工作物の種類(第2号・第3号)を確かめる' });
+    // 文は平らな言葉にし、条番号と抜き書きは basis で根拠の折りたたみと CSV の根拠の列に出す(F62a)。画面の「公共」には国・地方公共団体でない発注者も含むので、言い切らず「と見て」と書く
+    checks.push({ key: 'dedicated', label: ded.label, changes: true, basis: ded.basis, message: '発注者は国か地方公共団体(都道府県・市区町村・一部事務組合など)と見て、専任としました。独立行政法人・特殊法人・地方公社などの発注なら、工事の目的物(施設・工作物の種類)で決まるので、発注者に確かめてください。' });
   }
   if (engineer.value === 'kanri' && input.engineerQualification !== 'kanri') {
     checks.push({ key: 'engineer', label: engineer.label, message: '受注したら監理技術者を置くが、置ける技術者の資格が「監理技術者」と入っていない。置ける人を確かめる' });

@@ -207,13 +207,20 @@ test('#schedule-result へ飛ぶと閉じた表も開く。querySelector の無�
   openPanelForLink({ getElementById: () => null }, '#schedule-result');
 });
 
-test('次にすること: 誤り・条件の変更・未回答・確認が要る点・無し の順に1つだけ出す。入れた文字はエスケープする', () => {
+test('次にすること: 誤り・条件の変更・元請けの実績・未回答・確認が要る点・無し の順に1つだけ出す。入れた文字はエスケープする', () => {
   const go = (o) => [topText(o.match(/<p class="next-title">([\s\S]*?)<\/p>/)[1]), o.match(/class="next-go" href="#([\w-]+)"/)[1]];
   assert.equal(renderResultTop({}), '');
   const err = renderResultTop({ errors: ['x'] });
   assert.deepEqual(go(err), ['次にすること: 金額の欄を直す', 'bid-form']);
   assert.ok(!err.includes('class="stats"'), '読めないときに数を出している');
   assert.deepEqual(go(renderResultTop({ bid: TOP_BID, stale: true })), ['次にすること: もう一度「確認する」を押す', 'bid-run']);
+  // 元請けの実績の知らせ: 誤りと条件の変更より後、未回答と確認が要る点より先。checks の順にはよらない
+  const PRIME_BID = { ...TOP_BID, checks: [...TOP_BID.checks, { key: 'prime-experience', label: '元請けの施工実績', message: '<知らせ>' }] };
+  const PRIME_NEXT = ['次にすること: 元請けとしての施工実績が参加の条件です', 'open-items'];
+  assert.deepEqual(go(renderResultTop({ errors: ['x'], bid: PRIME_BID })), ['次にすること: 金額の欄を直す', 'bid-form']);
+  assert.deepEqual(go(renderResultTop({ bid: PRIME_BID, stale: true })), ['次にすること: もう一度「確認する」を押す', 'bid-run']);
+  assert.deepEqual(go(renderResultTop({ bid: PRIME_BID, values: {} })), PRIME_NEXT);
+  assert.deepEqual(go(renderResultTop({ bid: PRIME_BID })), PRIME_NEXT);
   assert.deepEqual(go(renderResultTop({ bid: TOP_BID, values: {} })).slice(1), ['bid-form']);
   assert.match(go(renderResultTop({ bid: TOP_BID, values: {} }))[0], /^次にすること: 未回答の質問 \d+つに答える$/);
   const check = renderResultTop({ bid: TOP_BID });
