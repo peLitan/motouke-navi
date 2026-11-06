@@ -35,7 +35,8 @@ test('入口の題「まず、どう始めますか」に3つのタイルが同�
   assert.equal(btns.filter((m) => m[2].includes('sample-button')).length, 1);
   assert.ok(btns[0][3].includes('まず見本で試す') && btns[0][3].includes('初めての方はこちら') && btns[0][3].includes('見本を読み込む'));
   assert.ok(btns[1][3].includes('条件を入れる'));
-  assert.ok(btns[2][3].includes('公告から拾った条件を読み込む') && btns[2][3].includes('公告を読んだ AI がまとめた条件のファイル'));
+  // F83a6: 公告のタイルは PDF も読むので、主の文を「公告を読み込む」に短くし、副の文で PDF と条件のファイルを言う
+  assert.ok(btns[2][3].includes('<span class="btn-main">公告を読み込む</span>') && btns[2][3].includes('公告の PDF か、AI がまとめた条件のファイル(.json)を選ぶ'));
   assert.match(html, /\.entry-button \{[^}]*font-size: 1\.1875rem/, 'ボタンの文字が大きくない');
   assert.equal((body.match(/id="sample-load"/g) || []).length, 1, '見本のボタンが2つある');
   assert.ok(body.indexOf('id="start"') < body.indexOf('id="bid-form"'));
@@ -77,13 +78,14 @@ test('段階の表示が 1 条件を入れる → 2 結果を見る → 3 書類
   assert.deepEqual(items, [['1 条件を入れる', '1条件を入れる'], ['2 結果を見る', '2結果を見る'], ['3 書類を確かめる', '3書類を確かめる']]);
 });
 
-test('節の番号は 1・2・3、そのあと「ここからは別の道具」の下に A・B', () => {
+test('節の番号は 1・3-1・3-2(段3 の見出しは段の番号の下)、そのあと「ここからは別の道具」の下に A・B', () => {
   const numbered = h2s.filter((t) => /^(\d+(-\d+)?|[A-Z])\. /.test(t)).map((t) => t.split('.')[0]);
-  assert.deepEqual(numbered, ['1', '2', '3', 'A', 'B']);
+  assert.deepEqual(numbered, ['1', '3-1', '3-2', 'A', 'B']); // F83a6: 段3 の見出しを 3-1・3-2 に
   assert.ok(!body.includes('2-2.'), '2-2 の番号が残っている');
   const other = h2s.indexOf('ここからは別の道具');
-  assert.ok(other > h2s.findIndex((t) => t.startsWith('3. ')) && other < h2s.findIndex((t) => t.startsWith('A. ')));
-  assert.ok(h2s.some((t) => t.startsWith('3. 施工計画書の目次の点検')));
+  assert.ok(other > h2s.findIndex((t) => t.startsWith('3-2. ')) && other < h2s.findIndex((t) => t.startsWith('A. ')));
+  assert.ok(h2s.some((t) => t.startsWith('3-1. 施工体制台帳の点検')));
+  assert.ok(h2s.some((t) => t.startsWith('3-2. 施工計画書の目次の点検')));
   assert.ok(h2s.some((t) => t.startsWith('A. 文の置き換え')));
   assert.ok(h2s.some((t) => t.startsWith('B. Claude で点検した結果')));
 });

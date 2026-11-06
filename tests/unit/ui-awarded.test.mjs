@@ -13,7 +13,7 @@ import { runPage } from '../acceptance/_helpers.mjs';
 const FILE = fs.readFileSync(new URL('../../data/specs/wakayama_r0711_rows.json', import.meta.url), 'utf8');
 const html = buildHtml();
 const body = html.slice(html.indexOf('<body'));
-const NATIONAL = '条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて『確認する』を押すと、要る・要らないが分かれます。';
+const NATIONAL = '条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて「確認する」を押すと、要る・要らないが分かれます。';
 const COUNT = scheduleData.rules.length;
 const REAL = { direct: true, orderer: 'public', subcontractTotal: 0, contractAmount: 1000000, hasSubcontract: false };
 

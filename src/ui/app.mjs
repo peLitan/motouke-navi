@@ -407,11 +407,11 @@ function runSchedule(doc, input, errors = []) {
 // 読み込んだ表と和歌山県の例は条件で行が分かれないので、国の例と同じ文にしない
 let awardedAll = false;
 export function awardedNotice(table, notRead = false, exampleLabel = '国の直轄の例') {
-  if (notRead) return NOT_READ + 'ので、段取りの行はありません。' + ALWAYS_SHOWN + '。工事の条件を入れて『確認する』を押すと出ます。';
+  if (notRead) return NOT_READ + 'ので、段取りの行はありません。' + ALWAYS_SHOWN + '。工事の条件を入れて「確認する」を押すと出ます。';
   const custom = Boolean(table?.schedule?.length);
   const name = custom ? table.label ?? '読み込んだ表' : exampleLabel;
   return '条件を入れていないので、' + name + 'の全部の行を出しています。'
-    + (custom ? 'この表は条件を入れても行は分かれません。入札前の確認と台帳が要るかは、工事の条件を入れて『確認する』を押すと出ます。' : '工事の条件を入れて『確認する』を押すと、要る・要らないが分かれます。');
+    + (custom ? 'この表は条件を入れても行は分かれません。入札前の確認と台帳が要るかは、工事の条件を入れて「確認する」を押すと出ます。' : '工事の条件を入れて「確認する」を押すと、要る・要らないが分かれます。');
 }
 function setAwardedText(doc) {
   const text = doc.getElementById('awarded-notice-text');
@@ -1112,7 +1112,7 @@ function outsideNotice(doc) {
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }
   if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'ledger-file') + '。'];
-  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '条件のファイル(.json)は「公告から拾った条件を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
+  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '条件のファイル(.json)は「公告を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
   // 入力の確かめの画面には枠が無い
   return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
 }

@@ -354,7 +354,7 @@ test('(F54d-3) 枠の外に置くと、今見えている段の欄に書き、�
   // 入口
   doc = fakeDoc();
   await outside(doc);
-  assert.match(status(doc, 'drop-status'), /^読み込んでいません。条件のファイル\(\.json\)は「公告から拾った条件を読み込む」のタイルに/);
+  assert.match(status(doc, 'drop-status'), /^読み込んでいません。条件のファイル\(\.json\)は「公告を読み込む」のタイルに/);
   // 段1: scrollIntoView の無い要素でも落ちない
   doc = fakeDoc();
   showStep(doc, 'panel-1');

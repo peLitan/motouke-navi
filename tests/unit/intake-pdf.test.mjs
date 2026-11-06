@@ -292,7 +292,7 @@ test('画面の label・accept・タイル・説明に公告の PDF があり、
     const accept = page.match(/<input\b[^>]*\bid="intake-load"[^>]*>/)[0].match(/accept="([^"]*)"/)[1].split(',');
     for (const a of ['.json', 'application/json', '.pdf', 'application/pdf']) assert.ok(accept.includes(a), file + ' の accept に ' + a + ' が無い');
     assert.ok(page.includes('公告の PDF・拾った条件のファイル(.pdf・.json)'), file);
-    assert.ok(page.includes('>PDF か、公告を読んだ AI がまとめた条件のファイル<'), file);
+    assert.ok(page.includes('>公告の PDF か、AI がまとめた条件のファイル(.json)を選ぶ<'), file); // F83a6: タイルの文を短くした
     assert.ok(page.includes('公告の PDF を読むと、全文がここに入ります。'), file);
     assert.ok(!page.includes('公告の PDF はこの画面では読めません'), file);
   }
