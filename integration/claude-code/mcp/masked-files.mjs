@@ -7,10 +7,14 @@
 //                         返すのは置き換えた後の中身だけ。対応表(元の語)は返さない。raw/ の外のパスは断る。
 //   list_masked { dir? }  raw/ の中のファイルの名前(作業フォルダからのパス)だけを返す。中身は返さない。raw/ の外は返さない。
 //                         ファイルの名前は置き換えない(read_masked に渡すため)。名前に人名・会社名が入っていれば、そのまま返る。
+//   check_articles { text }  指摘の文(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる(F56a)。ファイルは読まない。
+//                         返すのは check-articles.mjs の CLI と同じ文(条番号ごとの「ある」「無い」「確かめられない」と数)だけで、原文の全文は返さない。
+//                         確かめるのは条・項・号・細分があるかだけ。指摘の中身が条の文に合っているかは確かめない。
 //
 // 環境変数(どれも任意):
 //   MASK_ROOT      作業フォルダ(raw/ のある所)。既定は起動したときのフォルダ(Claude Code はプロジェクトのフォルダで起動する)
-//   MASK_TOOL_DIR  このツール(src/mask/ のあるリポジトリ)のフォルダ。既定はこのファイルから3つ上。作業フォルダに写したときは指定する
+//   MASK_TOOL_DIR  このツール(src/mask/ のあるフォルダ)。既定はこのファイルから3つ上(リポジトリの integration/claude-code/mcp/ に置いたときの直下)。
+//                  作業フォルダに写したときは指定する。plugin/mcp/ の写しは .mcp.json がプラグインの直下を渡す
 //   MASK_MAP       画面の「対応表を書き出す」で保存した対応表の JSON。指定すると、その語(人名・現場名など)も同じ記号で置き換える
 //   MASK_DICT      画面の「辞書を書き出す」で保存した辞書の JSON(format: "mask-dict")。指定すると、足した語(人名・現場名など)も置き換える(F28c)。
 //                  MASK_MAP と両方を指定したときは、対応表を読んでから辞書の語を加える。読めないときは理由の種類だけを返し、辞書の中身(語)は返事にも記録にも出さない
@@ -28,7 +32,7 @@ const { createMasker } = await import(pathToFileURL(path.join(TOOL_DIR, 'src', '
 const { CONSTRUCTION_DICT } = await import(pathToFileURL(path.join(TOOL_DIR, 'src', 'mask', 'dict-construction.mjs')).href);
 const { checkDecoys, decoyMessage } = await import(pathToFileURL(path.join(TOOL_DIR, 'src', 'mask', 'decoy.mjs')).href);
 
-export const SERVER_INFO = { name: 'masked-files', version: '0.1.0' };
+export const SERVER_INFO = { name: 'masked-files', version: '0.2.0' };
 export const PROTOCOL_VERSION = '2025-06-18';
 export const TEXT_EXT = ['.txt', '.md', '.csv', '.tsv', '.json'];
 const MAX_BYTES = 1024 * 1024;
@@ -50,6 +54,16 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: { dir: { type: 'string', description: '一覧にする raw/ の中のフォルダ(例 raw/工事A)。省くと raw/ 全体' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'check_articles',
+    description: '指摘の文に書かれた条番号が、取得した法令の原文にあるかを確かめ、条番号ごとの「ある」「無い」「確かめられない」と数を返す。確かめるのは条・項・号・細分があるかだけで、指摘の中身が条の文に合っているかは確かめない。原文の全文は返さない。ファイルは読まない。',
+    inputSchema: {
+      type: 'object',
+      properties: { text: { type: 'string', description: '指摘の文(文か JSON)。根拠の条番号は法令名から書く(例 建設業法第24条の8第1項)' } },
+      required: ['text'],
       additionalProperties: false,
     },
   },
@@ -187,6 +201,26 @@ export function readMasked(root, rel, opts = {}) {
   return readMaskedWithCheck(root, rel, opts).masked;
 }
 
+// check-articles.mjs の場所。リポジトリでは plugin/ の下、入れた後ではプラグインの直下にある(F56a)
+const CHECK_ARTICLES_PLACES = [
+  ['plugin', 'skills', 'construction-check', 'scripts', 'check-articles.mjs'],
+  ['skills', 'construction-check', 'scripts', 'check-articles.mjs'],
+];
+
+// 呼ばれたときに場所を順に試す(読み込みの時に解くと、部品の無い所で tools/list まで落ちる)。原文の場所は check-articles.mjs が自分の位置から決める
+// 原文が1つも読めないときに次へ進むのは、そのまま確かめるとどの条も「無い」と出て、書き間違いと見分けられないため
+export async function checkArticlesText(text, { toolDir = TOOL_DIR } = {}) {
+  if (typeof text !== 'string' || !text.trim()) throw new ToolError('text がありません。指摘の文を渡してください。');
+  for (const place of CHECK_ARTICLES_PLACES) {
+    try {
+      const { checkArticles, formatResults, loadSources } = await import(pathToFileURL(path.join(toolDir, ...place)).href);
+      const sources = loadSources();
+      if (sources.length) return formatResults(checkArticles(text, sources));
+    } catch { /* この場所には無い。次を試す */ }
+  }
+  throw new ToolError('確かめられない: 条番号を確かめる部品か取得した原文が見つからず、どの条番号も確かめていません。プラグインの入れ方を確かめてください。');
+}
+
 const ok = (id, result) => ({ jsonrpc: '2.0', id, result });
 const err = (id, code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
 
@@ -202,7 +236,7 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
         protocolVersion: typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
-        instructions: 'raw/ の生のファイルは直接読まず、read_masked で置き換えた後の中身を読んでください。ファイルの名前が分からないときは list_masked で名前の一覧を見てください。記号(〔人名1〕など)の元の名前は推測しないでください。',
+        instructions: 'raw/ の生のファイルは直接読まず、read_masked で置き換えた後の中身を読んでください。ファイルの名前が分からないときは list_masked で名前の一覧を見てください。記号(〔人名1〕など)の元の名前は推測しないでください。指摘の条番号は check_articles で確かめてください。',
       });
     case 'ping':
       return ok(id, {});
@@ -210,10 +244,14 @@ export async function handleMessage(msg, { root = process.env.MASK_ROOT || proce
       return ok(id, { tools: TOOLS });
     case 'tools/call': {
       const name = params?.name;
-      if (name !== 'read_masked' && name !== 'list_masked') return err(id, -32602, '知らない道具です: ' + String(name));
+      if (!TOOLS.some((t) => t.name === name)) return err(id, -32602, '知らない道具です: ' + String(name));
       try {
         if (name === 'list_masked') {
           return ok(id, { content: [{ type: 'text', text: formatList(listRawFiles(root, params?.arguments?.dir)) }], isError: false });
+        }
+        // 「無い」があっても道具としては成功。確かめられなかったときだけ isError にする
+        if (name === 'check_articles') {
+          return ok(id, { content: [{ type: 'text', text: await checkArticlesText(params?.arguments?.text) }], isError: false });
         }
         const opts = {};
         if (mapPath !== undefined) opts.mapPath = mapPath;

@@ -125,7 +125,7 @@ test('Skill construction-check: 候補を出したあと refuter に見直させ
   assert.deepEqual(numbers, numbers.map((_, i) => i + 1));
   const at = (w) => { const i = steps.indexOf(w); assert.ok(i >= 0, w); return i; };
   // 条番号の確かめ → 係を呼ぶ → 外す → 見せる の順
-  assert.ok(at('check-articles.mjs') < at('`motouke-navi-guard:refuter`'));
+  assert.ok(at('`check_articles`') < at('`motouke-navi-guard:refuter`'));
   assert.ok(at('`motouke-navi-guard:refuter`') < at('指摘の一覧から外し'));
   assert.ok(at('指摘の一覧から外し') < at('外した候補をそのまま見せる'));
   // 呼ぶ名前の係が実在し、渡すと書いた3つを係が受け取ると書いている

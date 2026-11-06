@@ -23,6 +23,7 @@ export const PLUGIN_DIR = path.join(ROOT, 'plugin');
 export const PLUGIN_NAME = 'motouke-navi-guard';
 export const READ_MASKED = `mcp__plugin_${PLUGIN_NAME}_masked-files__read_masked`;
 export const LIST_MASKED = `mcp__plugin_${PLUGIN_NAME}_masked-files__list_masked`;
+export const CHECK_ARTICLES = `mcp__plugin_${PLUGIN_NAME}_masked-files__check_articles`;
 export const DEFAULT_BUDGET_USD = 3;
 
 // 鍵を外す環境変数。外さないと claude -p はログインより鍵を優先する
@@ -41,10 +42,10 @@ export function allowedTools(pluginDir = PLUGIN_DIR) {
     `Skill(${PLUGIN_NAME}:construction-check)`,
     READ_MASKED,
     LIST_MASKED,
+    CHECK_ARTICLES,
     `Agent(${PLUGIN_NAME}:refuter)`,
     `Task(${PLUGIN_NAME}:refuter)`, // 2.1.317 の道具の一覧では Task の名前で出るので、両方を挙げる
     `Read(//${skill.replace(/^\/+/, '')}/**)`,
-    `Bash(node ${skill}/scripts/check-articles.mjs *)`,
     'Edit(./tmp/**)',
     'Read(./tmp/**)',
   ];

@@ -21,6 +21,7 @@ execution:
     - Skill
     - mcp__plugin_motouke-navi-guard_masked-files__read_masked
     - mcp__plugin_motouke-navi-guard_masked-files__list_masked
+    - mcp__plugin_motouke-navi-guard_masked-files__check_articles
 runs: 3
 graders:
   # 書類は2つあるので2回以上。読まずに終わった回が、名前の検査だけで合格にならないようにする

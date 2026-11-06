@@ -6,7 +6,7 @@ import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import {
   allowedTools, buildArgs, buildEnv, buildPrompt, summarize, runHeadless, validateWork, validateDocs, validateLog,
-  DISALLOWED_TOOLS, PLUGIN_DIR, READ_MASKED, LIST_MASKED,
+  DISALLOWED_TOOLS, PLUGIN_DIR, READ_MASKED, LIST_MASKED, CHECK_ARTICLES,
 } from '../../scripts/claude-headless.mjs';
 import { decide } from '../../plugin/scripts/guard-raw.mjs';
 
@@ -44,10 +44,10 @@ test('buildArgs: 頼む文を -p の直後に置き、プラグイン・許可�
 
 test('allowedTools: 点検に要る物だけで、道具まるごとの許可が無い', () => {
   const tools = allowedTools('/x/plugin');
-  for (const t of [READ_MASKED, LIST_MASKED, 'Skill(motouke-navi-guard:construction-check)', 'Agent(motouke-navi-guard:refuter)', 'Task(motouke-navi-guard:refuter)']) assert.ok(tools.includes(t), t);
+  for (const t of [READ_MASKED, LIST_MASKED, CHECK_ARTICLES, 'Skill(motouke-navi-guard:construction-check)', 'Agent(motouke-navi-guard:refuter)', 'Task(motouke-navi-guard:refuter)']) assert.ok(tools.includes(t), t);
   for (const bare of ['Bash', 'Read', 'Edit', 'Write', 'Skill', 'Agent', 'Task']) assert.ok(!tools.includes(bare), bare);
   assert.ok(tools.includes('Read(//x/plugin/skills/construction-check/**)'));
-  assert.ok(tools.includes('Bash(node /x/plugin/skills/construction-check/scripts/check-articles.mjs *)'));
+  assert.ok(!tools.some((t) => t.startsWith('Bash(')), '条番号の確かめは道具で行うので Bash を許さない');
   assert.ok(!tools.some((t) => t.includes('evals')));
 });
 
@@ -57,26 +57,28 @@ test('allowedTools: 許す道具の一覧は決めたとおりで、増えてい
     'Skill(motouke-navi-guard:construction-check)',
     'mcp__plugin_motouke-navi-guard_masked-files__read_masked',
     'mcp__plugin_motouke-navi-guard_masked-files__list_masked',
+    'mcp__plugin_motouke-navi-guard_masked-files__check_articles',
     'Agent(motouke-navi-guard:refuter)',
     'Task(motouke-navi-guard:refuter)',
     'Read(//x/plugin/skills/construction-check/**)',
-    'Bash(node /x/plugin/skills/construction-check/scripts/check-articles.mjs *)',
     'Edit(./tmp/**)',
     'Read(./tmp/**)',
   ]);
 });
 
-test('SKILL.md: 条番号の確かめの例は許す形に合う1つの命令で、別の命令をつながないと書いてある', () => {
+test('SKILL.md: 条番号の確かめは道具 check_articles で行い、Bash の命令の行が無い', () => {
   const skill = fs.readFileSync(path.join(PLUGIN_DIR, 'skills', 'construction-check', 'SKILL.md'), 'utf8');
   const shown = skill.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('node ') && l.includes('check-articles.mjs'));
-  assert.deepEqual(shown, ['node <このスキルのフォルダ>/scripts/check-articles.mjs tmp/指摘.md']);
-  const rule = allowedTools('/x/plugin').find((t) => t.startsWith('Bash('));
-  const prefix = rule.slice('Bash('.length, -'*)'.length);
-  const command = shown[0].replace('<このスキルのフォルダ>', '/x/plugin/skills/construction-check');
-  assert.ok(command.startsWith(prefix), command);
-  assert.doesNotMatch(command, /[;&|\n]/);
-  assert.match(skill, /単独で呼ぶ/);
-  assert.match(skill, /`;` や `&&` で別の命令をつながない/);
+  assert.deepEqual(shown, []);
+  assert.doesNotMatch(skill, /単独で呼ぶ/);
+  const steps = /## 手順\n([\s\S]*?)\n## /.exec(skill)[1].split(/^(?=\d+\. )/m);
+  const step = (n) => steps.find((p) => p.startsWith(`${n}. `));
+  assert.match(step(6), /`check_articles`/);
+  assert.match(step(8), /手順 6 の `check_articles` をもう一度呼ぶ/);
+  assert.match(step(9), /`check_articles` の結果/);
+  assert.doesNotMatch(skill, /スクリプト/);
+  // 手順が呼ぶ道具を、画面なしの入口が許している
+  assert.ok(allowedTools('/x/plugin').some((t) => t.endsWith('__check_articles')));
 });
 
 test('DISALLOWED_TOOLS: raw/ の直接の読み書きと Web を断る', () => {

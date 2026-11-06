@@ -474,6 +474,8 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 
 最初の記録の後、Skill `construction-check` の手順に「`check-articles.mjs` は単独で呼び、別の命令をつながない」と書きました(許す道具と見張りの決まりは変えていません)。上の今の版の回では、この手順のとおり条番号の確かめが動きました。
 
+その後、F56a で手順の確かめを道具 `check_articles` に替えたので、今の手順に Bash の命令はありません。上の2つの回は替える前の版で、替えた後の版ではこの入口を走らせていません。
+
 1. Claude Code を入れて、`claude auth login` でログインする
 2. 空の作業フォルダを作り、点検する書類を `raw/` に置く(作業フォルダはこのリポジトリの `plugin/` の外にする。重ねると止まります)
 3. `node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]` を動かす
@@ -485,7 +487,7 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 
 ### 絞っていること
 - 鍵: `ANTHROPIC_API_KEY`・`ANTHROPIC_AUTH_TOKEN` を外してから `claude` を動かします。端末に鍵が入っていても送られません。記録の `apiKeySource` が `none` でなければ注意を出します
-- 道具: `--permission-mode dontAsk` で、`--allowedTools` に挙げた物のほかは断ります。挙げたのは、Skill `construction-check`、`read_masked`・`list_masked`、係 `refuter`、Skill のフォルダの読み取り、`check-articles.mjs` の実行、作業フォルダの `tmp/` の読み書きです
+- 道具: `--permission-mode dontAsk` で、`--allowedTools` に挙げた物のほかは断ります。挙げたのは、Skill `construction-check`、`read_masked`・`list_masked`・`check_articles`、係 `refuter`、Skill のフォルダの読み取り、作業フォルダの `tmp/` の読み書きです。`Bash` は挙げていません(F56a で、条番号の確かめを `check-articles.mjs` の実行から道具 `check_articles` に替えました)
 - 二重の守り: `--disallowedTools` が断るのは、`Read`・`Edit` の `raw/` への操作と、`WebFetch`・`WebSearch` です。`Bash` などほかの道具はこの指定の範囲の外で、上の `--allowedTools` に無いので断られます。プラグインは権限の決まりを配れませんが、この入口ではコマンドの指定で渡せます。プラグインのフックも同時に働きます
 - 保存: `--no-session-persistence` で Claude Code のセッションを保存しません。残るのは上の記録だけです
 
@@ -510,7 +512,6 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 - 記録には、置き換えた後の書類の中身が入ります。置き換えの漏れは0になりません。書類のファイル名は置き換えないので、そのまま Claude と記録に渡ります。記録は外へ渡さないでください
 - 記号の元の名前の対応表を使うときは、端末の環境変数 `MASK_MAP`・`MASK_DICT` がそのまま道具へ渡ります
 - 画面なしでは聞き返しに答えられないので、頼む文で「聞き返さず、判断できないと書いて進める」よう頼んでいます。止まらないことの保証ではありません
-- プラグインのフォルダのパスに空白があると、`check-articles.mjs` の許可が当たらないおそれがあります。Windows では試していません
 
 ## Claude Code に組み込む
 Claude Code で書類を点検するときに、`raw/` に置いた生のファイル(元の名前が入ったもの)を Claude Code の道具で読む操作の多くを止め、置き換えた後の中身だけを渡すための設定と道具です。置き場は `integration/claude-code/` で、自分の作業フォルダに中身を写して使います。
@@ -527,6 +528,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - `.mcp.json` と `mcp/masked-files.mjs`: 手元の MCP の道具 `masked-files`。道具 `read_masked` は `raw/` の中の文のファイルを読み、人名・会社名・メール・電話・住所・許可番号などを記号に置き換えた後の中身だけを返す(対応表と元の語は返さない。`raw/` の外は読まない。外部と通信しない)
   - 道具 `list_masked` は `raw/` の中のファイルの名前(作業フォルダからのパス。例 `raw/台帳.txt`)の一覧だけを返す(F23a)。中身は開かない。`raw/` の外の名前は返さず、`raw/` の外へ出るシンボリックリンクは挙げない。読めない形(.pdf など)は分けて挙げる。点検する書類の名前が分からないときに使う
   - 注意: `list_masked` はファイルの名前を置き換えずに返します(`read_masked` に渡すため)。ファイル名に人名・会社名・現場名などの個人情報が入っていると、その名前がそのまま Claude に送られます。`raw/` に置くファイルの名前は `台帳.txt`・`通知書_工事A.csv` のように、個人情報を含まない名前にしてください
+  - 道具 `check_articles` は、渡された指摘の文(引数 `text`)の条番号が取得した原文にあるかを確かめ、条番号ごとの結果と数だけを返す(F56a)。ファイルは読まない。確かめるのは条・項・号・細分があることだけで、指摘の中身が条の文に合っているかは確かめない。原文は `plugin/skills/construction-check/reference/sources/` のものを使う
 
 使い方:
 1. 作業フォルダに `raw/` を作り、生のファイルを置く(Excel・Word は文のファイル .txt・.csv などにしてから置く)
@@ -542,7 +544,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
   - 作業フォルダから4階層より深い所の `raw/`(パスに `raw` の文字があるときだけ止める)
   - 先に作ったリンク・写し(人が端末で作ったもの)を、別の名前で読む形の一部
   - プラグインのフォルダのスクリプトは中身を見ずに通すので、そのスクリプトに `raw/` の外のパスを渡しても読む中身は確かめない
-  - MCP の道具はフックの対象にしていない(`masked-files` の `read_masked` は置き換えた後の中身だけを、`list_masked` は `raw/` の中のファイルの名前だけを返す。名前は置き換えない)
+  - MCP の道具はフックの対象にしていない(`masked-files` の `read_masked` は置き換えた後の中身だけを、`list_masked` は `raw/` の中のファイルの名前だけを返す。名前は置き換えない。`check_articles` は渡された文の条番号を確かめた結果だけを返し、ファイルを読まない)
   - 止めすぎもあります: `raw/` がある作業フォルダでは、場所を指定しない `ls -R`・`grep -r`、変数の入ったコマンド、ファイルを読む自作のスクリプト(`import`・`require` で読み込んだ別のファイルの中で読むものを含む。ただし上の「わかっているもの」の形は見ていないので、自作のスクリプトがすべて止まるわけではありません)も止まります。読み込む別のファイルが見つからないときも、確かめられないので止めます。`claude -p` では止まったところで先へ進めません
 - Grep は、探す場所から3階層までに `raw/` があるときにフックで止めます。それより深い所の `raw/` は `permissions.deny` に任せます
 - 止めるのは Claude Code の道具だけです。人が端末で開いたファイルや、別のプログラムは止められません
@@ -561,7 +563,8 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
   - `SKILL.md`(500 行以内): 書類は道具 `masked-files` の `read_masked` で置き換えた後の中身だけを読み、取得した条に照らして抜けや食い違いの「候補」を、法令名・条・項・号と原文の短い抜き書きつきで書く手順。見ていない条は根拠にせず人に回す。候補を出したあと反証の係 `refuter` に見直させ、「確かめられない」とされた候補を指摘の一覧から外して「外した候補」として別に見せる(F35b。外した候補は消さない)
   - `reference/articles.md`: この Skill に入れた8つの条(建設業法 第3条・第24条の8・第26条、建設業法施行令 第2条・第7条の4・第27条、入札契約適正化法 第15条、建設業法施行規則 第14条の2)の作る側の言葉での要約と、見ていない条の一覧(取得した条の中から引かれている条)。要約は入口で、根拠は原文
   - `reference/sources/`: 取得した法令の原文と取得日の一覧(`data/sources/` の写し)
-  - `scripts/check-articles.mjs`: 点検の結果(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる。`node plugin/skills/construction-check/scripts/check-articles.mjs <指摘のファイル>` で、条番号ごとに「ある」「無い」(取得していない条・無い項や号)「確かめられない」(「法第○条」「同条」のように法令名が無い)を出し、1つでも「ある」以外があれば終了コード 1。項・号の切り出しは `src/quote-check.mjs` の写し(`lib/quote-check.mjs`)を使う
+  - `scripts/check-articles.mjs`: 点検の結果(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる。Skill の手順では、MCP の道具 `check_articles`(引数 `text`)が同じ処理を呼び、条番号ごとに「ある」「無い」(取得していない条・無い項や号)「確かめられない」(「法第○条」「同条」のように法令名が無い)と数を返す(F56a)。道具の返事に原文の全文は入らない。部品か原文が見つからないときは、どの条番号も確かめていないと返す。項・号の切り出しは `src/quote-check.mjs` の写し(`lib/quote-check.mjs`)を使う
+  - 端末で確かめる別の道: `node plugin/skills/construction-check/scripts/check-articles.mjs <指摘のファイル>` で同じ文が出る。1つでも「ある」以外があれば終了コード 1
 
 - `skills/spec-to-rules/`: 発注者の仕様書の文から規則表の行を作る Skill(F26a)
 - `skills/bid-intake/`: 公告・入札説明書・仕様書から条件を拾う Skill(F41a。下の「公告から条件を拾う」)

@@ -2,6 +2,7 @@
 // 点検の結果(指摘の文)に書かれた条番号が、取得した原文(reference/sources/ の law-*.txt)にあるかを確かめる(F20b)
 // 使い方: node check-articles.mjs <指摘のファイル(文か JSON)>
 //         ファイルを渡さなければ標準入力から読む
+//         Skill の手順では、同じ処理を MCP の道具 check_articles で呼ぶ(F56a。このファイルの formatResults が同じ文を返す)
 // 出力: 1つの条番号ごとに「ある」「無い」「確かめられない」と理由。1つでも「無い」「確かめられない」があれば終了コード 1
 // 確かめるのは「その条・項・号・細分が取得した原文にあるか」だけ。指摘の中身が条の文に合っているかは確かめない
 import fs from 'node:fs';
@@ -111,14 +112,21 @@ export function checkArticles(input, sources = loadSources()) {
   return { results, ok: results.every((r) => r.status === 'ある') };
 }
 
+// 確かめた結果を、条番号ごとの行と数の行の文にする(CLI と道具 check_articles が同じ文を出す。F56a)。checkArticles の返り値でも results の配列でもよい
+export function formatResults(checked) {
+  const results = Array.isArray(checked) ? checked : checked.results;
+  const lines = results.map((r) => `${r.status}\t${r.label}\t${r.reason}`);
+  if (!results.length) lines.push('条番号が見つからなかった(確かめたものは無い)');
+  const n = (s) => results.filter((r) => r.status === s).length;
+  lines.push(`条番号 ${results.length} 件: ある ${n('ある')}・無い ${n('無い')}・確かめられない ${n('確かめられない')}`);
+  return lines.join('\n');
+}
+
 const isMain = Boolean(process.argv[1]) && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const file = process.argv[2];
   const input = file ? fs.readFileSync(file, 'utf8') : fs.readFileSync(0, 'utf8');
-  const { results, ok } = checkArticles(input);
-  for (const r of results) console.log(`${r.status}\t${r.label}\t${r.reason}`);
-  if (!results.length) console.log('条番号が見つからなかった(確かめたものは無い)');
-  const n = (s) => results.filter((r) => r.status === s).length;
-  console.log(`条番号 ${results.length} 件: ある ${n('ある')}・無い ${n('無い')}・確かめられない ${n('確かめられない')}`);
-  process.exit(ok ? 0 : 1);
+  const checked = checkArticles(input);
+  console.log(formatResults(checked));
+  process.exit(checked.ok ? 0 : 1);
 }

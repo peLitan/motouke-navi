@@ -22,9 +22,11 @@ test('SKILL.md: 500 行以内で、frontmatter に name(フォルダの名前と
   assert.match(name, /^[a-z0-9]+(-[a-z0-9]+)*$/);
   const desc = fm[1].match(/^description:\s*(.+)$/m)?.[1] ?? '';
   assert.ok(desc.length > 0 && desc.length <= 1024);
-  // 書類は置き換えた後の中身だけを読む・スクリプトで確かめる、が手順にある
+  // 書類は置き換えた後の中身だけを読む・条番号は道具で確かめる、が手順にある
   assert.match(s, /read_masked/);
-  assert.match(s, /scripts\/check-articles\.mjs/);
+  assert.match(s, /check_articles/);
+  assert.match(desc, /check_articles/);
+  assert.doesNotMatch(desc, /スクリプト/);
 });
 
 test('SKILL.md: 根拠に挙げた条番号は、すべて取得した原文にある(見ていない条を根拠にしていない)', () => {
