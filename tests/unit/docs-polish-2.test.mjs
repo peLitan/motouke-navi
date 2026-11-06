@@ -1,7 +1,6 @@
 // 説明の仕上げ 2周目(F53a): overview の冒頭の要約と、README の期間の文を確かめる
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const read = (p) => fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
@@ -24,14 +23,11 @@ test('overview の説明の文: 要約を挟んでも「最初の3文」と指�
   assert.ok(overview.indexOf('確かめた数字:') > overview.indexOf('\n## 評価\n'));
 });
 
-test('README の期間の文: キックオフの日時と、git の最初のコミットの日時がある', () => {
+// init は子プロセスを許さない形で試験を回すので、git は呼ばない。overview の数えた範囲の始まりと照らす
+test('README の期間の文: キックオフの日時と、overview と同じ最初のコミットの日時がある', () => {
   const line = readme.split('\n').find((l) => l.startsWith('> Built with Claude'));
   assert.ok(line.includes('キックオフは 2026-11-02 12:00〜12:30'));
-  const first = execFileSync('git', ['log', '--reverse', '--format=%ad', '--date=format:%F %H:%M'], {
-    cwd: new URL('../../', import.meta.url),
-    encoding: 'utf8',
-  }).split('\n')[0];
-  const [day, time] = first.split(' ');
+  const [, day, time] = overview.match(/コミットは (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) から/);
   assert.equal(day, '2026-11-02');
-  assert.ok(line.includes(`最初のコミットは同じ日の ${time}`), first);
+  assert.ok(line.includes(`最初のコミットは同じ日の ${time}`), time);
 });
