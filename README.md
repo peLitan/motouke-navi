@@ -46,6 +46,24 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 ## デモ
 - 動画: (提出のときに作者が URL を書きます。台本は `docs/demo-script.md`。12場面・2:58 で、実在の公告1件を読むところから結果、架空の書類の点検、測った数字までを1本で見せます。期間中に作った機能だけを映します)
 
+## 審査で確かめる所(5分)
+数字は版 eb63e28 で 2026-11-06 23:15 に数えた値。モデルを呼ぶ命令は最後に分けた。版はこの節を足すコミットの前の版で、試験の数はこの節の試験を足した状態の数。
+
+| 審査の基準(要点) | 開く物 | 命令(モデルを呼ばない) | 出る数(数えた日時) | 動画に映るか |
+|---|---|---|---|---|
+| 開発の中心が Claude Code か | [docs/development.md](docs/development.md) | `git log --format=%s \| head -20`<br>`git rev-list --count eb63e28`<br>`git rev-list --count eb63e28 --grep='Co-Authored-By: Claude'` | 題に機能の id と検証の中身が並ぶ。206 件、うち共著の印 203 件(2026-11-06 23:15) | 映らない |
+| 仕組みを目的で使い分けたか | [docs/overview.md](docs/overview.md) の仕組みの表、`plugin/hooks/hooks.json`、`plugin/agents/refuter.md`、`plugin/.mcp.json`、`plugin/skills/*/SKILL.md` | `claude plugin validate ./plugin` | 通る。注意2つ(plugin.json に author と icon が無い)は既知。Claude Code 2.1.319(2026-11-06 23:15) | 場面 2・8(Skill)、場面 7(hook)、場面 8(MCP)、場面 9(係) |
+| 試行錯誤の跡 | [docs/critic.md](docs/critic.md) の反証の節、[docs/評価.md](docs/評価.md) の 1 と 7、[docs/development.md](docs/development.md) の「見つけた → 直した → 測り直した」 | `grep -n '^## 反証' docs/critic.md` | 反証の節の見出しが並ぶ(2026-11-06 23:15)。文書の値: 仕込みの見つけた数 5→7→9(2026-11-03〜11-04)、古い組(検査9つ)の名前の検査8つで 7/8 → 8/8(2026-11-04〜11-05) | 映らない(場面 10 の札2 に古い組の 8/8 だけ) |
+| 設計と実装の確かさ | [docs/acceptance-map.md](docs/acceptance-map.md) | `node --test tests/acceptance/*.test.mjs`<br>`node --test tests/unit/*.test.mjs`<br>`node scripts/quote-rate.mjs` | 受け入れ tests 110、単体 tests 1434(どちらも fail 0。Ubuntu 24.04・WSL2、Node 24.22.0。ほかの環境では数えていない)、抜き書き 345 件(2026-11-06 23:15) | 映らない |
+| 使う人がそのまま使える形か | この README の [限界](#限界)、画面の結果の上の注意の文、[docs/development.md](docs/development.md) の「残っていること(未測・直していない)」 | `grep -c '^\| 残 ' docs/development.md` | 一覧 23 行(2026-11-06 23:15) | 場面 11(注意の文) |
+| 動画に無い仕組み | [docs/manual.md](docs/manual.md) の「走らせた記録」、[docs/評価.md](docs/評価.md) の 7、`docs/evals/2026-11-05_e1/aggregate-result.json`、`plugin/skills/construction-check/SKILL.md` の frontmatter(この版の Stop の置き場) | `node --test tests/unit/check-done.test.mjs tests/unit/refuter-check-articles.test.mjs tests/unit/plugin-eval-case.test.mjs` | tests 42(2026-11-06 23:15)。走らせた値はここに書かず、「残っていること」の 残 2・残 5・残 9・残 12 を指す | 動画には無い。ここで確かめる: `check_articles` の呼び出し、公式の評価(場面 10 の札2 は値だけ)、Stop の hook、`refuter` の実走(場面 9 は係が呼ばれた表示と数だけ) |
+
+### モデルを呼ぶ命令
+この節で挙げる命令のうち、モデルを呼ぶのは次の2つです。動かす人の契約の範囲で動きます。
+
+- 公式の評価: `claude plugin eval plugin …`。命令の全文は [docs/評価.md](docs/評価.md) の 7 の「走らせ方」にあります
+- 画面なしの入口: `node scripts/claude-headless.mjs --work <作業フォルダ>`。手順は [docs/manual.md](docs/manual.md) の「Claude で点検(画面なしの Claude Code)」にあります
+
 ## 業界の構造にどう効くか(効かないことも含めて)
 国の直轄の一般土木工事では、D等級に登録した 9,734 社のうち、2016 年以降に単体の元請けで受注したのは 723 社です(国土交通省「中小建設業への普及促進方策について」p.2。北海道と沖縄を除く)。この数を、国の直轄の工事を元請けで受けた経験を社内で積む機会は限られている、と読みました(残る会社が県や市町村の工事で元請けをしている可能性は、この資料からは分かりません)。この道具が手伝うのはその調べ方で、受注そのもの(実績・等級・資金)は変えません。
 
