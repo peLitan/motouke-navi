@@ -72,6 +72,48 @@ test('5分で試せる手順: 公告から拾った条件の見本を挙げ、�
   assert.equal(page.el('panel-confirm').hidden, false);
 });
 
+// F70a: 費用と通信の1行、手順の数、困る場面の箇条
+const trySteps = () => read('README.md').split('## 5分で試せる手順')[1].split('\n## ')[0];
+
+test('5分で試せる手順: 先頭の行に通信・費用・鍵の文があり、費用の文は1つだけ', () => {
+  const readme = read('README.md');
+  const first = trySteps().trimStart().split('\n')[0];
+  for (const w of ['開いたあとは通信しません', '使う人自身の API の鍵か Claude Code のログイン', '費用もその人の契約', '`claude plugin eval` の費用と時間の目安', 'docs/評価.md §7', '作者の鍵はこのリポジトリに入っていません']) {
+    assert.ok(first.includes(w), w);
+  }
+  assert.equal(readme.split('費用もその人の契約').length - 1, 1);
+  assert.equal(readme.split('費用と時間の目安').length - 1, 1);
+  assert.equal(/(^|[^A-Za-z0-9-])sk-[A-Za-z0-9_-]/.test(readme), false);
+  assert.ok(readme.includes('動かす人の Claude の使用量がかかります'));
+  assert.equal(/(?<!動かす人の )Claude の使用量がかかります/.test(readme), false);
+});
+
+test('5分で試せる手順: ブラウザだけで済む番号が手順と合い、括弧が Pages の通信を書いている', () => {
+  const section = trySteps();
+  const m = section.match(/1〜(\d+) はブラウザだけで済みます\(([^)]*)\)/);
+  assert.ok(m);
+  const steps = section.split('\n').filter((l) => /^\d+\. /.test(l));
+  assert.deepEqual(steps.map((l) => parseInt(l, 10)), steps.map((_, i) => i + 1));
+  const n = Number(m[1]);
+  assert.ok(steps.slice(0, n).every((l) => !l.includes('Claude')));
+  assert.match(steps[n], /^\d+\. Claude Code があれば/);
+  assert.ok(m[2].includes('1 の Pages はページを読み込む通信だけ'));
+  assert.ok(!m[2].includes('通信も要りません'));
+  assert.ok(steps[0].includes('GitHub Pages') && steps[0].includes('`index.html`'));
+});
+
+test('どんな場面で: README と overview の「誰の」のすぐ下にあり、監督職員の語が無く、作者の立場の段落は箇条の下のまま', () => {
+  for (const file of ['README.md', 'docs/overview.md']) {
+    const lines = read(file).split('\n');
+    const scene = lines[lines.findIndex((l) => l.startsWith('- 誰の: ')) + 1];
+    assert.match(scene, /^- どんな場面で: /, file);
+    assert.ok(!scene.includes('監督職員'), file);
+    const how = lines.findIndex((l) => l.startsWith('- どう: '));
+    const stance = lines.findIndex((l) => l.startsWith('最初の3文は作者の言葉です。'));
+    assert.ok(how >= 0 && how < stance, file);
+  }
+});
+
 test('overview: コミットの数に数えた日時があり、使い分けの表の行はどれも4列', () => {
   const overview = read('docs/overview.md');
   assert.match(overview, /コミットを数えた日時: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
