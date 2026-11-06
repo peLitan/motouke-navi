@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { sourceVersion } from './src/source-version.mjs';
 import { parseRulesFile, tableCredit } from './src/rules-load.mjs';
 import { renderSafetyQuestions } from './src/ui/safety-view.mjs';
+import pluginManifest from './plugin/.claude-plugin/plugin.json' with { type: 'json' };
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SHELL = path.join(ROOT, 'src', 'ui', 'shell.html');
@@ -117,9 +118,15 @@ export function wakayamaCreditHtml() {
     + '加工: 上の節の文を抜き出し、行の形に言い換えました。加工者はこの作品の作者です。' + tableCredit(table)) + '</p>';
 }
 
+// 道具の版(F61a): plugin.json の version の1か所から読み、画面の足と印刷の頭に入れる
+export function toolVersion() {
+  if (!pluginManifest.version) throw new Error('plugin.json に version が無い');
+  return pluginManifest.version;
+}
+
 export function buildHtml() {
   const shell = fs.readFileSync(SHELL, 'utf8');
-  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}', '{{CHECKLIST_REFERENCE}}', '{{WAKAYAMA_CREDIT}}', '{{SAFETY_QUESTIONS}}']) {
+  for (const key of ['{{CSP}}', '{{SCRIPT}}', '{{SOURCES}}', '{{SCOPE}}', '{{CHECKLIST_REFERENCE}}', '{{WAKAYAMA_CREDIT}}', '{{SAFETY_QUESTIONS}}', '{{VERSION}}']) {
     if (!shell.includes(key)) throw new Error('shell.html に ' + key + ' の場所が無い');
   }
   const withBody = shell
@@ -128,6 +135,7 @@ export function buildHtml() {
     .replace('{{CHECKLIST_REFERENCE}}', () => checklistReferenceHtml())
     .replace('{{WAKAYAMA_CREDIT}}', () => wakayamaCreditHtml())
     .replace('{{SAFETY_QUESTIONS}}', () => renderSafetyQuestions())
+    .replaceAll('{{VERSION}}', () => escHtml(toolVersion()))
     .replace('{{SCRIPT}}', () => `<script>\n${bundle()}</script>`);
   return withBody.replace('{{CSP}}', () => makeCsp(withBody));
 }

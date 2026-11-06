@@ -69,6 +69,7 @@ export function workKindRows(kind) {
 }
 
 // 1段目(入札前と台帳)の書き出しの行。最後に、候補であって最後は人が判断する旨を入れる
+// ここでの最後は stage1Rows の中の話で、入札前の CSV のファイルは、このあとに工種と安全の法令の候補の行をつなぐ(F61a)
 export function stage1Rows(bid, t, notice) {
   return [
     ...bidRows(bid),
@@ -108,27 +109,29 @@ export function checkRows(out, notice) {
 export const SCHEDULE_COLUMNS = ['段', 'いつ', '何を', '誰に', '状態', '根拠の箇所', '根拠の原文(抜き書き)', '取得日', '版', '注意', SCHEDULE_NOTE_LABEL];
 // notes は画面の書き込み(F37e)。鍵 → 書いた文 の Map
 // kind を渡すと、最後に工種と表の出典の行を足す(F44a。ほかの行は変えない)
-export function scheduleRows(rows = [], notes = new Map(), kind = null) {
+// notice を渡したときだけ、そのあとに「注意」行を足す(F61a。checkRows と同じ分け方。渡さなければ出力は変わらない)
+export function scheduleRows(rows = [], notes = new Map(), kind = null, notice) {
   const s = kind && kindSource(kind, 'schedule');
   const kindRow = kind ? [['工種', '', workKindLabel(kind), '', '', s?.title ?? '', '', s?.fetchedAt ?? '', s?.version ?? '', s ? kindNote(kind, 'schedule') : NOT_READ, '']] : [];
   return [SCHEDULE_COLUMNS.slice(), ...rows.map((r) => [
     SCHEDULE_PHASE[r.phase] ?? r.phase, r.when, r.what, r.to, SCHEDULE_STATUS[r.status] ?? r.status ?? '',
     r.basis.doc + ' ' + r.basis.section + (r.basis.sectionTitle ? ' ' + r.basis.sectionTitle : ''), r.basis.quote, r.basis.fetchedAt, r.basis.version || NO_VERSION,
     [r.note, ...(r.checks ?? [])].filter(Boolean).join('\n'), notes.get(scheduleNoteKey(r)) ?? '',
-  ]), ...kindRow];
+  ]), ...kindRow, ...(notice ? [['注意', '', '', '', '', '', '', '', '', notice, '']] : [])];
 }
 
 // 施工計画書の目次の点検(F07)の行。見出しの行 + 抜けの候補1件ごとに1行
 export const PLAN_COLUMNS = ['項目', '状態', '説明', '根拠の箇所', 'ページ', '根拠の原文(抜き書き)', '取得日', '版'];
-// kind を渡すと、最後に工種と表の出典の行を足す(F44a)
-export function planRows(out = {}, kind = null) {
+// kind を渡すと、最後に工種と表の出典の行を足す(F44a)。notice を渡したときだけ、そのあとに「注意」行を足す(F61a)
+export function planRows(out = {}, kind = null, notice) {
   return [PLAN_COLUMNS.slice(), ...(out.candidates ?? []).map((c) => [
     c.item, '抜けの候補', c.message ?? '',
     c.basis.doc + ' ' + c.basis.section + (c.basis.sectionTitle ? ' ' + c.basis.sectionTitle : ''),
     c.basis.page ? 'PDF ' + c.basis.page + 'ページ' + (c.basis.printedPage ? '(紙面 ' + c.basis.printedPage + ')' : '') : '',
     c.basis.quote, c.basis.fetchedAt ?? '', c.basis.version || NO_VERSION,
   ]), ...(out.undecidable ?? []).map((u) => ['施工計画書の目次', '判断できない', u.message ?? '', '', '', '', '', '']),
-  ...(kind ? [['工種', '', kindSourceText(kind, 'plan'), kindSource(kind, 'plan')?.title ?? '', '', '', kindSource(kind, 'plan')?.fetchedAt ?? '', kindSource(kind, 'plan')?.version ?? '']] : [])];
+  ...(kind ? [['工種', '', kindSourceText(kind, 'plan'), kindSource(kind, 'plan')?.title ?? '', '', '', kindSource(kind, 'plan')?.fetchedAt ?? '', kindSource(kind, 'plan')?.version ?? '']] : []),
+  ...(notice ? [['注意', '', notice, '', '', '', '', '']] : [])];
 }
 
 // 1つの欄: カンマ・引用符・改行を含むときは引用符で囲み、中の引用符は2つにする

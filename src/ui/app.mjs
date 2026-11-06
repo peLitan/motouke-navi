@@ -487,7 +487,7 @@ export function clearRulesTable(doc) {
 
 export function exportScheduleCsv(doc) {
   if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
-  downloadText(doc, toCsv(scheduleRows(lastSchedule, scheduleNotes, shownKind.schedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
+  downloadText(doc, toCsv(scheduleRows(lastSchedule, scheduleNotes, shownKind.schedule, NOTICE)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
   setScheduleStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
@@ -510,10 +510,23 @@ export function restoreDetailsAfterPrint() {
 }
 
 // 今日の日付(ファイル名に使う。PC の時計の日付)
-function today() {
+const z2 = (n) => String(n).padStart(2, '0');
+function today(d = new Date()) {
+  return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate());
+}
+
+// 印刷の頭の行(F61a)。紙がどの版のいつの結果かを残す。日時は PC の時計。画面には出さない行なので、印刷の直前に描く
+export function stampPrintHead(doc) {
+  const el = doc.getElementById('print-head');
+  if (!el) return;
   const d = new Date();
-  const z = (n) => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+  el.textContent = '版 ' + el.getAttribute('data-version') + '・印刷した日時 ' + today(d) + ' ' + z2(d.getHours()) + ':' + z2(d.getMinutes());
+}
+
+// 紙に出す直前の準備。ボタンからもブラウザのメニューからも通る
+function prepareForPrint(doc) {
+  stampPrintHead(doc);
+  openDetailsForPrint(doc);
 }
 
 export function exportCsv(doc) {
@@ -526,7 +539,7 @@ export function exportCsv(doc) {
 
 export function printResult(doc, win) {
   if (!last) setExportStatus(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
-  openDetailsForPrint(doc);
+  prepareForPrint(doc);
   win.print();
 }
 
@@ -702,7 +715,7 @@ export function runPlanCheck(doc) {
 
 export function exportPlanCsv(doc) {
   if (!lastPlan) { setPlanStatus(doc, '先に「目次を点検する」を押して結果を出してください。'); return; }
-  downloadText(doc, toCsv(planRows(lastPlan, shownKind.planItems)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
+  downloadText(doc, toCsv(planRows(lastPlan, shownKind.planItems, NOTICE)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
   setPlanStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
@@ -1187,9 +1200,9 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       el.addEventListener('input', changed);
       el.addEventListener('change', changed);
     }
-    // ブラウザのメニューから印刷したときも、折りたたみを開く
+    // ブラウザのメニューから印刷したときも、日時を描いて折りたたみを開く
     if (win && win.addEventListener) {
-      win.addEventListener('beforeprint', () => openDetailsForPrint(doc));
+      win.addEventListener('beforeprint', () => prepareForPrint(doc));
       win.addEventListener('afterprint', () => restoreDetailsAfterPrint());
     }
   };
