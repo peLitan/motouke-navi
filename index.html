@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-uAOw5VaOpPIbIZVlZoVSZYOp7OeFkmostC4ld1DlLhg='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OqIl8b3xXVsDe7mfC3qp/oVGhOjZ9mDOVLF+zWQvIQM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -2491,8 +2491,9 @@ const FACILITY_SUFFIXES_LAW = [
 
 // ---- 慣用の語尾(法令の定義は無い) ----
 // 法人格の無い会社・団体・役所の名前の終わりに付く語
+// 「電設サービス」は長い形だけを足す。「電設」は辞書に足す候補に回す語(company-candidates の試験)、「サービス」「設備サービス」などは普通の文にも出る語で、置き換えすぎになる
 const ORG_SUFFIXES_CUSTOM = [
-  '組', '建設', '工務店', '商店', '商会', '製作所', '工業', '興業', '産業',
+  '組', '建設', '工務店', '商店', '商会', '製作所', '工業', '興業', '産業', '電設サービス',
   '事務所', '設計事務所', '法律事務所', '会計事務所',
   'クリニック', '医院', '歯科', '薬局', '訪問看護ステーション',
   '協会', '連合会', '組合',

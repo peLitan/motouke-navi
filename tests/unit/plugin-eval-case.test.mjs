@@ -28,7 +28,7 @@ const CASES = [
     data: 'plugin/evals/cases/E2_あおば台共同住宅',
     docs: ['raw/施工体制台帳.md', 'raw/施工体系図.md'],
     nameCount: 11,
-    left: ['架空電設サービス'], // 分かっている漏れ。docs/評価.md の 7
+    left: [],
   },
 ].map((c) => {
   const yaml = read(`${c.dir}/case.yaml`);
@@ -200,7 +200,7 @@ test('調べる名前はどれも書類にあり、Skill などプラグイン�
   assert.deepEqual(overlap, [['みほん建設', 'plugin/src/mask/rules-company.mjs']]);
 });
 
-test('read_masked の返事に残る名前は一覧のとおり(E1 は無し。E2 は分かっている漏れの 架空電設サービス だけ)', () => {
+test('read_masked の返事に残る名前は一覧のとおり(E1・E2 とも無し)', () => {
   for (const c of CASES) {
     const masked = c.docs.map((d) => readMaskedWithCheck(path.join(ROOT, c.data), d, { mapPath: '', dictPath: '' }).masked).join('\n');
     assert.deepEqual(c.names.map((g) => g.pattern).filter((p) => masked.includes(p)), c.left, c.id);
@@ -252,7 +252,7 @@ test('文書: 8/8・0/8 と判定の合格は、古い組(検査9つ)の値だ�
   assert.ok(SECTION7.includes('古い組(検査9つ)'));
 });
 
-test('文書: 評価.md の 7 に合否の書き方・公式のページの出どころ・版の差・分かっている漏れがある', () => {
+test('文書: 評価.md の 7 に合否の書き方・公式のページの出どころ・版の差・E2 の二次の会社の名前がある', () => {
   for (const w of ['--threshold', '`weight`', '設計の係が 2026-11-06 に開き', '"1.0"', '"1.1"', '架空電設サービス', '`--model']) {
     assert.ok(SECTION7.includes(w), w);
   }

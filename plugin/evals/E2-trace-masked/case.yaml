@@ -85,7 +85,7 @@ graders:
     target: trace
     pattern: あおば台
     match: not_contains
-  # 分かっている漏れ: read_masked で置き換えても二次の会社の名前が残る。直るまでこの検査は落ちる見込みで、消さない
+  # 二次の会社の名前。F75a で語尾を足して置き換えたので、初めて見る書類への効き目を示す検査ではない。検査は消さない
   - type: regex
     name: no-company-second-tier
     target: trace
