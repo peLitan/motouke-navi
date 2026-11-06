@@ -200,3 +200,27 @@ test('07 の決まり: 外部の読み込み・通信が無く、断り書きと
   assert.ok(html.includes('PDL1.0'));
   assert.equal(fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8'), html, 'index.html を作り直していない');
 });
+
+// F54b: スマホ幅だけの注記2つと、空の知らせの欄
+test('F54b: 2つの注記は phone-only と no-print を持ち、決まった位置にあり、言わない語が無い', () => {
+  const FIELD = '<p id="field-note" class="note phone-only no-print">この画面は通信も保存もしません。閉じたり読み直されたりすると、入れた内容は消えます。ほかの端末で入れた内容は、この端末には出ません。</p>';
+  const PC = '<p id="panel-3-pc-note" class="note phone-only no-print">書類の点検はパソコンの方が楽です(台帳の文を貼る・Excel を読む・印刷)。スマホでも使えます。</p>';
+  assert.ok(html.includes('<div id="result-top" hidden></div>\n' + FIELD + '\n<details class="fold" id="bid-fold">'), '#field-note が #result-top と #bid-fold の間に無い');
+  const panel3 = html.slice(html.indexOf('<section id="panel-3"'));
+  const firstH2 = panel3.match(/<h2[^>]*>[\s\S]*?<\/h2>/);
+  assert.equal(firstH2[0], '<h2>2. 施工体制台帳の点検</h2>');
+  assert.ok(panel3.slice(firstH2.index + firstH2[0].length).startsWith('\n' + PC), '#panel-3-pc-note が #panel-3 の最初の h2 の直後に無い');
+  for (const note of [FIELD, PC]) {
+    assert.doesNotMatch(note, /事故を防げる|指名停止を防ぐ|初心者でもできる|あらゆる公共工事に対応|積算できる|電波/);
+  }
+});
+
+test('F54b: #drop-status は入口の通信しない注記の下にある空の欄で、紙に出さない', () => {
+  assert.match(html, /この端末の中だけで扱います。<\/p>\n<p id="drop-status" class="no-print" aria-live="polite"><\/p>\n<section id="panel-1" hidden>/);
+  assert.match(css, /p\[aria-live\]:not\(:empty\)/);
+});
+
+test('F54b: 結果の段取りの件数の行は、表が開いていても閉じていても合う文にする', () => {
+  const lead = renderSchedule(NATIONAL, buildScheduleDetail(COND));
+  assert.ok(lead.includes('表は下の「受注後の段取り」にあります。'));
+});

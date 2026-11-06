@@ -278,7 +278,7 @@ export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
   }).join('');
   // 結論(何件あるか・段ごとの件数)は閉じずに出し、表は「受注後の段取り(○件)」の折りたたみに入れる
   const lead = rows.length
-    ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。' + (detail.all ? '' : '表は下の「受注後の段取り」を開くと見られます。') + '</p>'
+    ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。' + (detail.all ? '' : '表は下の「受注後の段取り」にあります。') + '</p>'
     : '';
   const body = rows.length
     ? '<details class="schedule-table"' + (detail.all || rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary><p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>' + tables + '</details>'

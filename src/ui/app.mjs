@@ -487,7 +487,7 @@ export function clearRulesTable(doc) {
 export function exportScheduleCsv(doc) {
   if (!lastSchedule) { setScheduleStatus(doc, '先に「確認する」を押して段取りを出してください。'); return; }
   downloadText(doc, toCsv(scheduleRows(lastSchedule, scheduleNotes, shownKind.schedule)), '段取り_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setScheduleStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
+  setScheduleStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 function setExportStatus(doc, text) {
@@ -520,7 +520,7 @@ export function exportCsv(doc) {
   const snap = safetySnapshot(doc);
   const csv = toCsv([...stage1Rows(last.bid, last.taicho, NOTICE), ...workKindRows(shownKind.schedule), ...safetyRows(snap.result, snap.answerRows)]);
   downloadText(doc, csv, '入札前の確認_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setExportStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
+  setExportStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 export function printResult(doc, win) {
@@ -637,13 +637,13 @@ export function exportChecklistCsv(doc) {
   if (!lastChecklist) { setChecklistStatus(doc, '先に「台帳を点検する」を押して記載事項の表を出してください。'); return; }
   if (checklistStale) { setChecklistStatus(doc, '台帳の文が変わりました。もう一度「台帳を点検する」を押してから書き出してください(同じ文に戻せばチェックは残ります)。'); return; }
   downloadText(doc, toCsv(checklistRows(lastChecklist, checklistChecked, NOTICE)), '台帳の記載事項_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setChecklistStatus(doc, 'CSV をこの PC に保存しました(「確認した」の列にチェックの有無が入っています。Excel で開けます。外へは送っていません)。');
+  setChecklistStatus(doc, 'CSV をこの端末に保存しました(「確認した」の列にチェックの有無が入っています。Excel で開けます。外へは送っていません)。');
 }
 
 export function exportCheckCsv(doc) {
   if (!lastCheck) { setCheckStatus(doc, '先に「台帳を点検する」を押して結果を出してください。'); return; }
   downloadText(doc, toCsv(checkRows(lastCheck, NOTICE)), '台帳の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setCheckStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
+  setCheckStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 // 台帳の Excel の読み込み(F04c): 作成例の様式の .xlsx を読み、読めた欄を台帳の文にして「施工体制台帳の文」の欄に入れる。
@@ -702,7 +702,7 @@ export function runPlanCheck(doc) {
 export function exportPlanCsv(doc) {
   if (!lastPlan) { setPlanStatus(doc, '先に「目次を点検する」を押して結果を出してください。'); return; }
   downloadText(doc, toCsv(planRows(lastPlan, shownKind.planItems)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
-  setPlanStatus(doc, 'CSV をこの PC に保存しました(Excel で開けます。外へは送っていません)。');
+  setPlanStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
 // 見本(F05f): 架空の工事の条件を入力欄に入れ、架空の書類(台帳・施工計画書の目次)を入れて、そのまま確認まで動かす。

@@ -130,8 +130,8 @@ test('入札前の確認の入力欄に ※必須/※任意 と1行の補足が�
   for (const sel of ['.req-must', '.req-optional']) assert.ok(contrast(hexOf(prop(rules.find((r) => r.sel === sel).body, 'color')), '#fff') >= 4.5);
 });
 
-test('CSV の説明は「Excel で開ける CSV として、この PC に保存します(外へは送りません)」', () => {
-  assert.match(body, /<p id="csv-note">Excel で開ける CSV として、この PC に保存します\(外へは送りません\)。/);
+test('CSV の説明は「Excel で開ける CSV として、この端末に保存します(外へは送りません)」', () => {
+  assert.match(body, /<p id="csv-note">Excel で開ける CSV として、この端末に保存します\(外へは送りません\)。/);
   assert.ok(!body.includes('BOM つきの UTF-8'), '利用者に分かりにくい言葉(BOM)が残っている');
   const app = fs.readFileSync(new URL('../../src/ui/app.mjs', import.meta.url), 'utf8');
   assert.ok(!app.includes('BOM つき UTF-8)。'), '書き出したあとの知らせに BOM が残っている');

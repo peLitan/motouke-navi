@@ -58,7 +58,7 @@ test('「もう受注した」: 段2 に全部の行と注意とボタンが出�
   const out = page.el('schedule-result').innerHTML;
   assert.ok(out.includes('受注後の段取りは ' + COUNT + '件です'), out.slice(0, 200));
   assert.ok(out.includes('<details class="schedule-table" open>'));
-  assert.ok(!out.includes('表は下の「受注後の段取り」を開くと見られます'));
+  assert.ok(!out.includes('表は下の「受注後の段取り」にあります'));
   assert.ok(out.includes('確かめる'));
   assert.ok(!/data-label="状態">行う</.test(out), '「行う」と言い切る行がある');
   assert.equal(page.el('bid-fold').open, false);

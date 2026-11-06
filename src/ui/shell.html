@@ -292,7 +292,7 @@
     .next-go { width: 100%; justify-content: center; }
     #bid-run, #ledger-run, #plan-run, .rules-switch button, .sample-banner button { width: 100%; margin: 0.25rem 0; }
     .sample-banner { padding: 0.5rem 0.75rem; }
-    /* 下に止まる帯(F43c)は「次へ」の1つだけ。流れの中の行なので、下まで動かせば本文は隠れない */
+    /* 下に止まる帯(F43c)は段ごとに1つ(#confirm-go・#next-step-3)。同時には出ない。sticky の決まりは1つ。流れの中の行なので、下まで動かせば本文は隠れない */
     .step-next { position: sticky; bottom: 0; margin: 1rem 0 0; padding: 0.5rem 0; background: var(--paper); border-top: 1px solid var(--line); }
     #next-step-3, #confirm-go { width: 100%; margin: 0; }
     .confirm-row { grid-template-columns: minmax(0, 1fr) auto; }
@@ -401,7 +401,8 @@
 </ol>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </div>
-<p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの PC の中だけで扱います。</p>
+<p class="no-print note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの端末の中だけで扱います。</p>
+<p id="drop-status" class="no-print" aria-live="polite"></p>
 <section id="panel-1" hidden>
 <section id="bid">
 <h2>1. 入札前の確認と、施工体制台帳が要るか</h2>
@@ -511,6 +512,7 @@
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>
 </div>
 <div id="result-top" hidden></div>
+<p id="field-note" class="note phone-only no-print">この画面は通信も保存もしません。閉じたり読み直されたりすると、入れた内容は消えます。ほかの端末で入れた内容は、この端末には出ません。</p>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result-plain" aria-live="polite"><p>条件を入れて「確認する」を押してください。</p></div>
@@ -567,7 +569,7 @@
 <div class="export">
 <button type="button" id="print-btn">結果を印刷する</button>
 <button type="button" id="csv-btn">結果を CSV に書き出す</button>
-<p id="csv-note">Excel で開ける CSV として、この PC に保存します(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
+<p id="csv-note">Excel で開ける CSV として、この端末に保存します(外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
 <p id="export-status" aria-live="polite"></p>
 </div>
 <div class="row no-print step-next"><button type="button" id="next-step-3">次へ: 3 書類を確かめる</button></div>
@@ -575,6 +577,7 @@
 <section id="panel-3" hidden>
 <section id="ledger-check">
 <h2>2. 施工体制台帳の点検</h2>
+<p id="panel-3-pc-note" class="note phone-only no-print">書類の点検はパソコンの方が楽です(台帳の文を貼る・Excel を読む・印刷)。スマホでも使えます。</p>
 <p>台帳を貼って「台帳を点検する」を押すと、抜け・食い違いの候補を根拠の条つきで出します。</p>
 <details class="no-print"><summary>台帳の書き方</summary>
 <p>見出しと「| 項目 | 内容 |」の表の形で貼ります。発注者(公共・民間)と工事の種類は、段階の「1 条件を入れる」で選んだ値を使います。決められないことは「判断できない」に出します。</p>
@@ -604,7 +607,7 @@
 <div class="row"><label for="ledger-file">台帳の Excel を読む(国交省の「施工体制台帳(作成例)」の様式、.xlsx)</label>
 <input type="file" id="ledger-file" name="ledger-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
 <details class="fold"><summary>Excel で読める欄</summary>
-<p class="note" id="ledger-file-note">ファイルはこの PC の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
+<p class="note" id="ledger-file-note">ファイルはこの端末の中で開きます(外へは送りません)。読むのは元請けの欄(会社名・工事名称・発注者名・工期・監理技術者名/主任技術者名)だけで、読めた値を下の「施工体制台帳の文」の欄に入れます。許可番号・下請負人の欄は読まないので書き足してください。作成例の様式には請負代金額の欄がありません。</p>
 </details>
 <p id="ledger-file-status" aria-live="polite"></p>
 <div id="ledger-unreadable" class="result" aria-live="polite"></div>
@@ -655,7 +658,7 @@
 <p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。</p>
 <p class="note" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
 <details class="fold"><summary>使い方と限界</summary>
-<p>置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの PC にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
+<p>置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの端末にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
 <p class="note" id="mask-limits">限界(架空の書類での測定): 敬称・役職・欄名の隣の語を人名の候補として、工事・工区・作業所・現場などで終わる語を現場名の候補として置き換えます。辞書作りに使っていない初めて見る書類4件では、辞書に語を足さない場合の漏れの率は 37.8% でした(人名・現場名を辞書に足すと 14.3%)。会社名は24語中11語が、足しても残りました。規則を作るときに見た見本の書類では 4.2% でしたが、この数字は当てになりません。人名・現場名は「辞書に足す」で足し、後の欄を必ず目で確かめてください。詳しくは docs/mask-rate.md。</p>
 </details>
 <div class="row"><label for="mask-industry">業界(語尾・役職の表)</label>
@@ -683,7 +686,7 @@
 <button type="button" id="dict-add">辞書に足す</button></div>
 <p id="dict-status" aria-live="polite"></p>
 <div id="dict-list"><p>足した語はまだありません。</p></div>
-<p class="note" id="dict-file-note">足した語は、ページを閉じると消えます(ブラウザには保存しません)。次に使うときのために「辞書を書き出す」でこの PC に JSON のファイルとして保存し、「辞書を読み込む」で読み込めます。このファイルには元の名前が入っています。外の AI などへ送らず、要らなくなったら消してください。</p>
+<p class="note" id="dict-file-note">足した語は、ページを閉じると消えます(ブラウザには保存しません)。次に使うときのために「辞書を書き出す」でこの端末に JSON のファイルとして保存し、「辞書を読み込む」で読み込めます。このファイルには元の名前が入っています。外の AI などへ送らず、要らなくなったら消してください。</p>
 <div class="row"><button type="button" id="dict-export">辞書を書き出す</button>
 <label for="dict-import">辞書を読み込む</label>
 <input type="file" id="dict-import" name="dict-import" accept=".json,application/json"></div>
@@ -691,7 +694,7 @@
 <div class="row"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx)</label>
 <input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
 <details class="fold"><summary>読めるファイルと読めないもの</summary>
-<p class="note" id="mask-file-note">ファイルはこの PC の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
+<p class="note" id="mask-file-note">ファイルはこの端末の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF・.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
 </details>
 <p id="mask-file-status" aria-live="polite"></p>
 <div class="row"><label for="mask-input">置き換える文</label><br>
@@ -724,7 +727,7 @@
 <div class="row"><button type="button" id="unmask-run">元に戻す</button></div>
 <pre id="unmask-output"></pre>
 <h3>対応表の書き出しと読み込み</h3>
-<p class="warning-box" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この PC に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
+<p class="warning-box" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この端末に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
 <div class="row"><button type="button" id="map-export">対応表を書き出す</button>
 <label for="map-import">対応表を読み込む</label>
 <input type="file" id="map-import" name="map-import" accept=".json,application/json"></div>
