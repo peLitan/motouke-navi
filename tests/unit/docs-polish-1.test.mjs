@@ -16,6 +16,15 @@ test('場面の数: README と台本の見出しの数が、台本の表の行�
   assert.ok(readme.includes(`${rows}場面・`));
 });
 
+test('台本の札1: 公告2件・1人・各1回の形で、測れなかったときの外し方が2通りある(F72a)', () => {
+  const note = script.split('\n').find((l) => l.startsWith('- 10 の札1:'));
+  assert.ok(note, '補足に 10 の札1 の行がある');
+  for (const w of ['実在の公告2件', '「2件・1人・各1回」', '「手で ○分/道具で ○分」', '何割減']) assert.ok(note.includes(w), w);
+  assert.match(note, /2件とも測れなかったら札1 と声の1文目を外し/);
+  assert.match(note, /1件だけ測れたら札1 をその1件の形で出し、隅の「2件」を「1件」に、「各1回」を「1回」に替える/);
+  for (const w of ['同じ公告1件', '1人・1回']) assert.ok(!script.includes(w), w);
+});
+
 test('実在の公告の外れた欄: overview が評価.md の 30欄のうち1欄(岡山の15欄のうち1欄)と同じ', () => {
   assert.ok(hyouka.includes('15欄のうち1欄が外れ'));
   assert.ok(hyouka.includes('全部の行の数え方で30欄のうち1欄が外れ'));

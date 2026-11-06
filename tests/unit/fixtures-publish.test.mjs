@@ -68,3 +68,25 @@ test('git の対象と履歴に正解の表・仕込み表が無い(git を呼�
     assert.equal(goldHeader(fs.readFileSync(p, 'utf8')), false, f + ' は正解の表の見出しで始まらない');
   }
 });
+
+test('README: 仕込み表の文のすぐ後に、正解と初めて見る書類の置き場と、入れていない物の名前がある(F72a)', () => {
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const keep = '仕込み表と置き換えの正解の表はリポジトリに入れていません';
+  assert.equal(readme.split(keep).length - 1, 1, '元の文が1件残っている');
+  const line = readme.slice(readme.indexOf(keep) + keep.length).split('\n')[0];
+  assert.ok(line.startsWith('。公告の拾いの正解(架空の公告 N1〜N5)は `docs/samples/bid-intake/測り/正解/` に、初めて見る書類は `fixtures/unseen/` に入っています'), '直後の文');
+  for (const w of ['`answers.json`', '`score/`', '岡山労働局の公告を文にしたファイルとその正解']) assert.ok(line.includes(w), w);
+  assert.match(line, /は入れていません$/, '入れていない物の文で終わる');
+});
+
+test('README: 書いた置き場と入れていない物が git の対象の名前と合う(名前だけを見る。git を呼べるときだけ)', (t) => {
+  let r;
+  try { r = spawnSync('git', ['-c', 'core.quotepath=false', 'ls-files'], { cwd: root, encoding: 'utf8' }); } catch { r = null; }
+  if (!r || r.status !== 0) { t.skip('git を呼べない(init の permission model など)'); return; }
+  const tracked = r.stdout.split('\n').filter(Boolean);
+  const dir = 'docs/samples/bid-intake/測り/正解/';
+  const gold = tracked.filter((x) => x.startsWith(dir)).map((x) => x.slice(dir.length));
+  assert.deepEqual(gold.sort(), ['N1.md', 'N2.md', 'N3.md', 'N4.md', 'N5.md'], '正解は N1〜N5');
+  assert.ok(tracked.some((x) => x.startsWith('fixtures/unseen/')), '初めて見る書類が git の対象にある');
+  assert.deepEqual(tracked.filter((x) => /(^|\/)score\//.test(x) || x.split('/').pop() === 'answers.json' || x.includes('岡山')), [], '入れていない物が無い');
+});
