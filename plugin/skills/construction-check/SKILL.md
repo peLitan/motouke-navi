@@ -1,6 +1,11 @@
 ---
 name: construction-check
 description: 建設工事の書類(施工体制台帳・再下請負通知書・施工計画書など)を、取得した建設業法などの条に照らして点検し、抜けや食い違いの「候補」を条番号つきで挙げる。書類は raw/ を直接読まず、道具 masked-files の read_masked で置き換えた後の中身だけを読む。指摘を書いたら、条番号が取得した原文にあるかを道具 check_articles で確かめる。
+hooks:
+  Stop:
+    - hooks:
+        - type: command
+          command: node "${CLAUDE_PLUGIN_ROOT}/skills/construction-check/scripts/check-done.mjs"
 ---
 
 # 建設の書類の点検(Motouke Navi)

@@ -64,6 +64,30 @@ test('hooks.json のコマンドが指すフック(プラグインの中の写�
   assert.equal(decide(null).block, true);
 });
 
+// F56b: Stop の hook は Skill の frontmatter に置く。予備の案の hooks.json へ移しても同じ試験が通るよう、両方を見る
+const skillFrontmatter = () => /^---\n([\s\S]*?)\n---\n/.exec(fs.readFileSync(path.join(PLUGIN, 'skills', 'construction-check', 'SKILL.md'), 'utf8'))[1];
+const checkDoneCommands = () => {
+  const inSkill = [...skillFrontmatter().matchAll(/^\s*(?:- )?command:\s*(.+?)\s*$/gm)].map((m) => m[1]);
+  const inJson = (readJson('hooks/hooks.json').hooks.Stop ?? []).flatMap((entry) => entry.hooks.map((hook) => hook.command));
+  return [...inSkill, ...inJson].filter((c) => c.includes('check-done'));
+};
+
+test('Stop の hook: command が指すファイルが plugin の中にあり、decide を読み込める。SKILL.md の frontmatter に once が無い', async () => {
+  const commands = checkDoneCommands();
+  assert.equal(commands.length, 1);
+  assert.match(commands[0], /^node "\$\{CLAUDE_PLUGIN_ROOT\}\//);
+  const file = /^node "(.+)"$/.exec(expand(commands[0], PLUGIN))?.[1];
+  assert.ok(file, commands[0]);
+  const rel = path.relative(PLUGIN, file);
+  assert.ok(!rel.startsWith('..') && !path.isAbsolute(rel), rel);
+  assert.ok(fs.statSync(file).isFile());
+  const { decide } = await import(pathToFileURL(file).href);
+  assert.equal(typeof decide, 'function');
+  assert.equal(decide(null), null);
+  assert.doesNotMatch(skillFrontmatter(), /^\s*(?:- )?once\s*:/m);
+  assert.match(skillFrontmatter(), /^hooks:\n  Stop:\n    - hooks:\n        - type: command\n          command: /m);
+});
+
 test('.mcp.json: プラグインの直下にあり、masked-files を ${CLAUDE_PLUGIN_ROOT} の写しで起動する。${CLAUDE_PROJECT_DIR} に頼らない', () => {
   const m = readJson('.mcp.json');
   const s = m.mcpServers['masked-files'];

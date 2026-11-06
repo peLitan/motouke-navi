@@ -566,6 +566,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
   - `reference/sources/`: 取得した法令の原文と取得日の一覧(`data/sources/` の写し)
   - `scripts/check-articles.mjs`: 点検の結果(文か JSON)に書かれた条番号が、取得した原文にあるかを確かめる。Skill の手順では、MCP の道具 `check_articles`(引数 `text`)が同じ処理を呼び、条番号ごとに「ある」「無い」(取得していない条・無い項や号)「確かめられない」(「法第○条」「同条」のように法令名が無い)と数を返す(F56a)。道具の返事に原文の全文は入らない。部品か原文が見つからないときは、どの条番号も確かめていないと返す。項・号の切り出しは `src/quote-check.mjs` の写し(`lib/quote-check.mjs`)を使う
   - 端末で確かめる別の道: `node plugin/skills/construction-check/scripts/check-articles.mjs <指摘のファイル>` で同じ文が出る。1つでも「ある」以外があれば終了コード 1
+  - `scripts/check-done.mjs`: Stop のフック(F56b)。`read_masked` を呼んだ会話で、最後の返事に係の結果の数(残る・崩れた・確かめられない)も「反証の見直しをしていない」も無いとき、Claude に案内の文を渡して1回催促する。`SKILL.md` の frontmatter の `hooks:` で登録する。限界は下の「手順の抜けの催促の限界」
 
 - `skills/spec-to-rules/`: 発注者の仕様書の文から規則表の行を作る Skill(F26a)
 - `skills/bid-intake/`: 公告・入札説明書・仕様書から条件を拾う Skill(F41a。下の「公告から条件を拾う」)
@@ -603,6 +604,16 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - plugins/components https://code.claude.com/docs/en/plugins/components.md (hooks.json の形、プラグインの係で無視される項目、プラグインの settings で効く項目)
 - hooks https://code.claude.com/docs/en/hooks.md (終了コード 2 で止める、UserPromptSubmit は matcher を使わない)
 - sub-agents https://code.claude.com/docs/en/sub-agents.md (プラグインの係で無視される項目: `permissionMode`・`hooks`・`mcpServers`・`initialPrompt`)
+
+### 手順の抜けの催促の限界
+`check-done` は、Stop の時点で最後の返事の文を見て案内を渡す、一度だけの催促です。手順6・7 を守らせる仕組みではありません。止める所(`raw/` の読み取り)は `guard-raw` が持ちます。
+
+- 文しか見ません: 道具や係を実際に呼んだかは見ないので、数を書いた返事は、係を呼んでいなくても通ります
+- 催促しないとき: `read_masked` を呼ぶ前の停止(手順1 で利用者に聞いたときなど)、催促のあとの続き(`stop_hook_active` が true)、入力や記録が読めないとき。読めないときは止めない側に倒します。`guard-raw` は逆に止める側に倒します
+- 止まり続けません: 催促の続きでは `stop_hook_active` で何もしません。Claude Code にも連続8回の上限があります(道具を呼ぶと数が戻ります)
+- 記録の遅れ: 会話の記録は非同期に書かれ、Stop の時点で今のターンの分がまだ無いことがあります。`read_masked` の呼び出しがまだ記録に無ければ、催促は出ません。返事の文は記録でなく Stop の入力の `last_assistant_message` から読みます
+- 余分に出るとき: 手順の途中で利用者に聞いて止まったとき、数を表の列など別の書き方で書いたとき、点検のあとに別の話をしたとき(記録に `read_masked` が残るので)は、1回余分に催促が出ることがあります。Skill の frontmatter の hook は呼んだときに登録され、会話の終わりまで残るので、別の話の返事ごとに出ることもあります。催促が出ると、`claude -p` や評価の回では1ターン増えます
+- 確かめたこと: 判断の関数の試験(`tests/unit/check-done.test.mjs`)と、合成の記録を渡して端末で6通り動かした1回だけです。Skill の frontmatter に Stop を置く例は公式のページに無く、Claude Code に登録されるか、`${CLAUDE_PLUGIN_ROOT}` が解けるかはまだ確かめていません。登録されないときは、同じコマンドを `hooks/hooks.json` の Stop に移します
 
 ## Claude Code での作り方
 この節に書く仕組み(自走キット・hook・subagent・機能の一覧)は、開始前に作ったもので、このリポジトリには入っていません(審査の対象外です)。作品の働きの説明ではなく、作り方の記録として書いています。
