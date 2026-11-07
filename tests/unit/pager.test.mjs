@@ -112,17 +112,16 @@ test('戻った確かめのページは、今の値を書き直している', as
   assert.match(page.text('confirm-value-contract-amount'), /123,?456,?789/);
 });
 
-test('別の道具: 入口の折りたたみを開くと1ページになり、右の席は入口に戻る。戻ると閉じて入口に帰る', async () => {
+test('別の道具: 入口の「文の置き換え(別の道具)」で1ページになり、右の席は入口に戻る。戻ると閉じて入口に帰る', async () => {
   const page = runPage(html);
   const tools = page.el('other-tools');
-  tools.open = true;
-  tools.dispatchEvent({ type: 'toggle', bubbles: false });
+  await page.click('entry-tools');
   await assertOn(page, 'pg-tools', 'entry-back');
   assert.equal(page.el('panel-tools').hidden, false);
   await page.click('pg-back');
   assertEntry(page);
   assert.equal(tools.open, false, '開いたまま入口に戻った');
-  assert.equal(page.el('panel-tools').hidden, false, '入口から別の道具の見出しが消えた');
+  assert.equal(page.el('panel-tools').hidden, true, '入口に別の道具の枠が残っている');
 });
 
 test('別の道具: 段のページの間は隠れ、全部の印刷が折りたたみを開いてもページは替わらない', async () => {
@@ -245,7 +244,7 @@ test('帯の HTML: 紙に出ず、席のボタンの文字を変えていない'
 
 test('紙: 隠れたページの文も紙に出し、overflow を外す。印刷の決まりは1つのまま', () => {
   assert.equal((css.match(/@media print/g) ?? []).length, 1);
-  assert.match(printCss, /\.pg\[hidden\], #panel-tools\[hidden\] \{ display: block; \}/);
+  assert.match(printCss, /\.pg\[hidden\], #panel-ref\[hidden\], #panel-tools\[hidden\] \{ display: block; \}/);
   assert.match(printCss, /\.pg \{ overflow: visible; \}/);
   // 紙の外の規則が隠れたページを消さない
   for (const m of printCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {

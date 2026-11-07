@@ -7,9 +7,10 @@ export const PAGES = {
   2: [['pg-2', '結果', 'result-title']],
   3: [['pg-3', '書類', 'ledger-title']],
   tools: [['pg-tools', '別の道具', 'tools-title']],
+  ref: [['pg-ref', '使った資料', 'ref-title']],
 };
 // 一覧の最後のページの右の席。席はどのページでも1つだけ見える
-const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'entry-back', tools: 'entry-back' };
+const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'entry-back', tools: 'entry-back', ref: 'entry-back' };
 const SEATS = ['pg-next', ...new Set(Object.values(LAST_SEAT))];
 // 一覧の1ページ目の「戻る」の行き先(group が null なら入口)。last は行き先の一覧の最後のページへ着く印
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
@@ -19,6 +20,7 @@ const STEP_OF = { 1: 1, confirm: 1, 2: 2, 3: 3 };
 const STEPS = [0, 1, 2, 3];
 
 let at = { group: null, index: 0 };
+let cameFrom = { group: null, index: 0 }; // 使った資料の「戻る」の行き先
 const flip = (doc, id, on) => { const e = doc.getElementById(id); if (e) e.hidden = !on; };
 const lastIndex = (group) => (PAGES[group]?.length ?? 1) - 1;
 
@@ -37,9 +39,12 @@ function setCount(doc, num, name) {
   if (nameEl) nameEl.textContent = name;
 }
 export const currentPage = () => ({ ...at });
+// 使った資料を開く前に呼ぶ。今のページを「戻る」の行き先として覚える
+export const rememberCameFrom = () => { cameFrom = { ...at }; };
 export const seatOf = (group, index) => (index < lastIndex(group) ? 'pg-next' : LAST_SEAT[group]);
 // 「戻る」の行き先。入口なら group が null
 export function backTarget() {
+  if (at.group === 'ref') return { ...cameFrom };
   if (at.index > 0) return { group: at.group, index: at.index - 1 };
   const out = BACK_OUT[at.group] ?? { group: null };
   return { group: out.group, index: out.last ? lastIndex(out.group) : 0 };
@@ -53,6 +58,7 @@ function setSeats(doc, group, index) {
   // 確かめのページの左の席は #confirm-back(同じ席・同じ形)
   flip(doc, 'pg-back', group !== 'confirm');
   flip(doc, 'confirm-back', group === 'confirm');
+  flip(doc, 'ref-open', group !== 'ref');
 }
 // 見せるページを1つにする。頭へ戻し、見出しへ焦点を移す(焦点は押したボタンが隠れても消えない。画面は動かさない)
 export function showPage(doc, group, index = 0) {
@@ -69,13 +75,14 @@ export function showPage(doc, group, index = 0) {
   if (el) el.scrollTop = 0;
   if (page) doc.getElementById(page[2])?.focus?.({ preventScroll: true });
 }
-// 入口へ: 下の帯を隠し、ページを1ページ目の形に戻す(入口の折りたたみの別の道具が見えるように)
+// 入口へ: 下の帯を隠し、ページを1ページ目の形に戻す
 export function hidePages(doc) {
   for (const list of Object.values(PAGES)) list.forEach(([id], i) => flip(doc, id, i === 0));
   at = { group: null, index: 0 };
   doc.body?.classList?.remove?.('in-pages');
   flip(doc, 'pager', false);
   for (const id of SEATS) flip(doc, id, false);
+  flip(doc, 'ref-open', true);
   markStep(doc, 0);
   setCount(doc, '', '');
 }

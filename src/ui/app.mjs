@@ -3,7 +3,7 @@
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
-import { showPage, hidePages, pageStep, backTarget, currentPage } from './pager.mjs';
+import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom } from './pager.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -168,12 +168,18 @@ export function showPanel(doc, n, index = 0) {
     const panel = doc.getElementById('panel-' + i);
     if (panel) panel.hidden = i !== n;
   }
-  const tools = doc.getElementById('panel-tools');
-  if (tools) tools.hidden = true;
+  showExtra(doc, null);
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = true;
   setNoticeCompact(doc, n === 2 || n === 3);
   showPage(doc, n, index);
+}
+// 段の外の2つの枠(別の道具・使った資料)のうち、見せる物だけ hidden を外す。段の枠は showPanel が持つ
+function showExtra(doc, shown) {
+  for (const id of ['panel-tools', 'panel-ref']) {
+    const panel = doc.getElementById(id);
+    if (panel) panel.hidden = id !== shown;
+  }
 }
 // 常に出る注意を、結果と段3 では1行にまとめる(F83a4)。行の hidden を外すと CSS が全文を消す。「くわしく」を開いた形は段を移っても残す
 function setNoticeCompact(doc, on) {
@@ -191,8 +197,7 @@ export function showEntry(doc) {
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = false;
   hidePages(doc);
-  const tools = doc.getElementById('panel-tools');
-  if (tools) tools.hidden = false;
+  showExtra(doc, null);
   const fold = doc.getElementById('other-tools');
   if (fold) fold.open = false;
   setNoticeCompact(doc, false);
@@ -204,19 +209,33 @@ function openPanel(doc, n, scrollId) {
   showPanel(doc, n);
   if (scrollId) doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
 }
-// 入口の折りたたみ「ここからは別の道具」を開くと、別の道具のページになる(F86a)。段のページの間に開くのは全部の印刷だけなので、ページは替えない
+// 段の外のページへ: 段を全部隠してから見せる。見出しは紙のために残し、折りたたみは開いたまま使う
+function showOutside(doc, group, panelId) {
+  for (const id of ['panel-1', 'panel-2', 'panel-3', 'panel-confirm', 'entry']) {
+    const el = doc.getElementById(id);
+    if (el) el.hidden = true;
+  }
+  showExtra(doc, panelId);
+  setNoticeCompact(doc, group === 'ref');
+  showPage(doc, group, 0);
+}
+// 入口の「文の置き換え(別の道具)」から(F86c)。今の形のまま1ページ
 function openTools(doc) {
   const fold = doc.getElementById('other-tools');
-  if (!fold?.open || currentPage().group !== null) return;
-  const entry = doc.getElementById('entry');
-  if (entry) entry.hidden = true;
-  showPage(doc, 'tools', 0);
+  if (fold) fold.open = true;
+  showOutside(doc, 'tools', 'panel-tools');
+}
+// 上の帯の「使った資料」から。「戻る」は来たページへ
+function openRef(doc) {
+  rememberCameFrom();
+  showOutside(doc, 'ref', 'panel-ref');
 }
 // 下の帯の「戻る」: 同じ一覧の中は前のページ、一覧の1ページ目は決まった行き先へ
 function goBack(doc) {
   const { group, index } = backTarget();
   if (group === null) showEntry(doc);
   else if (group === 'confirm') openConfirm(doc);
+  else if (group === 'tools') openTools(doc);
   else showPanel(doc, group, index);
 }
 // 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
@@ -591,9 +610,9 @@ function openForPrint(d) {
 export function openDetailsForPrint(doc) {
   for (const d of doc.querySelectorAll('details')) openForPrint(d);
 }
-// まとめの印刷は、まとめの2つのカードだけを開く(F66b)。描いていないときは飛ばす
+// まとめの印刷は、まとめの2つのカードと、紙に常に出す1行が入った「くわしく」だけを開く(F66b・F86c)。描いていないときは飛ばす
 export function openSummaryForPrint(doc) {
-  for (const id of SUMMARY_FOLDS) {
+  for (const id of [...SUMMARY_FOLDS, 'entry-more']) {
     const d = doc.getElementById(id);
     if (d) openForPrint(d);
   }
@@ -1091,8 +1110,8 @@ const ONE_FILE = '一度に読めるファイルは1つです。どれも読み�
 const NO_FILE = '読み込んでいません。ファイルを受け取れませんでした。ボタンからファイルを選んでください。';
 const NOT_READ_DROP = '読み込んでいません。';
 const USE_FRAME = NOT_READ_DROP + 'ファイルは点線の枠にドラッグしてください。';
-// 別の道具の口は閉じた折りたたみの中にある
-const toolPort = (what, label) => 'これは' + what + 'のファイルです。「ここからは別の道具」を開き、「' + label + '」の枠にドラッグしてください。';
+// 別の道具の口は入口の「文の置き換え(別の道具)」から開くページの中にある
+const toolPort = (what, label) => 'これは' + what + 'のファイルです。入口の「文の置き換え(別の道具)」を開き、「' + label + '」の枠にドラッグしてください。';
 const WRONG_PORT = {
   'intake-load': 'これは公告から拾った条件のファイルです。段1「条件を入れる」の「公告から拾った条件を読み込む」を開き、その枠にドラッグしてください。',
   'rules-load': 'これは発注者の表のファイルです。段2「結果を見る」の「直轄とは・例の違い・自分の表を読み込む」を開き、その枠にドラッグしてください。',
@@ -1233,7 +1252,7 @@ function openFold(doc, id) {
 const OPENED = (name) => (name ? '「' + name + '」を開きました' : '');
 // 枠の外に置いたとき: 今見えている段の口の欄に書き、見える所に出す(開いた折りたたみの中の欄もあるので、開いてから動かす)
 function outsideNotice(doc) {
-  if (doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
+  if (isShown(doc, 'panel-tools') && doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
   if (isShown(doc, 'panel-1')) {
     const opened = OPENED(openFold(doc, 'intake-more'));
     return ['intake-status', USE_FRAME + 'この段の枠: ' + frameLabel(doc, 'intake-load') + '。' + (opened ? opened + '。' : '')];
@@ -1387,7 +1406,8 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('next-step-3', () => openPanel(doc, 3));
     on('pg-next', () => pageStep(doc, 1));
     on('pg-back', () => pageStep(doc, -1, () => goBack(doc)));
-    doc.getElementById('other-tools')?.addEventListener?.('toggle', () => openTools(doc));
+    on('entry-tools', () => openTools(doc));
+    on('ref-open', () => openRef(doc));
     const main = doc.getElementById('main');
     if (main) main.addEventListener('click', (ev) => {
       const a = ev && ev.target && ev.target.closest ? ev.target.closest('a[href^="#"]') : null;

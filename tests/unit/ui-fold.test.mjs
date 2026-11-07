@@ -51,10 +51,10 @@ test('数え方: details の中は数えず、summary は数える(入れ子も)
   assert.equal(chars(outsideFolds('あ<details id="x"><summary>い</summary>う<details><summary>え</summary>お</details>か</details>き')), 3);
 });
 
-test('畳まない: 断り書き・通信しない表示・見ていない法令の1行・入口・出典の表示・取得日は、どの折りたたみの中にも無く、段の中にも無い', () => {
-  for (const id of ['disclaimer', 'scope-not-line', 'start', 'sources-dates', 'credits']) assert.deepEqual(foldsAround(id), [], id);
+test('畳まない: 断り書き・入口・出典の表示・取得日は、どの折りたたみの中にも無く、段の中にも無い。通信しない表示と見ていない法令の1行は入口の「くわしく」の中', () => {
+  for (const id of ['disclaimer', 'start', 'sources-dates', 'credits']) assert.deepEqual(foldsAround(id), [], id);
   assert.ok(body.indexOf('この画面は外部と通信しません') < body.indexOf('<section id="panel-1"'));
-  assert.ok(outsideFolds(body).includes('この画面は外部と通信しません'));
+  for (const id of ['scope-not-line', 'offline-note']) assert.deepEqual(foldsAround(id), ['entry-more'], id);
   const credits = body.slice(body.indexOf('<footer id="credits">'));
   assert.ok(outsideFolds(credits).includes('PDL1.0'));
   assert.ok(outsideFolds(credits).includes('国土交通省が作成したものではない'));
@@ -88,7 +88,7 @@ test('7問と任意の欄の説明: 閉じた折りたたみの中にあり、id
 });
 
 test('畳んだ説明の文言は消していない(できること3つ・必須と任意の説明・Excel・体系図・段取りの作り方・目次の範囲)', () => {
-  assert.deepEqual(foldsAround('can-do'), ['can-do-more']);
+  assert.deepEqual(foldsAround('can-do'), ['entry-more']);
   assert.equal((body.match(/<ul id="can-do">([\s\S]*?)<\/ul>/)[1].match(/<li>/g) ?? []).length, 3);
   for (const s of ['推測で埋めません', '「仮の一覧」', '※任意の欄は', '許可番号・下請負人の欄は読まない', '下請負人の一覧・下請けの技術者の氏名', '公共工事標準請負契約約款 第32条', '見出しの言葉だけで比べ', 'ブラウザに保存しません']) {
     assert.ok(body.includes(s), s);

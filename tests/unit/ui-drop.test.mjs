@@ -401,7 +401,7 @@ test('(F54d-4) 違う口の .json は読まず、行き先の段と折りたた�
   assert.match(status(doc, 'intake-status'), /^これは発注者の表のファイルです。段2「結果を見る」の「直轄とは・例の違い・自分の表を読み込む」を開き/);
   assert.equal(doc.getElementById('contract-amount').value, '');
   await put('dict-import', text('置換の対応表.json', MAP));
-  assert.match(status(doc, 'dict-file-status'), /^これは対応表のファイルです。「ここからは別の道具」を開き、「対応表を読み込む」の枠に/);
+  assert.match(status(doc, 'dict-file-status'), /^これは対応表のファイルです。入口の「文の置き換え\(別の道具\)」を開き、「対応表を読み込む」の枠に/);
   await put('map-import', text('置換の辞書.json', '\uFEFF' + DICT));
   assert.match(status(doc, 'map-status'), /^これは辞書のファイルです。/);
   await put('intake-load', text('候補.json', AI));

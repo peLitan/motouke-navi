@@ -1,5 +1,5 @@
 // F14g: 最初の1画面(幅1280・高さ900)に、題・断り書き・できることの1行・「見本で試す」のボタン・段階の表示が入る。
-// 法令の2つの一覧は題の分かる閉じた details にし、「見ていない法令・資料」があることは details の外の1行で常に見せる。
+// F86c: 入口の折りたたみは「くわしく」の1つで、「見ていない法令・資料」の1行はその中。法令の2つの一覧は使った資料のページの閉じた details。
 // この環境にはブラウザが無いので、高さは実測ではなく見積もる: 画面が出す HTML の文と CSS の値から、各ブロックの行数×行の高さ+余白を
 // 多めに数える(和文は1字1em、英数字も0.6emとし、行末の禁則の分として1行あたり1字ぶん幅を減らし、上下の余白は重ねずに足す)
 import test from 'node:test';
@@ -65,22 +65,16 @@ function estimate() {
   const disc = text(body.match(/<p class="disclaimer" id="disclaimer">([\s\S]*?)<\/p>/)[1]);
   add('断り書き', block(disc, REM, LH, W - 1.75 * REM) + marginTB('.disclaimer'));
 
-  // できること(1行と、閉じた details の見出し。3つの箇条は畳んだ: F37b)
-  const lead = body.match(/<div class="lead" id="lead">([\s\S]*?)<\/div>/)[1];
-  const summaryH = (s) => Math.max(px(cssValue('details > summary', 'padding').split(/\s+/)[0]) * 2 + block(s, REM, LH, W - REM), 2.75 * REM);
-  add('できることの1行と見出し', marginTB('.lead') + block(text(lead.match(/<p>([\s\S]*?)<\/p>/)[1]), REM, LH, W) + summaryH(text(lead.match(/<summary>([\s\S]*?)<\/summary>/)[1])));
-
-  // 見ていない法令・資料の1行と、閉じた details の見出し
-  add('見ていない法令の1行', block(text(body.match(/<p class="scope-not-line" id="scope-not-line">([\s\S]*?)<\/p>/)[1]), REM, LH, W) + marginTB('.scope-not-line'));
-  const sum = text(body.match(/<details class="scope" id="scope"><summary>([\s\S]*?)<\/summary>/)[1]);
-  add('法令の一覧の見出し(閉じた details)', summaryH(sum) + marginTB('details.scope'));
+  // できることの1行(3つの箇条は「くわしく」の中: F86c)
+  const lead = body.match(/<div class="lead" id="lead">([\s\S]*?)<\/div>/);
+  add('できることの1行', marginTB('.lead') + block(text(lead[1]), REM, LH, W));
 
   // header と入口の枠の間にほかのブロックがあれば、ここで落とす(見積もりから漏らさない)
-  const between = body.slice(body.indexOf('</details>', body.indexOf('id="scope"')), body.indexOf('<div class="start no-print" id="start">'));
-  assert.equal(text(between), '', '法令の一覧と入口の枠の間に、見積もっていない文がある: ' + text(between));
+  const between = body.slice(body.indexOf(lead[0]) + lead[0].length, body.indexOf('<div class="start no-print" id="start">'));
+  assert.equal(text(between), '<main id="main">'.replace(/<[^>]+>/g, ''), '1行と入口の枠の間に、見積もっていない文がある: ' + text(between));
 
   // 入口(枠なし): 見出しと、用意するものの1行と、同じ大きさの3つのタイルと、もう受注した方のリンクと、段階の表示
-  const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="offline-note"'));
+  const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="entry-more"'));
   const inner = W;
   let h = marginTB('.start');
   h += block(text(start.match(/<h2>([\s\S]*?)<\/h2>/)[1]), px(cssValue('.start h2', 'font-size')), LH, inner) + marginTB('.start h2');
@@ -94,15 +88,18 @@ function estimate() {
   h += Math.max(...btns.map((b) => 1 * REM * 2 + 4 + 2.5 * REM
     + block(text(b.match(/<span class="btn-main">([\s\S]*?)<\/span>/)[1]), px(cssValue('.entry-button', 'font-size')), LH, btnW)
     + block(text(b.match(/<span class="btn-sub">([\s\S]*?)<\/span>/)[1]), REM, LH, btnW)));
-  // もう受注した方のリンク: 押す所 44px と上の余白
-  h += 44 + marginTB('.start .entry-aside');
+  // 2つの入り口(F86c): 押す所 44px を2行と上の余白。閉じた「くわしく」の見出し
+  assert.match(start, /id="entry-awarded"[\s\S]*id="entry-tools"/);
+  h += 44 * 2 + marginTB('.start .entry-aside');
+  const summaryH = (s) => Math.max(px(cssValue('details > summary', 'padding').split(/\s+/)[0]) * 2 + block(s, REM, LH, W - REM), 2.75 * REM);
+  h += summaryH('くわしく') + marginTB('details.fold');
   const steps = [...start.matchAll(/<li id="step-\d"[^>]*>([\s\S]*?)<\/li>/g)].map((m) => text(m[1]));
   assert.equal(steps.length, 4);
   // 進み具合は横に並ぶ(丸 1.5rem・間 0.25rem・線 1.5rem とその間 0.25rem)。全部の幅が枠に入らなければ2行と数える(1行の高さは行の高さ)。F86b で入口の上へ移した
   const stepsW = steps.reduce((n, s) => n + ems(s) * REM + 1.75 * REM + 1.75 * REM, 0);
   const rows = Math.ceil(stepsW / inner);
   h += marginTB('.progress') + rows * LH * REM + (rows - 1) * 0.5 * REM;
-  add('入口の枠(タイルと段階の表示まで)', h);
+  add('入口の枠(タイル・2つの入り口・くわしくの見出し・段階の表示まで)', h);
   return { parts, total: parts.reduce((n, p) => n + p.h, 0), W };
 }
 
@@ -113,13 +110,13 @@ test('幅1280・高さ900の最初の1画面に、題・断り書き・できる
   assert.ok(total <= VIEW_H, `最初の1画面に入らない(見積もり ${Math.round(total)}px): ${detail}`);
 });
 
-test('並び: 題 → 断り書き → できること → 見ていない法令の1行 → 法令の一覧(閉じた details) → 進み具合 → 入口の3択', () => {
-  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="scope-not-line"', '<details class="scope" id="scope">', 'id="steps"', 'id="sample-load"', 'id="entry-bid"', 'id="entry-intake"', 'id="entry-awarded"'].map((k) => body.indexOf(k));
+test('並び: 題 → 断り書き → できること → 進み具合 → 入口の3択 → 2つの入り口 → くわしく(見ていない法令の1行) → 法令の一覧(閉じた details)', () => {
+  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="steps"', 'id="sample-load"', 'id="entry-bid"', 'id="entry-intake"', 'id="entry-awarded"', 'id="entry-tools"', 'id="entry-more"', 'id="scope-not-line"', '<details class="scope" id="scope">'].map((k) => body.indexOf(k));
   assert.ok(order.every((n) => n >= 0), '冒頭のどれかが無い: ' + order);
   for (let i = 1; i < order.length; i++) assert.ok(order[i - 1] < order[i], '並びが違う: ' + i);
 });
 
-test('法令の2つの一覧は、題の分かる閉じた details の中にある。「見ていない」があることは details の外で1行で見せる', () => {
+test('法令の2つの一覧は、題の分かる閉じた details の中にある。「見ていない」があることは入口の「くわしく」の1行で見せる', () => {
   const d = body.match(/<details class="scope" id="scope">([\s\S]*?)<\/details>/);
   assert.ok(d, '法令の一覧の details が無い');
   assert.ok(!/<details class="scope" id="scope" open/.test(body), '最初から開いている');
@@ -127,7 +124,7 @@ test('法令の2つの一覧は、題の分かる閉じた details の中にあ�
   assert.match(summary, /見ている法令・資料/);
   assert.match(summary, /見ていない法令・資料/);
   assert.ok(d[1].includes('id="scope-seen"') && d[1].includes('id="scope-not"'), '2つの一覧が details の中に無い');
-  // details の外の1行(画面にも印刷にも出す)
+  // 一覧の details の外の1行(画面は「くわしく」の中、印刷にも出す)
   const line = body.match(/<p class="scope-not-line" id="scope-not-line">([\s\S]*?)<\/p>/);
   assert.ok(line, '「見ていない法令・資料」の1行が無い');
   const before = body.slice(0, body.indexOf('<details class="scope"'));
@@ -150,7 +147,7 @@ test('題は作品名「Motouke Navi」に何のツールかの説明を添え�
   assert.ok(!html.includes('施工体制の確認の候補'), '古い題が残っている');
 });
 
-test('通信しないことの説明は消さず、入口の枠の下の、段の外に置いた(どの段でも見える)', () => {
+test('通信しないことの説明は消さず、入口の枠の下の「くわしく」の中の、段の外に置いた', () => {
   const i = body.indexOf('この画面は外部と通信しません');
   assert.ok(i > body.indexOf('id="steps"') && i < body.indexOf('id="panel-1"'));
 });

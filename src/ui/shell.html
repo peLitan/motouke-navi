@@ -66,7 +66,7 @@
   .notice-more-open { color: var(--primary); font-weight: normal; text-decoration: underline; }
   /* 消すのは画面だけ。紙とまとめの紙の出し方は今のまま(全文が出る) */
   @media screen {
-    #notice-more:not([hidden]):not([open]) ~ #disclaimer, #notice-more:not([hidden]):not([open]) ~ #lead, #notice-more:not([hidden]):not([open]) ~ #scope-not-line, #notice-more:not([hidden]):not([open]) ~ #scope, #notice-more:not([hidden]):not([open]) ~ main #offline-note { display: none; }
+    #notice-more:not([hidden]):not([open]) ~ #disclaimer, #notice-more:not([hidden]):not([open]) ~ #lead { display: none; }
   }
   /* 太い黒の枠は、対応表の警告(元の名前が入ったファイル)の1つだけ。ほかの注意は灰色の左線の注記(.note) */
   .warning-box { border: 3px solid var(--line-strong); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 0.75rem 1rem; font-weight: bold; }
@@ -133,8 +133,11 @@
   .entry-icon { display: block; width: 2rem; height: 2rem; margin: 0 0 0.5rem; }
   /* もう受注した方の小さなリンク(F43b): 下線の字だけ。押す所の高さは 44px を保つ */
   .start .entry-aside { margin: 0.5rem 0 0; }
+  .can-do-head { margin: 0; }
+  #can-do { margin: 0.25rem 0 0; padding-left: 1.5rem; }
   .entry-link { min-height: 44px; margin: 0; padding: 0.25rem 0; color: var(--primary); background: var(--paper); border: none; text-decoration: underline; cursor: pointer; }
   .entry-link:hover, .entry-link:active { color: var(--primary-dark); background: var(--paper); }
+  .entry-aside .entry-link { display: block; }
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
   #bid-run, #ledger-run, #plan-run, #next-step-3, #confirm-go, #pg-next, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
   #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, #confirm-go:hover, #pg-next:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, #confirm-go:active, #pg-next:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
@@ -229,7 +232,9 @@
   .topbar svg { flex: none; width: 2rem; height: 2rem; }
   h1 { font-size: 1.1875rem; margin: 0; line-height: 1.4; }
   .topbar-sub { display: block; font-size: 1rem; font-weight: normal; }
-  /* 最初の1画面(F14g): 法令の2つの一覧は閉じた折りたたみにし、「見ていない」があることは1行で常に見せる */
+  .topbar-link { flex: none; margin: 0 0 0 auto; color: var(--bar-ink); background: var(--bar-bg); border: 1px solid var(--bar-ink); }
+  .topbar-link:hover, .topbar-link:active { color: var(--bar-ink); background: var(--bar-bg); text-decoration: underline; }
+  /* 法令の2つの一覧は閉じた折りたたみ(F14g)。「見ていない」があることの1行は入口の「くわしく」の中で、紙には常に出す(F86c) */
   .lead p { margin: 0; }
   .scope-not-line { margin: 0.5rem 0 0; }
   details.scope { margin: 0 0 0.5rem; }
@@ -327,10 +332,19 @@
     .phone-only { display: block; }
     li.phone-only { display: list-item; }
     .wrap { padding: 0 0.75rem; }
-    .start h2 { font-size: 1.5rem; }
+    /* 入口を1画面に入れる(F86c)。字は小さくせず、余白と絵を減らす。押す所の高さは今のまま */
+    .topbar .wrap { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    .topbar svg { display: none; }
+    .topbar-link { padding: 0.25rem 0.5rem; }
+    .disclaimer { margin: 0.25rem 0; }
+    .start { margin: 0; }
+    .start h2 { font-size: 1.5rem; margin: 0.25rem 0 0.5rem; }
+    .entry-prep { margin: 0 0 0.5rem; }
+    .entry-button { padding: 0.5rem 0.75rem; }
+    .entry-icon { display: none; }
     .result, .form, .summary, .other-tools { padding: 0.75rem 1rem; }
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
-    .entry-choices { grid-template-columns: minmax(0, 1fr); }
+    .entry-choices { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
     .stats { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
     /* 数字のカードは、数字が左・名前と説明が右の行にする(F54a)。説明は消さない */
     .stat { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: 0.75rem; align-items: center; padding: 0.5rem 0.75rem; border-top-width: 1px; border-left: 6px solid var(--line); }
@@ -387,7 +401,7 @@
     .entry-button.drop-over { background: var(--primary-bg); }
   }
   /* ページの枠(F86a): 全体は動かさず、上の帯・注意・進み具合・ページ・下の帯を縦に並べる。ページの順は pager.mjs の PAGES だけで決める。
-     入口はまだページに分けていないので、#start より上の注意と下の出典ごと .wrap.page の中で縦に動く。段のページの間は #main が残りの高さを取り、.pg の中で縦に動く。
+     入口は .pg に入れず、「くわしく」を開いて入らないときだけ .wrap.page の中で縦に動く。段のページの間は #main が残りの高さを取り、.pg の中で縦に動く。
      縮む子は overflow を持つので、自動の最小の高さは 0 になる(押す所の決まりのため min-height: 0 は書かない) */
   @media screen {
     html, body { height: 100vh; height: 100dvh; overflow: hidden; }
@@ -396,11 +410,14 @@
     .wrap.page { flex: 1; width: 100%; box-sizing: border-box; overflow-y: auto; padding-bottom: 0; }
     body.in-pages .wrap.page { display: flex; flex-direction: column; }
     body.in-pages #main { flex: 1; min-height: 14rem; display: flex; flex-direction: column; }
-    #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]) { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-    body.in-pages #panel-tools:not([hidden]) { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]) { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
     .pg:not([hidden]) { flex: 1; overflow-y: auto; padding: 0 0.25rem; }
-    /* 出典と PDL の表示の画面の置き場は入口。使った資料のページができるまで、段のページでは枠に入れない。紙には今のまま出る */
-    body.in-pages #sources, body.in-pages #credits { display: none; }
+    /* 入口の説明は入口だけに出す。紙には今のまま出る */
+    body.in-pages #entry-more { display: none; }
+    /* 参照物の枠(F86c): 縦に動くのはこの中だけ。紙では動かす決まりが無いので全部出る */
+    #pg-ref:not([hidden]) { display: flex; flex-direction: column; }
+    .ref-frame { flex: 1 1 0; min-height: 6rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
+    .ref-frame footer { margin-top: 1rem; }
     /* 別の道具のページでは開いたままにするので、開く見出しは要らない */
     body.in-pages #other-tools > summary { display: none; }
     #pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; max-width: 60rem; margin: 0 auto; padding: 0.5rem 1rem; box-sizing: border-box; border-top: 1px solid var(--line); background: var(--paper); }
@@ -417,8 +434,9 @@
     html, body { height: auto; overflow: visible; }
     body { display: block; }
     .wrap.page, body.in-pages .wrap.page { display: block; overflow: visible; }
-    body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), body.in-pages #panel-tools:not([hidden]) { display: block; overflow: visible; }
+    body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
+    .ref-frame { flex: none; overflow-y: visible; }
   }
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
@@ -439,7 +457,7 @@
     /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
     #panel-1[hidden], #panel-2[hidden], #panel-3[hidden] { display: block; }
     /* ページも同じ(F86a)。画面の枠の中で縦に動かす決まりは紙で外す */
-    .pg[hidden], #panel-tools[hidden] { display: block; }
+    .pg[hidden], #panel-ref[hidden], #panel-tools[hidden] { display: block; }
     .pg { overflow: visible; }
     .result, .form { border: none; padding: 0; }
     .table-scroll { overflow: visible; }
@@ -463,7 +481,7 @@
     #print-head { margin: 0 0 0 auto; }
     .sign-off { break-inside: avoid; margin-top: 1.5rem; }
     /* まとめの紙(F66c)。print-brief は「PDF で保存・印刷」の間だけ body に付くので、全部の紙とブラウザのメニューからの印刷は変わらない。rem は紙の字の大きさに連動しないので pt で書く */
-    body.print-brief #lead, body.print-brief #scope, body.print-brief #panel-1, body.print-brief #bid-fold, body.print-brief #schedule-heading, body.print-brief #work-kind-schedule, body.print-brief #awarded-notice, body.print-brief #schedule-notice, body.print-brief #schedule-about-fold, body.print-brief #schedule-result, body.print-brief #safety-heading, body.print-brief #safety-note, body.print-brief #safety-prime-note, body.print-brief #safety-fold, body.print-brief #panel-3, body.print-brief #other-tools, body.print-brief .stats, body.print-brief .human, body.print-brief ul.print-only + p { display: none !important; }
+    body.print-brief #lead, body.print-brief #can-do-more, body.print-brief #scope, body.print-brief #panel-1, body.print-brief #bid-fold, body.print-brief #schedule-heading, body.print-brief #work-kind-schedule, body.print-brief #awarded-notice, body.print-brief #schedule-notice, body.print-brief #schedule-about-fold, body.print-brief #schedule-result, body.print-brief #safety-heading, body.print-brief #safety-note, body.print-brief #safety-prime-note, body.print-brief #safety-fold, body.print-brief #panel-3, body.print-brief #other-tools, body.print-brief .stats, body.print-brief .human, body.print-brief ul.print-only + p { display: none !important; }
     body.print-brief .brief-only { display: block; }
     body.print-brief { line-height: 1.4; }
     body.print-brief h2 { font-size: 13pt; margin: 8pt 0 2pt; }
@@ -494,38 +512,14 @@
 <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="3" y="24" width="26" height="4" rx="1" fill="currentColor"/><path d="M6 24V13l10-8 10 8v11" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
 <h1><span class="topbar-name">Motouke Navi</span><span class="topbar-sub">(はじめての元請けの確認ツール)</span></h1>
 <p id="print-head" class="print-only" data-version="{{VERSION}}"></p>
+<button type="button" id="ref-open" class="topbar-link no-print">使った資料</button>
 </div></header>
 <div class="wrap page">
 <details class="notice-more no-print" id="notice-more" hidden><summary><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 5.5v6M10 14v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>指摘の候補です。最終の確認は担当者と発注者との協議で行ってください<span class="notice-more-open">(くわしく)</span></span></summary></details>
 <p class="disclaimer" id="disclaimer"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 5.5v6M10 14v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>指摘の候補です。抜けが無いことの保証や合否ではありません。最終の確認は担当者と発注者との協議で行ってください</span></p>
 <div class="lead" id="lead">
 <p>工事の条件から要るものと段取りを、台帳・目次から抜けの候補を、根拠の条つきで出します。</p>
-<details id="can-do-more"><summary>このツールでできること</summary>
-<ul id="can-do">
-<li>工事の条件から、受注したら要るもの(許可・技術者・施工体制台帳など)と受注後の段取りを、根拠の条つきで出す</li>
-<li>施工体制台帳を貼ると、抜け・食い違いの候補を根拠の条つきで出す</li>
-<li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
-</ul>
-</details>
 </div>
-<p class="scope-not-line" id="scope-not-line"><strong>見ていない法令・資料があります</strong>(条例・契約書・特記仕様書・省令など)。別に確かめてください。</p>
-<details class="scope" id="scope"><summary>このツールが見ている法令・資料と、見ていない法令・資料(一覧)</summary>
-<div class="scope-cols">
-<div><p><strong>このツールが見ている法令・資料</strong>(取り込んだ条と節だけ)</p>
-{{SCOPE}}
-</div>
-<div><p><strong>見ていない法令・資料</strong>(結果に入っていないので、別に確かめてください)</p>
-<ul id="scope-not">
-<li>都道府県・市町村の条例・規則・要綱</li>
-<li>工事の契約書・請負契約約款</li>
-<li>発注者の特記仕様書・現場説明書・質問回答書</li>
-<li>自治体・民間の発注者の共通仕様書・要領(段取りは国の直轄の例)</li>
-<li>工種の欄で「この工種の仕様書は見ていない」と出る工種の仕様書</li>
-<li>国土交通省令(建設業法施行規則など。発注者が確認できる措置の中身など。施行規則 第14条の2 第1項(台帳の記載事項)は取り込み、台帳の記載事項の表に使っています。第2項〜第4項は見ていません)</li>
-<li>取り込んだ条より外の条(労働安全衛生法のほかの条を含む)と、ほかの法令(建築基準法など)</li>
-</ul></div>
-</div>
-</details>
 <main id="main">
 <div class="start no-print" id="start">
 <div class="progress no-print" id="progress">
@@ -545,10 +539,20 @@
 <button type="button" id="entry-bid" class="entry-button"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M6 26l1.5-6L22 5.5l4.5 4.5L12 24.5zM19 8.5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">条件を入れる</span><span class="btn-sub">工事の条件を手で入れる</span></button>
 <button type="button" id="entry-intake" class="entry-button drop-tile" data-drop="intake-load"><svg class="entry-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4h11l6 6v18H8zM19 4v6h6M16.5 14v9M12.5 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-main">公告を読み込む</span><span class="btn-sub">公告の PDF か、AI がまとめた条件のファイル(.json)を選ぶ</span></button>
 </div>
-<p class="entry-aside"><button type="button" id="entry-awarded" class="entry-link">もう受注した方は段取りの一覧へ</button></p>
+<p class="entry-aside"><button type="button" id="entry-awarded" class="entry-link">もう受注した方は段取りの一覧へ</button><button type="button" id="entry-tools" class="entry-link">文の置き換え(別の道具)</button></p>
 </div>
 </div>
+<details class="fold" id="entry-more"><summary>くわしく</summary>
+<div id="can-do-more"><p class="can-do-head"><strong>このツールでできること</strong></p>
+<ul id="can-do">
+<li>工事の条件から、受注したら要るもの(許可・技術者・施工体制台帳など)と受注後の段取りを、根拠の条つきで出す</li>
+<li>施工体制台帳を貼ると、抜け・食い違いの候補を根拠の条つきで出す</li>
+<li>施工計画書の目次を貼ると、共通仕様書の記載事項のうち見当たらない項目を候補として出す</li>
+</ul>
+</div>
+<p class="scope-not-line" id="scope-not-line"><strong>見ていない法令・資料があります</strong>(条例・契約書・特記仕様書・省令など)。別に確かめてください。</p>
 <p class="no-print note" id="offline-note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの端末の中だけで扱います。</p>
+</details>
 <p id="drop-status" class="no-print" aria-live="polite"></p>
 <section id="panel-1" hidden><div class="pg" id="pg-1">
 <section id="bid">
@@ -814,7 +818,7 @@
 </section>
 <p class="note no-print" id="panel-3-print-note">紙や PDF にするときは、「戻る」で「結果」のページに戻り、「全部を印刷する」を押してください。この書類の点検の結果も入ります。</p>
 </div></section>
-<section id="panel-tools"><div class="pg" id="pg-tools">
+<section id="panel-tools" hidden><div class="pg" id="pg-tools">
 <details class="other-tools" id="other-tools">
 <summary class="no-print"><h2>ここからは別の道具</h2><span class="other-tools-sub">A 文の置き換え・B AI の候補の読み込み</span></summary>
 <p class="no-print">A・B は、「結果」と「書類」の画面(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
@@ -912,13 +916,32 @@
 </section>
 </details>
 </div></section>
+<section id="panel-ref" hidden><div class="pg" id="pg-ref">
+<h2 class="no-print" id="ref-title" tabindex="-1">使った資料</h2>
+<div class="ref-frame" id="ref-frame">
+<details class="scope" id="scope"><summary>このツールが見ている法令・資料と、見ていない法令・資料(一覧)</summary>
+<div class="scope-cols">
+<div><p><strong>このツールが見ている法令・資料</strong>(取り込んだ条と節だけ)</p>
+{{SCOPE}}
+</div>
+<div><p><strong>見ていない法令・資料</strong>(結果に入っていないので、別に確かめてください)</p>
+<ul id="scope-not">
+<li>都道府県・市町村の条例・規則・要綱</li>
+<li>工事の契約書・請負契約約款</li>
+<li>発注者の特記仕様書・現場説明書・質問回答書</li>
+<li>自治体・民間の発注者の共通仕様書・要領(段取りは国の直轄の例)</li>
+<li>工種の欄で「この工種の仕様書は見ていない」と出る工種の仕様書</li>
+<li>国土交通省令(建設業法施行規則など。発注者が確認できる措置の中身など。施行規則 第14条の2 第1項(台帳の記載事項)は取り込み、台帳の記載事項の表に使っています。第2項〜第4項は見ていません)</li>
+<li>取り込んだ条より外の条(労働安全衛生法のほかの条を含む)と、ほかの法令(建築基準法など)</li>
+</ul></div>
+</div>
+</details>
 <section id="sources">
 <h2>使った法令と資料(取得日)</h2>
 <div id="sources-dates">
 {{SOURCES}}
 </div>
 </section>
-</main>
 <footer id="credits">
 <h2>使った資料の表示</h2>
 <p>この画面の判定には、国土交通省「建設業許可事務ガイドライン」(https://www.mlit.go.jp/totikensangyo/const/content/001860019.pdf)の一部(【その他】２.「請負代金の額」等の内容について)を使っています。公共データ利用規約(第1.0版)(PDL1.0)に従って利用しています。</p>
@@ -928,6 +951,9 @@
 <p>法令の条文は e-Gov 法令 API(https://laws.e-gov.go.jp/)から取得したものです。</p>
 <p id="tool-version">道具の版 {{VERSION}}</p>
 </footer>
+</div>
+</div></section>
+</main>
 </div>
 <nav class="no-print" id="pager" aria-label="ページの移動" hidden>
 <button type="button" id="pg-back">戻る</button>

@@ -215,8 +215,8 @@ test('F54b: 2つの注記は phone-only と no-print を持ち、決まった位
   }
 });
 
-test('F54b: #drop-status は入口の通信しない注記の下にある空の欄で、紙に出さない', () => {
-  assert.match(html, /この端末の中だけで扱います。<\/p>\n<p id="drop-status" class="no-print" aria-live="polite"><\/p>\n<section id="panel-1" hidden>/);
+test('F54b: #drop-status は入口の「くわしく」の下にある空の欄で、紙に出さない', () => {
+  assert.match(html, /この端末の中だけで扱います。<\/p>\n<\/details>\n<p id="drop-status" class="no-print" aria-live="polite"><\/p>\n<section id="panel-1" hidden>/);
   assert.match(css, /p\[aria-live\]:not\(:empty\)/);
 });
 

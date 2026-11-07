@@ -165,8 +165,8 @@ test('画面を動かす: 未回答と「分からない」を残して確認す
   assert.match(page.text('open-items'), /未回答\(0問\)/);
 });
 
-test('冒頭に「このツールが見ている法令・資料」と「見ていない法令・資料」', () => {
-  const head = body.split('<main')[0];
+test('使った資料のページに「このツールが見ている法令・資料」と「見ていない法令・資料」', () => {
+  const head = body.slice(body.indexOf('<section id="panel-ref"'));
   const seen = head.match(/<ul id="scope-seen">([\s\S]*?)<\/ul>/)[1];
   for (const s of sourcesData.sources) assert.ok(seen.includes(s.title.replace(/&/g, '&amp;')), '見ている法令に無い: ' + s.id);
   const not = text(head.match(/<ul id="scope-not">([\s\S]*?)<\/ul>/)[1]);

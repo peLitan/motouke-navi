@@ -76,9 +76,7 @@ test('今の段だけ aria-current: 入口でも印が付き、確かめは条�
 
 test('別の道具のページでは、どの段にも印を付けない。入口に戻ると入口に印が付く', async () => {
   const page = runPage(html);
-  const tools = page.el('other-tools');
-  tools.open = true;
-  tools.dispatchEvent({ type: 'toggle', bubbles: false });
+  await page.click('entry-tools');
   assert.equal(page.el('pg-tools').hidden, false, '別の道具のページが開いていない');
   assert.deepEqual(current(page), []);
   await page.click('pg-back');

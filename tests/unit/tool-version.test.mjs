@@ -30,7 +30,7 @@ test('版: 番号を shell.html に書かず、plugin.json の1か所から入�
 test('版: 画面の足は出典の表示の下、印刷の頭は上の帯の中で、紙にだけ出す', () => {
   assert.ok(body.indexOf('id="tool-version"') > body.indexOf('e-Gov 法令 API'));
   assert.ok(body.indexOf('id="tool-version"') < body.indexOf('</footer>'));
-  assert.match(body, /<\/h1>\s*<p id="print-head" class="print-only" data-version="[^"]+"><\/p>\s*<\/div><\/header>/);
+  assert.match(body, /<\/h1>\s*<p id="print-head" class="print-only" data-version="[^"]+"><\/p>\s*<button type="button" id="ref-open" class="topbar-link no-print">使った資料<\/button>\s*<\/div><\/header>/);
 });
 
 test('印刷の頭: ボタンで版と日時を描き、PC の時計の時刻で書く(UTC ではない)', async () => {
