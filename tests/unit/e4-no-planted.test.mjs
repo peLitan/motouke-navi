@@ -253,7 +253,8 @@ test('文書: README 手順4 に E4 の1行があり、claude plugin eval の命
   const lines = read('README.md').split('\n');
   const step4 = lines.slice(lines.findIndex((l) => l.startsWith('4. Claude Code があれば')), lines.indexOf('## できること'));
   const e4 = step4.filter((l) => l.includes('E4'));
-  assert.ok(e4.some((l) => l.startsWith('   - E4(仕込みの無い書類で言い切らないか)も走ります。') && l.includes('未測')), e4.join('\n'));
+  // F85m: 走らせたので値と版に替えた
+  assert.ok(e4.some((l) => l.startsWith('   - E4(仕込みの無い書類で言い切らないか)も走ります。') && !l.includes('未測') && l.includes('17b7bc2') && l.includes('合格')), e4.join('\n'));
   const cmd = lines.filter((l) => l.includes('claude plugin eval plugin'));
   assert.equal(cmd.length, 1);
   for (const w of ['e4', '--case', '--ablation none']) assert.equal(cmd[0].includes(w), false, w);

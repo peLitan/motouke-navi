@@ -613,15 +613,18 @@ test('文書: 評価.md の 7 の表に E3 の行が版の印と値つきであ�
   assert.equal(SECTION7.includes('E1 と E2 の両方が走ります'), false);
 });
 
-test('文書: README 手順4 に E3 が走ることと未測があり、overview の評価の行と manual に E3 がある', () => {
+test('文書: README 手順4 に E3 が走ることと値と版があり、overview の評価の行と manual に E3 がある', () => {
   const readme = read('README.md');
   const line = readme.split('\n').find((l) => l.includes('E3(公告の拾い)も走ります'));
   assert.ok(line);
-  assert.ok(line.includes('未測'));
+  // F85m: 走らせたので値と版に替えた。差が 0 のまま「合格」とだけ書かないことも見る
+  assert.equal(line.includes('未測'), false);
+  for (const w of ['17b7bc2', '2026-11-07', '合格', '0.00', '手順の最後の行は3回とも落ち']) assert.ok(line.includes(w), w);
   assert.ok(readme.indexOf(line) > readme.indexOf('claude plugin eval plugin'));
   assert.ok(readme.indexOf(line) < readme.indexOf('## できること'));
   const row = read('docs/overview.md').split('\n').find((l) => l.startsWith('| 評価 `plugin/evals/` |'));
-  assert.ok(row.includes('E3(bid-intake)は未測'));
+  assert.equal(row.includes('未測'), false);
+  for (const w of ['17b7bc2', 'E1 不合格', 'E2 不合格', 'E3(bid-intake)合格', 'E4 合格']) assert.ok(row.includes(w), w);
   assert.equal(row.split(' | ').length, 4);
   assert.ok(read('docs/manual.md').includes('`E3-bid-intake/`'));
 });

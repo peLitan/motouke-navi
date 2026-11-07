@@ -128,7 +128,7 @@ test('動画に無い行が4つの仕組みを指し、開く記録と残りの�
   assert.ok(r[4].includes('動画には無い。ここで確かめる'));
   for (const s of ['check_articles', '公式の評価', 'Stop の hook', 'refuter']) assert.ok(r[4].includes(s), s);
   assert.equal(section.split('動画には無い').length - 1, 1);
-  for (const s of ['「走らせた記録」', 'docs/評価.md', 'plugin/skills/construction-check/SKILL.md']) assert.ok(r[1].includes(s), s);
+  for (const s of ['「走らせた記録」', 'docs/評価.md', 'plugin/skills/construction-check/SKILL.md', 'plugin/hooks/hooks.json']) assert.ok(r[1].includes(s), s);
   const record = read('docs/development.md');
   for (const [, n] of r[3].matchAll(/残 (\d+)/g)) assert.ok(record.includes(`| 残 ${n} |`), n);
   assert.match(r[3], /残 \d+/);
@@ -160,4 +160,70 @@ test('本文に使わない語が無く、評価・画面なし・mask-rate の�
   assert.ok(fractions.every((f) => ['7/8', '8/8'].includes(f)), fractions.join(' '));
   for (const line of section.split('\n')) if (/[78]\/8/.test(line)) assert.ok(line.includes('古い組'));
   assert.ok(row('試行錯誤')[3].includes('5→7→9'));
+});
+
+// F85m: 表の下の1行。節の本文の決まり(上の試験)で、点の形の数は書かない。E3 の差は「差 0」と書く
+const EVAL_VERSION = '17b7bc2';
+const afterTable = above.split('\n').slice(above.split('\n').lastIndexOf(tableLines.at(-1)) + 1).filter((l) => l.trim());
+const evalLine = afterTable[0] ?? '';
+
+test('F85m: 表のすぐ下の1行に、新しい組の判定と版と評価の文書へのリンクがある', () => {
+  assert.equal(afterTable.length, 1, afterTable.join('\n'));
+  for (const w of ['E1 不合格', 'E2 不合格', 'E3 合格(差 0)', 'E4 合格', '判定役の検査だけ', '測った範囲で 0', `版 ${EVAL_VERSION}`, '2026-11-07']) {
+    assert.ok(evalLine.includes(w), w);
+  }
+  assert.ok(evalLine.includes('手順の最後の行は3回とも落ち'), '差の無い合格だけを書かない');
+  assert.ok(linkTargets(evalLine).includes('docs/評価.md'), evalLine);
+  assert.ok(evalLine.includes('評価.md#7-'), '7 の節へのリンク');
+});
+
+test('F85m: 版を書いた所に plugin/ の差が空であることが添えてあり、git でも空(.git の無い写しでは git を見ない)', (t) => {
+  const NOTE = `\`git diff ${EVAL_VERSION} HEAD -- plugin/\` が空`;
+  assert.ok(evalLine.includes(NOTE));
+  const evalSection = readme.split('\n').find((l) => l.startsWith('- 公式の評価 `claude plugin eval`:')) ?? '';
+  assert.ok(evalSection.includes(NOTE));
+  const row = read('docs/overview.md').split('\n').find((l) => l.startsWith('| 評価 `plugin/evals/` |')) ?? '';
+  assert.ok(row.includes(NOTE));
+  let out;
+  try {
+    out = execFileSync('git', ['diff', '--stat', EVAL_VERSION, 'HEAD', '--', 'plugin/'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    t.skip('git で版を読めない');
+    return;
+  }
+  assert.equal(out, '', '版より後に plugin/ を変えたら、この文を書き直す');
+});
+
+test('F85m: 冒頭の版は評価を走らせた版より後(.git の無い写しでは見ない)', (t) => {
+  const hash = section.match(COUNTED)[1];
+  assert.notEqual(hash, 'eb63e28');
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', EVAL_VERSION, hash], { cwd: ROOT, stdio: 'ignore' });
+  } catch (e) {
+    if (e.status === 1) assert.fail(`${hash} は ${EVAL_VERSION} より後の版でない`);
+    t.skip('git で版を読めない');
+  }
+});
+
+test('F85m: Stop の置き場の語が実物と合う(hooks.json にあり、SKILL.md の frontmatter に無い)', () => {
+  const r = row('動画に無い');
+  assert.equal(r[1].includes('frontmatter'), false, r[1]);
+  assert.ok(r[1].includes('`plugin/hooks/hooks.json`(Stop の置き場)'));
+  assert.ok(Array.isArray(JSON.parse(read('plugin/hooks/hooks.json')).hooks.Stop));
+  const front = read('plugin/skills/construction-check/SKILL.md').split('---')[1];
+  assert.equal(/^hooks:/m.test(front), false);
+});
+
+test('F85m: 手順4・評価の節・overview の新しい組の所に「未測」が残っていない', () => {
+  const lines = readme.split('\n');
+  const step4 = lines.slice(lines.findIndex((l) => l.startsWith('4. Claude Code があれば')), lines.indexOf('## できること'));
+  assert.equal(step4.join('\n').includes('未測'), false);
+  const evalSection = lines.find((l) => l.startsWith('- 公式の評価 `claude plugin eval`:'));
+  assert.equal(evalSection.includes('未測'), false);
+  const overview = read('docs/overview.md').split('\n');
+  const item = overview.find((l) => l.startsWith('4. 公式の `claude plugin eval`'));
+  assert.equal(item.includes('未測'), false);
+  assert.ok(item.includes(EVAL_VERSION));
+  const conditions = overview.find((l) => l.startsWith('| MCP `check_conditions` |'));
+  assert.equal(conditions.includes('まだ走らせていない'), false);
 });
