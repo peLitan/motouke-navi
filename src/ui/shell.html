@@ -533,6 +533,10 @@
     /* ページも同じ(F86a)。画面の枠の中で縦に動かす決まりは紙で外す */
     .pg[hidden], #panel-ref[hidden], #panel-tools[hidden] { display: block; }
     .pg { overflow: visible; }
+    /* 法令の一覧は紙の後ろに動いた(F86c)。全部の紙の枚数を前より増やさないよう、この一覧の余白だけを詰める(F87d)。字と行間は変えない */
+    #scope p, #scope li { margin: 0; padding: 0; }
+    #scope ul { margin: 0; padding-left: 1rem; }
+    .scope-cols { gap: 0 0.5rem; }
     .result, .form { border: none; padding: 0; }
     .table-scroll { overflow: visible; }
     .table-scroll table.checklist-table { min-width: 0; }
