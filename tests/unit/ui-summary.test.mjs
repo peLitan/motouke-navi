@@ -89,7 +89,7 @@ test('renderSummary: 件数・一覧・台帳の候補・目次の抜け・入�
   const order = ['項目A', '項目D', '項目B', '項目C'].map((l) => out.indexOf('>' + l + '</a>'));
   assert.ok(order.every((v, i) => v > 0 && (i === 0 || v > order[i - 1])), '一覧の順が違う');
   for (const k of ['a', 'b', 'c', 'd']) assert.ok(out.includes('href="#bid-item-' + k + '"'));
-  for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'check-result', 'plan-result']) assert.ok(out.includes('href="#' + id + '"'), 'リンクが無い: ' + id);
+  for (const id of ['open-items', 'taicho-result', 'schedule-result', 'check-result', 'plan-result']) assert.ok(out.includes('href="#' + id + '"'), 'リンクが無い: ' + id);
   assert.ok(/抜け・食い違いの候補 3件、判断できない 1件/.test(text));
   assert.ok(/記載項目の抜けの候補 2件/.test(text));
   assert.ok(text.includes('作らなくてよい') && text.includes('3件'));
@@ -236,7 +236,7 @@ test('次にすること: 誤り・条件の変更・元請けの実績・未回
   assert.deepEqual(go(renderResultTop({ bid: PRIME_BID })), PRIME_NEXT);
   assert.deepEqual(go(renderResultTop({ bid: TOP_BID, values: {} })).slice(1), ['bid-form']);
   assert.match(go(renderResultTop({ bid: TOP_BID, values: {} }))[0], /^次にすること: 未回答の質問 \d+つに答える$/);
-  const check = renderResultTop({ bid: TOP_BID });
+  const check = renderResultTop({ bid: { ...TOP_BID, checks: [{ key: 'a', label: '<確かめる>', message: '文' }] } });
   assert.deepEqual(go(check), ['次にすること: 確認が要る点 1件を確かめる', 'open-items']);
   assert.ok(check.includes('&lt;確かめる&gt;') && !check.includes('<確かめる>'));
   assert.deepEqual(go(renderResultTop({ bid: { ...TOP_BID, checks: [] } })), ['次にすること: 書類を確かめる', 'panel-3']);

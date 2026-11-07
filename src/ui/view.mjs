@@ -36,18 +36,18 @@ export function basisList(list = []) {
   return '<details class="basis"><summary>根拠: ' + basisLabels(list) + '</summary>' + basisItems(list) + '</details>';
 }
 
-// 確認が要る点の1行。根拠のある点(専任の確認。F62a)は、文の下に条番号と抜き書きの折りたたみを添える
+// 確認が要る点の1行。根拠のある点(専任の確認。F62a)は、文の下に条番号と抜き書きの折りたたみを添える。
+// items を渡すと、項目のカードと同じ根拠の折りたたみは紙にだけ出す(画面に同じ見出しを2回出さない)
 const pointBasis = (c) => (c.basis?.length ? '<details class="basis"><summary>根拠を見る: ' + basisLabels(c.basis) + '</summary>' + basisItems(c.basis) + '</details>' : '');
-const pointLine = (c) => '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + pointBasis(c) + '</li>';
+function pointLine(c, items = []) {
+  const sameBasis = c.basis?.length && items.some((it) => it.basis?.length && basisLabels(it.basis) === basisLabels(c.basis));
+  return '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + (sameBasis ? '<div class="print-only">' + pointBasis(c) + '</div>' : pointBasis(c)) + '</li>';
+}
 // 同じ文の2回目から画面に出す参照の1行(F83a12)。文そのものは .print-only・.print-inline で紙にだけ残す(紙は節ごとに読むので変えない)
 export const seeAbove = (name, id) => '<a class="see-above" href="#' + esc(id) + '">→ 上の「' + esc(name) + '」を見てください</a>';
-// 入札前の確認の中の1行。1件目の文は「次にすること」のカードに同じ文が出ている間だけ参照に替える(#bid-result の first-point-above。app.mjs が付け外す)。
-// 条件が変わるとカードの文が替わるので、描き直さずに文へ戻せるよう両方を持つ。項目のカードと同じ根拠の折りたたみは紙にだけ出す
-function bidPointLine(c, i, items) {
-  const text = i === 0 ? '<span class="point-full">' + esc(c.message) + '</span><span class="point-ref no-print">' + seeAbove('次にすること', 'result-top') + '</span>' : esc(c.message);
-  const sameBasis = c.basis?.length && items.some((it) => it.basis?.length && basisLabels(it.basis) === basisLabels(c.basis));
-  return '<li><strong>' + esc(c.label) + '</strong>: ' + text + (sameBasis ? '<div class="print-only">' + pointBasis(c) + '</div>' : pointBasis(c)) + '</li>';
-}
+const seeBelow = (name, id) => '<a class="see-below" href="#' + esc(id) + '">→ 下の「' + esc(name) + '」を見てください</a>';
+// 結果の最後の一覧の名前。確認が要る点の全文の置き場で、ほかの節はこの名前で指す(F85a)
+const OPEN_ITEMS_TITLE = '確認が要る点と未回答の質問';
 
 function exceptionList(list = []) {
   if (!list.length) return '';
@@ -120,7 +120,7 @@ export function renderBidResult(bid, values) {
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
   const checks = points.length
-    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<p class="points-note" id="bid-checks">' + BADGE_NOTE + '</p><ul class="checks">' + points.map((c, i) => bidPointLine(c, i, bid.items)).join('') + '</ul>'
+    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<p class="points-note" id="bid-checks">' + BADGE_NOTE + '</p><p class="no-print">' + seeBelow(OPEN_ITEMS_TITLE, 'open-items') + '</p><div class="print-only"><ul class="checks">' + points.map((c) => pointLine(c)).join('') + '</ul></div>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
   // 労務費と処遇の候補(F50a): 上の「確認が要る点」の件数には混ぜない
   const dutyList = bid.duties ?? [];
@@ -139,11 +139,11 @@ export function renderBidResult(bid, values) {
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
 }
 
-// 結果の最後の一覧(F14f): 「確認が要る点」と「未回答」。印刷にも出す
+// 結果の最後の一覧(F14f): 「確認が要る点」と「未回答」。印刷にも出す。確認が要る点の全文は画面でもここに出す(F85a。「確認が要る点を見る」・数のカード・項目のリンクの行き先)
 export function renderOpenItems(bid, values = {}) {
   const o = openItems(bid, values);
   const need = o.needsCheck.length
-    ? '<p class="no-print">' + seeAbove('入札前の確認', 'bid-checks') + '</p><div class="print-only"><ul class="open-checks">' + o.needsCheck.map(pointLine).join('') + '</ul></div>'
+    ? '<ul class="open-checks">' + o.needsCheck.map((c) => pointLine(c, bid.items)).join('') + '</ul>'
     : '<p>ありません(入れた条件の範囲で。このツールが見ていない法令・資料の確認は別に要ります)。</p>';
   const known = o.unknown.length
     ? '<p>「分からない」を選んだ質問: ' + o.unknown.map((q) => esc(q.name) + (q.items.length ? '(使う項目: ' + esc(q.items.join('・')) + ')' : '')).join('、') + '。この質問を使う項目は「確認が要る」にしています。</p>'
@@ -151,7 +151,7 @@ export function renderOpenItems(bid, values = {}) {
   const un = o.unanswered.length
     ? '<ul class="open-unanswered">' + o.unanswered.map((q) => '<li><strong>' + esc(q.name) + '</strong>' + (q.items.length ? ' — この質問に答えると決まることがある項目: ' + esc(q.items.join('・')) : '') + '</li>').join('') + '</ul>'
     : '<p>ありません。</p>';
-  return '<h3 id="open-items-title">確認が要る点と未回答の質問</h3>'
+  return '<h3 id="open-items-title">' + OPEN_ITEMS_TITLE + '</h3>'
     + '<h4>確認が要る点(' + o.needsCheck.length + '件)</h4>' + need + known
     + '<h4>未回答(' + o.unanswered.length + '問)</h4>' + un;
 }
@@ -469,14 +469,8 @@ function nextStep(state, points, un) {
   // 元請けの実績の知らせは法令の項目ではないので checks の最後にあるが、参加の条件なので未回答より先に出す(F62a)。参加できないとは言い切らない(F49)
   if ((state.bid?.checks ?? []).some((c) => c.key === PRIME_CHECK_KEY)) return { title: '元請けとしての施工実績が参加の条件です', sub: '公告の抜き書きを確かめ、認められる実績の範囲を発注者の公告と説明書で確かめてください。', href: 'open-items', go: '確認が要る点を見る' };
   if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '1 条件に戻る' };
-  if (points.length) return { title: '確認が要る点 ' + points.length + '件を確かめる', sub: points[0].label + ': ' + points[0].message, href: 'open-items', go: '確認が要る点を見る', showsPoint: true };
+  if (points.length) return { title: '確認が要る点 ' + points.length + '件を確かめる', sub: '1件目: ' + points[0].label, href: 'open-items', go: '確認が要る点を見る' };
   return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '3 書類を確かめる' };
-}
-// 「次にすること」のカードが確認が要る点の1件目の文を出しているか(F83a12)。出している間は、入札前の確認の1件目を参照の1行にする
-export function nextShowsPoint(state = {}) {
-  if (state.errors?.length || !state.bid) return false;
-  const vals = state.values ?? null;
-  return nextStep(state, needsCheckPoints(state.bid, vals ?? undefined), vals ? unansweredQuestions(vals) : []).showsPoint === true;
 }
 export function renderResultTop(state = {}) {
   const errors = state.errors?.length > 0;
@@ -523,7 +517,7 @@ export function renderSummary(state = {}) {
       + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
       + '<ul class="summary-items print-only">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
         .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
-      + (points.length ? '<p><a href="#bid-result">確認が要る点 ' + points.length + '件</a>を入札前の確認の欄に出しています。<span class="print-inline">' + esc(pointsNote(points)) + '</span></p>' : ''));
+      + (points.length ? '<p><a href="#open-items">確認が要る点 ' + points.length + '件</a>を「' + OPEN_ITEMS_TITLE + '」に出しています。<span class="print-inline">' + esc(pointsNote(points)) + '</span></p>' : ''));
   } else {
     parts.push('<h4>受注したら要るもの</h4><p>' + NOT_YET('確認する') + '</p>');
   }

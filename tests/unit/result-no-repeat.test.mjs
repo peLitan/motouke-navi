@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildHtml } from '../../build.mjs';
 import { runPage } from '../acceptance/_helpers.mjs';
-import { renderBidResult, renderOpenItems, renderResultTop, nextShowsPoint } from '../../src/ui/view.mjs';
+import { renderBidResult, renderOpenItems, renderResultTop } from '../../src/ui/view.mjs';
 import { SAMPLE } from '../../src/sample.mjs';
 import { readBidForm } from '../../src/ui/form.mjs';
 import { bidCheck } from '../../src/bid-check.mjs';
@@ -67,6 +67,7 @@ async function samplePage() {
   return page;
 }
 const SEE_ABOVE = /→ 上の「[^」]+」を見てください/;
+const SEE_BELOW = /→ 下の「[^」]+」を見てください/;
 const bid = () => bidCheck(readBidForm(SAMPLE.form));
 
 test('見本の結果: 画面に見える文で、20字以上の同じ文が2回以上出ない', async () => {
@@ -84,17 +85,23 @@ test('この試験の数え方: 外した文は数えず、見える文の重な
   assert.equal(visibleText('<p class="no-print">画面だけ</p><p class="print-only">紙</p>', { paper: true }).trim(), '紙');
 });
 
-test('確認が要る点の一覧は、2回目の節で参照の1行になる。行き先は入札前の確認の見出し', () => {
+test('確認が要る点の文は最後の一覧に全文で出て、入札前の確認の節は参照の1行になる。行き先は最後の一覧', () => {
   const b = bid();
-  const open = renderOpenItems(b, SAMPLE.form);
-  const shown = visibleText(open);
-  assert.ok(shown.includes('→ 上の「入札前の確認」を見てください'), shown);
-  assert.equal(shown.match(new RegExp(SEE_ABOVE.source, 'g')).length, 1, '1行にする');
-  assert.ok(open.includes('href="#bid-checks"'));
-  assert.match(renderBidResult(b, SAMPLE.form), /<h3>確認が要る点\(\d+件\)<\/h3>(<p class="points-note">[^<]*<\/p>)?<p class="points-note" id="bid-checks">/);
-  for (const c of b.checks) assert.ok(!shown.includes(c.message.slice(0, 20)), c.label);
+  const shown = visibleText(renderOpenItems(b, SAMPLE.form));
+  const out = renderBidResult(b, SAMPLE.form);
+  const section = visibleText(out);
+  assert.ok(section.includes('→ 下の「確認が要る点と未回答の質問」を見てください'), section);
+  assert.equal(section.match(new RegExp(SEE_BELOW.source, 'g')).length, 1, '1行にする');
+  assert.ok(out.includes('href="#open-items">→ 下の「'));
+  assert.ok(!SEE_ABOVE.test(shown), shown);
+  assert.match(out, /<h3>確認が要る点\(\d+件\)<\/h3>(<p class="points-note">[^<]*<\/p>)?<p class="points-note" id="bid-checks">/);
+  for (const c of b.checks) {
+    assert.ok(shown.includes(c.message), c.label);
+    assert.ok(!section.includes(c.message.slice(0, 20)), c.label);
+  }
   // 件数の見出しは画面に残す
   assert.match(shown, /確認が要る点\(\d+件\)/);
+  assert.match(section, /確認が要る点\(\d+件\)/);
 });
 
 test('確認が要る点が無ければ、参照の行は出さない', () => {
@@ -125,36 +132,27 @@ test('画面と紙の決まり: .print-inline と .print-only は画面で隠し
   const paper = css.slice(at);
   assert.match(screen, /\.print-only \{ display: none; \}/);
   assert.match(screen, /\.print-inline \{ display: none; \}/);
-  assert.match(screen, /\.point-ref \{ display: none; \}/);
-  assert.match(screen, /#bid-result\.first-point-above \.point-full \{ display: none; \}/);
-  assert.match(screen, /#bid-result\.first-point-above \.point-ref \{ display: inline; \}/);
   assert.match(paper, /\.print-only \{ display: block; \}/);
-  assert.match(paper, /\.print-inline, #bid-result\.first-point-above \.point-full \{ display: inline; \}/);
+  assert.match(paper, /\.print-inline \{ display: inline; \}/);
   assert.match(paper, /\.no-print \{ display: none !important; \}/);
 });
 
-test('1件目の文: カードに同じ文が出ている間は参照で、条件が変わってカードの文が替わると文へ戻る', async () => {
+test('1件目の文: カードには出さず最後の一覧に出て、条件が変わってカードの文が替わっても最後の一覧に残る', async () => {
   const page = await samplePage();
-  const box = page.el('bid-result');
+  const open = page.el('open-items');
   const first = bid().checks[0];
   assert.ok(page.el('result-top').innerHTML.includes('確認が要る点'));
-  assert.equal(box.classList.contains('first-point-above'), true);
-  const above = visibleText(box.innerHTML, { pointAbove: true });
-  assert.ok(above.includes('→ 上の「次にすること」を見てください'), above.slice(0, 400));
-  assert.ok(!above.includes(first.message));
-  assert.ok(box.innerHTML.includes('href="#result-top"'));
+  assert.ok(!page.el('result-top').innerHTML.includes(first.message));
+  assert.ok(visibleText(open.innerHTML).includes(first.message));
   page.set('orderer', 'private');
   const input = page.el('orderer');
   input.dispatchEvent?.({ type: 'change', target: input, bubbles: true });
   const stale = page.el('result-top').innerHTML.includes('もう一度「確認する」を押す');
-  if (stale) {
-    assert.equal(box.classList.contains('first-point-above'), false, '条件が変わったのに参照のまま');
-    assert.ok(visibleText(box.innerHTML).includes(first.message));
-  }
+  if (stale) assert.ok(visibleText(open.innerHTML).includes(first.message), '条件が変わったら文が消えた');
   assert.ok(stale, '条件を変えたあとのカードの形を確かめられなかった');
 });
 
-test('nextShowsPoint: カードが点の文を出すときだけ true', () => {
+test('次にすることのカードは、どの状態でも点の文を出さない', () => {
   const b = bid();
   const top = (state) => renderResultTop(state).includes(b.checks[0].message);
   const cases = [
@@ -165,18 +163,16 @@ test('nextShowsPoint: カードが点の文を出すときだけ true', () => {
     { bid: { ...b, checks: [...b.checks, { key: 'prime-experience', label: 'x', message: 'y' }] }, values: SAMPLE.form },
     { bid: { ...b, checks: [] }, values: SAMPLE.form },
   ];
-  assert.deepEqual(cases.map(nextShowsPoint), [true, false, false, false, false, false]);
-  assert.deepEqual(cases.map(top), [true, false, false, false, false, false]);
-  assert.equal(nextShowsPoint({}), false);
+  assert.deepEqual(cases.map(top), [false, false, false, false, false, false]);
 });
 
-test('項目のカードと同じ根拠の折りたたみは画面で1回。別の根拠の点は画面に残す', () => {
-  const out = renderBidResult(bid(), SAMPLE.form);
-  const shown = visibleText(out, { pointAbove: true });
+test('項目のカードと同じ根拠の折りたたみは画面で1回。別の根拠の点は最後の一覧に残す', () => {
+  const open = renderOpenItems(bid(), SAMPLE.form);
+  const shown = visibleText(renderBidResult(bid(), SAMPLE.form)) + '\n' + visibleText(open);
   const labels = shown.split('\n').filter((l) => l.startsWith('根拠を見る: '));
   assert.equal(new Set(labels).size, labels.length, '同じ根拠の見出しが2回ある');
-  assert.ok(labels.some((l) => l.includes('監理技術者制度運用マニュアル')), '別の根拠の点の折りたたみが消えた');
-  assert.equal(out.split('<div class="print-only"><details class="basis">').length - 1, 1);
+  assert.ok(visibleText(open).split('\n').some((l) => l.startsWith('根拠を見る: ') && l.includes('監理技術者制度運用マニュアル')), '別の根拠の点の折りたたみが消えた');
+  assert.equal(open.split('<div class="print-only"><details class="basis">').length - 1, 1);
 });
 
 test('要る項目の決まった文は画面では節の頭の1回で、カードごとの文は紙に残す', () => {

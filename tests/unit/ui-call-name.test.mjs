@@ -34,7 +34,7 @@ test('見本の結果: 数のカード・節・まとめの文・次にするこ
   assert.equal(card[2], '確認が要る点');
   assert.equal(r.bid.match(/確認が要る点\((\d+)件\)/)?.[1], card[1]);
   assert.equal(r.open.match(/確認が要る点\((\d+)件\)/)?.[1], card[1]);
-  assert.equal(r.summary.match(/確認が要る点 (\d+)件 ?を入札前の確認の欄に出しています/)?.[1], card[1]);
+  assert.equal(r.summary.match(/確認が要る点 (\d+)件 ?を「確認が要る点と未回答の質問」に出しています/)?.[1], card[1]);
   assert.ok(r.top.includes('確認が要る点 ' + card[1] + '件を確かめる'), r.top);
   assert.ok(Number(card[1]) > 0, '見本で点が出ない形では呼び方を見られない');
 });

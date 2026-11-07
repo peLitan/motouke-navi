@@ -6,7 +6,7 @@ import { bidCheck, dedicatedThreshold, sharedSiteLimit, kanjiYen } from '../../s
 import { checkTaicho } from '../../src/check-taicho.mjs';
 import { checkQuote } from '../../src/quote-check.mjs';
 import { bidCheckRows, bidRows, toCsv } from '../../src/export.mjs';
-import { basisLabel, renderOpenItems, renderResultTop } from '../../src/ui/view.mjs';
+import { basisLabel, renderOpenItems } from '../../src/ui/view.mjs';
 import quotesData from '../../data/quotes.json' with { type: 'json' };
 import sourcesData from '../../data/sources/index.json' with { type: 'json' };
 import { buildHtml } from '../../build.mjs';
@@ -22,7 +22,6 @@ const SPECIAL = '特例があります。この道具は特例を判定してい
 const CANNOT = /兼ねる特例は使えません/;
 const ARTICLE = /第\s*[0-9０-９一二三四五六七八九十百]+\s*[条項号]|施行令|建設業法/;
 const NEW_QUOTES = ['q-rei-27-1-2', 'q-rei-27-1-3', 'q-rei-15-1', 'q-rei-15-3', 'q-rei-28', 'q-rei-30', 'q-kensetsu-26-5'];
-const nextSub = (bid) => renderResultTop({ bid }).match(/<p class="next-sub">([\s\S]*?)<\/p>/)[1];
 
 test('根拠: 公共でも民間でも足した抜き書きがすべて basis にあり、原文の項・号の中にある', () => {
   const texts = Object.fromEntries(sourcesData.sources.filter((s) => s.file).map((s) => [s.id, read('data/sources/' + s.file)]));
@@ -55,12 +54,11 @@ test('特例の金額と現場の数: 原文の漢数字から読み、コード
   assert.doesNotMatch(code, /[12]億円|[12]つの現場|100_000_000 *[;,)]|200_000_000/);
 });
 
-test('請負代金 45,000,000・公共: 副題と確認が要る点と CSV の行に特例の一文がある', () => {
+test('請負代金 45,000,000・公共: 確認が要る点の全文の置き場と CSV の行に特例の一文がある', () => {
   const bid = bidCheck(input(45_000_000));
-  const sub = nextSub(bid);
-  assert.ok(sub.includes(SPECIAL), sub);
-  assert.ok(sub.includes('請負代金が1億円未満(建築一式は2億円未満)などの条件を満たすと、2つの現場まで兼ねられる'), sub);
-  assert.ok(renderOpenItems(bid, {}).includes(SPECIAL));
+  const open = renderOpenItems(bid, {});
+  assert.ok(open.includes(SPECIAL), open);
+  assert.ok(open.includes('請負代金が1億円未満(建築一式は2億円未満)などの条件を満たすと、2つの現場まで兼ねられる'), open);
   const row = bidCheckRows(bid).find((r) => r[1] === '技術者を専任で置く必要があるか');
   assert.equal(row[0], '確認が要る点');
   assert.ok(row[3].includes(SPECIAL));
@@ -129,11 +127,12 @@ test('項が1つの印は足した4件だけで、ほかの条番号の書き方
   assert.equal(basisLabel({ law: '建設業法施行令', article: '2', paragraph: 1, item: null }), '建設業法施行令 第2条第1項');
 });
 
-test('組み立てた画面: 見本の「次にすること」の副題に、確かめることと特例の文が出る', async () => {
+test('組み立てた画面: 見本の「次にすること」の飛び先に、確かめることと特例の文が出る', async () => {
   const page = runPage(buildHtml());
   await page.click('sample-load');
   await page.click('confirm-go');
-  const sub = page.el('result-top').innerHTML.match(/<p class="next-sub">([\s\S]*?)<\/p>/)[1];
-  assert.match(sub, /^技術者を専任で置く必要があるか: 公告で、発注者が国か地方公共団体か/);
-  assert.ok(sub.includes('この道具は特例を判定していません。'), sub);
+  const top = page.el('result-top').innerHTML;
+  const open = page.el(top.match(/class="next-go" href="#([\w-]+)"/)[1]).innerHTML;
+  assert.match(open, /<strong>技術者を専任で置く必要があるか<\/strong>: 公告で、発注者が国か地方公共団体か/);
+  assert.ok(open.includes('この道具は特例を判定していません。'), open);
 });

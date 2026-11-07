@@ -104,7 +104,7 @@ test('隠す規則が前提にする HTML の形: まとめの結びの文と、
   const page = body.replace(/<script\b[\s\S]*?<\/script>/g, '');
   assert.equal((page.match(/<ul\b[^>]*print-only/g) ?? []).length, 0, '静的な HTML に ul.print-only を足すと次の段落も隠れる');
   assert.match(out, /<ul class="summary-items print-only">/);
-  assert.match(out, /<\/ul><p><a href="#bid-result">確認が要る点 /);
+  assert.match(out, /<\/ul><p><a href="#open-items">確認が要る点 /);
   assert.match(out, /<p class="human">まとめは下の各結果の数を並べたものです。/);
 });
 

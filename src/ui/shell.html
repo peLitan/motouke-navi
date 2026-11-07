@@ -238,11 +238,6 @@
   .print-only { display: none; }
   .print-inline { display: none; }
   .brief-only { display: none; }
-  /* 同じ文の2回目は画面では参照の1行(F83a12)。1件目は「次にすること」に同じ文が出ている間だけ参照に替える */
-  .point-ref { display: none; }
-  #bid-checks { scroll-margin-top: 3.5rem; } /* 飛んだとき、すぐ上の見出しも見えるように */
-  #bid-result.first-point-above .point-full { display: none; }
-  #bid-result.first-point-above .point-ref { display: inline; }
   .sign-table { border-collapse: collapse; width: 100%; }
   .sign-table th, .sign-table td { border: 1px solid var(--line-strong); padding: 0.5rem; height: 2.5rem; text-align: left; }
   .sign-table th { width: 8rem; }
@@ -424,7 +419,7 @@
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
     .print-only { display: block; }
-    .print-inline, #bid-result.first-point-above .point-full { display: inline; }
+    .print-inline { display: inline; }
     #print-head { margin: 0 0 0 auto; }
     .sign-off { break-inside: avoid; margin-top: 1.5rem; }
     /* まとめの紙(F66c)。print-brief は「PDF で保存・印刷」の間だけ body に付くので、全部の紙とブラウザのメニューからの印刷は変わらない。rem は紙の字の大きさに連動しないので pt で書く */

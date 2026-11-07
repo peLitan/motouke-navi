@@ -34,7 +34,7 @@ test('見本: 画面の結果に ✕ が出ず、印は ●。「確認が要る
   const sum = plain(renderSummary({ values, bid }));
   assert.match(sum, /● 要る 6項目/);
   assert.match(sum, /! 確認が要る 0項目/);
-  assert.match(sum, /確認が要る点 2件を入札前の確認の欄に出しています。このうち 2件は、結論の出た項目の中で確かめる点です。/);
+  assert.match(sum, /確認が要る点 2件を「確認が要る点と未回答の質問」に出しています。このうち 2件は、結論の出た項目の中で確かめる点です。/);
   const out = renderBidResult(bid, values);
   assert.ok(!(out + renderSummary({ values, bid })).includes('✕'));
   assert.match(out, /<h3>確認が要る点\(2件\)<\/h3><p class="points-note">このうち 2件は、結論の出た項目/);
