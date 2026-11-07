@@ -146,7 +146,8 @@ export function decideCandidate(doc, word, value) {
   const list = doc.getElementById('dict-list');
   if (list) list.innerHTML = renderTerms(m.terms());
   // 長い文では置き換えが後で走るので、知らせはその後に書く(先に書くと置き換えが消す)
-  const done = () => setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し、置き換え直しました。');
+  // 欄が空なら置き換え直していない(F84b)
+  const done = () => setText(doc, 'mask-candidate-status', '「' + word + '」を' + m.labelOf('company') + 'として足し' + (last ? '、置き換え直しました。' : 'ました。もう一度「置き換える」を押すと使います。'));
   const later = runMask(doc);
   if (later) later.then(done); else done();
   return true;
@@ -217,9 +218,22 @@ export function runMask(doc) {
     }, 0);
   });
 }
+// 文が空のまま押したとき(F84b)。段3 の「＊ 台帳の文が空です。」と同じ形で知らせ、前の結果を消す。
+// 見本の確かめと残りの点検は走らせない。対応表と足した語は消さない(「元に戻す」は使える)
+const MASK_EMPTY_NOTICE = '＊ 置き換える文が空です。';
+function showEmptyInput(doc) {
+  last = null;
+  lastDecoy = null;
+  renderDecisions(doc);
+  for (const id of ['mask-before', 'mask-after', 'mask-decoy', 'mask-candidate-status']) setText(doc, id, '');
+  const mapEl = doc.getElementById('mask-map');
+  if (mapEl) mapEl.innerHTML = '';
+  setText(doc, 'mask-status', MASK_EMPTY_NOTICE);
+}
 function runMaskNow(doc) {
-  const m = getMasker();
   const text = valueOf(doc, 'mask-input');
+  if (text.trim() === '') { showEmptyInput(doc); return; }
+  const m = getMasker();
   const amounts = valueOf(doc, 'mask-amounts') === 'band' ? 'band' : 'keep';
   const { nums, bad } = parseThresholds(valueOf(doc, 'mask-thresholds'));
   const notes = [];
