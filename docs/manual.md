@@ -171,6 +171,7 @@ Skill `bid-intake` は公告の文の中から額を探すので、読み方が�
 - Skill の手順では、MCP の道具 `check_conditions`(引数 `data` と `files`)が同じ処理を呼びます。原文は道具が読むので、Claude が写した文は照合に入りません。読めない原文(空のファイルを含む)が1つでもあれば全体を断ります。`files` は 50 ファイルまでです
 - 端末で使うときの別の道: `node plugin/skills/bid-intake/scripts/check-conditions.mjs <拾った条件.json> <原文のファイル ...> --out <画面用.json> --md <表.md>` でも照らせます。`--out` で画面に入れるファイルを、`--md` で表を書き出します
 - PDF の公告: Skill は PDF を Read で開きません(頁の画像も渡るため)。`node plugin/skills/bid-intake/scripts/pdf-to-text.mjs <公告.pdf> --out <公告.txt>` で文にしてから読み、`check_conditions` にも作った `.txt` を渡します。読むのは文字の入った PDF だけです(30MB まで)
+- PDF の公告を走らせた結果(版 17b7bc2): 架空の PDF で2回とも、Claude は Read でなく `pdf-to-text.mjs` を含む Bash を呼びました。ただし `ls`・`mkdir` などを繋いだ複合の命令が許可の形に合わず断られ、スクリプトは動いていません。`check_conditions` までの通しは見ていません。公開の公告の PDF では試していません
   - 書く文: UTF-8 で、頁の間に `―― n頁 ――` の行を入れます。この行は道具が入れた区切りなので、抜き書きに入れません。見えない字は入れません。字の対応表が制御文字に当てた字は空白にします
   - 文字の無い頁があるときは、読めた頁を書き、読めない頁の数と番号を標準エラーに言います。文字の入っていない・保護のかかった・文字に戻せない・壊れた PDF は `.txt` を書かず、理由と次の手を言って終了コード 1 で終わります
   - パスのどこかに `raw` の部分があれば(大文字小文字を問わず、リンクの実体も)読みません。文にすると、置き換えていない文が `raw/` の外に出るためです。`--out` も `raw/` の下にはできません
@@ -512,7 +513,7 @@ Anthropic の公式ページ(2026-11-02 に確認)によると、API に送っ�
 ## Claude で点検(画面なしの Claude Code)
 Claude Code を画面なしで動かす入口です。`scripts/claude-headless.mjs` が `claude -p --plugin-dir plugin` を動かし、下の「Claude Code のプラグイン」の Skill `construction-check` と反証の係 `refuter` で書類を点検します。API の鍵ではなく、Claude Code のログインで動きます。
 
-**走らせた記録(2026-11-05、版 156b15c、作る係とは別の担当。F56a で替えた後の版の走らせは、下の表に統括が足す)**: 評価のケース E1 の架空の書類2件を `raw/` に置いた作業フォルダで、下の手順3のとおり走らせました。
+**走らせた記録(2026-11-05、版 156b15c、作る係とは別の担当。F56a で替えた後の版の走らせは、下の表)**: 評価のケース E1 の架空の書類2件を `raw/` に置いた作業フォルダで、下の手順3のとおり走らせました。
 
 | 見たこと | 結果 |
 |---|---|
@@ -523,10 +524,18 @@ Claude Code を画面なしで動かす入口です。`scripts/claude-headless.m
 
 この回の元の名前の数と費用は受け取っていません。
 
-F56a で替えた後の版の走らせ(値は統括が足す):
+F56a で替えた後の版の走らせ:
 
 | 版 | 日時 | 往復 | 秒 | 費用 | 道具の呼び出し(主と係を分けて名前ごと) | 断られた道具 | 係の本文の有無 | plugin_errors | mcp_servers | Stop の催促 |
 |---|---|---|---|---|---|---|---|---|---|---|
+| 17b7bc2 | 2026-11-07 15:45〜15:53 | 23 | 483 | $1.75 | 主: Skill 1・ToolSearch 2・list_masked 1・Read 9・Bash 1・read_masked 2・check_articles 2・Agent 2・SendMessage 1/係: read_masked 4・check_articles 2 | なし | あり(4件) | 欄なし(無いとき省かれる) | masked-files connected、claude.ai Claude Docs pending | 0(記録が無く、動けない) |
+
+この回は opus で走りました。費用は記録の見積もりで、実際の請求の額ではありません。
+
+- 流れ: Skill → read_masked → check_articles → refuter → 答え、の順に動きました。候補19件のうち 残る17・崩れた2 です。`SendMessage` は記録が無く再開できずに失敗したので、係をもう1回呼びました
+- 許可を渡さない `-p`: 入口を通さず `claude --plugin-dir plugin -p` だけで走らせた回は、Skill の後の Read・Bash・`list_masked` が断られ、書類を読めず点検まで進みませんでした(21秒・$0.18)
+- Stop の催促が 0 なのは、入口の `--no-session-persistence` で記録のファイルが無く、`check-done` が動けなかったためです。旗の有無だけを変えて比べた2回のうち、旗を外した回(sonnet・80秒+23秒・$0.42)では催促が1回出ました
+- **この値は旗を付けた今の入口の値です。旗は外さないことにしたので、旗を外した入口では走らせていません。** 上の旗を外した回は、確かめのために別に走らせた物です
 
 **最初の記録(2026-11-04 22時台、作る係とは別の担当)**: 同じ書類で、同じ手順で走らせました。
 
@@ -543,7 +552,7 @@ F56a で替えた後の版の走らせ(値は統括が足す):
 
 最初の記録の後、Skill `construction-check` の手順に「`check-articles.mjs` は単独で呼び、別の命令をつながない」と書きました(許す道具と見張りの決まりは変えていません)。上の版 156b15c の回では、この手順のとおり条番号の確かめが動きました。
 
-その後、F56a で手順の確かめを道具 `check_articles` に替えたので、今の手順に Bash の命令はありません。上の2つの回は替える前の版で、替えた後の版ではこの入口を走らせていません。
+その後、F56a で手順の確かめを道具 `check_articles` に替えたので、今の手順に Bash の命令はありません。版 156b15c と最初の記録の回は替える前の版で、替えた後の版の回は上の表の1回です。
 
 1. Claude Code を入れて、`claude auth login` でログインする
 2. 空の作業フォルダを作り、点検する書類を `raw/` に置く(作業フォルダはこのリポジトリの `plugin/` の外にする。重ねると止まります)
@@ -553,15 +562,15 @@ F56a で替えた後の版の走らせ(値は統括が足す):
 - `--help` で使い方が出ます(`claude` は動きません)。知らない引数と値の無い指定は、何も書かずに終了コード 2 で止まります。`node scripts/sync-plugin.mjs --help` も同じです
 - `--doc` を省くと、`raw/` の書類すべてを点検します
 - `--log` を省くと、記録は作業フォルダの `headless-logs/<日時>.jsonl` に残ります。記録は `--output-format stream-json` の出力そのままです。同じ名前のファイルがあれば止まり、上書きしません。`raw/` の中には置けません
-- `--max-budget-usd` の既定は 3 です。1回の点検にかかる額は測っていません
+- `--max-budget-usd` の既定は 3 です。架空の書類 E1 の2件でかかった額は上の表のとおりで、ほかの書類の額は測っていません
 - 係の本文は `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` で記録に残します(公式の headless のページの「Follow subagent messages」)。記録の `parent_tool_use_id` がある行を係の分として、道具の呼び出しを主と係の中に分けて数えます
 - 読み込みの失敗(記録の init の `plugin_errors`・`mcp_servers`)は黙って進まず `ok: false` にし、「注意:」を出して終了コードを 1 にします(同じページの「Fail CI when a plugin or MCP server doesn't load」)。`plugin_errors` があるとき、`mcp_servers` に名前に `masked-files` を含む物が無いとき、その状態が `failed`・`needs-auth`・`disabled` のときです。`pending` は注意だけで、`mcp_servers` の無い記録では確かめません
 
 ### 絞っていること
 - 鍵: `ANTHROPIC_API_KEY`・`ANTHROPIC_AUTH_TOKEN` を外してから `claude` を動かします。端末に鍵が入っていても送られません。記録の `apiKeySource` が `none` でなければ注意を出します
 - 道具: `--permission-mode dontAsk` で、`--allowedTools` に挙げた物のほかは断ります。挙げたのは、Skill `construction-check`、`read_masked`・`list_masked`・`check_articles`、係 `refuter`、Skill のフォルダの読み取り、作業フォルダの `tmp/` の読み書きです。`Bash` は挙げていません(F56a で、条番号の確かめを `check-articles.mjs` の実行から道具 `check_articles` に替えました)
-- 二重の守り: `--disallowedTools` が断るのは、`Read`・`Edit` の `raw/` への操作と、`WebFetch`・`WebSearch` です。`Bash` などほかの道具はこの指定の範囲の外で、上の `--allowedTools` に無いので断られます。プラグインは権限の決まりを配れませんが、この入口ではコマンドの指定で渡せます。プラグインのフックも同時に働きます
-- 保存: `--no-session-persistence` で Claude Code のセッションを保存しません。残るのは上の記録だけです
+- 二重の守り: `--disallowedTools` が断るのは、`Read`・`Edit` の `raw/` への操作と、`WebFetch`・`WebSearch` です。`Bash` などほかの道具はこの指定の範囲の外で、上の `--allowedTools` に無いので断られます。ただし `dontAsk` でも、許した Read の範囲のフォルダへの `ls`・`wc` は通りました(上の表の Bash。`raw/` は見ていません)。`cd … && cat …` は断られました。プラグインは権限の決まりを配れませんが、この入口ではコマンドの指定で渡せます。プラグインのフックも同時に働きます
+- 保存: `--no-session-persistence` で Claude Code のセッションを保存しません。残るのは上の記録だけです。そのため、この入口では Stop の見張りが動きません(「手順の抜けの催促の限界」)
 
 ### API の版との違い
 | | API の版(`tools/claude-check.mjs`) | 画面なしの版(`scripts/claude-headless.mjs`) |
@@ -689,7 +698,7 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 読み込ませて確かめたこと(2026-11-03。架空の書類 A の施工体制台帳だけを `raw/` に置いた作業フォルダで、`claude --plugin-dir` で開いた。1回だけで、ほかの書類では確かめていない):
 - `raw/` の Read: 人が画面で頼み、フックに止められ、`read_masked` で記号に置き換わった中身が返った
 - Skill: 同じ頼みを `claude -p --plugin-dir` で回し、記録(stream-json)で見た。Skill `motouke-navi-guard:construction-check` が呼ばれ、`read_masked` で読み、`reference/sources/` の原文を根拠に指摘の候補を10件出した。`check-articles.mjs` では条番号30件のうち「ある」26・「無い」3・「確かめられない」1だった(候補の中身が正しいかは数えていない)
-- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた。この確かめは Skill の手順に係を呼ぶことを書く前のもの。書いた後の手順で走らせた結果は、上の「走らせた記録(2026-11-05、版 156b15c、作る係とは別の担当。F56a で替えた後の版の走らせは、下の表に統括が足す)」にある(元の18件のうち 残る 15・崩れた 2・確かめられない 1)
+- 反証の係: Agent `motouke-navi-guard:refuter` が呼ばれ、係の中の道具は `read_masked` だけだった(Read は使っていない)。10件のうち1件を「確かめられない」として外し、新しい点(台帳の作成日が下請契約日より前)を1件挙げた。この確かめは Skill の手順に係を呼ぶことを書く前のもの。書いた後の手順で走らせた結果は、上の「走らせた記録(2026-11-05、版 156b15c、作る係とは別の担当。F56a で替えた後の版の走らせは、下の表)」にある(元の18件のうち 残る 15・崩れた 2・確かめられない 1)
 
 確かめた公式のページ(Claude Code の文書。取得日 2026-11-03。作る係の環境からは開けなかったので、作る係とは別の進行役が別の環境で開いて要点を渡した。題名は受け取っていないので URL の末尾の名前で示す):
 - plugins/manifest-reference https://code.claude.com/docs/en/plugins/manifest-reference.md (plugin.json の置き場と必須の項目、`${CLAUDE_PLUGIN_ROOT}` などの変数)
@@ -707,7 +716,8 @@ Claude Code で書類を点検するときに、`raw/` に置いた生のファ�
 - 記録の遅れ: 会話の記録は非同期に書かれ、Stop の時点で今のターンの分がまだ無いことがあります。`read_masked` の呼び出しがまだ記録に無ければ、催促は出ません。係の呼び出しがまだ記録に無ければ、係を呼んだあとでも、数を書いた返事に1回催促が出ます(催促の文に、記録の遅れで見えないだけならそのまま終えるよう書いています)。返事の文は記録でなく Stop の入力の `last_assistant_message` から読みます
 - 余分に出るとき: 手順の途中で利用者に聞いて止まったとき、数を表の列など別の書き方で書いたとき、点検のあとに別の話をしたとき(記録に `read_masked` が残るので)は、1回余分に催促が出ることがあります。Skill を呼ばず `read_masked` を直に呼んだ会話でも、手順6・7 の催促が出ます。公式の説明では hook は plugin が有効な間は登録されるので、点検のあとの別の話では、返事ごとに出ることもあります。催促が出ると、`claude -p` や評価の回では1ターン増えます。評価の回で催促のあとに係を呼ぶと、係の呼び出しを見る検査は、手順でなく催促で呼んだ分でも通ることがあり、最後の返事は催促のあとの返事になります
 - 置き場: Stop は公式の既定の置き場 `hooks/hooks.json` に置きました(plugin が有効な間は登録され、Skill を呼んだかに左右されない。Skill の frontmatter から移した)。plugin を読み込んだ全部の会話で走りますが、記録に `read_masked` が無ければ何もしません。登録は /hooks で確かめます(まだ確かめていません)。置き場と登録の時は、公式の Plugin manifest reference https://code.claude.com/docs/en/plugins-reference と Hooks reference https://code.claude.com/docs/en/hooks によります(2026-11-06 に設計の係が開いた。作る係は開いていません)
-- 確かめたこと: 判断の関数の試験(`tests/unit/check-done.test.mjs`)と、合成の記録を渡して端末で動かした確かめ(F56b の6通りと、F80a の9通り: 係を `Agent`・`Task` で呼んだ記録と数、係の無い記録と数、数なし、読めない記録、`read_masked` の無い記録、見直しなしの語、`stop_hook_active`、壊れた入力。どちらも1回)だけです。Claude Code に読み込ませて動かしてはいません
+- 画面なしの入口: `scripts/claude-headless.mjs` は `--no-session-persistence` を付けるので、会話の記録のファイルが作られません。`check-done` は記録を読めず何もしないので(上の「入力や記録が読めないとき」)、この入口では、催促が要る場面でも催促は出ません。記録を残せば催促は動きますが(「走らせた記録」の下)、記録には置き換えた後の書類の中身が入ります。使う人の書類を手元に残さない方を取り、旗は外していません
+- 確かめたこと: 判断の関数の試験(`tests/unit/check-done.test.mjs`)と、合成の記録を渡して端末で動かした確かめ(F56b の6通りと、F80a の9通り: 係を `Agent`・`Task` で呼んだ記録と数、係の無い記録と数、数なし、読めない記録、`read_masked` の無い記録、見直しなしの語、`stop_hook_active`、壊れた入力。どちらも1回)です。Claude Code に読み込ませて動かしたのは版 17b7bc2 の確かめの回で、sonnet の1回で催促の文が届きました(「走らせた記録」の下)。opus で催促が出る場面は見ていません
 
 ## Claude Code での作り方
 この節に書く仕組み(自走キット・hook・subagent・機能の一覧)は、開始前に作ったもので、このリポジトリには入っていません(審査の対象外です)。作品の働きの説明ではなく、作り方の記録として書いています。
