@@ -72,7 +72,8 @@
   .warning-box { border: 3px solid var(--line-strong); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 0.75rem 1rem; font-weight: bold; }
   .note { border-left: 4px solid var(--line); padding: 0.25rem 0 0.25rem 0.75rem; margin: 0.5rem 0; color: var(--ink-2); }
   .req { font-size: 1rem; font-weight: bold; margin-left: 0.25rem; white-space: nowrap; }
-  .req-must { color: var(--need); }
+  /* 必須の札(F83a15): 色のほかに「必須」の文字と枠で示す。赤の「要る」「失敗」と見分ける。※任意は札にしない */
+  .req-must { color: var(--need); border: 1px solid var(--need-line); border-radius: 8px; padding: 0 0.25rem; }
   .req-optional { color: var(--ink-2); }
   .form-lead { margin: 0.25rem 0 0.75rem; }
   .row { margin: 0.5rem 0; }
@@ -169,6 +170,8 @@
   .sample-banner p[aria-live]:not(:empty) { border: none; padding: 0; margin: 0.25rem 0; font-weight: normal; }
   /* 失敗の知らせ(F58a): 左線と字を「要る」の色にする。線と文の頭の語でも分かるので、色だけには頼らない */
   p[aria-live][data-kind="error"]:not(:empty) { border-left-color: var(--need); color: var(--need); }
+  /* 失敗の印(F83a15): 文は変えず、頭に印と語を足す。赤の「要る」(●)・必須の札と、色のほかでも見分ける。印刷でも残す。入力が空の知らせ(F83a2)と「条件が変わりました」は失敗ではないので付けない */
+  [data-kind="error"]:not(:empty)::before, .fail-head::before, .field-error::before, .summary-error::before, span.errors::before { content: "× 失敗: "; font-weight: bold; }
   /* 空の状態の文(F38d): 結果と見分ける */
   .result > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   .result-plain > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }

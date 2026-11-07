@@ -187,7 +187,7 @@ export function renderEmptyInput(text) {
 }
 
 export function renderErrors(list) {
-  return '<div class="errors"><p>入力を読めませんでした。直してからもう一度押してください。</p><ul>' + list.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
+  return '<div class="errors"><p class="fail-head">入力を読めませんでした。直してからもう一度押してください。</p><ul>' + list.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
 }
 
 // 知らせの行に書く件数(F57)。結果の枠には aria-live を付けないので、数はこの行で伝える。数え方はまとめの表と同じ
