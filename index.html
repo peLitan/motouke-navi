@@ -302,6 +302,8 @@
   /* 四角の印とラベルの行も、押せる高さにする */
   .check-row { display: flex; align-items: center; min-height: 2.75rem; }
   .check-row > input { flex: none; }
+  /* 印の行の説明の折りたたみ(F84d): 名前が長いと折りたたみも縮むので、見出しは折り返さない。幅 40rem 以下では行の下に回す */
+  .check-row > details > summary { white-space: nowrap; }
   /* 表(F38c): 見出しの下は黒い 2px、行は灰色の 1px。数の列(.num)は右寄せ。幅 40rem 以下の段取りの表はカード */
   table { border-collapse: collapse; }
   th { text-align: left; vertical-align: bottom; padding: 0.5rem 0.5rem; border-bottom: 2px solid var(--line-strong); }
@@ -347,6 +349,10 @@
     #next-step-3, #confirm-go { width: 100%; margin: 0; }
     .confirm-row { grid-template-columns: minmax(0, 1fr) auto; }
     .confirm-row dt { grid-column: 1 / -1; }
+    /* 説明の折りたたみを持つ印の行(F84d): 折りたたみは行の下に回す。名前の基準の幅を 0 にして、長い名前が印の次の行へ落ちないようにする */
+    .row.check-row { flex-wrap: wrap; }
+    .row.check-row > label { flex: 1 1 0; }
+    .row.check-row > details { flex: 0 0 100%; }
     /* 進み具合(F43a): 字は 16px のまま3つの段を等しい幅に分け、丸の下に名前を全部出す(長い名前は2行に折り返す)。線は丸と丸の間に描く */
     .steps { align-items: flex-start; }
     .steps li { position: relative; flex: 1 1 0; min-width: 0; justify-content: center; }
