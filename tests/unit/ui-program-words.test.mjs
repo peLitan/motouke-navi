@@ -109,12 +109,12 @@ test('段3 が空: 台帳も目次も「入力を読めませんでした」を�
   await page.set('ledger-input', '');
   await page.click('ledger-run');
   const check = plain(page.el('check-result').innerHTML);
-  assert.equal(check, '台帳の文が空です。台帳を貼るか、入口の「まず見本で試す」を押してください。');
+  assert.equal(check, '台帳を貼るか、入口の「まず見本で試す」を押してください。');
   assert.equal(page.el('check-status').textContent, '＊ 台帳の文が空です。');
   await page.set('plan-input', '');
   await page.click('plan-run');
   const plan = plain(page.el('plan-result').innerHTML);
-  assert.equal(plan, '目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。');
+  assert.equal(plan, '施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。');
   assert.equal(page.el('plan-status').textContent, '＊ 目次が空です。');
   assertNoWords(check + plan + plain(page.el('checklist-result').innerHTML), '段3 の空の画面');
 });

@@ -187,7 +187,7 @@ export function renderTaichoResult(t) {
 
 // 入力が空のときの知らせ(F83a2)。読めなかったのではないので、renderErrors の見出しの文を付けない
 export function renderEmptyInput(text) {
-  return '<div class="errors"><p>' + esc(text) + '</p></div>';
+  return '<p>' + esc(text) + '</p>';
 }
 
 export function renderErrors(list) {
@@ -265,11 +265,17 @@ export function renderCheckResult(out, warnings = []) {
   const undHtml = und.length
     ? '<h3>判断できない(' + und.length + '件)</h3><ul class="undecidable">' + und.map((u) => '<li><h4>' + esc(u.target) + ' — ' + esc(fieldLabel(u.field)) + '</h4><p>' + esc(u.message) + '</p>' + basisList(u.basis ?? []) + '</li>').join('') + '</ul>'
     : '';
+  // 候補があるときは、注意を候補の後ろで閉じる(F85h)。候補が 0 件のときは、読めなかった行があるのに「候補なし」とだけ読まれないよう、開いて先頭に置く
+  const hasCand = cands.length > 0;
   const warnHtml = warnings.length
-    ? '<details class="warnings" open><summary>台帳の文を読んだときの注意(' + warnings.length + '件)</summary><ul>' + warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul></details>'
+    ? '<details class="warnings"' + (hasCand ? '' : ' open') + '><summary>台帳の文を読んだときの注意(' + warnings.length + '件)</summary><ul>' + warnings.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul></details>'
     : '';
-  const notes = (out.notes ?? []).length ? '<ul class="notes">' + out.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
-  return warnHtml + candHtml + undHtml + notes
+  const noteList = out.notes ?? [];
+  const noteItems = noteList.map((n) => '<li>' + esc(n) + '</li>').join('');
+  const notes = !noteList.length ? ''
+    : hasCand ? '<details class="notes"><summary>点検の注意(' + noteList.length + '件)</summary><ul>' + noteItems + '</ul></details>'
+    : '<ul class="notes">' + noteItems + '</ul>';
+  return (hasCand ? candHtml + undHtml + warnHtml : warnHtml + candHtml + undHtml) + notes
     + '<p class="human">指摘の候補です。台帳が正しいかの最後の判断は、契約書・下請けの書類などを確かめたうえで人がしてください</p>';
 }
 

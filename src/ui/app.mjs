@@ -689,7 +689,7 @@ export function runLedgerCheck(doc) {
   setCheckStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') {
-    outEl.innerHTML = renderEmptyInput('台帳の文が空です。台帳を貼るか、入口の「まず見本で試す」を押してください。');
+    outEl.innerHTML = renderEmptyInput('台帳を貼るか、入口の「まず見本で試す」を押してください。');
     setCheckStatus(doc, '＊ 台帳の文が空です。');
     lastChecklist = null; checklistText = null; checklistChecked.clear();
     const cl = doc.getElementById('checklist-result');
@@ -830,7 +830,7 @@ export function runPlanCheck(doc) {
   setPlanStatus(doc, '');
   const text = input ? String(input.value ?? '') : '';
   if (text.trim() === '') {
-    outEl.innerHTML = renderEmptyInput('目次が空です。施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。');
+    outEl.innerHTML = renderEmptyInput('施工計画書の目次を貼るか、入口の「まず見本で試す」を押してください。');
     setPlanStatus(doc, '＊ 目次が空です。');
     return;
   }
