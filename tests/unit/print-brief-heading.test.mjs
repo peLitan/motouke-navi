@@ -1,6 +1,7 @@
 // F84e: 「PDF で保存・印刷」のまとめの紙で、見出し「入れた条件」だけが1枚目の一番下に残り、表が次の紙へ分かれていた。
 // 見出しはまとめのカードの <summary> で、紙の切れ目は見出しと中身の間にも来られる。この間で切らない決まりを、まとめの紙だけに足す。
-// 動くのは見出しの1行だけで、表は今までどおり紙をまたげる。表ごと動かすと空きが大きくなり、3枚を超えるおそれがある。
+// F85i: 見出しの決まりだけでは紙で効かなかった(3通りの撮り方で見出しは1枚目の一番下のまま、表は2枚目から)。
+// 統括の測りで効いたのは、カードの枠に中で切らない決まりを足す形だけで、見本の条件で見出しが2枚目へ移り3枚のまま。これを足した。
 // この環境にはブラウザが無いので、切れ目の位置と枚数は測れない。CSS の決まりと、画面が出す HTML の形を確かめる
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,6 +22,7 @@ const selectorsOf = (r) => r.sel.split(',').map((s) => s.trim());
 const prop = (r, name) => r?.body.match(new RegExp('(?:^|;)\\s*' + name + '\\s*:\\s*([^;]+)'))?.[1].trim();
 
 const HEADING = 'body.print-brief details.open-card > summary';
+const CARD = 'body.print-brief details.open-card';
 const BREAK = /(?:^|;)\s*(?:page-)?break-(?:before|after|inside)\s*:/;
 const breakRules = print.filter((r) => BREAK.test(r.body));
 const inBrief = (r) => selectorsOf(r).every((s) => s.startsWith('body.print-brief '));
@@ -55,15 +57,16 @@ test('全部の紙は変えない: 切れ目の決まりで印の無いものは
   assert.ok(!parse(screen).some((r) => BREAK.test(r.body)), '画面の決まりに切れ目の指定がある');
 });
 
-test('表ごと次の紙へ動かさない: まとめの紙の切れ目の決まりは見出しの1つだけ(まとめは3枚以内のまま)', () => {
+test('見出しを表と分けない: まとめの紙の切れ目の決まりは見出しとカードの枠の2つだけ(全部の紙は変えない)', () => {
   const brief = breakRules.filter(inBrief);
-  assert.deepEqual(brief.map((r) => r.sel), [HEADING]);
-  assert.equal(brief[0].body, 'break-after: avoid;', '見出しの決まりに別の切れ目の指定が混ざった');
-  // まとめの枠と表に、中で切らない決まりが当たっていない。当たると表が丸ごと次の紙へ動き、下に大きな空きができる
+  assert.deepEqual(brief.map((r) => r.sel).sort(), [CARD, HEADING].sort());
+  assert.equal(brief.find((r) => r.sel === HEADING).body, 'break-after: avoid;', '見出しの決まりに別の切れ目の指定が混ざった');
+  assert.equal(brief.find((r) => r.sel === CARD).body, 'break-inside: avoid;', 'カードの枠の決まりに別の切れ目の指定が混ざった');
+  // カードの枠のほかに、中で切らない決まりは足さない。.open-card を全部の紙へ広げず、表や行の並びにも当てない
   const whole = /\.open-card(?! > summary)|#summary|\.summary\b|\.summary-list|\.summary-row|\.summary-table|\.table-scroll/;
   for (const r of breakRules.filter((x) => /break-inside\s*:\s*avoid/.test(x.body))) {
-    for (const s of selectorsOf(r)) assert.ok(!whole.test(s), s + ' は表を丸ごと動かす');
+    for (const s of selectorsOf(r).filter((x) => x !== CARD)) assert.ok(!whole.test(s), s + ' は中で切らない決まりをカードの枠より広く当てている');
   }
-  // 行の中で切らない決まりは今のまま tr にある。表は行の境で紙をまたげる
+  // 行の中で切らない決まりは今のまま tr にある。カードが1枚に入らないときの表は、行の境で紙をまたげる
   assert.equal(prop(print.find((r) => r.sel === 'table'), 'break-inside'), 'auto');
 });
