@@ -115,7 +115,7 @@ test('入札前の確認の入力欄に ※必須/※任意 と1行の補足が�
   for (const [id, kind] of Object.entries(need)) {
     const label = form.match(new RegExp('<label for="' + id + '">([\\s\\S]*?)</label>'))[1];
     assert.ok(label.includes('<span class="req req-' + (kind === '必須' ? 'must' : 'optional') + '">※' + kind + '</span>'), id + ' に ※' + kind + ' が無い');
-    assert.match(form, new RegExp('id="' + id + '"[^>]*aria-describedby="' + id + '-hint"'), id + ' の補足が欄とつながっていない');
+    assert.match(form, new RegExp('id="' + id + '"[^>]*aria-describedby="(?:' + id + '-plain )?' + id + '-hint"'), id + ' の補足が欄とつながっていない');
     assert.match(form, new RegExp('<p id="' + id + '-hint" class="hint">[^<]+</p>'), id + ' の補足が無い');
   }
   assert.match(form, /<legend>元請けか下請けか<span class="req req-must">※必須<\/span><\/legend>/);

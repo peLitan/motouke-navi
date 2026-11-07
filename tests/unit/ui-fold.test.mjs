@@ -76,8 +76,8 @@ test('7問と任意の欄の説明: 閉じた折りたたみの中にあり、id
   const labels = new Set();
   for (const id of ids) {
     assert.deepEqual(foldsAround(id + '-hint'), ['(id なし)'], id);
-    assert.match(form, new RegExp('aria-describedby="' + id + '-hint"'), id);
-    const m = form.match(new RegExp('<details class="fold hint-fold"><summary aria-label="([^"]+)">説明</summary><p id="' + id + '-hint" class="hint">[^<]+</p></details>'));
+    assert.match(form, new RegExp('aria-describedby="(?:' + id + '-plain )?' + id + '-hint"'), id);
+    const m = form.match(new RegExp('<details class="fold hint-fold"><summary aria-label="([^"]+)">(?:説明|くわしく)</summary><p id="' + id + '-hint" class="hint">[^<]+</p></details>'));
     assert.ok(m, id + ' の折りたたみが無い');
     labels.add(m[1]);
   }

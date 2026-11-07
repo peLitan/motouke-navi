@@ -85,10 +85,10 @@ for (const id of ['contract-amount', 'subcontract-total']) {
     assert.equal(read.hidden, false);
     assert.equal(page.el(id + '-error').hidden, true);
     assert.equal(el.hasAttribute('aria-invalid'), false);
-    assert.equal(el.getAttribute('aria-describedby'), id + '-hint ' + id + '-read');
+    assert.equal(el.getAttribute('aria-describedby'), id + '-plain ' + id + '-hint ' + id + '-read');
     typing(page, id, '1億3,420万');
     assert.equal(read.hidden, true, '打ち直している間は古い値を見せない');
-    assert.equal(el.getAttribute('aria-describedby'), id + '-hint');
+    assert.equal(el.getAttribute('aria-describedby'), id + '-plain ' + id + '-hint');
     leave(page, id);
     assert.equal(read.hidden, true, '円の無い単位は読めない');
     assert.equal(page.el(id + '-error').hidden, false);
@@ -102,7 +102,7 @@ for (const id of ['contract-amount', 'subcontract-total']) {
     await page.set(id, '134,200,000');
     assert.equal(read.hidden, true, '数字だけの値には出さない');
     assert.equal(read.textContent, '');
-    assert.equal(el.getAttribute('aria-describedby'), id + '-hint');
+    assert.equal(el.getAttribute('aria-describedby'), id + '-plain ' + id + '-hint');
   });
 }
 

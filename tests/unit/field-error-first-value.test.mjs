@@ -99,7 +99,7 @@ test('誤りの文の場所: 2つの欄の .row の中で説明より前にあ�
     assert.ok(row.includes(tag), id);
     assert.ok(row.indexOf(id + '-unknown') < row.indexOf(tag));
     assert.ok(row.indexOf(tag) < row.indexOf('<details'));
-    assert.ok(body.includes('aria-describedby="' + id + '-hint"'), id);
+    assert.ok(body.includes('aria-describedby="' + id + '-plain ' + id + '-hint"'), id);
   }
   assert.match(css, /\.field-error \{ color: var\(--need\);/);
 });
@@ -113,14 +113,14 @@ for (const id of ['contract-amount', 'subcontract-total']) {
     assert.equal(note.textContent, UNREADABLE);
     assert.equal(note.hidden, false);
     assert.equal(el.getAttribute('aria-invalid'), 'true');
-    assert.equal(el.getAttribute('aria-describedby'), id + '-hint ' + id + '-error');
+    assert.equal(el.getAttribute('aria-describedby'), id + '-plain ' + id + '-hint ' + id + '-error');
     await page.set(id, 'まだ読めない');
-    assert.equal(el.getAttribute('aria-describedby'), id + '-hint ' + id + '-error', '同じ id を重ねない');
+    assert.equal(el.getAttribute('aria-describedby'), id + '-plain ' + id + '-hint ' + id + '-error', '同じ id を重ねない');
     await page.set(id, '120,000,000');
     assert.equal(note.textContent, '');
     assert.equal(note.hidden, true);
     assert.equal(el.hasAttribute('aria-invalid'), false);
-    assert.equal(el.getAttribute('aria-describedby'), id + '-hint');
+    assert.equal(el.getAttribute('aria-describedby'), id + '-plain ' + id + '-hint');
   });
 }
 
@@ -129,7 +129,7 @@ test('誤りの文: 打っている途中には出さず、欄を離れたとき
   typing(page, 'contract-amount', 'abc');
   assert.equal(page.el('contract-amount-error').hidden, true);
   assert.equal(page.el('contract-amount').hasAttribute('aria-invalid'), false);
-  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-hint');
+  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-plain contract-amount-hint');
   leave(page, 'contract-amount');
   assert.equal(page.el('contract-amount-error').hidden, false);
   await page.set('subcontract-total', '100');
@@ -142,7 +142,7 @@ test('誤りの文: 空にすると消え、「分からない」に印を付け
   await page.set('contract-amount', 'abc');
   await page.set('contract-amount-unknown', true);
   assert.equal(page.el('contract-amount-error').hidden, true);
-  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-hint');
+  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-plain contract-amount-hint');
   await page.set('contract-amount-unknown', false);
   assert.equal(page.el('contract-amount-error').hidden, false);
   await page.set('contract-amount', '');
@@ -169,7 +169,7 @@ test('誤りの文: 「確認する」から「変更」で戻ると、欄の下
   await page.click('confirm-change-contract-amount');
   assert.equal(page.el('panel-1').hidden, false);
   assert.equal(page.el('contract-amount-error').textContent, UNREADABLE);
-  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-hint contract-amount-error');
+  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-plain contract-amount-hint contract-amount-error');
 });
 
 test('誤りの文: 公告の読み込みで読める値に置き換わると消える。読み込まなかった欄の文は残る', async () => {
@@ -193,7 +193,7 @@ test('誤りの文: 見本を入れ直すと消える', async () => {
   await page.click('sample-reenter');
   assert.equal(page.el('contract-amount-error').hidden, true);
   assert.equal(page.el('contract-amount').hasAttribute('aria-invalid'), false);
-  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-hint');
+  assert.equal(page.el('contract-amount').getAttribute('aria-describedby'), 'contract-amount-plain contract-amount-hint');
 });
 
 // (3) 未回答の札
