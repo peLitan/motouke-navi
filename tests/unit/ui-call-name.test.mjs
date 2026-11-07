@@ -81,7 +81,8 @@ test('項目の札とカード「要るものの候補」は変えない', async
   assert.equal(BID_STATUS.needs_check, '確認が要る');
   const r = await sampleResult();
   assert.ok(r.top.includes('要るものの候補'));
-  assert.ok(r.summary.includes('! 確認が要る 0'), r.summary);
+  assert.ok(!r.summary.includes('! 確認が要る'), r.summary);
+  assert.ok(renderSummary({ bid: { items: [{ key: 'a', label: '項目A', status: 'needs_check' }], checks: [] } }).includes('確認が要る'));
 });
 
 test('文書の節の名前も新しい呼び方で、前の呼び方が残らない', () => {

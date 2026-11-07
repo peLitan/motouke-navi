@@ -28,16 +28,37 @@ test('印: 要るは ×の仲間を使わず ●。4つの状態の印はどれ�
   assert.ok(statusBadge('required').includes('aria-hidden="true"'), '印を読み上げに渡している');
 });
 
-test('見本: 画面の結果に ✕ が出ず、印は ●。「確認が要る」0項目と確認が要る点 2件の違いを文で示す', () => {
+test('見本: 画面の結果に ✕ が出ず、印は ●。「確認が要る」の項目が 0 なら札を出さず、確認が要る点 2件は文で示す', () => {
   const values = SAMPLE.form;
   const bid = bidCheck(readBidForm(values));
   const sum = plain(renderSummary({ values, bid }));
   assert.match(sum, /● 要る 6項目/);
-  assert.match(sum, /! 確認が要る 0項目/);
+  assert.doesNotMatch(sum, /! 確認が要る/);
+  assert.match(sum, /✓ 要らない \d+項目/);
   assert.match(sum, /確認が要る点 2件を「確認が要る点と未回答の質問」に出しています。このうち 2件は、結論の出た項目の中で確かめる点です。/);
   const out = renderBidResult(bid, values);
   assert.ok(!(out + renderSummary({ values, bid })).includes('✕'));
   assert.match(out, /<h3>確認が要る点\(2件\)<\/h3><p class="points-note">このうち 2件は、結論の出た項目/);
+});
+
+test('まとめの札: 「確認が要る」は項目があるときだけ出す。ほかの札は 0 でも変えない', () => {
+  const item = (status) => ({ key: status, label: status, status });
+  const counts = (items) => plain(renderSummary({ bid: { items, checks: [] } }));
+  const none = counts([item('required')]);
+  assert.doesNotMatch(none, /確認が要る/);
+  assert.match(none, /● 要る 1項目/);
+  assert.match(none, /✓ 要らない 0項目/);
+  const one = counts([item('not_required')]);
+  assert.match(one, /● 要る 0項目/);
+  assert.doesNotMatch(one, /確認が要る/);
+  assert.match(counts([item('needs_check')]), /! 確認が要る 1項目/);
+  assert.match(counts([item('needs_check'), item('needs_check')]), /! 確認が要る 2項目/);
+  // 本物の判定で: 「分からない」を選んだ質問を使う項目があると札が出る
+  const values = { ...SAMPLE.form, orderer: 'unknown' };
+  const bid = bidCheck(readBidForm(values));
+  const n = bid.items.filter((it) => displayStatus(it, values) === 'needs_check').length;
+  assert.ok(n > 0, '確認が要る項目ができていない');
+  assert.ok(plain(renderSummary({ values, bid })).includes('! 確認が要る ' + n + '項目'));
 });
 
 test('数え方: まとめ・入札前の確認・最後の一覧の「確認が要る点」は、どの条件でも同じ数', () => {

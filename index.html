@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-JKml2Qw9DI8HDNsBxOWKokQBQK/7qrTiCqxXQQqzq9Q='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XaURoIXNGOVCKt9cAh7oKFNQa0+2IOlxi63tN4yOASQ='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -2036,6 +2036,7 @@ __m["src/ui/next-steps.mjs"] = (function () {
 // 「要る」の項目のカードに出す「次にすること」の文(F83a3)。
 // 文は判定の note にある語句だけで作り、期限・書類名・宛先・数字・括弧の根拠を足さない(根拠は折りたたみの中にある)。
 // 語句だけでは動作の文にならない行(note が名詞で終わる行)は、語句に「があるかを確かめる」を続けて人が書く。
+// 語句の決まりの例外は専任の1行だけ(F85g)。note の語句は判定の条件の言い方で、続けても読める文にならないので、項目の名前の語で書く(note は変えない)。
 // 1つの key に枝がいくつかあるときは、どの枝でも本当の語句だけを使う(施工体系図の掲げる場所は公共と民間で違うので、共通の語句にした)。
 // note を変えたら、ここの文も見直す(tests/unit/next-steps.test.mjs が枝を集めて照らす)。
 const NEXT_STEPS = {
@@ -2045,20 +2046,16 @@ const NEXT_STEPS = {
   'engineer:kanri': '監理技術者を置く',
   'engineer:shunin': '主任技術者を置く',
   taikeizu: '施工体系図を作り、見やすい場所に掲げる',
-  dedicated: '国又は地方公共団体が注文者に当たるものとして専任があるかを確かめる',
+  dedicated: '技術者を専任で置く必要があるかを確かめる',
 };
-
-const EXCEPTION_WORDS = /ただし|を除き|この限りでない/;
 
 // 表の引き方。監理技術者か主任技術者かは同じ項目の結論の値で分かれるので、key に値を続ける
 const stepKey = (it) => (it.value ? it.key + ':' + it.value : it.key);
 
-// 項目の文。例外があるか、note に例外を表す語があれば、文の末尾で知らせる。表に無い項目は null
+// 項目の文。表に無い項目は null。例外は行ごとに書かず、節の頭の1行で知らせる(F85g。view.mjs の stepNote)
 function nextStepText(it) {
   const key = stepKey(it);
-  if (!Object.hasOwn(NEXT_STEPS, key)) return null;
-  const hasException = (it.exceptions?.length ?? 0) > 0 || EXCEPTION_WORDS.test(it.note ?? '');
-  return NEXT_STEPS[key] + (hasException ? '(例外あり)' : '');
+  return Object.hasOwn(NEXT_STEPS, key) ? NEXT_STEPS[key] : null;
 }
 
 return { NEXT_STEPS, stepKey, nextStepText };
@@ -2337,8 +2334,12 @@ function renderBidResult(bid, values) {
   const provisional = un.length
     ? '<p class="provisional"><strong>仮の一覧です</strong>。未回答の質問が ' + un.length + 'つあります(' + esc(un.map((q) => q.name).join('・')) + ')。答えるか「分からない」を選んでから、もう一度「確認する」を押してください。</p>'
     : '';
-  // カードごとの「当てはまるかは…」は紙にだけ残し、画面では節の頭に1回だけ書く(F83a12)
-  const stepNote = rows.includes('class="item-next"') ? '<p class="points-note no-print">次にすることの行が当てはまるかは、各項目の「根拠を見る」で確かめてください。</p>' : '';
+  // カードごとの「当てはまるかは…」は紙にだけ残し、画面では節の頭に1回だけ書く(F83a12)。
+  // 例外の知らせも行ごとに書かず、ここで1回だけ。指す先の折りたたみがある行があるときだけ足す(F85g。紙では折りたたみが開くので例外の本文は残る)
+  const stepItems = bid.items.filter((it) => st(it) === 'required' && nextStepText(it));
+  const stepNote = stepItems.length
+    ? '<p class="points-note no-print">次にすることの行が当てはまるかは、各項目の「根拠を見る」で確かめてください。' + (stepItems.some((it) => it.exceptions?.length) ? '例外は「根拠を見る」の「例外・読み方の注意」にあります。' : '') + '</p>'
+    : '';
   return provisional + '<h3>受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3>' + stepNote + '<ul class="items">' + rows + '</ul>' + checks + duties + amountBasisBlock(bid.amountBasis)
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
 }
@@ -2718,7 +2719,7 @@ function renderSummary(state = {}) {
     const count = (st) => items.filter((it) => dst(it) === st).length;
     parts.push((un.length ? '<p class="provisional"><strong>仮の一覧です</strong>(未回答の質問 ' + un.length + 'つ)。<a href="#open-items">未回答の一覧</a>を見て、答えるか「分からない」を選んでください。</p>' : '')
       + '<h4>受注したら要るもの(' + items.length + '項目' + (un.length ? '・仮の一覧' : '') + ')</h4>'
-      + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
+      + '<ul class="summary-counts">' + order.filter((st) => (st !== 'unanswered' && st !== 'needs_check') || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
       + '<ul class="summary-items print-only">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
         .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
       + (points.length ? '<p><a href="#open-items">確認が要る点 ' + points.length + '件</a>を「' + OPEN_ITEMS_TITLE + '」に出しています。<span class="print-inline">' + esc(pointsNote(points)) + '</span></p>' : ''));

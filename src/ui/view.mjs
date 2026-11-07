@@ -133,8 +133,12 @@ export function renderBidResult(bid, values) {
   const provisional = un.length
     ? '<p class="provisional"><strong>仮の一覧です</strong>。未回答の質問が ' + un.length + 'つあります(' + esc(un.map((q) => q.name).join('・')) + ')。答えるか「分からない」を選んでから、もう一度「確認する」を押してください。</p>'
     : '';
-  // カードごとの「当てはまるかは…」は紙にだけ残し、画面では節の頭に1回だけ書く(F83a12)
-  const stepNote = rows.includes('class="item-next"') ? '<p class="points-note no-print">次にすることの行が当てはまるかは、各項目の「根拠を見る」で確かめてください。</p>' : '';
+  // カードごとの「当てはまるかは…」は紙にだけ残し、画面では節の頭に1回だけ書く(F83a12)。
+  // 例外の知らせも行ごとに書かず、ここで1回だけ。指す先の折りたたみがある行があるときだけ足す(F85g。紙では折りたたみが開くので例外の本文は残る)
+  const stepItems = bid.items.filter((it) => st(it) === 'required' && nextStepText(it));
+  const stepNote = stepItems.length
+    ? '<p class="points-note no-print">次にすることの行が当てはまるかは、各項目の「根拠を見る」で確かめてください。' + (stepItems.some((it) => it.exceptions?.length) ? '例外は「根拠を見る」の「例外・読み方の注意」にあります。' : '') + '</p>'
+    : '';
   return provisional + '<h3>受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3>' + stepNote + '<ul class="items">' + rows + '</ul>' + checks + duties + amountBasisBlock(bid.amountBasis)
     + '<p class="human">' + esc(bid.disclaimer) + '</p>';
 }
@@ -514,7 +518,7 @@ export function renderSummary(state = {}) {
     const count = (st) => items.filter((it) => dst(it) === st).length;
     parts.push((un.length ? '<p class="provisional"><strong>仮の一覧です</strong>(未回答の質問 ' + un.length + 'つ)。<a href="#open-items">未回答の一覧</a>を見て、答えるか「分からない」を選んでください。</p>' : '')
       + '<h4>受注したら要るもの(' + items.length + '項目' + (un.length ? '・仮の一覧' : '') + ')</h4>'
-      + '<ul class="summary-counts">' + order.filter((st) => st !== 'unanswered' || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
+      + '<ul class="summary-counts">' + order.filter((st) => (st !== 'unanswered' && st !== 'needs_check') || count(st) > 0).map((st) => '<li>' + statusBadge(st) + ' <strong>' + count(st) + '</strong>項目</li>').join('') + '</ul>'
       + '<ul class="summary-items print-only">' + items.slice().sort((a, b) => order.indexOf(dst(a)) - order.indexOf(dst(b)))
         .map((it) => '<li>' + statusBadge(dst(it), it.value && ENGINEER[it.value] ? '(' + ENGINEER[it.value] + ')' : '') + ' <a href="#' + esc(bidItemId(it.key)) + '">' + esc(it.label) + '</a></li>').join('') + '</ul>'
       + (points.length ? '<p><a href="#open-items">確認が要る点 ' + points.length + '件</a>を「' + OPEN_ITEMS_TITLE + '」に出しています。<span class="print-inline">' + esc(pointsNote(points)) + '</span></p>' : ''));

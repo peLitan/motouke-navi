@@ -14,6 +14,13 @@ import { runPage } from '../acceptance/_helpers.mjs';
 
 const CHECK_END = 'があるかを確かめる';
 const HAS_EXCEPTION = '(例外あり)';
+const HEAD_NOTE = '次にすることの行が当てはまるかは、各項目の「根拠を見る」で確かめてください。';
+const EXCEPTION_NOTE = '例外は「根拠を見る」の「例外・読み方の注意」にあります。';
+const EXCEPTION_FOLD = '<summary>例外・読み方の注意(';
+// note の語句の決まりの例外はこの1行だけ(F85g)。note の語句「国又は地方公共団体が注文者に当たるものとして専任」は判定の条件の言い方で、
+// 続けて確かめる文にしても読めなかった。項目の名前の語で書き、note と根拠の折りたたみは変えない
+const NOT_FROM_NOTE = 'dedicated';
+const DEDICATED_STEP = '技術者を専任で置く必要があるかを確かめる';
 const TAIL = '当てはまるかは「根拠を見る」で確かめてください。';
 const MIN_CHUNK = 4;
 const MAX_LENGTH = 40;
@@ -83,15 +90,22 @@ test('要るになる枝をすべて集めた: 表の key と枝の key が同�
   for (const it of REQUIRED) assert.ok(it.basis.length > 0, it.key + ' に根拠が無い');
 });
 
-test('各文は、その key の note の1つの語句を4字以上の塊でそのまま使う(「があるかを確かめる」を除く)', () => {
+test('各文は、その key の note の1つの語句を4字以上の塊でそのまま使う(「があるかを確かめる」を除く。例外は専任の1行だけ)', () => {
   for (const [key, text] of Object.entries(NEXT_STEPS)) {
     assert.ok(body(text).length > 0, key);
-    assert.ok([...NOTES.get(key)].some((note) => madeFrom(text, note)), key + ': ' + text);
+    assert.equal([...NOTES.get(key)].some((note) => madeFrom(text, note)), key !== NOT_FROM_NOTE, key + ': ' + text);
   }
 });
 
-test('文はその key のどの枝でも本当: どの note の語句でも同じ文を作れる', () => {
+test('専任の1行は項目の名前の語で書き、note の語句の例外はこの1行だけ', () => {
+  assert.equal(NEXT_STEPS[NOT_FROM_NOTE], DEDICATED_STEP);
+  // 語を入れ替えても「専任」の話のまま(どの枝の note も専任の note)
+  for (const note of NOTES.get(NOT_FROM_NOTE)) assert.match(note, /専任$/);
+});
+
+test('文はその key のどの枝でも本当: どの note の語句でも同じ文を作れる(例外は専任の1行だけ)', () => {
   for (const [key, notes] of NOTES) {
+    if (key === NOT_FROM_NOTE) continue;
     for (const note of notes) {
       // 台帳を作ることは決まっていて、写しの措置の入力だけが足りない枝。note は写しの話だけなので語句が無い
       if (key === 'taicho' && note.startsWith('写しの提出が要るかは判断できません')) continue;
@@ -122,17 +136,51 @@ test('文は「(例外あり)」を足しても40字以下', () => {
   for (const [key, text] of Object.entries(NEXT_STEPS)) assert.ok(length(text + HAS_EXCEPTION) <= MAX_LENGTH, key);
 });
 
-test('例外があるか、note に「ただし」「を除き」「この限りでない」があれば「(例外あり)」', () => {
+// 節の頭の1行(受注したら要るもの の見出しの直後)を取り出す
+const headNote = (html) => html.match(/<h3>受注したら要るもの<\/h3>(<p class="points-note no-print">[\s\S]*?<\/p>)?/)?.[1] ?? '';
+
+test('行の文に「(例外あり)」を付けない: 例外があっても無くても、note の語があっても、表の文のまま', () => {
   const item = (exceptions, note = '') => ({ key: 'taicho', exceptions, note });
-  assert.equal(nextStepText(item(['x'])), NEXT_STEPS.taicho + HAS_EXCEPTION);
+  assert.equal(nextStepText(item(['x'])), NEXT_STEPS.taicho);
   assert.equal(nextStepText(item([])), NEXT_STEPS.taicho);
   assert.equal(nextStepText({ key: 'taicho' }), NEXT_STEPS.taicho);
   for (const word of ['ただし', 'を除き', 'この限りでない']) {
-    assert.equal(nextStepText(item([], '前の文。' + word + '後の文')), NEXT_STEPS.taicho + HAS_EXCEPTION, word);
+    assert.equal(nextStepText(item([], '前の文。' + word + '後の文')), NEXT_STEPS.taicho, word);
   }
   for (const it of REQUIRED) {
     assert.ok(it.exceptions.length > 0, it.key);
-    assert.equal(nextStepText(it), NEXT_STEPS[stepKey(it)] + HAS_EXCEPTION, it.key);
+    assert.equal(nextStepText(it), NEXT_STEPS[stepKey(it)], it.key);
+  }
+  assert.ok(!buildHtml().includes(HAS_EXCEPTION));
+});
+
+test('節の頭の知らせは、例外のある行があるときだけ。行があれば前の文は残す', () => {
+  const taicho = REQUIRED.find((it) => it.key === 'taicho');
+  const plainItem = { ...taicho, key: 'taikeizu', exceptions: [] };
+  const head = (...items) => headNote(renderBidResult({ items, checks: [] }));
+  const both = '<p class="points-note no-print">' + HEAD_NOTE + EXCEPTION_NOTE + '</p>';
+  const only = '<p class="points-note no-print">' + HEAD_NOTE + '</p>';
+  assert.equal(head(taicho), both);
+  assert.equal(head(plainItem, taicho), both, '1行でも例外があれば出す');
+  assert.equal(head(plainItem), only);
+  // note に語があっても、指す先の折りたたみが無ければ書かない
+  const noFold = { ...plainItem, note: '前の文。ただし後の文' };
+  assert.ok(!renderBidResult({ items: [noFold], checks: [] }).includes(EXCEPTION_FOLD));
+  assert.equal(head(noFold), only);
+  // 次にすることの行の無い項目の例外では出さない(要らない項目・表に無い項目)
+  assert.equal(head({ ...taicho, status: 'not_required' }), '');
+  assert.equal(head({ ...taicho, key: 'no-such' }), '');
+  assert.equal(head(plainItem, { ...taicho, status: 'not_required' }), only);
+  assert.equal(head(plainItem, { ...taicho, key: 'no-such' }), only);
+});
+
+test('すべての入力の組で、節の頭の知らせは1回だけで、そのとき指す先の折りたたみが次にすることの行のカードにある', () => {
+  for (const input of INPUTS) {
+    const bid = bidCheck(input);
+    const html = renderBidResult(bid);
+    const stepCards = cards(html).filter((c) => c.html.includes('class="item-next"'));
+    const count = html.split(EXCEPTION_NOTE).length - 1;
+    assert.equal(count, stepCards.some((c) => c.html.includes(EXCEPTION_FOLD)) ? 1 : 0, JSON.stringify(input));
   }
 });
 
@@ -176,9 +224,9 @@ test('監理技術者か主任技術者かは判定の値で分ける', () => {
     return cards(renderBidResult(bid)).find((c) => c.id === bidItemId('engineer')).html;
   };
   const kanri = engineerCard(input);
-  assert.ok(kanri.includes('次にすること: ' + NEXT_STEPS['engineer:kanri'] + HAS_EXCEPTION + '。') && !kanri.includes(NEXT_STEPS['engineer:shunin']), kanri.slice(0, 300));
+  assert.ok(kanri.includes('次にすること: ' + NEXT_STEPS['engineer:kanri'] + '。') && !kanri.includes(NEXT_STEPS['engineer:shunin']), kanri.slice(0, 300));
   const shunin = engineerCard({ ...input, hasSubcontract: false });
-  assert.ok(shunin.includes('次にすること: ' + NEXT_STEPS['engineer:shunin'] + HAS_EXCEPTION + '。') && !shunin.includes(NEXT_STEPS['engineer:kanri']), shunin.slice(0, 300));
+  assert.ok(shunin.includes('次にすること: ' + NEXT_STEPS['engineer:shunin'] + '。') && !shunin.includes(NEXT_STEPS['engineer:kanri']), shunin.slice(0, 300));
 });
 
 test('すべての入力の組で、1行が出るのは「要る」の項目だけ', () => {
@@ -213,8 +261,18 @@ test('組み立てた画面: 見本の結果に全文が出る', async () => {
     '作った施工体制台帳の写しを発注者に出す',
     '監理技術者を置く',
     '施工体系図を作り、見やすい場所に掲げる',
-    '国又は地方公共団体が注文者に当たるものとして専任があるかを確かめる',
-  ].map((s) => '次にすること: ' + s + HAS_EXCEPTION + '。' + TAIL));
+    DEDICATED_STEP,
+  ].map((s) => '次にすること: ' + s + '。' + TAIL));
+  assert.ok(page.el('bid-result').innerHTML.includes('<h3>受注したら要るもの</h3><p class="points-note no-print">' + HEAD_NOTE + EXCEPTION_NOTE + '</p>'));
+});
+
+test('専任の note と根拠の折りたたみは今までどおり「根拠を見る」の中にある', () => {
+  const bid = bidCheck(readBidForm(SAMPLE.form));
+  const it = bid.items.find((x) => x.key === 'dedicated');
+  const card = cards(renderBidResult(bid, SAMPLE.form)).find((c) => c.id === bidItemId('dedicated')).html;
+  assert.ok(card.indexOf('<p class="reason"><span class="part">理由:</span> ' + it.note) > card.indexOf('<details class="basis"><summary>根拠を見る: '), card.slice(0, 500));
+  assert.match(it.note, /専任$/);
+  assert.ok(card.includes(EXCEPTION_FOLD));
 });
 
 test('後ろの決まった文は補足の色で分け、字は 16px より小さくしない', () => {
@@ -228,4 +286,6 @@ test('設計の文書: カードで見える物の書き方を直した', () => 
   const design = fs.readFileSync(new URL('../../docs/design.md', import.meta.url), 'utf8');
   assert.ok(design.includes('見えるのは結論の札と名前と、要るの項目だけ次にすることの1行'));
   assert.ok(!design.includes('見えるのは結論の札と名前だけ'));
+  assert.ok(!design.includes('末尾に「(例外あり)」'));
+  assert.ok(design.includes(EXCEPTION_NOTE));
 });
