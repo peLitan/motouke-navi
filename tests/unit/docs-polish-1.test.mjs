@@ -36,7 +36,7 @@ test('実在の公告の外れた欄: overview が評価.md の 30欄のうち1�
 
 test('積算のずれ: overview が評価.md の 9 の数を書き、測っていないと書かない', () => {
   assert.ok(!overview.includes('額のずれは測っていない'));
-  for (const n of ['-11.4%〜-0.5%', '13 種別', '0.5〜4.7%']) {
+  for (const n of ['-11.4%〜-0.5%', '12 種別', '0.5〜4.7%']) {
     assert.ok(hyouka.includes(n), n);
     assert.ok(overview.includes(n), n);
   }
