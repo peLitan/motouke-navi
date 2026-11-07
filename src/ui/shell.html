@@ -513,6 +513,9 @@
 <input type="file" id="intake-load" name="intake-load" accept=".json,application/json,.pdf,application/pdf"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="intake-status" aria-live="polite"></p>
 <div id="intake-result"></div>
+<p id="intake-save-note" class="hint">「公告の参加の条件」の欄の文をこの端末に保存します(外へは送りません)。欄が空のときは押せません。</p>
+<button type="button" id="intake-save-txt" aria-describedby="intake-save-note" disabled>公告の文を .txt で保存</button>
+<p id="intake-save-status" aria-live="polite"></p>
 </details>
 <div class="row"><label for="orderer">発注者<span class="req req-must">※必須</span></label>
 <select id="orderer" name="orderer" aria-describedby="orderer-hint">

@@ -16,7 +16,7 @@ const body = (html) => html.slice(html.indexOf('</style>'));
 
 const RESULT_BOXES = ['bid-result', 'taicho-result', 'schedule-result', 'summary', 'open-items', 'ledger-unreadable', 'check-result', 'plan-result', 'ai-result'];
 const STATUS_LINES = [
-  'bid-status', 'sample-status', 'intake-status', 'drop-status', 'rules-status', 'schedule-status', 'safety-status', 'export-status',
+  'bid-status', 'sample-status', 'intake-status', 'intake-save-status', 'drop-status', 'rules-status', 'schedule-status', 'safety-status', 'export-status',
   'ledger-file-status', 'check-status', 'checklist-status', 'plan-status', 'mask-industry-status', 'mask-file-status', 'mask-status',
   'mask-candidate-status', 'dict-status', 'dict-file-status', 'map-status', 'ai-status',
 ];

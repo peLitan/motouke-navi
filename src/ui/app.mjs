@@ -22,7 +22,7 @@ import { kindSourceText, kindTable } from '../work-kind-tables.mjs';
 import { DEFAULT_WORK_KIND, NOT_READ, ALWAYS_SHOWN, hasKindTable } from '../work-kinds.mjs';
 import { checkPlanToc } from '../plan-check.mjs';
 import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
-import { parseIntakeFile, intakeLines, pdfIntakeNotice, INTAKE_FIELD_FILLED, INTAKE_MAX_BYTES } from '../intake-load.mjs';
+import { parseIntakeFile, intakeLines, intakeTxtName, pdfIntakeNotice, INTAKE_FIELD_FILLED, INTAKE_MAX_BYTES } from '../intake-load.mjs';
 import { extractFile } from '../mask/extract.mjs';
 import { tidyPdfPages } from '../pdf-text.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
@@ -876,6 +876,7 @@ export function loadSample(doc) {
   runBid(doc);
   if (doc.getElementById('ledger-input') && doc.getElementById('check-result')) runLedgerCheck(doc);
   if (doc.getElementById('plan-input') && doc.getElementById('plan-result')) runPlanCheck(doc);
+  updateIntakeSave(doc); // 見本は input の知らせを出さずに欄を入れる
   fieldSources = markSources(collect(doc), '見本');
   // 見本のあとも入力の確かめを通る(F43d)。結果は隠れた段に書いておき、「この内容で結果を見る」で開く
   const banner = doc.getElementById('sample-banner');
@@ -921,6 +922,26 @@ function setParticipation(doc, text) {
   participation.value = text;
   if (typeof Event === 'function') participation.dispatchEvent?.(new Event('input', { bubbles: true }));
 }
+// 公告の文を .txt で保存(F83a14): 欄の文をそのまま UTF-8 で保存する。Skill bid-intake に渡す文のファイルになる。
+// ファイルの名前は、読んだ PDF の文が欄にそのままある間だけ PDF の名前を使う(別の文を貼った後に前の公告の名前を付けない)
+let intakeRead = null;
+const participationText = (doc) => String(doc.getElementById('participation-conditions')?.value ?? '');
+export function rememberIntakeText(doc, name) {
+  intakeRead = name ? { name, text: participationText(doc) } : null;
+}
+function updateIntakeSave(doc) {
+  const button = doc.getElementById('intake-save-txt');
+  if (button) button.disabled = participationText(doc).trim() === '';
+  writeNotice(doc.getElementById('intake-save-status'), '');
+}
+export function saveIntakeTxt(doc, now = new Date()) {
+  const text = participationText(doc);
+  if (text.trim() === '') return false;
+  const name = intakeTxtName(intakeRead?.text === text ? intakeRead.name : null, today(now));
+  downloadText(doc, text, name, 'text/plain;charset=utf-8');
+  writeNotice(doc.getElementById('intake-save-status'), '「' + name + '」をこの端末に保存しました(外へは送っていません)。');
+  return true;
+}
 // 公告の PDF(F82c): 文字を読んで「公告の参加の条件」の欄に入れる。条件は拾わず、ほかの欄は変えない。
 // 欄に文があれば入れない。読む間に書かれた文も消さないよう、読んだ後にも見る
 const INTAKE_BY_HAND = '手で入れるときは、段1「条件を入れる」の欄に入れます。';
@@ -941,6 +962,7 @@ async function readIntakePdf(doc, f) {
   if (doc.getElementById('sample-banner')?.hidden === false) clearSample(doc);
   const text = tidyPdfPages(read.text);
   setParticipation(doc, text);
+  rememberIntakeText(doc, f.name);
   fieldSources = { ...fieldSources, ...markSources(collect(doc), '公告', {}, ['participation-conditions']) };
   // 読めない頁や見えない字の注意は、見つからなかったと言う文の根拠に関わるので行で添える
   setIntakeStatus(doc, pdfIntakeNotice(f.name, read.pages, text), read.notes);
@@ -1216,6 +1238,7 @@ export function clearSample(doc) {
     if (typeof v === 'boolean') el.checked = v;
     else el.value = v;
   }
+  updateIntakeSave(doc);
   last = null;
   stale = false;
   lastSchedule = null;
@@ -1292,6 +1315,9 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('confirm-back', () => openPanel(doc, 1));
     for (const r of CONFIRM_ROWS) on('confirm-change-' + r.key, () => changeField(doc, r.key));
     on('sample-load', () => loadSample(doc));
+    on('intake-save-txt', () => saveIntakeTxt(doc));
+    doc.getElementById('participation-conditions')?.addEventListener('input', () => updateIntakeSave(doc));
+    updateIntakeSave(doc); // 再読み込みでブラウザが欄の文を戻したときも合わせる
     on('sample-reenter', () => clearSample(doc));
     on('entry-bid', () => openPanel(doc, 1));
     on('entry-intake', () => openIntake(doc));

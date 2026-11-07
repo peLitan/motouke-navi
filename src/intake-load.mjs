@@ -54,7 +54,13 @@ export function pdfIntakeNotice(name, pages, text) {
   const prime = findPrimeExperience(text)
     ? '元請けとしての実績を求める文がありました。結果の「確認が要る点」に出します。'
     : '元請けとしての実績を求める文は見つかりませんでした。公告の本文で確かめてください。';
-  return '「' + name + '」の文字を読みました(' + pages + '頁)。「公告の参加の条件」の欄に入れました。見たのは元請けの実績の条件だけで、金額・工事の種類・等級・地域などの条件は拾っていません。拾うのはパソコンの Claude Code の『公告を読む Skill(bid-intake)』で、渡すのは文のファイルです(この欄の文をメモ帳に貼り、.txt で保存して渡してください)。' + prime;
+  return '「' + name + '」の文字を読みました(' + pages + '頁)。「公告の参加の条件」の欄に入れました。見たのは元請けの実績の条件だけで、金額・工事の種類・等級・地域などの条件は拾っていません。拾うのはパソコンの Claude Code の『公告を読む Skill(bid-intake)』で、渡すのは文のファイルです(下の「公告の文を .txt で保存」で保存して渡してください)。' + prime;
+}
+
+// 「公告の文を .txt で保存」のファイルの名前(F83a14)。読んだ PDF の名前が無いときは日付の名前にする。OS が名前に使えない字は _ にする
+export function intakeTxtName(pdfName, day) {
+  const name = String(pdfName ?? '').replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim();
+  return '公告_' + (name || day) + '.txt';
 }
 
 // 読み込んだあとに人が見る行
