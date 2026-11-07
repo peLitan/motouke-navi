@@ -400,7 +400,8 @@
     button, .export, .no-print { display: none !important; }
     .phone-only { display: none !important; }
     .drop-hint { display: none !important; }
-    .drop { border: none; padding: 0; }
+    /* ファイルを選ぶ部品は紙では使えず「ファイルが選択されていません」だけが残るので、入力・ラベル・案内を枠ごと紙に出さない(F84f) */
+    .drop { display: none !important; border: none; padding: 0; }
     .entry-button.drop-tile::after { content: none; }
     p[aria-live]:not(.note):not(#check-status):not(#checklist-status):not(#plan-status) { display: none !important; }
     /* 段は画面では1つずつ見せるが、紙には段をまたいで全部出す(F37a) */
