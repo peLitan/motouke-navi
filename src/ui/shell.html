@@ -346,7 +346,7 @@
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
     .entry-choices { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
     .stats { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
-    /* 数字のカードは、数字が左・名前と説明が右の行にする(F54a)。説明は消さない */
+    /* 数字のカードは、数字が左・名前が右の行にする(F54a)。説明は消さず、画面の外へ置いて読み上げに残す(F87c) */
     .stat { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: 0.75rem; align-items: center; padding: 0.5rem 0.75rem; border-top-width: 1px; border-left: 6px solid var(--line); }
     .stat-num { grid-row: 1 / span 2; font-size: 1.5rem; }
     .stat-required { border-left-color: var(--need-line); }
@@ -492,6 +492,11 @@
   @media screen and (max-width: 40rem) {
     #ledger-input { height: 9rem; }
     #mask-input { height: 7rem; }
+    /* 要点(F87c): 数のカードを1行ずつにし、どの状態でも「次にすること」のボタンを1画面に入れる。説明の行は読み上げと 1280 に残す */
+    .stats { gap: 0.25rem; margin: 0.25rem 0 0.5rem; }
+    .stat { grid-template-columns: 4rem minmax(0, 1fr); padding: 0.25rem 0.75rem; }
+    .stat-sub { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .next-title { font-size: 1rem; }
     #bid-result .item > details.basis:not([open]) .basis-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #bid-result .item { gap: 0 0.25rem; }
     #schedule-heading .heading-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

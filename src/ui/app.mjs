@@ -29,7 +29,7 @@ import { tidyPdfPages, dropPageLines } from '../pdf-text.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
 import { unansweredQuestions } from './answers.mjs';
-import { CONFIRM_ROWS, conditionLine, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
+import { CONFIRM_ROWS, conditionLine, conditionUnset, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
 import { startMask, loadMaskFile, readDictFile, readMapFile } from './mask-app.mjs';
 import { readAiFile, RESULT_FORMAT } from './ai-app.mjs';
 import { writeNotice, markFailed } from './notice.mjs';
@@ -279,6 +279,7 @@ function setResultName(doc) {
   el.hidden = !shown;
   if (!shown) el.textContent = '';
   else el.textContent = doc.getElementById('sample-banner')?.hidden === false && !sampleChanges(shown) ? SAMPLE.title : conditionLine(shown);
+  if (shown && conditionUnset(shown)) el.hidden = true; // どれも答えていないときは1行に出す物が無い(F87c)
 }
 // 前に見せた結果(F78a)。覚えるのは loadSample と confirmGo のときだけ。runBid で覚えると、「確認する」のあとの confirmGo で同じ値どうしを比べる
 let shownResult = null;

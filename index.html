@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kOzKx4eSroY8E+5alsFmHN3fhjhpOksMwrt+y0jZfhU='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1yHFQkLQ2IAgrDIDb49KHV3ik9h9hnfNvo+Tkio8cQ8='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -346,7 +346,7 @@
     .mask-cols { grid-template-columns: minmax(0, 1fr); }
     .entry-choices { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
     .stats { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
-    /* 数字のカードは、数字が左・名前と説明が右の行にする(F54a)。説明は消さない */
+    /* 数字のカードは、数字が左・名前が右の行にする(F54a)。説明は消さず、画面の外へ置いて読み上げに残す(F87c) */
     .stat { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: 0.75rem; align-items: center; padding: 0.5rem 0.75rem; border-top-width: 1px; border-left: 6px solid var(--line); }
     .stat-num { grid-row: 1 / span 2; font-size: 1.5rem; }
     .stat-required { border-left-color: var(--need-line); }
@@ -492,6 +492,11 @@
   @media screen and (max-width: 40rem) {
     #ledger-input { height: 9rem; }
     #mask-input { height: 7rem; }
+    /* 要点(F87c): 数のカードを1行ずつにし、どの状態でも「次にすること」のボタンを1画面に入れる。説明の行は読み上げと 1280 に残す */
+    .stats { gap: 0.25rem; margin: 0.25rem 0 0.5rem; }
+    .stat { grid-template-columns: 4rem minmax(0, 1fr); padding: 0.25rem 0.75rem; }
+    .stat-sub { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .next-title { font-size: 1rem; }
     #bid-result .item > details.basis:not([open]) .basis-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #bid-result .item { gap: 0 0.25rem; }
     #schedule-heading .heading-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -8059,6 +8064,8 @@ function answer(row, values) {
 // 結果の要点の工事の名前(F86e)。名前の欄は無いので、入れた条件の1行で代える
 const NAME_ROWS = ['orderer', 'work-type', 'contract-amount'];
 const conditionLine = (values = {}) => CONFIRM_ROWS.filter((r) => NAME_ROWS.includes(r.key)).map((r) => r.label + ' ' + answer(r, values).text).join('・');
+// 3つのどれにも答えていない(1行に「まだ選んでいません」が並ぶだけになる)とき true(F87c)
+const conditionUnset = (values = {}) => CONFIRM_ROWS.filter((r) => NAME_ROWS.includes(r.key)).every((r) => answer(r, values).state === 'unset');
 
 // 建築一式の工事なのに工種が既定の土木のままなら、その注意の文(F59)。値は変えない。where は選び直す所
 function workKindWarning(values, where = '「変更」') {
@@ -8111,7 +8118,7 @@ function renderConfirmRow(r) {
   return '<strong>' + unset + value + '</strong><small>出どころ: ' + esc(source) + '</small>' + warning + estimated;
 }
 
-return { CONFIRM_ROWS, conditionLine, workKindWarning, markSources, confirmRows, renderConfirmRow };
+return { CONFIRM_ROWS, conditionLine, conditionUnset, workKindWarning, markSources, confirmRows, renderConfirmRow };
 })();
 __m["src/intake-load.mjs"] = (function () {
 // 画面の「公告から拾った条件を読み込む」(F41a): Skill bid-intake の check-conditions.mjs --out のファイルを読む。
@@ -9909,7 +9916,7 @@ const { tidyPdfPages, dropPageLines } = __m["src/pdf-text.mjs"];
 const wakayamaRows = __m["data/specs/wakayama_r0711_rows.json"];
 const { SAMPLE } = __m["src/sample.mjs"];
 const { unansweredQuestions } = __m["src/ui/answers.mjs"];
-const { CONFIRM_ROWS, conditionLine, confirmRows, markSources, renderConfirmRow, workKindWarning } = __m["src/ui/confirm.mjs"];
+const { CONFIRM_ROWS, conditionLine, conditionUnset, confirmRows, markSources, renderConfirmRow, workKindWarning } = __m["src/ui/confirm.mjs"];
 const { startMask, loadMaskFile, readDictFile, readMapFile } = __m["src/ui/mask-app.mjs"];
 const { readAiFile, RESULT_FORMAT } = __m["src/ui/ai-app.mjs"];
 const { writeNotice, markFailed } = __m["src/ui/notice.mjs"];
@@ -10159,6 +10166,7 @@ function setResultName(doc) {
   el.hidden = !shown;
   if (!shown) el.textContent = '';
   else el.textContent = doc.getElementById('sample-banner')?.hidden === false && !sampleChanges(shown) ? SAMPLE.title : conditionLine(shown);
+  if (shown && conditionUnset(shown)) el.hidden = true; // どれも答えていないときは1行に出す物が無い(F87c)
 }
 // 前に見せた結果(F78a)。覚えるのは loadSample と confirmGo のときだけ。runBid で覚えると、「確認する」のあとの confirmGo で同じ値どうしを比べる
 let shownResult = null;
