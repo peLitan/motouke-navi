@@ -480,14 +480,14 @@ export async function readMapFile(doc, f) {
   return importMaskMap(doc, text, f.name);
 }
 
-export function startMask(doc) {
+export function startMask(doc, beforeRun) {
   const on = (id, f) => {
     const btn = doc.getElementById(id);
     if (btn) btn.addEventListener('click', (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); f(); });
   };
   const ind = doc.getElementById('mask-industry');
   if (ind) ind.addEventListener('change', () => setIndustry(doc, String(ind.value ?? ''), doc.defaultView));
-  on('mask-run', () => runMask(doc));
+  on('mask-run', () => { beforeRun?.(); runMask(doc); });
   on('unmask-run', () => runUnmask(doc));
   on('dict-add', () => addDictWord(doc));
   on('mask-reset', () => resetMask(doc));

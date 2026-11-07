@@ -38,7 +38,7 @@ const atLeast = (fg, bg, min, label) => {
   assert.ok(r >= min, label + ': ' + fg + ' と ' + bg + ' の比 ' + r.toFixed(2) + ' < ' + min);
 };
 
-const PRIMARY_IDS = ['bid-run', 'ledger-run', 'plan-run', 'next-step-3', 'confirm-go', 'pg-next'];
+const PRIMARY_IDS = ['bid-run', 'ledger-run', 'plan-run', 'mask-run', 'unmask-run', 'next-step-3', 'confirm-go', 'pg-next']; // F86i: 別の道具の主の2つを足した
 const primarySel = (suffix) => [...PRIMARY_IDS.map((id) => '#' + id + suffix), '.sample-button' + suffix];
 // :not( の中のカンマでは分けない
 const selectors = (sel) => sel.split(/,(?![^(]*\))/).map((s) => s.trim());
@@ -195,7 +195,7 @@ test('進み具合: 番号の丸と線で、全部の段の名前を出す。押
   assert.equal(prop(ruleOf('.steps li[aria-current="step"]'), 'font-weight'), 'bold');
 });
 
-test('ボタンの形: 既定は副、主の6つだけ塗り、押せない・選んでいるは形で分かる', () => {
+test('ボタンの形: 既定は副、主の8つだけ塗り、押せない・選んでいるは形で分かる', () => {
   // 副: 白地に主の色の枠と字
   const base = ruleOf('button');
   assert.equal(color(prop(base, 'color')), vars['--primary']);

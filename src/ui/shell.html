@@ -140,8 +140,8 @@
   .entry-link:hover, .entry-link:active { color: var(--primary-dark); background: var(--paper); }
   .entry-aside .entry-link { display: block; }
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
-  #bid-run, #ledger-run, #plan-run, #next-step-3, #confirm-go, #pg-next, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
-  #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, #confirm-go:hover, #pg-next:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, #confirm-go:active, #pg-next:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
+  #bid-run, #ledger-run, #plan-run, #mask-run, #unmask-run, #next-step-3, #confirm-go, #pg-next, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
+  #bid-run:hover, #ledger-run:hover, #plan-run:hover, #mask-run:hover, #unmask-run:hover, #next-step-3:hover, #confirm-go:hover, #pg-next:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #mask-run:active, #unmask-run:active, #next-step-3:active, #confirm-go:active, #pg-next:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
   /* 進み具合(F86b): 今どこかを示すだけで押せない。番号の丸を線でつなぎ、全部の段の名前を出す。入口でも出す。行き来は下の帯の「戻る」と右の席で。
      これからの段は丸を灰色にして押せる形に見せない(主の色の輪と字を使わない。F83a6)。今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色。線は枠線で描く(3:1 の検査に掛かる) */
   .progress { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; }
@@ -425,6 +425,13 @@
     #check-result, #checklist-result, #plan-result { --shadow: none; margin-bottom: 0; border: none; padding: 0; }
     #ledger-input { height: 14rem; }
     #plan-input { height: 8rem; }
+    /* 別の道具の4ページ(F86i): ページは開いたままの折りたたみの中にあり、折りたたみの中身の箱は高さを渡さないので、#panel-tools の高さいっぱいに置く。カードの線と影は枠に譲る */
+    #panel-tools { position: relative; }
+    #panel-tools .pg { position: absolute; inset: 0; }
+    body.in-pages #other-tools { --shadow: none; margin: 0; border: none; padding: 0; }
+    #ai-result { --shadow: none; margin-bottom: 0; border: none; padding: 0; }
+    #mask-input { height: 10rem; }
+    #unmask-input { height: 7rem; }
     /* まとめの枠(F86f): カードの枠を残し、開いてもページが長くならない高さで止める */
     #summary-fold .ref-frame { max-height: 18rem; border: none; padding: 0; }
     /* 見本でないときは「見本について」の見出しごと出さない */
@@ -446,9 +453,9 @@
     #pager button { margin: 0; }
     #pg-back { flex: none; }
     /* 右の席は端に寄せ、どのページでも同じ場所にする */
-    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #ledger-run, #pager #plan-run, #pager #entry-back, #pager #awarded-conditions { margin-left: auto; }
+    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #ledger-run, #pager #plan-run, #pager #mask-run, #pager #entry-back, #pager #awarded-conditions { margin-left: auto; }
     #pg-back::before, #confirm-back::before { content: "\25C0\00A0"; content: "\25C0\00A0" / ""; }
-    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #ledger-run::after, #plan-run::after, #entry-back::after, #awarded-conditions::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
+    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #ledger-run::after, #plan-run::after, #mask-run::after, #entry-back::after, #awarded-conditions::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
     /* 要点のページ(F86e): 塗りは「次にすること」のボタンだけにする */
     #pager.seat-plain #pg-next { color: var(--primary); background: var(--paper); font-weight: normal; }
     #pager.seat-plain #pg-next:hover, #pager.seat-plain #pg-next:active { color: var(--primary); background: var(--primary-bg); }
@@ -459,6 +466,7 @@
   }
   @media screen and (max-width: 40rem) {
     #ledger-input { height: 9rem; }
+    #mask-input { height: 7rem; }
   }
   /* 背の低い画面(拡大 200%・横向きのスマホ): 下の帯が場所を取り切らないよう、高さの固定を外して全体が動く形に戻す(WCAG 1.4.10) */
   @media screen and (max-height: 30rem) {
@@ -468,6 +476,7 @@
     body.in-pages #main, #bid:not([hidden]), #bid-form:not([hidden]), #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
+    #panel-tools .pg { position: static; }
     #summary-fold .ref-frame { max-height: none; }
   }
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
@@ -923,25 +932,30 @@
 </div>
 </section>
 </section>
-<section id="panel-tools" hidden><div class="pg" id="pg-tools">
+<section id="panel-tools" hidden>
 <details class="other-tools" id="other-tools">
 <summary class="no-print"><h2>ここからは別の道具</h2><span class="other-tools-sub">A 文の置き換え・B AI の候補の読み込み</span></summary>
-<p class="no-print">A・B は、「結果」と「書類」の画面(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
 <section id="mask" class="no-print">
+<div class="pg" id="pg-tools">
 <h2 id="tools-title" tabindex="-1">A. 文の置き換え(外のサービスに貼る前に)</h2>
 <p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。</p>
 <p class="note" id="mask-warning">置き換えには漏れがあります。漏れは0になりません。辞書に無い人名・現場名や、形の決まっていない書き方は残ることがあります。記号にしても、残った語の組み合わせ(工期・金額・地名・工種・発注者など)から、どの工事か・誰のことかが分かるおそれがあります。外へ出す前に、後の欄を必ず目で確かめてください。</p>
 <details class="fold"><summary>使い方と限界</summary>
-<p>置き換えた文を外の AI などに貼り、戻ってきた文を下の「元に戻す」に貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、下の「対応表を書き出す」でこの端末にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
+<p>A・B は、「結果」と「書類」の画面(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
+<p>置き換えた文を外の AI などに貼り、戻ってきた文を「元に戻す」のページに貼ると、記号を元の語に戻します。対応表と足した語はこの画面の中だけに持ちます(ページを閉じると消えます)。あとで戻すときのために、「元に戻す」のページの「対応表を書き出す」でこの端末にファイルとして保存し、「対応表を読み込む」で読み込めます。</p>
 <p class="note" id="mask-limits">限界(架空の書類での測定): 敬称・役職・欄名の隣の語を人名の候補として、工事・工区・作業所・現場などで終わる語を現場名の候補として置き換えます。辞書作りに使っていない初めて見る書類4件では、辞書に語を足さない場合の漏れの率は 37.8% でした(人名・現場名を辞書に足すと 14.3%)。会社名は24語中11語が、足しても残りました。規則を作るときに見た見本の書類では 4.2% でしたが、この数字は当てになりません。人名・現場名は「辞書に足す」で足し、後の欄を必ず目で確かめてください。詳しくは docs/mask-rate.md。</p>
+<p>文を入れずに「元に戻す」か「AI の候補」のページを使うときは、欄を空のまま「置き換える」を押して進みます。</p>
 </details>
+<div class="row"><label for="mask-input">置き換える文</label><br>
+<textarea id="mask-input" name="mask-input" rows="8" cols="80"></textarea></div>
+<details class="fold" id="mask-more"><summary>辞書・ファイル・金額の扱い</summary>
 <div class="row"><label for="mask-industry">業界(語尾・役職の表)</label>
 <select id="mask-industry" name="mask-industry">
 <option value="construction" selected>建設</option>
 <option value="medical">医療(例)</option>
 </select></div>
 <details class="fold"><summary>「医療(例)」について</summary>
-<p class="note" id="mask-industry-note">「医療(例)」は、病院・医院・クリニック・診療所・薬局などで終わる語を施設名の候補として、医師・看護師などの後ろの語を人名の候補として置き換える「例」の表です。医療の書類での漏れの率は測っていません(上の限界の数字は建設の書類のものです)。医療では建設業の許可番号・共同企業体の形は使いません。切り替えても足した語は残りますが、対応表は消えます。</p>
+<p class="note" id="mask-industry-note">「医療(例)」は、病院・医院・クリニック・診療所・薬局などで終わる語を施設名の候補として、医師・看護師などの後ろの語を人名の候補として置き換える「例」の表です。医療の書類での漏れの率は測っていません(「使い方と限界」の数字は建設の書類のものです)。医療では建設業の許可番号・共同企業体の形は使いません。切り替えても足した語は残りますが、対応表は消えます。</p>
 </details>
 <p id="mask-industry-status" aria-live="polite"></p>
 <div class="row"><label for="dict-word">辞書に足す語</label>
@@ -968,11 +982,9 @@
 <div class="row drop" data-drop="mask-file"><label for="mask-file">ファイルから読む(.txt・.docx・.xlsx・.pdf)</label>
 <input type="file" id="mask-file" name="mask-file" accept=".txt,.docx,.xlsx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <details class="fold"><summary>読めるファイルと読めないもの</summary>
-<p class="note" id="mask-file-note">ファイルはこの端末の中で開き、取り出した文字を下の「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF は文字の入った物だけを読みます。紙を写した画像だけの物と、保護のかかった物は読みません。.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
+<p class="note" id="mask-file-note">ファイルはこの端末の中で開き、取り出した文字を「置き換える文」の欄に入れます(外へは送りません)。取り出すのは文字だけで、書式・画像・図形の中の文字・コメントは読みません。PDF は文字の入った物だけを読みます。紙を写した画像だけの物と、保護のかかった物は読みません。.doc・.xls は読めないので、文字をコピーして貼り付けてください。</p>
 </details>
 <p id="mask-file-status" aria-live="polite"></p>
-<div class="row"><label for="mask-input">置き換える文</label><br>
-<textarea id="mask-input" name="mask-input" rows="8" cols="80"></textarea></div>
 <div class="row"><label for="mask-amounts">金額の扱い</label>
 <select id="mask-amounts" name="mask-amounts">
 <option value="keep" selected>そのまま</option>
@@ -980,8 +992,12 @@
 </select>
 <label for="mask-thresholds">境目(円。空白か読点で区切る)</label>
 <input type="text" id="mask-thresholds" name="mask-thresholds" placeholder="例 50,000,000"></div>
-<div class="row"><button type="button" id="mask-run">置き換える</button>
-<button type="button" id="mask-reset">対応表と足した語を消す</button></div>
+<div class="row"><button type="button" id="mask-reset">対応表と足した語を消す</button></div>
+</details>
+</div>
+<div class="pg pg-framed" id="pg-tools-result" hidden>
+<h2 id="mask-result-title" tabindex="-1">置き換えた結果</h2>
+<div class="ref-frame" id="mask-frame">
 <p id="mask-status" aria-live="polite"></p>
 <p id="mask-decoy" class="note" aria-live="polite"></p>
 <p id="mask-residual" class="note" aria-live="polite"></p>
@@ -995,20 +1011,26 @@
 <h3>対応表</h3>
 <div id="mask-map"></div>
 <p class="note" id="mask-unchecked" role="status" hidden></p>
-<h3>元に戻す</h3>
+</div>
+</div>
+<div class="pg pg-framed" id="pg-tools-unmask" hidden>
+<h2 id="unmask-title" tabindex="-1">元に戻す</h2>
 <div class="row"><label for="unmask-input">戻ってきた文(記号を含む文)</label><br>
 <textarea id="unmask-input" name="unmask-input" rows="6" cols="80"></textarea></div>
 <div class="row"><button type="button" id="unmask-run">元に戻す</button></div>
-<pre id="unmask-output"></pre>
-<h3>対応表の書き出しと読み込み</h3>
+<div class="ref-frame"><pre id="unmask-output"></pre></div>
+<details class="fold" id="map-more"><summary>対応表の書き出しと読み込み</summary>
 <p class="warning-box" id="map-warning">このファイルには元の名前が入っています。外の AI などへ送らないでください。この端末に保存するだけです(外へは送りません)。要らなくなったら消してください。</p>
 <div class="row drop" data-drop="map-import"><button type="button" id="map-export">対応表を書き出す</button>
 <label for="map-import">対応表を読み込む</label>
 <input type="file" id="map-import" name="map-import" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="map-status" aria-live="polite"></p>
+</details>
+</div>
 </section>
 <section id="ai-check">
-<h2>B. Claude で点検した結果(AI の候補)</h2>
+<div class="pg pg-framed" id="pg-tools-ai" hidden>
+<h2 id="ai-title" tabindex="-1">B. Claude で点検した結果(AI の候補)</h2>
 <p>手元のプログラムが書き出した結果のファイルを読み込むと、AI の候補を下の欄に出します。</p>
 <p class="note" id="ai-note">ここに出るのは AI の候補です。「結果」と「書類」の画面の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
 <details class="fold"><summary>結果のファイルの作り方</summary>
@@ -1017,10 +1039,11 @@
 <div class="row drop" data-drop="ai-load"><label for="ai-load">AI の候補を読み込む</label>
 <input type="file" id="ai-load" name="ai-load" accept=".json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="ai-status" aria-live="polite"></p>
-<div id="ai-result" class="result"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div>
+<div class="ref-frame"><div id="ai-result" class="result"><p>結果のファイルを読み込むと、AI の候補をここに出します。</p></div></div>
+</div>
 </section>
 </details>
-</div></section>
+</section>
 <section id="panel-ref" hidden><div class="pg" id="pg-ref">
 <h2 class="no-print" id="ref-title" tabindex="-1">使った資料</h2>
 <div class="ref-frame" id="ref-frame">
@@ -1069,6 +1092,7 @@
 <button type="button" id="next-step-3">次へ: 書類を確かめる</button>
 <button type="button" id="ledger-run" hidden>台帳を点検する</button>
 <button type="button" id="plan-run" hidden>目次を点検する</button>
+<button type="button" id="mask-run" hidden>置き換える</button>
 <button type="button" id="awarded-conditions" hidden>条件を入れる</button>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </nav>

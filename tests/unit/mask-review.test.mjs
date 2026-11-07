@@ -30,7 +30,7 @@ test('画面の形: 後の欄の下に選ぶ表の枠、「元に戻す」の欄
   const iAfter = body.indexOf('id="mask-after"');
   const iReview = body.indexOf('id="mask-review"');
   const iWarn = body.indexOf('id="mask-unchecked"');
-  const iUnmask = body.indexOf('<h3>元に戻す</h3>');
+  const iUnmask = body.indexOf('<h2 id="unmask-title" tabindex="-1">元に戻す</h2>'); // F86i: ページの見出しにした
   assert.ok(iAfter > 0 && iAfter < iReview && iReview < iWarn && iWarn < iUnmask, '並びが違う');
   assert.match(body, /<p class="note" id="mask-unchecked" role="status" hidden><\/p>/);
   // 目立つ枠は増やさない(.disclaimer は使わない)。印の色は CSS にある

@@ -183,7 +183,14 @@ test('入口には別の道具の折りたたみを出さず、#entry-tools で�
   assert.equal(page.el('pg-tools').hidden, false);
   assert.equal(page.el('other-tools').open, true, '別の道具が開いていない');
   assert.equal(page.el('pager').hidden, false);
+  // F86i: 4ページに分けたので、「入口に戻る」の席は最後のページ
+  assert.equal(page.el('mask-run').hidden, false);
+  await page.click('mask-run');
+  await page.click('pg-next');
+  await page.click('pg-next');
   assert.equal(page.el('entry-back').hidden, false);
+  for (let i = 0; i < 3; i += 1) await page.click('pg-back');
+  assert.equal(page.el('pg-tools').hidden, false);
   await page.click('pg-back');
   assert.equal(page.el('entry').hidden, false);
   assert.equal(page.el('other-tools').open, false, '開いたまま入口に戻った');

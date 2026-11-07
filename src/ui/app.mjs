@@ -218,20 +218,20 @@ export function showEntry(doc) {
 // 段を開く。焦点は showPage がページの見出しへ移す
 const openPanel = (doc, n) => showPanel(doc, n);
 // 段の外のページへ: 段を全部隠してから見せる。見出しは紙のために残し、折りたたみは開いたまま使う
-function showOutside(doc, group, panelId) {
+function showOutside(doc, group, panelId, index = 0) {
   for (const id of ['panel-1', 'panel-2', 'panel-3', 'panel-confirm', 'entry']) {
     const el = doc.getElementById(id);
     if (el) el.hidden = true;
   }
   showExtra(doc, panelId);
-  setNoticeCompact(doc, group === 'ref');
-  showPage(doc, group, 0);
+  setNoticeCompact(doc, true);
+  showPage(doc, group, index);
 }
-// 入口の「文の置き換え(別の道具)」から(F86c)。今の形のまま1ページ
-function openTools(doc) {
+// 入口の「文の置き換え(別の道具)」から(F86c)。ページに分けても折りたたみは開いたまま使う(F86i)
+export function openTools(doc, index = 0) {
   const fold = doc.getElementById('other-tools');
   if (fold) fold.open = true;
-  showOutside(doc, 'tools', 'panel-tools');
+  showOutside(doc, 'tools', 'panel-tools', index);
 }
 // 上の帯の「使った資料」から。「戻る」は来たページへ
 function openRef(doc) {
@@ -243,7 +243,7 @@ function goBack(doc) {
   const { group, index, jump } = backTarget();
   if (group === null) showEntry(doc);
   else if (group === 'confirm') openConfirm(doc);
-  else if (group === 'tools') openTools(doc);
+  else if (group === 'tools') openTools(doc, index);
   else showPanel(doc, group, index);
   if (jump) rememberJump(jump);
 }
@@ -311,7 +311,8 @@ function openIntake(doc) {
 // id のあるページを開く(F86d)
 function showPageOf(doc, id) {
   const { group, index } = pageOfLink(id);
-  showPanel(doc, group, index);
+  if (group === 'tools') openTools(doc, index);
+  else showPanel(doc, group, index);
 }
 // 条件の欄へのリンク(F86e): 読めない欄か最初の未回答の欄へ。無ければ条件のページだけを開く
 function openNeededField(doc) {
@@ -1307,9 +1308,18 @@ function openFold(doc, id) {
   return String(fold.querySelector?.('summary')?.textContent ?? '').trim();
 }
 const OPENED = (name) => (name ? '「' + name + '」を開きました' : '');
+// 別の道具のページごとの [知らせの欄, 枠のある折りたたみ]
+const TOOL_PORTS = [['dict-file-status', 'mask-more'], ['dict-file-status', 'mask-more'], ['map-status', 'map-more'], ['ai-status', null]];
 // 枠の外に置いたとき: 今見えている段の口の欄に書き、見える所に出す(開いた折りたたみの中の欄もあるので、開いてから動かす)
 function outsideNotice(doc) {
-  if (isShown(doc, 'panel-tools') && doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
+  if (isShown(doc, 'panel-tools') && doc.getElementById('other-tools')?.open) {
+    // 知らせの欄は枠のあるページにある(F86i)。置き換えた結果のページには枠が無いので、文を入れるページへ
+    const { group, index } = currentPage();
+    const [status, fold] = TOOL_PORTS[group === 'tools' ? index : 0];
+    showPageOf(doc, status);
+    const opened = fold ? OPENED(openFold(doc, fold)) : '';
+    return [status, USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。' + (opened ? opened + '。' : '')];
+  }
   if (isShown(doc, 'panel-1')) {
     // 知らせの欄は公告のページにある(F86g)
     showPageOf(doc, 'intake-more');
@@ -1561,7 +1571,12 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
         ledgerFile.value = '';
       });
     }
-    startMask(doc);
+    // 押すと結果のページを開いてから置き換える(知らせの欄が見えている間に書くため)。前に動かした枠の位置に知らせが隠れないよう頭へ戻す
+    startMask(doc, () => {
+      showPageOf(doc, 'mask-status');
+      const frame = doc.getElementById('mask-frame');
+      if (frame) frame.scrollTop = 0;
+    });
     for (const id of ['plan-file', 'dict-import', 'mask-file', 'map-import', 'ai-load']) {
       const input = doc.getElementById(id);
       if (input) input.addEventListener('change', async () => {

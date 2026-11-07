@@ -67,7 +67,12 @@ test('畳まない: 断り書き・入口・出典の表示・取得日は、ど
 
 test('畳まない: 国の直轄の例の注記は段の中で見えたまま。A・B の注意は別の道具を開けばすぐ見える', () => {
   for (const id of ['schedule-notice', 'plan-notice']) assert.deepEqual(foldsAround(id), [], id);
-  for (const id of ['mask-warning', 'map-warning', 'dict-file-note', 'ai-note']) assert.deepEqual(foldsAround(id), ['other-tools'], id);
+  for (const id of ['mask-warning', 'ai-note']) assert.deepEqual(foldsAround(id), ['other-tools'], id);
+  // F86i: 辞書と対応表のファイルの注意は、そのボタンと同じ折りたたみの中。開けばボタンより先に読める
+  assert.deepEqual(foldsAround('map-warning'), ['other-tools', 'map-more']);
+  assert.deepEqual(foldsAround('dict-file-note'), ['other-tools', 'mask-more']);
+  assert.ok(body.indexOf('id="map-warning"') < body.indexOf('id="map-export"'));
+  assert.ok(body.indexOf('id="dict-file-note"') < body.indexOf('id="dict-export"'));
 });
 
 test('7問と任意の欄の説明: 閉じた折りたたみの中にあり、id と aria-describedby は残り、見出しの読み上げは欄ごとに違う', () => {

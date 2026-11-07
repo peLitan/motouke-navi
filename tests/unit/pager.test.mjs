@@ -13,7 +13,7 @@ const printCss = css.match(/@media print \{([\s\S]*)\n {2}\}/)[1];
 const screenCss = css.slice(0, css.indexOf('@media print'));
 const pager = () => import('../../src/ui/pager.mjs');
 
-const SEATS = ['pg-next', 'bid-run', 'confirm-go', 'next-step-3', 'ledger-run', 'plan-run', 'entry-back'];
+const SEATS = ['pg-next', 'bid-run', 'confirm-go', 'next-step-3', 'ledger-run', 'plan-run', 'mask-run', 'entry-back'];
 const allPages = async () => Object.values((await pager()).PAGES).flat().map(([id]) => id);
 const seen = (page, ids) => ids.filter((id) => !page.el(id).hidden);
 // 右の席は1つだけ見える。bid-run などの主のボタンも同じ席に出る
@@ -127,12 +127,18 @@ test('戻った確かめのページは、今の値を書き直している', as
   assert.match(page.text('confirm-value-contract-amount'), /123,?456,?789/);
 });
 
-test('別の道具: 入口の「文の置き換え(別の道具)」で1ページになり、右の席は入口に戻る。戻ると閉じて入口に帰る', async () => {
+test('別の道具: 入口の「文の置き換え(別の道具)」でページになり、最後のページの右の席は入口に戻る。戻ると閉じて入口に帰る', async () => {
   const page = runPage(html);
   const tools = page.el('other-tools');
   await page.click('entry-tools');
-  await assertOn(page, 'pg-tools', 'entry-back');
+  await assertOn(page, 'pg-tools', 'mask-run'); // F86i: 4ページに分けた
   assert.equal(page.el('panel-tools').hidden, false);
+  await page.click('mask-run');
+  await page.click('pg-next');
+  await page.click('pg-next');
+  await assertOn(page, 'pg-tools-ai', 'entry-back');
+  for (let i = 0; i < 3; i += 1) await page.click('pg-back');
+  await assertOn(page, 'pg-tools', 'mask-run');
   await page.click('pg-back');
   assertEntry(page);
   assert.equal(tools.open, false, '開いたまま入口に戻った');

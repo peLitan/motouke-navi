@@ -30,13 +30,21 @@ export const PAGES = {
     ['pg-3-plan', '目次を入れる', 'plan-title'],
     ['pg-3-plan-result', '目次の候補', 'plan-result-title'],
   ],
-  tools: [['pg-tools', '別の道具', 'tools-title']],
+  // 別の道具の4ページ(F86i)
+  tools: [
+    ['pg-tools', '文を入れる', 'tools-title'],
+    ['pg-tools-result', '置き換えた結果', 'mask-result-title'],
+    ['pg-tools-unmask', '元に戻す', 'unmask-title'],
+    ['pg-tools-ai', 'AI の候補', 'ai-title'],
+  ],
   ref: [['pg-ref', '使った資料', 'ref-title']],
 };
 // 一覧の最後のページの右の席。席はどのページでも1つだけ見える
 const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'entry-back', tools: 'entry-back', ref: 'entry-back' };
-// 一覧の途中で主のボタンが右の席に出るページ。押すと点検して次のページへ進む(F86h)
-const PAGE_SEAT = { 'pg-3-diagram': 'ledger-run', 'pg-3-plan': 'plan-run' };
+// 一覧の途中で主のボタンが右の席に出るページ。押すと動かして次のページへ進む(F86h・F86i)
+const PAGE_SEAT = { 'pg-3-diagram': 'ledger-run', 'pg-3-plan': 'plan-run', 'pg-tools': 'mask-run' };
+// 本文の主のボタンが塗りのページ。右の席は白地にする(F86e・F86i)
+const PLAIN_SEAT = ['pg-2-top', 'pg-tools-unmask'];
 const SEATS = ['pg-next', 'awarded-conditions', ...Object.values(PAGE_SEAT), ...new Set(Object.values(LAST_SEAT))];
 // 一覧の1ページ目の「戻る」の行き先(group が null なら入口)。last は行き先の一覧の最後のページへ着く印
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
@@ -60,6 +68,10 @@ const LINK_PAGE = {
   'pg-3-table': ['checklist-result'],
   'pg-3-plan': ['plan-file-status'],
   'pg-3-plan-result': ['plan-result'],
+  'pg-tools': ['dict-file-status'],
+  'pg-tools-result': ['mask-status'],
+  'pg-tools-unmask': ['map-status'],
+  'pg-tools-ai': ['ai-status'],
 };
 
 // 段取りの全部の行(F86f): 結果の一覧を段取りの1ページだけにする。右の席は「条件を入れる」、「戻る」は入口
@@ -102,8 +114,9 @@ export function pageOfLink(id) {
   const pg = String(id).startsWith('bid-item-') ? 'pg-2-need' : Object.keys(LINK_PAGE).find((k) => LINK_PAGE[k].includes(id));
   if (!pg) return null;
   const [group] = Object.entries(PAGES).find(([, l]) => l.some(([p]) => p === pg));
-  const index = listOf(Number(group)).findIndex(([p]) => p === pg);
-  return index < 0 ? null : { group: Number(group), index };
+  const key = PAGES[Number(group)] ? Number(group) : group; // 段は数、別の道具は名前
+  const index = listOf(key).findIndex(([p]) => p === pg);
+  return index < 0 ? null : { group: key, index };
 }
 export const seatOf = (group, index) => {
   const seat = PAGE_SEAT[listOf(group)?.[index]?.[0]];
@@ -129,8 +142,8 @@ function setSeats(doc, group, index) {
   flip(doc, 'pg-back', group !== 'confirm');
   flip(doc, 'confirm-back', group === 'confirm');
   flip(doc, 'ref-open', group !== 'ref');
-  // 要点のページの塗りは「次にすること」のボタンだけにする(F86e)
-  doc.getElementById('pager')?.classList?.toggle?.('seat-plain', listOf(group)?.[index]?.[0] === 'pg-2-top');
+  // 要点のページの塗りは「次にすること」のボタンだけにする(F86e)。元に戻すのページも同じ(F86i)
+  doc.getElementById('pager')?.classList?.toggle?.('seat-plain', PLAIN_SEAT.includes(listOf(group)?.[index]?.[0]));
 }
 // 見せるページを1つにする。頭へ戻し、見出しへ焦点を移す(焦点は押したボタンが隠れても消えない。画面は動かさない)
 export function showPage(doc, group, index = 0) {
