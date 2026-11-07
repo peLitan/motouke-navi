@@ -6,7 +6,7 @@
 // 置き換えで見つからなかった会社・団体の名前らしい語は「辞書に足す候補」として出す(F36b)。候補は自動で置き換えず、利用者が1つずつ選ぶ。
 import { createMasker, parseAmount, MAP_NOTICE, DICT_NOTICE } from '../mask/core.mjs';
 import { downloadText } from './download.mjs';
-import { writeNotice } from './notice.mjs';
+import { writeNotice, markFailed } from './notice.mjs';
 import { CONSTRUCTION_DICT } from '../mask/dict-construction.mjs';
 import { MEDICAL_DICT } from '../mask/dict-medical.mjs';
 import { esc, scrollTable } from './view.mjs';
@@ -218,21 +218,41 @@ export function runMask(doc) {
     }, 0);
   });
 }
+// 改行の無い1行が長いと置き換えがタブを塞ぐ(F85f)。全体の字数では断らない(長い PDF は行が短いので通す)。
+// 字数の数え方は MASK_DEFER_CHARS と同じ length
+export const MASK_MAX_LINE_CHARS = 150000;
+export function longestLineChars(text) {
+  let longest = 0;
+  for (const line of String(text).split(/\r?\n/)) if (line.length > longest) longest = line.length;
+  return longest;
+}
 // 文が空のまま押したとき(F84b)。段3 の「＊ 台帳の文が空です。」と同じ形で知らせ、前の結果を消す。
+// 1行が長すぎるとき(F85f)も同じに前の結果を消す。こちらは失敗の知らせなので印を付ける。
 // 見本の確かめと残りの点検は走らせない。対応表と足した語は消さない(「元に戻す」は使える)
 const MASK_EMPTY_NOTICE = '＊ 置き換える文が空です。';
-function showEmptyInput(doc) {
+const lineTooLongNotice = (longest) => '1行が長すぎます(いちばん長い行 ' + longest.toLocaleString('ja-JP') + '字。1行 ' + MASK_MAX_LINE_CHARS.toLocaleString('ja-JP') + '字まで)。改行を入れて分けてください。名前が区切りをまたぐと置き換わらないことがあるので、区切りは段落の境目にしてください。';
+function clearMaskResult(doc) {
   last = null;
   lastDecoy = null;
   renderDecisions(doc);
   for (const id of ['mask-before', 'mask-after', 'mask-decoy', 'mask-candidate-status']) setText(doc, id, '');
   const mapEl = doc.getElementById('mask-map');
   if (mapEl) mapEl.innerHTML = '';
-  setText(doc, 'mask-status', MASK_EMPTY_NOTICE);
 }
 function runMaskNow(doc) {
   const text = valueOf(doc, 'mask-input');
-  if (text.trim() === '') { showEmptyInput(doc); return; }
+  if (text.trim() === '') {
+    clearMaskResult(doc);
+    setText(doc, 'mask-status', MASK_EMPTY_NOTICE);
+    return;
+  }
+  const longest = longestLineChars(text);
+  if (longest > MASK_MAX_LINE_CHARS) {
+    clearMaskResult(doc);
+    setText(doc, 'mask-status', lineTooLongNotice(longest));
+    markFailed(doc.getElementById('mask-status'));
+    return;
+  }
   const m = getMasker();
   const amounts = valueOf(doc, 'mask-amounts') === 'band' ? 'band' : 'keep';
   const { nums, bad } = parseThresholds(valueOf(doc, 'mask-thresholds'));
