@@ -97,7 +97,7 @@ function pageList(nums) {
 function notesOf(r) {
   const unread = r.pages.filter((p) => p.scanLike).map((p) => p.page);
   const notes = [];
-  if (unread.length) notes.push(`${r.pageCount}頁のうち ${pageList(unread)}頁は文字が無い(紙を写した画像)ので読めていません。`);
+  if (unread.length) notes.push(`${r.pageCount}頁のうち ${unread.length}頁(${pageList(unread)}頁目)は文字が無い(紙を写した画像)ので読めていません。`);
   if (r.stats.hidden) notes.push(`見えない字(${r.stats.hidden}字)は入れていません。`);
   // 次の2つは読めたときでも起きる
   if (r.stats.unmapped) notes.push(`字に戻せなかった字(${r.stats.unmapped}字)は「�」のまま入れています。この字を探して紙と見比べてください。`);

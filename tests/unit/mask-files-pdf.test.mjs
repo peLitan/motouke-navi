@@ -106,13 +106,13 @@ test('ok: 1頁の PDF には区切りの行を入れない', async () => {
 test('partial: 読めない頁の番号を notes に出し、番号がずれないよう空の頁にも区切りの行を入れる', async () => {
   const r = await extractFile('写し.pdf', jaPdf(['建設工事の計画書', '現場事務所', '', '', '図面']));
   assert.deepEqual(r.text.split('\n'), ['建設工事の計画書', '―― 2頁 ――', '現場事務所', '―― 3頁 ――', '', '―― 4頁 ――', '', '―― 5頁 ――', '図面']);
-  assert.equal(r.notes[0], '5頁のうち 3・4頁は文字が無い(紙を写した画像)ので読めていません。');
+  assert.equal(r.notes[0], '5頁のうち 2頁(3・4頁目)は文字が無い(紙を写した画像)ので読めていません。');
   assert.ok(r.notes.includes('表は行や列の順が崩れることがあります。紙と見比べてください。'), '読めた頁の表の注意は partial でも出す');
 });
 
 test('partial: 続いた3頁以上の番号は「〜」でまとめ、離れた頁は残す', async () => {
   const r = await extractFile('写し.pdf', jaPdf(['建設工事', '', '', '', '', '図面', '', '計画書']));
-  assert.equal(r.notes[0], '8頁のうち 2〜5・7頁は文字が無い(紙を写した画像)ので読めていません。');
+  assert.equal(r.notes[0], '8頁のうち 5頁(2〜5・7頁目)は文字が無い(紙を写した画像)ので読めていません。');
 });
 
 test('見えない字は文に入れず、数を notes に出す', async () => {
@@ -215,7 +215,7 @@ test('loadMaskFile: 読む間の文と頁の進み、行の数と notes を出�
   for (const line of ['「計画書.pdf」を読んでいます(1/3頁)', '「計画書.pdf」を読んでいます(2/3頁)', '「計画書.pdf」を読んでいます(3/3頁)']) assert.ok(seen.includes(line), JSON.stringify(seen));
   const last = els['mask-file-status'].textContent;
   assert.match(last, /^「計画書\.pdf」から文字を取り出しました\(5 行\)。中身を確かめてから「置き換える」を押してください。/);
-  for (const note of ['3頁のうち 2頁は文字が無い', '見えない字(2字)は入れていません。', '表は行や列の順が崩れることがあります。']) assert.ok(last.includes(note), last);
+  for (const note of ['3頁のうち 1頁(2頁目)は文字が無い', '見えない字(2字)は入れていません。', '表は行や列の順が崩れることがあります。']) assert.ok(last.includes(note), last);
 });
 
 test('loadMaskFile: 読めない PDF では欄を変えず、失敗を返して理由と次の手を出す', async () => {

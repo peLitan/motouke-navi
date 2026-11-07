@@ -163,7 +163,7 @@ test('画面: 一部の頁が読めない PDF は読めた頁を入れ、読め�
   const page = runPage(html);
   await read(page, pdfFile('目次.pdf', plain([TOC_1, [], TOC_2])));
   assert.equal(field(page), TOC);
-  assert.ok(line(page).includes('3頁のうち 2頁は文字が無い(紙を写した画像)ので読めていません。'), line(page));
+  assert.ok(line(page).includes('3頁のうち 1頁(2頁目)は文字が無い(紙を写した画像)ので読めていません。'), line(page));
   assert.equal(kind(page), null);
 });
 

@@ -63,6 +63,7 @@
 - F83b3: MCP の `read_masked` と `check_conditions` が、名前に `:` のあるパス(Windows の代替データストリーム)と Windows のデバイス名のパスを断るようにした。`check_conditions` は作業フォルダの実体のパスのどの階層に `.git` があっても断り、`.claude` は `.claude/worktrees/<名前>` の下だけ許す。`MASK_MAP`・`MASK_DICT` の相対パスは作業フォルダから解くようにした(今までは読むときだけ起動の場所から解いていた)
 - F83b2: MCP の `read_masked` と `check_conditions` が JIS コード(ESC で文字集合を切り替える形)のファイルを置き換える前に断るようにした(会社名と人名が符号のまま返っていた)。`read_masked` は空のファイルも断る
 - F83b1: MCP の `read_masked` と `check_conditions` の読み方を、開いてから確かめて開いたものから読む読み口にまとめ、ハードリンクと読む間の差し替えを断るようにした。ファイルの番号を返さないドライブ(exFAT の USB など)のファイルは読めなくなった
+- F84a: PDF の読めない頁の知らせに、全部の頁の数・読めない頁の数・頁の番号を分けて書くようにした(頁の番号が読めない頁の数にも読めたため)。文の置き換え・公告・目次の画面と、Skill `bid-intake` の `pdf-to-text.mjs` の両方を直した
 
 ## 0.1.0(2026-11-03〜)
 

@@ -122,7 +122,7 @@ test('partial: 読めた頁を .txt に書いて 0。読めない頁の番号を
   const dir = workdir({ '公告.pdf': pdf([NOTICE, null, TAIL]) });
   const r = await run(dir, '公告.pdf', '--out', '公告.txt');
   assert.equal(r.code, 0, r.err);
-  assert.match(r.err, /3頁のうち 2頁は文字が無い/);
+  assert.match(r.err, /3頁のうち 1頁\(2頁目\)は文字が無い/);
   assert.doesNotMatch(r.out, /読めていません/);
   const text = fs.readFileSync(path.join(dir, '公告.txt'), 'utf8');
   assert.ok(text.includes(NOTICE[1]) && text.includes(TAIL[0]));
@@ -134,7 +134,7 @@ test('partial: 続いた3頁以上の読めない頁はまとめて言う', asyn
   const dir = workdir({ '公告.pdf': pdf([NOTICE, null, null, null, TAIL, null]) });
   const r = await run(dir, '公告.pdf', '--out', '公告.txt');
   assert.equal(r.code, 0);
-  assert.match(r.err, /6頁のうち 2〜4・6頁は文字が無い/);
+  assert.match(r.err, /6頁のうち 4頁\(2〜4・6頁目\)は文字が無い/);
 });
 
 test('ok のまま字が一部戻らないときは、数を標準エラーに言い、\uFFFD の字を入れる', async () => {
@@ -347,7 +347,7 @@ test('本物の入口: 出力の先と終了コード(子プロセス)', childSk
   const good = node('公告.pdf', '--out', '公告.txt');
   assert.equal(good.status, 0, good.stderr);
   assert.match(good.stdout, /公告\.txt/);
-  assert.match(good.stderr, /2頁のうち 2頁は文字が無い/);
+  assert.match(good.stderr, /2頁のうち 1頁\(2頁目\)は文字が無い/);
   const scan = node('絵.pdf', '--out', '絵.txt');
   assert.equal(scan.status, 1);
   assert.equal(scan.stdout, '');
