@@ -97,6 +97,12 @@ Claude Code でこの作品を作った流れを、git の履歴と今の文書�
 | Stop を Skill の frontmatter に置き続ける | Skill の hook は Skill を呼んだときに登録されるので、プラグインが有効な間ずっと登録される既定の置き場 `hooks/hooks.json` を選ぶ(F80a。この版ではまだ移していない。残 12) | Plugin manifest reference https://code.claude.com/docs/en/plugins-reference 、Hooks reference https://code.claude.com/docs/en/hooks |
 | SubagentStop で係の停止を exit 2 で止める | 測る直前に「あり」の側を変えないため、今回は使わない | Hooks reference https://code.claude.com/docs/en/hooks |
 
+## 見つけた → 直した → 測り直した
+
+| 日 | 誰が見つけた | 何 | 再現の試験 | 直したコミット | 前 → 後(版・日時・命令) | 測り直していない所 |
+|---|---|---|---|---|---|---|
+| 2026-11-06〜11-07 | 統括の安全の点検(2026-11-06)・設計の会議(2026-11-07) | MCP の道具で読まない所を読めた形・遅さ・落ちる所 | `tests/unit/` の `mcp-open-then-check`・`masked-files-iso2022`・`mcp-name-rules`・`mcp-bad-name`・`check-conditions-redos`・`mcp-denied-set` | 85a688a・51a5dda・04bcde9・415ba29・48d7c8e・F83b6 のコミット | 先に落ちる試験 → 直した(F83b1〜b6)→ 点検のやり直し(版・日時は統括が入れる) | 未測(点検のやり直しは統括) |
+
 ## コミットの数
 
 | 数えたもの | 値 | 数え方 |

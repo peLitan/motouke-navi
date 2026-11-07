@@ -37,9 +37,9 @@ async function installed(t, change = () => {}) {
   }
 }
 
-test('tools/list: read_masked・list_masked・check_articles の3つ。check_articles の引数は text だけ', async () => {
+test('tools/list: read_masked・list_masked・check_articles・check_conditions の4つ。check_articles の引数は text だけ', async () => {
   const list = await handleMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { root: ROOT });
-  assert.deepEqual(list.result.tools.map((t) => t.name), ['read_masked', 'list_masked', 'check_articles']);
+  assert.deepEqual(list.result.tools.map((t) => t.name), ['read_masked', 'list_masked', 'check_articles', 'check_conditions']);
   const tool = TOOLS.find((t) => t.name === 'check_articles');
   assert.deepEqual(Object.keys(tool.inputSchema.properties), ['text']);
   assert.deepEqual(tool.inputSchema.required, ['text']);
@@ -126,7 +126,7 @@ test('どちらの場所にも無いときは、投げずに「確かめられ�
   }
 });
 
-test('版と説明: plugin.json は 0.2.0 で、4つの Skill と3つの道具を挙げ、SERVER_INFO と同じ版。写しは元と同じ', () => {
+test('版と説明: plugin.json は 0.2.0 で、4つの Skill と4つの道具を挙げ、SERVER_INFO と同じ版。写しは元と同じ', () => {
   const m = JSON.parse(fs.readFileSync(path.join(PLUGIN, '.claude-plugin', 'plugin.json'), 'utf8'));
   assert.equal(m.version, '0.2.0');
   assert.equal(SERVER_INFO.version, m.version);

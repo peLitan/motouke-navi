@@ -32,11 +32,13 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
    - 空の作業フォルダを、このリポジトリの `plugin/` の外に作り、`plugin/evals/cases/E1_しおかぜ町下水道/raw/` だけを写す(`case.json` は写さない)
    - その作業フォルダで `claude --plugin-dir <このリポジトリ>/plugin` を開き、`case.json` の `prompt` を渡す。`raw/` の書類は直接は読めず、道具 `read_masked` で置き換えた後の中身だけが渡ります
    - 返ってきた指摘をファイルに保存し、`node plugin/evals/score.mjs plugin/evals/cases/E1_しおかぜ町下水道 <答えのファイル>` で採点する
-   - 公式の評価で走らせるときは、リポジトリの直下で次の1行です。`<固定の値>` は走らせるモデルに、`<別の固定の値>` は判定役のモデルに置き換えます。判定役は作る側(`--model`)と別のモデルに固定します。`--scaffold` が無いと書類が作業フォルダへ写らず、`--allow-real-servers` と `--allow-tools` の3つの道具が無いと本物の MCP の道具が使えません。`--no-publish` が無いと報告が claude.ai へ公開されます。E1 と E2 の両方が走り、片方だけなら `--case e1-trace-masked` のように足します
+   - 公式の評価で走らせるときは、リポジトリの直下で次の1行です。`<固定の値>` は走らせるモデルに、`<別の固定の値>` は判定役のモデルに置き換えます。判定役は作る側(`--model`)と別のモデルに固定します。`--scaffold` が無いと書類が作業フォルダへ写らず、`--allow-real-servers` と `--allow-tools` の4つの道具が無いと本物の MCP の道具が使えません。`--no-publish` が無いと報告が claude.ai へ公開されます。E1・E2・E4 が走り、1つだけなら `--case e1-trace-masked` のように足します
 
      ```
-     claude plugin eval plugin --model <固定の値> --judge-model <別の固定の値> --scaffold --allow-real-servers --allow-tools mcp__plugin_motouke-navi-guard_masked-files__read_masked mcp__plugin_motouke-navi-guard_masked-files__list_masked mcp__plugin_motouke-navi-guard_masked-files__check_articles --ablation with-without --runs 3 --no-publish --output-dir tmp/eval --report tmp/eval/report.html
+     claude plugin eval plugin --model <固定の値> --judge-model <別の固定の値> --scaffold --allow-real-servers --allow-tools mcp__plugin_motouke-navi-guard_masked-files__read_masked mcp__plugin_motouke-navi-guard_masked-files__list_masked mcp__plugin_motouke-navi-guard_masked-files__check_articles mcp__plugin_motouke-navi-guard_masked-files__check_conditions --ablation with-without --runs 3 --no-publish --output-dir tmp/eval --report tmp/eval/report.html
      ```
+
+   - E4(仕込みの無い書類で言い切らないか)も走ります。`plugin/evals/E4-no-planted/` の架空の台帳1冊で、答えが法令違反を言い切らず、候補・確認・判断できないの形で書くかを見る退行の評価です。E4 だけなら命令の `--ablation with-without` を外して `--case e4-no-planted --ablation none` を付けます。E4 は未測です(`docs/評価.md` の 7)
 
 ## できること
 - 多くの経験がない若手や、元請けを請けたことがない建設会社が、入札の前と受注の後に「何が要るか」「書類に抜けが無いか」を、建設業法などの条文と国の共通仕様書を引きながら確かめる手間を減らします
@@ -124,14 +126,14 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 ## Claude Code に組み込む
 `raw/` に置いた生のファイル(元の名前が入ったもの)を Claude Code の道具で読む操作の多くを止め、置き換えた後の中身だけを渡すための設定と道具です(`integration/claude-code/`)。詳しくは [docs/manual.md の「Claude Code に組み込む」](docs/manual.md#claude-code-に組み込む)。
 - フック `hooks/guard-raw.mjs` が Read・Grep・Glob・Bash などで `raw/` を読む形を止め、手元の MCP の道具 `masked-files` の `read_masked` が置き換えた後の中身だけを返します
-- `read_masked` は UTF-8(BOM の有無どちらも)と Shift_JIS のファイルを読みます。Excel の既定で保存した CSV・TXT は Shift_JIS になることがあります。どちらでも読めないファイルは、中身を返さず読めない旨を返します
+- `read_masked` は UTF-8(BOM の有無どちらも)と Shift_JIS のファイルを読みます。Excel の既定で保存した CSV・TXT は Shift_JIS になることがあります。どちらでも読めないファイルは、中身を返さず読めない旨を返します。ISO-2022-JP のファイルは、そのまま読むと名前が置き換わらないので読む前に断ります。空のファイルも断ります
 - 画面の「辞書を書き出す」で保存した辞書のファイルを環境変数 `MASK_DICT` に指定すると、`read_masked` も辞書に足した語(人名・現場名など)を置き換えます。読めない辞書は理由の種類だけを返して断り、辞書の語は道具の返事・出力に出しません
 - `list_masked` は `raw/` の中のファイル名を置き換えずに返すので、ファイル名に人名・会社名などの個人情報が入っているとそのまま送られます。個人情報を含まない名前にしてください
 - コマンド(`cat` など)での読み取りは、Linux・WSL で Claude Code の sandbox が有効なときは止まります。Windows(ネイティブ)では sandbox が使えないので止まりません。フックで止めきれない操作もあります
 
 ## Claude Code のプラグイン(plugin/)
 上の守り(フック)と道具を、作業フォルダに写さずに使えるようにしたプラグインです。建設の書類を点検する Skill(`skills/construction-check/`)、発注者の仕様書の文から段取りと施工計画書の記載項目の行を作って原文と機械で照らす Skill(`skills/spec-to-rules/`。[説明](docs/manual.md#claude-code-のプラグインplugin))と、指摘の候補を崩しにかかる反証の係(`agents/refuter.md`)が入っています。`claude --plugin-dir ./plugin` で、そのセッションだけ読み込めます。
-- 公告・入札説明書・仕様書から条件を拾う Skill `bid-intake`: 値ごとに原文の抜き書きを付け、`check-conditions.mjs` が原文と合わない値を外し、単位・桁・前後の食い違いを「確かめが要る」にします。人が読む表と、段1 の「公告から拾った条件を読み込む」で開くファイルを出します。見本は [docs/samples/bid-intake/拾った結果.md](docs/samples/bid-intake/拾った結果.md)(架空の公告)
+- 公告・入札説明書・仕様書から条件を拾う Skill `bid-intake`: 値ごとに原文の抜き書きを付け、MCP の道具 `check_conditions`(部品は `check-conditions.mjs`)が原文と合わない値を外し、単位・桁・前後の食い違いを「確かめが要る」にします。原文は道具が読み、読めるのは作業フォルダの中で `raw/`・`secrets/`・`.claude/`・`.git/` の下と名前が `.` で始まる部分の外だけで、名前に `:` のあるパスと Windows のデバイス名(`CON` など)のパスも断ります。人が読む表と、段1 の「公告から拾った条件を読み込む」で開くファイルを出します。見本は [docs/samples/bid-intake/拾った結果.md](docs/samples/bid-intake/拾った結果.md)(架空の公告)
 - 数量の表から参考の額を出す Skill `estimate`: 金抜き設計書や数量総括表の行を Claude が施工パッケージに当て、両方の抜き書きを付けます。`check-estimate.mjs` が抜き書きと単位を照らし、合わない行は合計に入れず、通った行だけをプログラムで積み上げます。1行ごとの出どころ、合計に入っていない行の割合、補正していない部分の額と割合を参考の額と並べます。見本は [docs/samples/estimate/結果.md](docs/samples/estimate/結果.md)(架空の数量の表と架空の単価)
 - 辞書は、端末で環境変数 `MASK_DICT` に辞書のファイルのパスを入れてから `claude --plugin-dir ./plugin` で開くと使えます(`plugin/.mcp.json` の `env` が `"MASK_DICT": "${MASK_DICT:-}"` を道具へ渡します)。入れないと空が渡り、辞書なしで動きます。確かめたのは2つに分けてです。同じ書き方の使い捨てのプラグインで、Claude Code 2.1.317 が値と空を道具へ渡すことを `claude mcp list` で確かめ(2026-11-04)、道具が辞書の語を置き換えることは単体の試験で確かめました。このプラグインで Claude に `read_masked` を呼ばせて、辞書の語が置き換わるところまで通しては確かめていません
 - プラグインは `permissions.deny` と sandbox の設定を配れません。コマンドでの読み取りを sandbox で止めるには、`integration/claude-code/.claude/settings.json` を作業フォルダに置いてください
@@ -194,6 +196,10 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 | Anthropic「Is my data used for model training?」 | https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training | 2026-11-02 |
 | Claude Code の文書(plugins/manifest-reference・plugins/create・plugins/components・hooks・sub-agents) | https://code.claude.com/docs/en/plugins/manifest-reference.md ほか4ページ | 2026-11-03 |
 | Claude Code の文書(mcp。道具の返事の保存と上限。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/mcp | 2026-11-06 |
+| Claude Code の文書(plugins-reference・hooks。hooks の既定の置き場と、Skill の frontmatter の hook を登録する時。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/plugins-reference ・ https://code.claude.com/docs/en/hooks | 2026-11-06 |
+| Claude Code の文書(plugin-evals。`--case` を付けないときに走るケース、`partial`・`skippedPaidGraders`、`arm: with-only` の検査の点の扱い。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/plugin-evals | 2026-11-06 |
+| Claude Code の文書(headless と Agent SDK の TypeScript の参照。画面なしの記録の init の `plugins`・`plugin_errors`・`mcp_servers`、`parent_tool_use_id`、`CLAUDE_CODE_FORWARD_SUBAGENT_TEXT`、result の `num_turns`・`duration_ms`、MCP の状態の5つ。開いたのは設計の係で、作る係は開いていない) | https://code.claude.com/docs/en/headless ・ https://code.claude.com/docs/en/agent-sdk/typescript | 2026-11-06 |
+| Anthropic の記事 Demystifying evals for AI agents(評価のケースの数の始めの目安、pass@k と pass^k、退行の評価と能力の評価。開いたのは調べる係で、作る係は開いていない) | https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents | 2026-11-06 |
 | デジタル庁デザインシステム `@digital-go-jp/design-tokens`(MIT。画面の色の値の多くを借りた。この画面はデジタル庁が作ったものではない) | https://www.npmjs.com/package/@digital-go-jp/design-tokens | 2026-11-05 |
 
 - 会社・団体の名前の語の一覧(`src/mask/company-types.mjs`)は、国税庁「法人種別」(https://www.houjin-bangou.nta.go.jp/documents/k-resource-dl-ver4.pdf)・法務局「商業・法人登記の申請書様式」(https://houmukyoku.moj.go.jp/homu/COMMERCE_11-1.html)・Unicode の文字表(https://www.unicode.org/Public/18.0.0/charts/PDF/U3200.pdf)・学校教育法 第1条・医療法 第1条の5・老人福祉法 第5条の3・介護保険法 第8条(e-Gov の URL はファイルに書いた)の語を、作る係とは別の進行役が並べた一覧(2026-11-03)から入れました。開発用のエージェントはこれらのページを開いておらず、原文と照合していません。略し方と慣用の語尾は公式の一覧が無いので「慣用」として分けています

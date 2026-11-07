@@ -70,13 +70,13 @@ test('CHANGELOG: 今の版の見出しがあり、plugin.json が1か所の決�
 test('CHANGELOG: 数字は版・機能の番号・日付だけ', () => {
   const rest = changelog
     .replace(/\b\d+\.\d+\.\d+\b/g, '')
-    .replace(/\bF\d+[a-z]?\b/g, '')
+    .replace(/\bF\d+[a-z]?\d*\b/g, '')
     .replace(/\b\d{4}-\d{2}-\d{2}\b/g, '');
   assert.deepEqual(rest.match(/[0-9０-９〇一二三四五六七八九十百千万億]+/gu) ?? [], []);
 });
 
 test('CHANGELOG: 版ごとの機能の番号が重ならない', () => {
-  const ids = [...changelog.matchAll(/^- (F\d+[a-z]?):/gm)].map((m) => m[1]);
+  const ids = [...changelog.matchAll(/^- (F\d+[a-z]?\d*):/gm)].map((m) => m[1]);
   assert.ok(ids.length > 0);
   assert.equal(new Set(ids).size, ids.length);
 });

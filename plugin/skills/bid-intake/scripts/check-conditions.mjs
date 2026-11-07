@@ -15,7 +15,7 @@ export const STATUS = { ok: '拾えた', check: '確かめが要る', absent: '�
 export const KIND = 'bid-intake';
 const MIN_QUOTE = 4; // 空白を除いた字数。短すぎる語句は、どこにでもあり根拠にならない
 const SMALL_YEN = 1000000; // 工事の金額としては小さい額(単位の落ちを疑う目安。法令の境目ではない)
-const NEAR = 30; // 見出しの語のあと、金額を探す字数
+const NEAR = 30; // 見出しの語のあと、金額が始まる所を探す字数
 
 // single: 値は1つのはずの欄。match: 値と抜き書きの照らし方(name は値が抜き書きの中の文字列、money は金額、number は値の数字)
 export const KEYS = [
@@ -48,7 +48,7 @@ export const COMPANY_FIELDS = [
 const KANJI = '〇零一二三四五六七八九十百千';
 const DIGIT = { 〇: 0, 零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
 const PLACE = { 十: 10, 百: 100, 千: 1000 };
-export const toHalf = (s) => String(s ?? '').replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/，/g, ',');
+export const toHalf = (s) => String(s ?? '').replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/，/g, ',').replace(/．/g, '.');
 
 // 「3百」「千二百」「1234」(桁区切りは除いてある)を数にする
 function smallValue(run) {
@@ -61,29 +61,53 @@ function smallValue(run) {
 }
 
 const NUM = `[0-9,.${KANJI}]`;
-// 億・万・円の前後の空白。\s は改行を含み、表の行をまたいで読むので使わない。toHalf は全角の空白を変えないので字で書く
+// 億・万・千・百・円の前後の空白。\s は改行を含み、表の行をまたいで読むので使わない。toHalf は全角の空白を変えないので字で書く
 const GAP = '[ \\t　]*';
 // 「円」で始まる語(「3 円滑に」「120 円形の管」)の円は額の単位ではない
 const NOT_YEN_NEXT = '滑形周盤筒柱錐弧';
-const AMOUNT_RE = new RegExp(`(?:(${NUM}+)${GAP}億${GAP})?(?:(${NUM}+)${GAP}万${GAP})?(${NUM}*)${GAP}円(?![${NOT_YEN_NEXT}])`, 'g');
+const MAX_RUN = 40; // 額として読む数字の並びの字数の上限。超えた並びは額ではない
+// 算用数字の後なら、空白を挟んだ千・百も並びの続き(「134,200 千円」「3 千万円」)。漢数字の後は見出しの番号かもしれないので続きにしない(「二 千円」)
+const RUN = `${NUM}{1,${MAX_RUN}}(?:(?<=[0-9])${GAP}[百千])?`;
+const PARTS = `(?:(${RUN})${GAP}億${GAP})?(?:(${RUN})${GAP}万${GAP})?(?:(${RUN})${GAP})?`;
+const YEN_WORD = `円(?![${NOT_YEN_NEXT}])`;
+const YEN_MARK = '[¥￥]';
+const AFTER_MARK = '[-－ー―‐−–—]'; // 「￥134,200,000-」の末尾の線。書き足しを防ぐ印で、額ではない
+// 円の印だけで「円」の無い額は、算用数字に単位が空白なしで付いた形だけを読む。額の続きかもしれない物が後ろにあれば、途中までの数にせず読まない:
+// 空白を挟んだ十・百・千・万・億(額の続きか、「￥134,200,000 千代田区」の次の語かを字では決められない)、単位で終わる額の後の空白と数字(「￥1億 3,420万」)
+const BARE_RUN = `[0-9][0-9,.百千]{0,${MAX_RUN - 1}}`;
+const BARE = `(?:(${BARE_RUN})億)?(?:(${BARE_RUN})万)?(${BARE_RUN})?(?!${NUM}|${GAP}[十百千万億])(?<![百千万億](?=${GAP}[0-9]))${AFTER_MARK}?`;
+// 長い1行で固まらないよう、並びの頭からだけ読み、空白の繰り返しを隣り合わせない(「億」の後の空白と「円」の前の空白は1つにまとまる)
+// 印の直後は算用数字に限る(「￥千円」「￥百万」は表の見出しの単位)
+const AMOUNT_RE = new RegExp(`${YEN_MARK}${GAP}(?=[0-9])(?:${PARTS}${YEN_WORD}|${BARE})|(?<!${NUM})${PARTS}${YEN_WORD}`, 'g');
+// 空白で区切られた額の途中から読み始めた所(「3 千 5 百万円」の「5 百万円」、「3 千500万円」の「千500万円」)。
+// 後ろの一部だけを読むと小さい額のまま「拾えた」になる。AMOUNT_RE の中で断ると次の頭からさらに後ろを読むので、読んだ額を丸ごと捨てる
+const MID_AMOUNT = new RegExp(`(?<=[十百千]${GAP}|[0-9]${GAP}(?=[十百千]))(?!${YEN_MARK})`, 'y');
+const midAmount = (s, index) => { MID_AMOUNT.lastIndex = index; return MID_AMOUNT.test(s); };
 const UNIT_WORD = new RegExp(`^(?:千|百${GAP}万)${GAP}円$`);
-const groupsBad = (run) => run.includes(',') && !/^[0-9]{1,3}(,[0-9]{3})+$/.test(run);
+const groupsBad = (run) => run.includes(',') && !/^[0-9]{1,3}(,[0-9]{3})+(\.[0-9]+)?$/.test(run);
+const noSpace = (run) => run.replace(/[ \t　]/g, '');
+// 末尾の点は小数点ではない(「￥134,200,000.-」)
+const noEndDot = (run) => run.replace(/\.$/, '');
 
-// 文の中の金額を円の数にする。{ yen, raw, index, badComma }。全角・漢数字・億・万・千円・百万円を読む
+// 並び1つの数。「1.2億円」「12.5万円」「134.2百万円」の小数も読む
+function runValue(run = '') {
+  const t = noEndDot(noSpace(run).replace(/,/g, ''));
+  const dec = t.match(/^([0-9]*\.[0-9]+)([百千]?)$/);
+  return dec ? Number(dec[1]) * (PLACE[dec[2]] ?? 1) : smallValue(t);
+}
+
+// 文の中の金額を円の数にする。{ yen, raw, index, badComma }。全角・漢数字・億・万・千円・百万円・円の印を読む
 export function parseAmounts(text) {
   const s = toHalf(text);
   const out = [];
   for (const m of s.matchAll(AMOUNT_RE)) {
-    const [raw, oku, man, rest] = m;
+    const raw = m[0];
+    const [oku, man, rest] = [1, 2, 3].map((i) => m[i] ?? m[i + 3] ?? m[i + 6]);
     const parts = [oku, man, rest].filter(Boolean);
-    if (!parts.length || UNIT_WORD.test(raw)) continue; // 「単位:千円」の語は額ではない
-    const clean = (p) => {
-      const t = String(p ?? '').replace(/,/g, '');
-      return /^[0-9]*\.[0-9]+$/.test(t) ? Number(t) : smallValue(t); // 「1.2億円」「12.5万円」
-    };
-    const yen = Math.round(clean(oku) * 1e8 + clean(man) * 1e4 + clean(rest));
-    if (yen === 0) continue;
-    out.push({ yen, raw, index: m.index, badComma: parts.some((p) => groupsBad(p.replace(/[百千]$/, ''))) });
+    if (!parts.length || UNIT_WORD.test(raw) || midAmount(s, m.index)) continue; // 「単位:千円」の語は額ではない
+    const yen = Math.round(runValue(oku) * 1e8 + runValue(man) * 1e4 + runValue(rest));
+    if (!Number.isFinite(yen) || yen === 0) continue; // 「1.2.3円」のような並びは数にならない
+    out.push({ yen, raw, index: m.index, badComma: parts.some((p) => groupsBad(noEndDot(noSpace(p).replace(/[百千]$/, '')))) });
   }
   return out;
 }
@@ -91,7 +115,7 @@ export function parseAmounts(text) {
 const ERAS = { 令和: 2018, 平成: 1988, R: 2018, H: 1988 };
 const DATE_RE = /(?:(令和|平成|R|H)\s*(\d+|元)\s*年|(?<!\d)(\d{4})\s*年)\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/g;
 // 日付の中の漢数字を数字にする(「令和九年四月一日」)
-const dateDigits = (s) => toHalf(s).replace(new RegExp(`[${KANJI}]+(?=\\s*[年月日])`, 'g'), (r) => String(smallValue(r)));
+const dateDigits = (s) => toHalf(s).replace(new RegExp(`(?<![${KANJI}])[${KANJI}]+(?=\\s*[年月日])`, 'g'), (r) => String(smallValue(r)));
 
 // 文の中の日付。{ raw, y, m, d, time, valid }。time は比べられる数(日)
 export function parseDates(text) {
@@ -109,7 +133,7 @@ export function parseDates(text) {
 
 // 値の数字の列。漢数字は単位が続くときだけ数字にする(「一式」「一括」を数にしない)
 function numberTokens(s) {
-  const t = toHalf(s).replace(/(\d),(?=\d)/g, '$1').replace(new RegExp(`[${KANJI}]+(?=\\s*(?:年|月|日|か月|箇月|ヶ月|人|名|級|点|件|回))`, 'g'), (r) => String(smallValue(r)));
+  const t = toHalf(s).replace(/(\d),(?=\d)/g, '$1').replace(new RegExp(`(?<![${KANJI}])[${KANJI}]+(?=\\s*(?:年|月|日|か月|箇月|ヶ月|人|名|級|点|件|回))`, 'g'), (r) => String(smallValue(r)));
   return t.match(/\d+/g) ?? [];
 }
 
@@ -123,7 +147,7 @@ export function taxState(text) {
 
 // 原文の「(単位:千円)」の宣言
 export function declaredUnit(text) {
-  const m = toHalf(text).match(new RegExp(`単位\\s*[:：]?\\s*(百${GAP}万${GAP}円|千${GAP}円|万${GAP}円)`));
+  const m = toHalf(text).match(new RegExp(`単位\\s*(?:[:：]\\s*)?(百${GAP}万${GAP}円|千${GAP}円|万${GAP}円)`));
   if (!m) return null;
   const word = m[1].replace(new RegExp(GAP, 'g'), '');
   return { word, yen: { 千円: 1e3, 万円: 1e4, 百万円: 1e6 }[word] };
@@ -138,30 +162,41 @@ const rel = (a, b) => {
   return '金額が違う';
 };
 const yenText = (n) => n.toLocaleString('en-US') + '円';
-const linesOf = (sources) => sources.flatMap((s) => s.text.split(/\r?\n/).map((line, i) => ({ file: s.file, no: i + 1, line })));
+const LINE_HEAD = 2000; // 1行のうち、見出しと日付の拾いに使う先頭の字数
+const linesOf = (sources) => sources.flatMap((s) => s.text.split(/\r\n|[\n\r\u2028\u2029]/).map((line, i) => ({ file: s.file, no: i + 1, line })));
 const where = (l) => `${l.file} ${l.no}行目`;
 
-// 見出しの語のすぐあとにある金額(境目の説明「1億円以上」は除く)
+// 見出しの語のすぐあとで始まる金額(境目の説明「1億円以上」は除く)。
+// 先に字数で切ると円の印の額が切れた所までの数になるので、読んでから位置で選ぶ
 function labelledAmounts(sources, words) {
   const out = [];
   for (const l of linesOf(sources)) {
     const s = toHalf(l.line);
     const w = words.find((x) => s.includes(x));
     if (!w) continue;
-    const near = s.slice(s.indexOf(w) + w.length, s.indexOf(w) + w.length + NEAR);
-    const a = parseAmounts(near)[0];
-    if (a && !/^\s*(?:以上|以下|未満|を超え)/.test(near.slice(a.index + a.raw.length))) out.push({ ...l, yen: a.yen, raw: a.raw });
+    const after = s.slice(s.indexOf(w) + w.length);
+    const a = parseAmounts(after)[0];
+    if (a && a.index < NEAR && !/^\s*(?:以上|以下|未満|を超え)/.test(after.slice(a.index + a.raw.length))) out.push({ ...l, yen: a.yen, raw: a.raw });
   }
   return out;
 }
 
+// 見出しの行の本文の末尾から落とす字
+const BODY_TAIL = /[\s　|]/;
+
 // 行の頭が見出しの語で始まる行の中身(「工事名: ○○」「| 工事名 | ○○ |」「2 工事名 ○○」)
 function labelledLines(sources, words) {
-  const head = new RegExp(`^[\\s　|#*\\-・]*(?:[(（]?[0-9０-９]+[)）.．]?[\\s　]*)?(?:${words.join('|')})[\\s　]*(?:[:：|]|[\\s　])[\\s　|]*(.+?)[\\s　|]*$`);
+  const head = new RegExp(`^[\\s　|#*\\-・]*(?:[(（]?[0-9０-９]+[)）.．]?[\\s　]*)?(?:${words.join('|')})([\\s　]*[:：|][\\s　|]*|[\\s　]+)`);
   const out = [];
   for (const l of linesOf(sources)) {
-    const m = l.line.match(head);
-    if (m) out.push({ ...l, body: m[1] });
+    const line = l.line.slice(0, LINE_HEAD);
+    const m = line.match(head);
+    if (!m) continue;
+    const rest = line.slice(m[0].length);
+    let end = rest.length;
+    while (end > 0 && BODY_TAIL.test(rest[end - 1])) end--;
+    if (end > 0) out.push({ ...l, body: rest.slice(0, end) });
+    else if (m[1].length > 1) out.push({ ...l, body: m[1].at(-1) }); // 本文の無い行(「| 工事名 | |」)は語の後の最後の1字
   }
   return out;
 }
@@ -238,7 +273,7 @@ export function eraConflicts(sources) {
   const out = [];
   const re = /(令和|平成)\s*(\d+|元)\s*年\s*[(（]\s*(\d{4})\s*年?\s*[)）]/g;
   for (const l of linesOf(sources)) {
-    for (const m of dateDigits(l.line).matchAll(re)) {
+    for (const m of dateDigits(l.line.slice(0, LINE_HEAD)).matchAll(re)) {
       const y = ERAS[m[1]] + (m[2] === '元' ? 1 : Number(m[2]));
       if (y !== Number(m[3])) out.push(`${where(l)} の「${m[0]}」は ${y}年 で合わない`);
     }
