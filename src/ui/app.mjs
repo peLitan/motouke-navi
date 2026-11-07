@@ -2,7 +2,7 @@
 // build.mjs がこのファイルと部品を index.html の1つのスクリプトにまとめ、最後に startApp(document) を呼ぶ。
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
-import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
+import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, nextShowsPoint, renderOpenItems, renderChecklist } from './view.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -57,6 +57,7 @@ function updateSummary(doc) {
   const state = { ...summary, values: summary.values ?? collect(doc) };
   const top = doc.getElementById('result-top');
   if (top) { const h = renderResultTop(state); top.innerHTML = h; top.hidden = !h; }
+  doc.getElementById('bid-result')?.classList?.toggle('first-point-above', nextShowsPoint(state));
   keepOpen(doc, SUMMARY_FOLDS, () => { el.innerHTML = renderSummary(state); });
   el.hidden = false;
   summaryShown = true;

@@ -146,7 +146,7 @@ test('表に無い key・値には文が無い(Object のもとからある名�
 
 const cards = (html) => [...html.matchAll(/<li class="item status-(\w+)" id="([^"]+)">([\s\S]*?<\/details>)<\/li>/g)]
   .map((m) => ({ status: m[1], id: m[2], html: m[3] }));
-const lineOf = (it) => '<p class="item-next">次にすること: ' + nextStepText(it) + '。<span class="item-next-note">' + TAIL + '</span></p>';
+const lineOf = (it) => '<p class="item-next">次にすること: ' + nextStepText(it) + '。<span class="item-next-note print-inline">' + TAIL + '</span></p>';
 
 test('見本の要る6項目: どのカードも h4 の直下、折りたたみより前に1行', () => {
   const bid = bidCheck(readBidForm(SAMPLE.form));

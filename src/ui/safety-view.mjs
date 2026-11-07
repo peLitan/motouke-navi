@@ -1,5 +1,5 @@
 // 労働安全衛生法の候補の画面(F40b)。問いは build の時に静的な HTML にし、候補は欄を変えるたびに描き直す。DOM には触らない。
-import { esc, statusBadge, basisList, BID_STATUS } from './view.mjs';
+import { esc, statusBadge, basisList, seeAbove, BID_STATUS } from './view.mjs';
 import { safetyQuestions } from '../safety.mjs';
 
 const q = safetyQuestions();
@@ -59,17 +59,25 @@ export function stage1Line(values = {}, stage1 = {}) {
 }
 
 const FIELD_ANCHOR = { subcontract: 'safety-q-subcontract', workers: 'safety-q-workers', plan: 'safety-q-plan', works: 'safety-q-works' };
-const needsLine = (n) => '<li><a href="#' + FIELD_ANCHOR[n.field] + '">' + esc('＊「' + n.label + '」' + (n.state === 'unknown' ? 'が分かると' : 'を入れると') + '判断できます') + '</a></li>';
+const needsText = (n) => '＊「' + n.label + '」' + (n.state === 'unknown' ? 'が分かると' : 'を入れると') + '判断できます';
+const needsLink = (n) => '<a href="#' + FIELD_ANCHOR[n.field] + '">' + esc(needsText(n)) + '</a>';
+// 同じ文の2回目(F83a12)。seen は 文 → 最初に出した候補。画面は参照の1行、紙は文のまま
+const firstSeen = (seen, text, c) => { const first = seen.get(text); if (!first) seen.set(text, c); return first ?? null; };
+const titleOf = (c) => c.label + (c.work ? '(' + c.work + ')' : '');
 
-function candidateBlock(c) {
-  const title = c.label + (c.work ? '(' + c.work + ')' : '');
+function candidateBlock(c, seen = new Map()) {
+  const title = titleOf(c);
   const route = c.status === 'required' && c.to ? '<p>届出先: ' + esc(c.to) + '(仕事の開始の日の ' + c.daysBefore + '日前まで)</p>'
     : c.routes ? '<p>当たるときの届出先: ' + c.routes.map((r) => esc(r.to) + '(' + r.daysBefore + '日前まで)').join('、または ') + '</p>' : '';
   const matched = (c.matched ?? []).length ? '<ul>' + c.matched.map((m) => '<li>' + esc(m.quote) + '</li>').join('') + '</ul>' : '';
+  const actionFirst = c.action ? firstSeen(seen, c.action, c) : null;
+  const noteFirst = c.note ? firstSeen(seen, c.note, c) : null;
+  const first = actionFirst ?? noteFirst;
+  const needsLine = (n) => { const f = firstSeen(seen, needsText(n), c); return '<li>' + (f ? '<span class="no-print">' + seeAbove(titleOf(f), f.id) + '</span><span class="print-inline">' + esc(needsText(n)) + '</span>' : needsLink(n)) + '</li>'; };
   return '<div class="item safety-item" id="' + esc(c.id) + '"><p>' + statusBadge(c.status) + ' <strong>' + esc(title) + '</strong></p>'
-    + (c.action ? '<p>' + esc(c.action) + '</p>' : '') + route + matched
+    + (c.action ? '<p' + (actionFirst ? ' class="print-only"' : '') + '>' + esc(c.action) + '</p>' : '') + (first ? '<p class="no-print">' + seeAbove(titleOf(first), first.id) + '</p>' : '') + route + matched
     + (c.caveat ? '<p class="note">原文の除外: ' + esc(c.caveat) + '</p>' : '')
-    + (c.note ? '<p class="note">' + esc(c.note) + '</p>' : '')
+    + (c.note ? '<p class="note' + (noteFirst ? ' print-only' : '') + '">' + esc(c.note) + '</p>' : '')
     + (c.needs.length ? '<ul class="safety-needs">' + c.needs.map(needsLine).join('') + '</ul>' : '')
     + basisList(c.basis) + '</div>';
 }
@@ -98,7 +106,8 @@ export function renderSafetyResult(r, answerRows = []) {
   if (!r.started) return '<p>条件を入れると、ここに候補を出します。</p>';
   const parts = [];
   if (r.line) parts.push('<p class="note">' + esc(r.line.text) + '</p>' + basisList(r.line.basis));
-  if (r.candidates.length) parts.push('<p><strong>候補は ' + r.counts.total + '件です</strong>(' + esc(safetyBreakdown(r)) + ')</p>' + r.candidates.map(candidateBlock).join(''));
+  const seen = new Map();
+  if (r.candidates.length) parts.push('<p><strong>候補は ' + r.counts.total + '件です</strong>(' + esc(safetyBreakdown(r)) + ')</p>' + r.candidates.map((c) => candidateBlock(c, seen)).join(''));
   else parts.push('<p>選んだ作業では、この一覧の条件には当たりませんでした。</p>');
   parts.push('<p class="note">' + esc(r.notOnList) + '</p>');
   parts.push('<div class="print-only"><h4>安全の法令の候補の入れた条件</h4><dl class="summary-list">' + answerRows.map(([k, v]) => '<div class="summary-row"><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl></div>');
