@@ -48,13 +48,14 @@ export function parseIntakeFile(text) {
   return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped), company: list(data.companyFields) };
 }
 
-// 公告の PDF を「公告の参加の条件」の欄に入れたときの知らせ(F82c)。条件は拾わないので、見た物と見ていない物を言う
+// 公告の PDF を「公告の参加の条件」の欄に入れたときの知らせ(F82c)。条件は拾わないので、見た物と見ていない物を言う。
+// 順は 読んだこと → 結論 → 次の動作 → 見た範囲 → Claude Code の話(F85c)。aria-live の p なので折りたたまない
 export const INTAKE_FIELD_FILLED = '「公告の参加の条件」の欄に文があるので入れていません。欄を空にしてから置き直してください。';
 export function pdfIntakeNotice(name, pages, text) {
   const prime = findPrimeExperience(text)
     ? '元請けとしての実績を求める文がありました。結果の「確認が要る点」に出します。'
     : '元請けとしての実績を求める文は見つかりませんでした。公告の本文で確かめてください。';
-  return '「' + name + '」の文字を読みました(' + pages + '頁)。「公告の参加の条件」の欄に入れました。見たのは元請けの実績の条件だけで、金額・工事の種類・等級・地域などの条件は拾っていません。拾うのはパソコンの Claude Code の『公告を読む Skill(bid-intake)』で、渡すのは文のファイルです(下の「公告の文を .txt で保存」で保存して渡してください)。' + prime;
+  return '「' + name + '」の文字を読みました(' + pages + '頁)。「公告の参加の条件」の欄に入れました。' + prime + '残りの欄を入れて「確認する」を押します。見たのは元請けの実績の条件だけで、金額・工事の種類・等級・地域などの条件は拾っていません。拾うのはパソコンの Claude Code の「公告を読む」手順で、渡すのは文のファイルです(下の「公告の文を .txt で保存」で保存して渡してください)。';
 }
 
 // 「公告の文を .txt で保存」のファイルの名前(F83a14)。読んだ PDF の名前が無いときは日付の名前にする。OS が名前に使えない字は _ にする

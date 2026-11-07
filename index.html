@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XZmm/kN/ByhD3IyQyr8BVtujBSXsjEjOw8LFoPVeZcI='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sP73jyQ3gbWxs9sI2/HP9SVvJCjwH3emZ3uaqcg8gOo='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -558,7 +558,7 @@
 <details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
 <p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。文字の入った公告の PDF を選ぶと、文字を読んで「公告の参加の条件」の欄に入れます(見るのは元請けの実績の条件だけで、ほかの条件は拾いません)。外へ送らず、入れた内容を残しません。</p>
 <div class="row drop" data-drop="intake-load"><label for="intake-load">公告の PDF・拾った条件のファイル(.pdf・.json)</label>
-<input type="file" id="intake-load" name="intake-load" accept=".json,application/json,.pdf,application/pdf"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
+<input type="file" id="intake-load" name="intake-load" accept=".pdf,application/pdf,.json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
 <p id="intake-status" aria-live="polite"></p>
 <div id="intake-result"></div>
 <p id="intake-save-note" class="hint">「公告の参加の条件」の欄の文をこの端末に保存します(外へは送りません)。欄が空のときは押せません。</p>
@@ -7713,13 +7713,14 @@ function parseIntakeFile(text) {
   return { title, form, quotes, rows, participation: participationText(rows), skipped: list(data.formSkipped), company: list(data.companyFields) };
 }
 
-// 公告の PDF を「公告の参加の条件」の欄に入れたときの知らせ(F82c)。条件は拾わないので、見た物と見ていない物を言う
+// 公告の PDF を「公告の参加の条件」の欄に入れたときの知らせ(F82c)。条件は拾わないので、見た物と見ていない物を言う。
+// 順は 読んだこと → 結論 → 次の動作 → 見た範囲 → Claude Code の話(F85c)。aria-live の p なので折りたたまない
 const INTAKE_FIELD_FILLED = '「公告の参加の条件」の欄に文があるので入れていません。欄を空にしてから置き直してください。';
 function pdfIntakeNotice(name, pages, text) {
   const prime = findPrimeExperience(text)
     ? '元請けとしての実績を求める文がありました。結果の「確認が要る点」に出します。'
     : '元請けとしての実績を求める文は見つかりませんでした。公告の本文で確かめてください。';
-  return '「' + name + '」の文字を読みました(' + pages + '頁)。「公告の参加の条件」の欄に入れました。見たのは元請けの実績の条件だけで、金額・工事の種類・等級・地域などの条件は拾っていません。拾うのはパソコンの Claude Code の『公告を読む Skill(bid-intake)』で、渡すのは文のファイルです(下の「公告の文を .txt で保存」で保存して渡してください)。' + prime;
+  return '「' + name + '」の文字を読みました(' + pages + '頁)。「公告の参加の条件」の欄に入れました。' + prime + '残りの欄を入れて「確認する」を押します。見たのは元請けの実績の条件だけで、金額・工事の種類・等級・地域などの条件は拾っていません。拾うのはパソコンの Claude Code の「公告を読む」手順で、渡すのは文のファイルです(下の「公告の文を .txt で保存」で保存して渡してください)。';
 }
 
 // 「公告の文を .txt で保存」のファイルの名前(F83a14)。読んだ PDF の名前が無いときは日付の名前にする。OS が名前に使えない字は _ にする
@@ -10527,9 +10528,7 @@ function fileTypeMessage(doc, id, file) {
   const name = file.name.toLowerCase();
   if (!exts.length || exts.some((x) => name.endsWith(x))) return null;
   const again = /\.xls$/.test(name) ? 'Excel で .xlsx に保存し直してください。' : '';
-  // 段1 の枠は公告の PDF も読むが、違う種類のファイルに案内するのは今までどおり条件のファイル(F82c)
-  const shown = id === 'intake-load' ? exts.filter((x) => x !== '.pdf') : exts;
-  return '選んだファイルは ' + shown.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
+  return '選んだファイルは ' + exts.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
 }
 // 読まなかったことを知らせる(F58a)。文は変えず、書いたあとで印を付ける
 function sayNotRead(doc, port, text) {
@@ -10644,9 +10643,9 @@ function outsideNotice(doc) {
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }
   if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + ['ledger-file', 'plan-file'].map((id) => frameName(doc, id)).filter(Boolean).join('・') + '。'];
-  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '条件のファイル(.json)は「公告を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
+  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '公告の PDF と条件のファイル(.json)は「公告を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
   // 入力の確かめの画面には枠が無い
-  return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
+  return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。公告の PDF と条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
 }
 function sayOutside(doc) {
   const [id, text] = outsideNotice(doc);

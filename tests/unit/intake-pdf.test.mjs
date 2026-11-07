@@ -68,7 +68,7 @@ test('画面: 公告の PDF を読むと欄に入り、結果の「確認が要�
 test('画面: 実績の文の無い公告では、見つからなかったと言い、確認が要る点に出さない', async () => {
   const page = await startPage();
   await read(page, pdfFile('公告.pdf', plain([NO_PRIME_LINES])));
-  assert.ok(line(page).endsWith(MISSED), line(page));
+  assert.ok(line(page).includes(MISSED), line(page));
   await toResult(page);
   assert.ok(!page.el('open-items').innerHTML.includes('元請けの施工実績'));
 });
@@ -154,7 +154,7 @@ test('画面: 読む間の文と頁の進みを出し、読み終わると消え
 test('画面: 読めない頁と表の注意を行で添え、次に読むと消える', async () => {
   const page = await startPage();
   await read(page, pdfFile('公告.pdf', plain([NO_PRIME_LINES, [], []])));
-  assert.ok(line(page).endsWith(MISSED), line(page));
+  assert.ok(line(page).includes(MISSED), line(page));
   const notes = page.el('intake-result').innerHTML;
   assert.ok(notes.includes('3頁のうち'), notes);
   assert.ok(notes.includes('2'), notes);

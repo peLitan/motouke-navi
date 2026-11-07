@@ -1119,9 +1119,7 @@ export function fileTypeMessage(doc, id, file) {
   const name = file.name.toLowerCase();
   if (!exts.length || exts.some((x) => name.endsWith(x))) return null;
   const again = /\.xls$/.test(name) ? 'Excel で .xlsx に保存し直してください。' : '';
-  // 段1 の枠は公告の PDF も読むが、違う種類のファイルに案内するのは今までどおり条件のファイル(F82c)
-  const shown = id === 'intake-load' ? exts.filter((x) => x !== '.pdf') : exts;
-  return '選んだファイルは ' + shown.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
+  return '選んだファイルは ' + exts.join('・') + ' にしてください(今のファイル: ' + file.name + ')。' + again;
 }
 // 読まなかったことを知らせる(F58a)。文は変えず、書いたあとで印を付ける
 function sayNotRead(doc, port, text) {
@@ -1236,9 +1234,9 @@ function outsideNotice(doc) {
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }
   if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + ['ledger-file', 'plan-file'].map((id) => frameName(doc, id)).filter(Boolean).join('・') + '。'];
-  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '条件のファイル(.json)は「公告を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
+  if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '公告の PDF と条件のファイル(.json)は「公告を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
   // 入力の確かめの画面には枠が無い
-  return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
+  return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。公告の PDF と条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
 }
 function sayOutside(doc) {
   const [id, text] = outsideNotice(doc);

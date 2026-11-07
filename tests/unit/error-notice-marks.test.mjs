@@ -27,7 +27,7 @@ const AI = JSON.stringify({ format: 'ai-candidates', candidates: [{ message: '�
 
 // id: 口の input、status: 知らせの欄、good: 読めるファイルの中身、big: 大きさの上限がある口
 const JSON_PORTS = [
-  { id: 'intake-load', status: 'intake-status', good: INTAKE, big: true },
+  { id: 'intake-load', status: 'intake-status', good: INTAKE, big: true, types: '.pdf・.json' }, // 公告の PDF も受ける口(F85c)
   { id: 'rules-load', status: 'rules-status', good: RULES, big: true },
   { id: 'dict-import', status: 'dict-file-status', good: DICT, big: true },
   { id: 'map-import', status: 'map-status', good: MAP },
@@ -62,7 +62,7 @@ for (const port of JSON_PORTS) {
     assert.equal(kind(page, port.status), null);
 
     await readIn(page, port.id, text('写真.png', 'x'));
-    assert.equal(line(page, port.status), '選んだファイルは .json にしてください(今のファイル: 写真.png)。');
+    assert.equal(line(page, port.status), '選んだファイルは ' + (port.types ?? '.json') + ' にしてください(今のファイル: 写真.png)。');
     assert.equal(kind(page, port.status), 'error');
 
     if (port.big) {

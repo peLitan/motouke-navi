@@ -143,6 +143,6 @@ test('読めないファイル: zip の目次や中身が壊れていても同�
 
 test('公告の PDF の知らせ: bid-intake は利用者の言葉の名前で書く', () => {
   const line = pdfIntakeNotice('架空.pdf', 1, '架空の公告の文');
-  assert.ok(line.includes('パソコンの Claude Code の『公告を読む Skill(bid-intake)』'), line);
+  assert.ok(line.includes('パソコンの Claude Code の「公告を読む」手順'), line);
   assert.ok(!line.includes('Skill bid-intake'), line);
 });

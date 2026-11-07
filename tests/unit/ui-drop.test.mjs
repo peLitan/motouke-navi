@@ -299,7 +299,7 @@ test('(F82c) タイルに公告の PDF を置くと、段1 を開いて欄に入
   assert.ok(doc.getElementById('participation-conditions').value.includes(PRIME_SENTENCE));
   const line = status(doc, 'intake-status');
   assert.ok(line.startsWith('「公告.pdf」の文字を読みました(2頁)。「公告の参加の条件」の欄に入れました。'), line);
-  for (const part of [NOT_PICKED, '『公告を読む Skill(bid-intake)』', '文のファイル', PRIME_FOUND]) assert.ok(line.includes(part), part);
+  for (const part of [NOT_PICKED, '「公告を読む」手順', '文のファイル', PRIME_FOUND]) assert.ok(line.includes(part), part);
   assert.equal(status(doc, 'drop-status'), '');
   assert.equal(doc.getElementById('contract-amount').value, '100', 'ほかの欄は変えない');
 });
@@ -307,7 +307,7 @@ test('(F82c) タイルに公告の PDF を置くと、段1 を開いて欄に入
 test('(F82c) 段1 の枠に置いても同じ。実績の文が無ければ、見つからなかったと言う', async () => {
   const doc = pdfDoc();
   await handleFileDrop(doc, dropEv(doc.frames['intake-load'], [pdfFile('公告.pdf', koukokuPdf([NO_PRIME_LINES]))]));
-  assert.ok(status(doc, 'intake-status').endsWith(PRIME_MISSED), status(doc, 'intake-status'));
+  assert.ok(status(doc, 'intake-status').includes(PRIME_MISSED), status(doc, 'intake-status'));
   assert.ok(status(doc, 'intake-status').includes(NOT_PICKED));
   assert.ok(!status(doc, 'intake-status').includes(PRIME_FOUND));
 });
@@ -354,7 +354,7 @@ test('(F54d-3) 枠の外に置くと、今見えている段の欄に書き、�
   // 入口
   doc = fakeDoc();
   await outside(doc);
-  assert.match(status(doc, 'drop-status'), /^読み込んでいません。条件のファイル\(\.json\)は「公告を読み込む」のタイルに/);
+  assert.match(status(doc, 'drop-status'), /^読み込んでいません。公告の PDF と条件のファイル\(\.json\)は「公告を読み込む」のタイルに/);
   // 段1: scrollIntoView の無い要素でも落ちない
   doc = fakeDoc();
   showStep(doc, 'panel-1');
