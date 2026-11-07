@@ -33,6 +33,8 @@ export const PLUGIN_COPIES = [
   ['src/quote-check.mjs', 'plugin/skills/spec-to-rules/scripts/lib/quote-check.mjs'],
   // F41a: 公告から条件を拾う Skill の照合
   ['src/quote-check.mjs', 'plugin/skills/bid-intake/scripts/lib/quote-check.mjs'],
+  // F82e: 公告の PDF を文にする道具が読む部品(画面と同じもの)
+  ['src/pdf-read.mjs', 'plugin/skills/bid-intake/scripts/lib/pdf-read.mjs'],
   // F42b: 参考の積算額の Skill の照合と計算。indirect.mjs が読む率の表は ../../data/ の位置に置く
   ['src/quote-check.mjs', 'plugin/skills/estimate/scripts/lib/quote-check.mjs'],
   ['src/estimate/direct.mjs', 'plugin/skills/estimate/scripts/lib/estimate/direct.mjs'],
