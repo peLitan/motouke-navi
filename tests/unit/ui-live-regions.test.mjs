@@ -66,11 +66,11 @@ const count = (html, re) => [...html.matchAll(re)].length;
 test('bid-status: 頭を残して「要る n項目。」を足し、次の一手も残す。数はカードと同じ', async () => {
   const page = await samplePage();
   await page.click('bid-run');
-  const m = status(page, 'bid-status').match(/^✓ 結果が出ました。要る (\d+)項目。下の「次にすること」から読んでください。/);
+  const m = status(page, 'bid-status').match(/^✓ 結果が出ました。要る (\d+)項目。「次にすること」から読んでください。/);
   assert.ok(m, status(page, 'bid-status'));
   assert.ok(Number(m[1]) > 0, '見本には要る項目があるはず');
   assert.equal(Number(m[1]), cardNumber(page));
-  assert.ok(status(page, 'bid-status').includes('「次へ: 書類を確かめる」'));
+  assert.ok(status(page, 'bid-status').includes('「次にすること」から読んでください。'));
   assert.doesNotMatch(status(page, 'bid-status'), /確認が要る/, '「確認が要る n」は書かない');
 });
 

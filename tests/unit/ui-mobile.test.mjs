@@ -174,7 +174,7 @@ test('F54a (5) 40rem の中の .stat は grid の行で、説明を隠さない'
   assert.ok([4, 8, 12, 16, 24, 32, 40].includes(toPx(prop(st, 'column-gap'))));
   assert.equal(prop(phoneRule('.stat-num'), 'font-size'), '1.5rem');
   for (const r of rules) if (r.sel.split(',').some((x) => x.includes('.stat-sub'))) assert.ok(!/display: none|visibility: hidden/.test(r.body), r.sel);
-  for (const c of ['.stat-required', '.stat-check', '.stat-safety', '.stat-schedule']) assert.ok(prop(phoneRule(c), 'border-left-color'), c);
+  for (const c of ['.stat-required', '.stat-check', '.stat-safety']) assert.ok(prop(phoneRule(c), 'border-left-color'), c);
   assert.equal(prop(ruleOf('.stat'), 'display'), 'block', 'パソコン幅のカードが変わった');
 });
 

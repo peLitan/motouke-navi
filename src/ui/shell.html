@@ -202,15 +202,13 @@
   /* 結果の先頭(F43c): 数字のカードは押すとその節へ飛ぶ。安全の法令の候補は印を付け、青にしない(「問題なし」「押せる字」に読めないように) */
   .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; list-style: none; margin: 0.75rem 0 1rem; padding: 0; }
   .stat { display: block; height: 100%; padding: 0.75rem 1rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-top: 6px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); text-decoration: none; }
-  .stat:hover { background: var(--paper-2); }
   .stat-num { display: block; font-size: 2rem; font-weight: bold; line-height: 1.2; }
-  .stat-lab { display: block; font-size: 1.1875rem; font-weight: bold; text-decoration: underline; }
+  .stat-lab { display: block; font-size: 1.1875rem; font-weight: bold; }
   .stat-sub { display: block; color: var(--ink-2); }
   .stat-required { border-top-color: var(--need-line); }
   .stat-required .stat-num { color: var(--need); }
   .stat-check { border-top-color: var(--check-line); }
   .stat-safety { border-top-color: var(--ink-2); }
-  .stat-schedule { border-top-color: var(--ink-2); }
   .next-card { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; color: var(--ink); background: var(--primary-bg); border: 1px solid var(--primary); border-radius: 12px; padding: 1rem 1.5rem; margin: 0 0 1rem; }
   .next-text { flex: 1 1 16rem; min-width: 0; }
   .next-title { margin: 0; font-size: 1.1875rem; font-weight: bold; }
@@ -353,7 +351,6 @@
     .stat-required { border-left-color: var(--need-line); }
     .stat-check { border-left-color: var(--check-line); }
     .stat-safety { border-left-color: var(--ink-2); }
-    .stat-schedule { border-left-color: var(--ink-2); }
     .next-card { padding: 0.75rem 1rem; }
     .next-go { width: 100%; justify-content: center; }
     #bid-run, #ledger-run, #plan-run, #print-btn, #print-all-btn, #csv-btn, .rules-switch button, .sample-banner button { width: 100%; margin: 0.25rem 0; }
@@ -439,6 +436,13 @@
     #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #entry-back { margin-left: auto; }
     #pg-back::before, #confirm-back::before { content: "\25C0\00A0"; content: "\25C0\00A0" / ""; }
     #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #entry-back::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
+    /* 要点のページ(F86e): 塗りは「次にすること」のボタンだけにする */
+    #pager.seat-plain #pg-next { color: var(--primary); background: var(--paper); font-weight: normal; }
+    #pager.seat-plain #pg-next:hover, #pager.seat-plain #pg-next:active { color: var(--primary); background: var(--primary-bg); }
+    #result-name { margin: 0.25rem 0; font-weight: bold; }
+    #result-flag { margin: 0.25rem 0; border-left: 4px solid var(--primary); padding: 0.25rem 0 0.25rem 0.75rem; font-weight: bold; }
+    /* 結果が出たときの全文: 1行の #result-flag だけを見せ、読み上げのために画面の外に残す */
+    p#bid-status.sr-only { position: absolute; width: 1px; height: 1px; margin: 0; border: 0; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   }
   /* 背の低い画面(拡大 200%・横向きのスマホ): 下の帯が場所を取り切らないよう、高さの固定を外して全体が動く形に戻す(WCAG 1.4.10) */
   @media screen and (max-height: 30rem) {
@@ -482,7 +486,6 @@
     .other-tools { margin: 0; border: none; padding: 0; }
     details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { margin: 0; border: none; padding: 0; }
     details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: none; }
-    .stat-lab { text-decoration: none; }
     .item { margin: 0; padding: 0.5rem 0; border: none; border-top: 1px solid var(--line); border-radius: 0; }
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
@@ -678,6 +681,8 @@
 <section id="panel-2" hidden><div class="pg" id="pg-2-top">
 <h2 id="result-title" tabindex="-1">結果</h2>
 <p id="bid-status" class="no-print" aria-live="polite"></p>
+<p id="result-name" class="no-print" hidden></p>
+<p id="result-flag" class="no-print" aria-hidden="true" hidden></p>
 <div id="sample-banner" class="sample-banner no-print" hidden>
 <p id="sample-status" aria-live="polite"></p>
 <button type="button" id="sample-reenter">自分の工事で入れ直す</button>

@@ -49,6 +49,10 @@ function answer(row, values) {
   return Object.hasOwn(row.options, raw) ? { text: row.options[raw], raw, state: 'set' } : { text: UNSET, raw: '', state: 'unset' };
 }
 
+// 結果の要点の工事の名前(F86e)。名前の欄は無いので、入れた条件の1行で代える
+const NAME_ROWS = ['orderer', 'work-type', 'contract-amount'];
+export const conditionLine = (values = {}) => CONFIRM_ROWS.filter((r) => NAME_ROWS.includes(r.key)).map((r) => r.label + ' ' + answer(r, values).text).join('・');
+
 // 建築一式の工事なのに工種が既定の土木のままなら、その注意の文(F59)。値は変えない。where は選び直す所
 export function workKindWarning(values, where = '「変更」') {
   const left = values['work-type'] === 'kenchiku-ikkatsu' && readWorkKind(values) === DEFAULT_WORK_KIND;

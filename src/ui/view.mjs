@@ -470,8 +470,8 @@ const NOT_YET = (btn) => '<span class="not-yet">まだ出していません(「'
 // 件数つきの開くカード(F43c)。まとめの中の2つ。描き直しても開いたままにする id は app.mjs の SUMMARY_FOLDS
 const openCard = (id, title, count, inner) => '<details class="open-card" id="' + esc(id) + '"><summary><span>' + esc(title) + '</span>' + (count ? ' <span class="open-count">' + esc(count) + '</span>' : '') + '</summary>' + inner + '</details>';
 
-// 結果の先頭(F43c): 数字のカードと「次にすること」のカード。state は renderSummary と同じ
-//   数字は候補の数で、押すとその節へ飛ぶ。安全の法令の候補は「要るものの候補」に混ぜない。印(▲)を付け、リンクの色にしない
+// 結果の先頭(F43c・F86e): 数字のカードと「次にすること」のカード。state は renderSummary と同じ
+//   数字は候補の数で、押せない。飛ぶのは「次にすること」のボタン1つ。安全の法令の候補は「要るものの候補」に混ぜない。印(▲)を付ける
 export const SAFETY_MARK = '▲';
 function nextStep(state, points, un) {
   if (state.errors?.length) return { title: '金額の欄を直す', sub: '読めない欄に印を付けました。直してから、もう一度「確認する」を押してください。', href: 'bid-form', go: '「条件を入れる」に戻る' };
@@ -494,16 +494,11 @@ export function renderResultTop(state = {}) {
   const required = requiredCount(state.bid);
   const provisional = provisionalUnanswered(state.bid, vals) > 0; // 答えていないから 0 のときは「● 0」にしない(F62b)
   const safety = state.safety?.count;
-  const stat = (cls, href, num, lab, sub, li = '<li>') => li + '<a class="stat stat-' + cls + '" href="#' + href + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></a></li>';
-  // スマホ幅だけの4つ目の行(F54a)。国の例などの件数で自分の工事の判定ではないので、印を付けず名前に「例」を入れる
-  const schedule = state.scheduleNotRead ? ['schedule-heading', '−', 'この工種の段取りの例はまだありません']
-    : typeof state.scheduleCount === 'number' ? ['schedule-result', state.scheduleCount + '件', 'いつ・何を・誰にの行。自分の発注者の仕様書で確かめてください']
-    : ['schedule-heading', '−', '条件を入れると出ます'];
-  return '<ul class="stats" aria-label="結果の件数と段取りの例(候補)">'
-    + stat('required', 'bid-result', provisional ? '−' : STATUS_MARK.required + ' ' + required, '要るものの候補', provisional ? '質問に答えると出ます' : '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
-    + stat('check', 'open-items', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る点', '自分で確かめる点(件)')
-    + stat('safety', 'safety-fold', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
-    + stat('schedule', schedule[0], schedule[1], '受注後の段取りの例', schedule[2], '<li class="phone-only">')
+  const stat = (cls, num, lab, sub) => '<li><div class="stat stat-' + cls + '"><span class="stat-num">' + num + '</span><span class="stat-lab">' + lab + '</span><span class="stat-sub">' + sub + '</span></div></li>';
+  return '<ul class="stats" aria-label="結果の件数(候補)">'
+    + stat('required', provisional ? '−' : STATUS_MARK.required + ' ' + required, '要るものの候補', provisional ? '質問に答えると出ます' : '受注したら要るものの候補(項目)' + (un.length ? '。仮の一覧' : ''))
+    + stat('check', STATUS_MARK.needs_check + ' ' + points.length, '確認が要る点', '自分で確かめる点(件)')
+    + stat('safety', SAFETY_MARK + ' ' + (safety ?? '−'), '安全の法令の候補', typeof safety === 'number' ? '労働安全衛生法の候補(件)' : '問いに答えると出ます')
     + '</ul>' + next;
 }
 

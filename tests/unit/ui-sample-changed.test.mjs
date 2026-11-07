@@ -10,7 +10,7 @@ import { runPage } from '../acceptance/_helpers.mjs';
 
 const status = (page) => page.el('bid-status').textContent;
 const banner = (page) => page.el('sample-status').textContent;
-const NEXT = '下の「次にすること」から読んでください。終わったら「次へ: 書類を確かめる」を押します。';
+const NEXT = '「次にすること」から読んでください。';
 const DIFF_40M = '前の結果から: 要る 6→5、確認が要る点 2→1。技術者を専任で置く必要があるか: 要る→要らない。';
 const LOADED = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
 const changedBanner = (n) => '見本「' + SAMPLE.title + '」から ' + n + '欄を変えました(架空の工事を元にしています。実在のものとは関係ありません)。';

@@ -25,14 +25,16 @@ const SEATS = ['pg-next', ...new Set(Object.values(LAST_SEAT))];
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
 // そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
 const OPEN_ON_SHOW = { 'pg-2-need': 'bid-fold', 'pg-2-safety': 'safety-fold' };
-// 結果の中のページをまたぐリンクの行き先(F86d)。同じページの中で動くだけの id は載せない
+// リンクの行き先の id → ページの表(F86d・F86e)。同じページの中で動くだけの id は載せない
 const LINK_PAGE = {
+  'pg-1': ['bid-form', 'bid-run'],
   'pg-2-need': ['bid-fold', 'bid-result', 'taicho-result', 'bid-checks', 'labor-duties'],
   'pg-2-open': ['open-items'],
   'pg-2-schedule': ['schedule-heading', 'schedule-result'],
   'pg-2-safety': ['safety-heading', 'safety-fold', 'safety-questions', 'safety-q-subcontract', 'safety-q-workers', 'safety-q-plan', 'safety-q-works'],
   'pg-2-candidates': ['safety-result'],
   'pg-2-save': ['summary'],
+  'pg-3': ['panel-3'],
 };
 
 // 進み具合の印(F86b): 入口は step-0。確かめは条件の段に数える。別の道具と使った資料はどの段にも印を付けない
@@ -41,6 +43,7 @@ const STEPS = [0, 1, 2, 3];
 
 let at = { group: null, index: 0 };
 let cameFrom = { group: null, index: 0 }; // 使った資料の「戻る」の行き先
+let jumpFrom = null; // リンクで飛んだ直後の「戻る」の行き先(F86e)。次にページを替えると忘れる
 const flip = (doc, id, on) => { const e = doc.getElementById(id); if (e) e.hidden = !on; };
 const lastIndex = (group) => (PAGES[group]?.length ?? 1) - 1;
 
@@ -60,15 +63,20 @@ function setCount(doc, num, name) {
 }
 export const currentPage = () => ({ ...at });
 // 使った資料を開く前に呼ぶ。今のページを「戻る」の行き先として覚える
-export const rememberCameFrom = () => { cameFrom = { ...at }; };
-// リンクの行き先の id が結果のどのページにあるか。表に無ければ null(段3 の id は段を開く側が持つ)
+export const rememberCameFrom = () => { cameFrom = { ...at, jump: jumpFrom }; };
+// リンクで飛んだあとに呼ぶ。飛ぶ前のページへ「戻る」で帰る
+export const rememberJump = (page) => { jumpFrom = page; };
+// リンクの行き先の id がどのページにあるか。表に無ければ null(段3 の中の id は段を開く側が持つ)
 export function pageOfLink(id) {
   const pg = String(id).startsWith('bid-item-') ? 'pg-2-need' : Object.keys(LINK_PAGE).find((k) => LINK_PAGE[k].includes(id));
-  return pg ? { group: 2, index: PAGES[2].findIndex(([p]) => p === pg) } : null;
+  if (!pg) return null;
+  const [group, list] = Object.entries(PAGES).find(([, l]) => l.some(([p]) => p === pg));
+  return { group: Number(group), index: list.findIndex(([p]) => p === pg) };
 }
 export const seatOf = (group, index) => (index < lastIndex(group) ? 'pg-next' : LAST_SEAT[group]);
 // 「戻る」の行き先。入口なら group が null
 export function backTarget() {
+  if (jumpFrom) return { ...jumpFrom };
   if (at.group === 'ref') return { ...cameFrom };
   if (at.index > 0) return { group: at.group, index: at.index - 1 };
   const out = BACK_OUT[at.group] ?? { group: null };
@@ -84,11 +92,14 @@ function setSeats(doc, group, index) {
   flip(doc, 'pg-back', group !== 'confirm');
   flip(doc, 'confirm-back', group === 'confirm');
   flip(doc, 'ref-open', group !== 'ref');
+  // 要点のページの塗りは「次にすること」のボタンだけにする(F86e)
+  doc.getElementById('pager')?.classList?.toggle?.('seat-plain', PAGES[group]?.[index]?.[0] === 'pg-2-top');
 }
 // 見せるページを1つにする。頭へ戻し、見出しへ焦点を移す(焦点は押したボタンが隠れても消えない。画面は動かさない)
 export function showPage(doc, group, index = 0) {
   for (const [g, list] of Object.entries(PAGES)) list.forEach(([id], i) => flip(doc, id, g === String(group) && i === index));
   at = { group, index };
+  jumpFrom = null;
   doc.body?.classList?.add?.('in-pages');
   flip(doc, 'pager', true);
   setSeats(doc, group, index);
@@ -106,6 +117,7 @@ export function showPage(doc, group, index = 0) {
 export function hidePages(doc) {
   for (const list of Object.values(PAGES)) list.forEach(([id], i) => flip(doc, id, i === 0));
   at = { group: null, index: 0 };
+  jumpFrom = null;
   doc.body?.classList?.remove?.('in-pages');
   flip(doc, 'pager', false);
   for (const id of SEATS) flip(doc, id, false);
@@ -116,6 +128,6 @@ export function hidePages(doc) {
 // 同じ一覧の中を動く。端を越えるときは out を呼ぶ(一覧の外への行き先は画面の側が持つ)
 export function pageStep(doc, step, out) {
   const index = at.index + step;
-  if (index < 0 || index > lastIndex(at.group)) { out?.(); return; }
+  if (index < 0 || index > lastIndex(at.group) || (step < 0 && jumpFrom)) { out?.(); return; }
   showPage(doc, at.group, index);
 }

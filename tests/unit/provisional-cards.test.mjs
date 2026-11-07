@@ -9,7 +9,7 @@ const status = (page) => page.el('bid-status').textContent;
 const cards = (page) => [...page.el('result-top').innerHTML.matchAll(/<span class="stat-num">([^<]*)<\/span><span class="stat-lab">([^<]*)<\/span><span class="stat-sub">([^<]*)<\/span>/g)].map((m) => m.slice(1));
 const requiredCard = (page) => cards(page).find((c) => c[1] === '要るものの候補');
 const nextTitle = (page) => page.el('result-top').innerHTML.match(/<p class="next-title">([^<]*)<\/p>/)[1];
-const PROVISIONAL = /^＊ 仮の結果が出ました\(未回答 (\d+)問\)。下の「次にすること」から読んでください。/;
+const PROVISIONAL = /^＊ 仮の結果が出ました\(未回答 (\d+)問\)。「次にすること」から読んでください。/;
 const NUMBER_FIELDS = ['contract-amount', 'subcontract-total'];
 const CHOICE_FIELDS = ['orderer', 'work-type', 'license', 'engineer-qualification'];
 
@@ -28,7 +28,7 @@ test('何も入れない: カードは「−」、知らせは「＊ 仮の結�
   assert.equal(Number(m[1]), QUESTIONS.length);
   assert.equal(nextTitle(page), '次にすること: 未回答の質問 ' + m[1] + 'つに答える');
   assert.ok(status(page).includes('結果が出ました'), status(page));
-  assert.ok(status(page).includes('「次へ: 書類を確かめる」'), '次の一手が消えた');
+  assert.ok(status(page).includes('「次にすること」から読んでください。'), '次の一手が消えた');
   assert.ok(!status(page).includes('✓'), '仮の結果に ✓ が付いている');
   assert.doesNotMatch(status(page), /要る \d/, '仮の結果に要る項目の数を書いている');
 });

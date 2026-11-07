@@ -145,19 +145,18 @@ const TOP_BID = { items: [
 ], checks: [{ key: 'a', label: '項目A', message: '<確かめる>' }] };
 const topText = (o) => o.replace(/<[^>]+>/g, '');
 
-const statCards = (o) => [...o.matchAll(/<a class="stat stat-(\w+)" href="#([\w-]+)"><span class="stat-num">([^<]*)<\/span><span class="stat-lab">([^<]*)<\/span><span class="stat-sub">([^<]*)<\/span>/g)].map((m) => m.slice(1));
+const statCards = (o) => [...o.matchAll(/<div class="stat stat-(\w+)"><span class="stat-num">([^<]*)<\/span><span class="stat-lab">([^<]*)<\/span><span class="stat-sub">([^<]*)<\/span>/g)].map((m) => m.slice(1));
 
-test('数字のカード: 要るものの候補・確認が要る点・安全の法令の候補・段取りの例の4つで、押すとその節へ飛ぶ。安全は要るものに混ぜない', () => {
+test('数字のカード: 要るものの候補・確認が要る点・安全の法令の候補の3つで、押せない。安全は要るものに混ぜない', () => {
   const out = renderResultTop({ bid: TOP_BID, safety: { count: 3 } });
   const cards = statCards(out);
-  assert.deepEqual(cards.map((c) => c.slice(0, 4)), [
-    ['required', 'bid-result', '● 2', '要るものの候補'],
-    ['check', 'open-items', '! 1', '確認が要る点'],
-    ['safety', 'safety-fold', SAFETY_MARK + ' 3', '安全の法令の候補'],
-    ['schedule', 'schedule-heading', '−', '受注後の段取りの例'],
+  assert.deepEqual(cards.map((c) => c.slice(0, 3)), [
+    ['required', '● 2', '要るものの候補'],
+    ['check', '! 1', '確認が要る点'],
+    ['safety', SAFETY_MARK + ' 3', '安全の法令の候補'],
   ]);
-  assert.ok(cards[0][4].includes('候補') && cards[2][4].includes('候補'), '件数の説明に「候補」が無い');
-  for (const c of cards) assert.ok(body.includes('id="' + c[1] + '"'), '飛ぶ先が無い: ' + c[1]);
+  assert.ok(cards[0][3].includes('候補') && cards[2][3].includes('候補'), '件数の説明に「候補」が無い');
+  assert.ok(!out.slice(0, out.indexOf('</ul>')).includes('href='), 'カードにリンクがある');
   // 問いに答える前の安全は 0件と言わない
   const none = topText(renderResultTop({ bid: TOP_BID, safety: { count: null } }));
   assert.ok(none.includes(SAFETY_MARK + ' −') && none.includes('問いに答えると出ます'));
@@ -167,41 +166,36 @@ test('数字のカード: 未回答が残り要る項目が無いときは「●
   const NONE = { items: [{ key: 'c', label: '項目C', status: 'not_required' }], checks: TOP_BID.checks };
   const ALL_ANSWERED = { orderer: 'unknown', 'work-type': 'unknown', license: 'unknown', 'engineer-qualification': 'unknown', 'contract-amount-unknown': true, 'subcontract-total-unknown': true, 'direct-unknown': true };
   const first = (state) => statCards(renderResultTop(state))[0];
-  assert.deepEqual(first({ bid: NONE, values: {} }), ['required', 'bid-result', '−', '要るものの候補', '質問に答えると出ます']);
-  assert.deepEqual(first({ bid: TOP_BID, values: {} }), ['required', 'bid-result', '● 2', '要るものの候補', '受注したら要るものの候補(項目)。仮の一覧']);
-  assert.deepEqual(first({ bid: NONE, values: ALL_ANSWERED }), ['required', 'bid-result', '● 0', '要るものの候補', '受注したら要るものの候補(項目)']);
-  assert.equal(first({ bid: NONE })[2], '● 0', '欄の値が無い形は未回答を数えていない');
-  // ほかの3枚は変えない
-  const rest = statCards(renderResultTop({ bid: NONE, values: {}, safety: { count: 3 } })).slice(1).map((c) => c.slice(0, 3));
-  assert.deepEqual(rest, [['check', 'open-items', '! 1'], ['safety', 'safety-fold', SAFETY_MARK + ' 3'], ['schedule', 'schedule-heading', '−']]);
+  assert.deepEqual(first({ bid: NONE, values: {} }), ['required', '−', '要るものの候補', '質問に答えると出ます']);
+  assert.deepEqual(first({ bid: TOP_BID, values: {} }), ['required', '● 2', '要るものの候補', '受注したら要るものの候補(項目)。仮の一覧']);
+  assert.deepEqual(first({ bid: NONE, values: ALL_ANSWERED }), ['required', '● 0', '要るものの候補', '受注したら要るものの候補(項目)']);
+  assert.equal(first({ bid: NONE })[1], '● 0', '欄の値が無い形は未回答を数えていない');
+  // ほかの2枚は変えない
+  const rest = statCards(renderResultTop({ bid: NONE, values: {}, safety: { count: 3 } })).slice(1).map((c) => c.slice(0, 2));
+  assert.deepEqual(rest, [['check', '! 1'], ['safety', SAFETY_MARK + ' 3']]);
 });
 
-test('4つ目の行「受注後の段取りの例」: スマホ幅だけに出し、件数・飛び先・説明は段取りの状態で変わる', () => {
+test('スマホだけの4つ目の行(受注後の段取りの例)を外した: どの幅でも3つで、段取りの状態で数が増えない', () => {
   const noCount = renderResultTop({ bid: TOP_BID });
-  assert.equal(statCards(noCount)[3][4], '条件を入れると出ます');
-  assert.ok(noCount.includes('<ul class="stats" aria-label="結果の件数と段取りの例(候補)">'));
-  // phone-only は4つ目の行だけ
-  assert.deepEqual([...noCount.matchAll(/<li( class="[^"]*")?><a class="stat stat-(\w+)"/g)].map((m) => [m[2], Boolean(m[1]) && m[1].includes('phone-only')]),
-    [['required', false], ['check', false], ['safety', false], ['schedule', true]]);
-  assert.deepEqual(statCards(renderResultTop({ bid: TOP_BID, scheduleCount: 21 }))[3],
-    ['schedule', 'schedule-result', '21件', '受注後の段取りの例', 'いつ・何を・誰にの行。自分の発注者の仕様書で確かめてください']);
-  // 0件も数として出す
-  assert.equal(statCards(renderResultTop({ bid: TOP_BID, scheduleCount: 0 }))[3][2], '0件');
-  assert.deepEqual(statCards(renderResultTop({ bid: TOP_BID, scheduleCount: null, scheduleNotRead: true }))[3],
-    ['schedule', 'schedule-heading', '−', '受注後の段取りの例', 'この工種の段取りの例はまだありません']);
-  // 飛び先はどちらも画面にある
-  assert.ok(body.includes('id="schedule-heading"') && body.includes('id="schedule-result"'));
+  assert.ok(noCount.includes('<ul class="stats" aria-label="結果の件数(候補)">'));
+  assert.ok(!noCount.includes('phone-only'));
+  assert.deepEqual([...noCount.matchAll(/<li><div class="stat stat-(\w+)"/g)].map((m) => m[1]), ['required', 'check', 'safety']);
+  for (const state of [{ scheduleCount: 21 }, { scheduleCount: 0 }, { scheduleCount: null, scheduleNotRead: true }]) {
+    assert.equal(statCards(renderResultTop({ bid: TOP_BID, ...state })).length, 3);
+  }
+  assert.ok(!noCount.includes('受注後の段取りの例'));
 });
 
-test('4つ目の行の件数は、組み立てた画面の段取りの表の件数と同じ', async () => {
+test('段取りの件数は段取りのページの頭の文にあり、表の件数と同じ', async () => {
   const page = runPage(html);
   await page.click('sample-load');
-  const top = page.el('result-top').innerHTML;
-  const shown = top.match(/href="#schedule-result"><span class="stat-num">(\d+)件</);
-  assert.ok(shown, top);
-  const table = page.el('schedule-result').innerHTML.match(/<summary>受注後の段取り\((\d+)件\)<\/summary>/);
+  const out = page.el('schedule-result').innerHTML;
+  const shown = out.match(/<p class="schedule-lead"><strong>受注後の段取りは (\d+)件です<\/strong>/);
+  assert.ok(shown, out.slice(0, 300));
+  const table = out.match(/<summary>受注後の段取り\((\d+)件\)<\/summary>/);
   assert.ok(table, '段取りの表の見出しが無い');
   assert.equal(shown[1], table[1]);
+  assert.ok(body.includes('id="pg-2-schedule"') && body.indexOf('id="schedule-result"') > body.indexOf('id="pg-2-schedule"'));
 });
 
 test('#schedule-result へ飛ぶと閉じた表も開く。querySelector の無い要素や表の無いときでも落ちない', () => {

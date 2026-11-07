@@ -73,7 +73,7 @@ test('文字と地: 自分の地を持たない字は、親の薄い地のどれ
 });
 
 test('文字と地: 触れたときだけ地が変わる決まりは、元の字の色の上で基準以上', () => {
-  const base = { 'button:hover': 'button', 'button:active': 'button', '.entry-button:hover': '.entry-button', '.stat:hover': '.stat', '#entry-back:hover': '#entry-back', 'input[type="file"]::file-selector-button:hover': 'input[type="file"]::file-selector-button' };
+  const base = { 'button:hover': 'button', 'button:active': 'button', '.entry-button:hover': '.entry-button', '#pager.seat-plain #pg-next:hover': '#pager.seat-plain #pg-next', '#entry-back:hover': '#entry-back', 'input[type="file"]::file-selector-button:hover': 'input[type="file"]::file-selector-button' };
   for (const [hover, from] of Object.entries(base)) {
     const fg = rules.filter((r) => selectors(r.sel).includes(from)).map(fgOf).find(Boolean);
     const bg = rules.filter((r) => selectors(r.sel).includes(hover)).map(bgOf).find(Boolean);

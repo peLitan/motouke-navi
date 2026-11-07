@@ -3,7 +3,7 @@
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
-import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, pageOfLink } from './pager.mjs';
+import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink } from './pager.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -28,7 +28,8 @@ import { extractFile } from '../mask/extract.mjs';
 import { tidyPdfPages, dropPageLines } from '../pdf-text.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
-import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
+import { unansweredQuestions } from './answers.mjs';
+import { CONFIRM_ROWS, conditionLine, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
 import { startMask, loadMaskFile, readDictFile, readMapFile } from './mask-app.mjs';
 import { readAiFile, RESULT_FORMAT } from './ai-app.mjs';
 import { writeNotice, markFailed } from './notice.mjs';
@@ -58,6 +59,7 @@ function updateSummary(doc) {
   const state = { ...summary, values: summary.values ?? collect(doc) };
   const top = doc.getElementById('result-top');
   if (top) { const h = renderResultTop(state); top.innerHTML = h; top.hidden = !h; }
+  setResultName(doc);
   keepOpen(doc, SUMMARY_FOLDS, () => { el.innerHTML = renderSummary(state); });
   el.hidden = false;
   summaryShown = true;
@@ -235,11 +237,12 @@ function openRef(doc) {
 }
 // 下の帯の「戻る」: 同じ一覧の中は前のページ、一覧の1ページ目は決まった行き先へ
 function goBack(doc) {
-  const { group, index } = backTarget();
+  const { group, index, jump } = backTarget();
   if (group === null) showEntry(doc);
   else if (group === 'confirm') openConfirm(doc);
   else if (group === 'tools') openTools(doc);
   else showPanel(doc, group, index);
+  if (jump) rememberJump(jump);
 }
 // 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
 let fieldSources = {};
@@ -261,6 +264,17 @@ export function changeField(doc, key) {
   (el?.closest?.('.row') ?? el)?.scrollIntoView?.({ block: 'center' });
   el?.focus?.({ preventScroll: true });
 }
+// 見本から変えた欄の数(F78a)
+const sampleChanges = (values) => confirmRows(values, fieldSources, initialForm).filter((r) => r.source !== '見本').length;
+// 要点の工事の名前(F86e): 見本のままなら見本の題、ほかは入れた条件の1行。条件が変わった間は、数を出した時の条件のまま
+function setResultName(doc) {
+  const el = doc.getElementById('result-name');
+  if (!el) return;
+  const shown = summary.bid || summary.errors.length ? summary.values : null;
+  el.hidden = !shown;
+  if (!shown) el.textContent = '';
+  else el.textContent = doc.getElementById('sample-banner')?.hidden === false && !sampleChanges(shown) ? SAMPLE.title : conditionLine(shown);
+}
 // 前に見せた結果(F78a)。覚えるのは loadSample と confirmGo のときだけ。runBid で覚えると、「確認する」のあとの confirmGo で同じ値どうしを比べる
 let shownResult = null;
 const currentResult = () => (bidNotice(null) ? null : resultSnapshot(summary.bid, summary.values));
@@ -273,13 +287,13 @@ function confirmGo(doc) {
     setBidStatus(doc, resultNotice(BID_NOTICE_DONE));
     return;
   }
-  const changed = confirmRows(collect(doc), fieldSources, initialForm).filter((r) => r.source !== '見本').length;
+  const changed = sampleChanges(collect(doc));
   const st = doc.getElementById('sample-status');
   if (st) st.textContent = sampleStatusText(changed);
   const now = currentResult();
   const diff = now && shownResult ? resultDiffText(shownResult, now) : '';
   shownResult = now ?? shownResult;
-  setBidStatus(doc, resultNotice(changed ? BID_NOTICE_DONE : SAMPLE_NOTICE_DONE) + diff);
+  setBidStatus(doc, resultNotice(changed ? BID_NOTICE_DONE : SAMPLE_NOTICE_DONE) + diff, diff);
 }
 // 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
@@ -288,17 +302,32 @@ function openIntake(doc) {
   openPanel(doc, 1, 'intake-more');
   doc.getElementById('intake-load')?.focus?.({ preventScroll: true });
 }
-// 結果の中で id のあるページを開く(F86d)
-function showResultPage(doc, id) {
+// id のあるページを開く(F86d)
+function showPageOf(doc, id) {
   const { group, index } = pageOfLink(id);
   showPanel(doc, group, index);
 }
-// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段とページを開き、行き先まで動かす
+// 条件の欄へのリンク(F86e): 読めない欄か最初の未回答の欄へ。無ければ条件のページだけを開く
+function openNeededField(doc) {
+  const values = collect(doc);
+  const id = amountValidity(values).find(([, bad]) => bad)?.[0] ?? unansweredQuestions(values)[0]?.id;
+  if (id) changeField(doc, id === 'direct' ? 'role' : id);
+  else showPageOf(doc, 'bid-form');
+}
+// リンクで行き先のページへ替わったら、「戻る」は押す前のページへ帰る(F86e)
 export function openPanelForLink(doc, href) {
   const id = String(href ?? '').replace(/^#/, '');
+  const from = currentPage();
+  if (id === 'bid-form') openNeededField(doc);
+  else openLinkTarget(doc, id);
+  const to = currentPage();
+  if (typeof from.group === 'number' && (to.group !== from.group || to.index !== from.index)) rememberJump(from);
+}
+// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段とページを開き、行き先まで動かす
+function openLinkTarget(doc, id) {
   const target = doc.getElementById(id);
   const panel = target?.closest?.('[id^="panel-"]');
-  if (pageOfLink(id)) showResultPage(doc, id);
+  if (pageOfLink(id)) showPageOf(doc, id);
   else if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
   // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
   for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
@@ -312,20 +341,29 @@ export function openPanelForLink(doc, href) {
 }
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
-const NEXT_STEP = '下の「次にすること」から読んでください。終わったら「次へ: 書類を確かめる」を押します。';
+const NEXT_STEP = '「次にすること」から読んでください。';
 const BID_NOTICE_DONE = '✓ 結果が出ました。';
 const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。';
-const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
-const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。下の「受注後の段取り」から読んでください。';
+const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、「条件を入れる」を押します。';
+const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。「受注後の段取り」から読んでください。';
 const NOTICE_STALE = '＊ 条件が変わりました。もう一度「確認する」を押すと、新しい条件の結果が出ます。';
 const NOTICE_AMOUNT = '金額の欄を読めませんでした。「条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
 const NOTICE_HALTED = '判定の途中で止まりました。結果の欄の知らせを読んでください。';
 // 失敗の文だけに印を付ける(F58a)。印の CSS が「× 失敗: 」を足すので、失敗の文の頭に「＊」は書かない(F85d)。条件が変わった文と仮の結果の文は失敗ではないので、「＊」のままで印を付けない
 const BID_FAILED = new Set([NOTICE_AMOUNT, NOTICE_HALTED]);
-function setBidStatus(doc, text) {
+// 結果が出たときは1行だけを見せる文の頭(F86e)。ここに無い文(失敗・条件の変更・仮の結果など)は全文を見せる
+const BRIEF_NOTICE = [[BID_NOTICE_DONE, '✓ 結果が出ました'], [SAMPLE_NOTICE_DONE, '✓ 見本の結果です'], [AWARDED_NOTICE_DONE, '✓ 結果が出ました']];
+// 1行にするときも、全文は読み上げのために画面の外に残す。前の結果からの差(diff)はほかに出ないので1行に添える
+function setBidStatus(doc, text, diff = '') {
   const el = doc.getElementById('bid-status');
   writeNotice(el, text);
   if (BID_FAILED.has(text)) markFailed(el);
+  const brief = BRIEF_NOTICE.find(([head]) => text.startsWith(head))?.[1];
+  el?.classList?.toggle?.('sr-only', Boolean(brief));
+  const flag = doc.getElementById('result-flag');
+  if (!flag) return;
+  flag.hidden = !brief;
+  flag.textContent = brief ? [brief, diff].filter(Boolean).join(' ') : '';
 }
 // 今の結果で done と言えるかを見て、言えなければ何が起きたかと次の一手を返す
 function bidNotice(done) {
@@ -487,7 +525,7 @@ export function enterAwarded(doc) {
   if (awardedAll) runSchedule(doc, { workKind: readWorkKind(collect(doc)) });
   // 失敗の文と条件が変わった文は #bid-status にしか無いので、要点のページで見せる
   if (!awardedAll && bidNotice(null)) showPanel(doc, 2);
-  else showResultPage(doc, 'schedule-heading');
+  else showPageOf(doc, 'schedule-heading');
   setBidStatus(doc, awardedAll ? (summary.scheduleNotRead ? '✓ ' + NOT_READ + 'ので、段取りの行はありません。' : AWARDED_NOTICE_ALL) : bidNotice(AWARDED_NOTICE_DONE));
 }
 
@@ -972,6 +1010,7 @@ export function loadSample(doc) {
   if (banner) banner.hidden = false;
   shownResult = currentResult();
   setBidStatus(doc, resultNotice(SAMPLE_NOTICE_DONE));
+  setResultName(doc);
   openConfirm(doc);
 }
 
@@ -1269,7 +1308,7 @@ function outsideNotice(doc) {
   }
   if (isShown(doc, 'panel-2')) {
     // 知らせの欄は段取りのページにある(F86d)
-    showResultPage(doc, 'schedule-heading');
+    showPageOf(doc, 'schedule-heading');
     const opened = OPENED(openFold(doc, 'rules-more'));
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }
@@ -1346,6 +1385,7 @@ export function clearSample(doc) {
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
   const top = doc.getElementById('result-top');
   if (top) { top.hidden = true; top.innerHTML = ''; }
+  setResultName(doc);
 
   const ledger = doc.getElementById('ledger-input');
   if (ledger && ledger.value === SAMPLE.documents.ledger) {

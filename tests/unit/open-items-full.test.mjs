@@ -108,13 +108,13 @@ test('次にすることの sub: 1件目の名前の短い1文で、40字以下�
   }
 });
 
-test('.next-go・数のカード・項目の「確認が要る点」のリンクの行き先はどれも #open-items のままで、行き先に点の全文がある', async () => {
+test('.next-go・項目の「確認が要る点」のリンクの行き先はどれも #open-items のままで、数のカードは押せず、行き先に点の全文がある', async () => {
   const page = await samplePage();
   const top = page.el('result-top').innerHTML;
   const go = top.match(/class="next-go" href="#([\w-]+)"/)[1];
   assert.equal(go, 'open-items');
   assert.ok(top.includes('>確認が要る点を見る</a>'));
-  assert.match(top, /class="stat stat-check" href="#open-items"/);
+  assert.match(top, /<div class="stat stat-check">/);
   assert.match(page.el('bid-result').innerHTML, /class="item-depends">＊ [^<]*<a href="#open-items">確認が要る点<\/a>/);
   const text = textOf(page.el(go).innerHTML);
   for (const p of points()) assert.ok(text.includes(p.message), p.label);
