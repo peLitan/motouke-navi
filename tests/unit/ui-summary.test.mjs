@@ -22,7 +22,7 @@ test('結果の先頭は数字と次にすることのカード(#result-top)で�
   assert.ok(/\shidden[\s>]/.test(m[0]), '結果を出す前から枠が見えている');
   assert.match(body, /<div id="result-top" hidden><\/div>/);
   const at = (id) => body.indexOf('id="' + id + '"');
-  const order = ['bid-status', 'sample-banner', 'result-top', 'bid-fold', 'bid-result', 'schedule-result', 'safety-fold', 'open-items', 'summary', 'print-btn', 'next-step-3'];
+  const order = ['bid-status', 'result-top', 'bid-fold', 'bid-result', 'schedule-result', 'safety-fold', 'open-items', 'print-btn', 'summary', 'sample-banner', 'next-step-3']; // F86f: 主のボタンを先に、まとめと見本の帯を折りたたみで後ろに
   for (let i = 1; i < order.length; i++) assert.ok(at(order[i - 1]) >= 0 && at(order[i - 1]) < at(order[i]), order[i - 1] + ' → ' + order[i]);
   assert.ok(at('summary') < at('check-result') && at('summary') < at('plan-result'));
 });
@@ -257,7 +257,7 @@ test('確認が要る点に左右される「要る」はそう書く。左右�
   const item = (key) => ({ key, label: key, status: 'required', basis: [] });
   const out = renderBidResult({ items: [item('a'), item('b'), item('c')], checks: [{ key: 'a', label: 'a', message: 'x', changes: true }, { key: 'b', label: 'b', message: 'y' }] });
   const parts = out.split('<li class="item').slice(1);
-  assert.ok(parts[0].includes('この「要る」は') && parts[0].includes('答えで変わることがあります') && parts[0].includes('href="#open-items"'));
+  assert.ok(parts[0].includes('この「要る」は') && parts[0].includes('答えで変わることがあります') && parts[0].includes('次のページの「')); // F86f: リンクをやめ、ページの語にした
   assert.ok(parts[1].includes('この項目には') && !parts[1].includes('変わることがあります'));
   assert.ok(!parts[2].includes('item-depends'));
   // 見本は 専任の項目だけが左右される。判定の側が印を付ける

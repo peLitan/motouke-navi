@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-x8i9K9ax319cS0obLQSAPR6s4Set9v5My7+O6UQ4JYE='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-VgejrTCCR/H8E7eckwRBLGdZ+RI86uadxMhSyorxpPw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -416,6 +416,10 @@
     #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: flex; flex-direction: column; }
     .ref-frame { flex: 1 1 0; min-height: 6rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
     .ref-frame footer { margin-top: 1rem; }
+    /* まとめの枠(F86f): カードの枠を残し、開いてもページが長くならない高さで止める */
+    #summary-fold .ref-frame { max-height: 18rem; border: none; padding: 0; }
+    /* 見本でないときは「見本について」の見出しごと出さない */
+    #sample-more:has(> #sample-banner[hidden]) { display: none; }
     /* 結果の2つの折りたたみ(F86d): ページを開くと pager.mjs が開くので、開く見出しは要らない。紙は今のまま */
     body.in-pages #bid-fold > summary, body.in-pages #safety-fold > summary { display: none; }
     /* 確認が要る点の題はページの見出し #open-title に出す。#open-items の名前のために要素は残す */
@@ -433,9 +437,9 @@
     #pager button { margin: 0; }
     #pg-back { flex: none; }
     /* 右の席は端に寄せ、どのページでも同じ場所にする */
-    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #entry-back { margin-left: auto; }
+    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #entry-back, #pager #awarded-conditions { margin-left: auto; }
     #pg-back::before, #confirm-back::before { content: "\25C0\00A0"; content: "\25C0\00A0" / ""; }
-    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #entry-back::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
+    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #entry-back::after, #awarded-conditions::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
     /* 要点のページ(F86e): 塗りは「次にすること」のボタンだけにする */
     #pager.seat-plain #pg-next { color: var(--primary); background: var(--paper); font-weight: normal; }
     #pager.seat-plain #pg-next:hover, #pager.seat-plain #pg-next:active { color: var(--primary); background: var(--primary-bg); }
@@ -452,6 +456,7 @@
     body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
+    #summary-fold .ref-frame { max-height: none; }
   }
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
@@ -484,7 +489,7 @@
     /* 印刷では折りたたみを開くので、「説明」などの見出しは紙に出さない */
     details.fold > summary { display: none; }
     .other-tools { margin: 0; border: none; padding: 0; }
-    details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { margin: 0; border: none; padding: 0; }
+    details.open-card, details#bid-fold, details.schedule-table, details.safety-fold, details#summary-fold { margin: 0; border: none; padding: 0; }
     details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: none; }
     .item { margin: 0; padding: 0.5rem 0; border: none; border-top: 1px solid var(--line); border-radius: 0; }
     table { break-inside: auto; } tr { break-inside: avoid; }
@@ -683,13 +688,8 @@
 <p id="bid-status" class="no-print" aria-live="polite"></p>
 <p id="result-name" class="no-print" hidden></p>
 <p id="result-flag" class="no-print" aria-hidden="true" hidden></p>
-<div id="sample-banner" class="sample-banner no-print" hidden>
-<p id="sample-status" aria-live="polite"></p>
-<button type="button" id="sample-reenter">自分の工事で入れ直す</button>
-</div>
 <p class="brief-only" id="brief-note">この紙は Motouke Navi の結果の要点です。入れた条件は「まとめ」の最後にあります。各項目の理由と根拠の条文の抜き書き、受注後の段取り、安全の法令の候補、書類の点検の中身は入っていません(全部を印刷した版にあります)。</p>
 <div id="result-top" hidden></div>
-<p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
 </div><div class="pg" id="pg-2-need" hidden>
 <h2 id="need-title" class="pg-title no-print" tabindex="-1">要るもの</h2>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
@@ -703,16 +703,18 @@
 <p id="work-kind-schedule"></p>
 <div id="awarded-notice" class="note" hidden>
 <p id="awarded-notice-text">条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて「確認する」を押すと、要る・要らないが分かれます。</p>
-<button type="button" id="awarded-conditions">条件を入れる</button>
+<details class="fold no-print" id="awarded-print"><summary>この一覧を印刷する</summary>
+<button type="button" id="awarded-print-all">全部を印刷する</button>
+</details>
 </div>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
+<p id="rules-file-on" class="no-print" hidden>読み込んだ表を使っています</p>
+<details class="fold no-print" id="rules-more"><summary>例を切り替える・自分の表を読み込む</summary>
 <div class="row no-print rules-switch" role="group" aria-label="段取りの例の切り替え">
 <button type="button" id="rules-national" aria-pressed="true">国の直轄の例(国が発注する工事)</button>
 <button type="button" id="rules-wakayama" aria-pressed="false">和歌山県の例(7つの節だけ)</button>
-<span id="rules-file-on" hidden>読み込んだ表を使っています</span>
 <button type="button" id="rules-clear" hidden>国の直轄の例に戻す</button></div>
 <p id="rules-status" class="no-print" aria-live="polite"></p>
-<details class="fold no-print" id="rules-more"><summary>直轄とは・例の違い・自分の表を読み込む</summary>
 <p>直轄 = 国(国土交通省の地方整備局など)が自分で発注する工事。</p>
 <p>和歌山県の例は、県の「土木請負工事必携」の7つの節だけから作った行です。条件を当てはめないので、要らない行も出ます。切り替えると 3 の目次の点検の記載項目も同じ例に変わります。</p>
 <div class="row drop" data-drop="rules-load"><label for="rules-load">自分の発注者の表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
@@ -753,7 +755,30 @@
 </div>
 </div><div class="pg" id="pg-2-save" hidden>
 <h2 id="save-title" class="pg-title no-print" tabindex="-1">結果を残す</h2>
+<p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
+<div class="export">
+<p class="export-lead" id="export-lead">残すときは PDF か CSV にしてください(入れた内容は画面を閉じると消えます。どれも外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
+<p id="export-status" aria-live="polite"></p>
+<div class="export-item"><button type="button" id="print-btn" aria-describedby="print-note">PDF で保存・印刷<span class="btn-sub">要点のまとめ(数枚)</span></button>
+<p id="print-note">開く印刷の画面で、プリンター(送信先)を「PDF」の付く項目に替えると PDF に、そのまま「印刷」を押すと紙に出ます。</p></div>
+<details class="fold" id="export-more"><summary>ほかの残し方</summary>
+<div class="export-item"><button type="button" id="print-all-btn" aria-describedby="print-all-note">全部を印刷する<span class="btn-sub">根拠の条文・段取りまで(数十枚)。PDF にもできます</span></button>
+<p id="print-all-note">折りたたみを全部開いて出します。PDF にする手順は上と同じです。</p></div>
+<div class="export-item"><button type="button" id="csv-btn" aria-describedby="csv-note">結果を CSV に書き出す</button>
+<p id="csv-note">Excel で開ける CSV として、この端末に保存します(外へは送りません)。</p></div>
+</details>
+</div>
+<details class="fold" id="summary-fold" hidden><summary>まとめを見る</summary>
+<div class="ref-frame">
 <div id="summary" class="summary" aria-labelledby="summary-title" hidden></div>
+</div>
+</details>
+<details class="fold no-print" id="sample-more"><summary>見本について</summary>
+<div id="sample-banner" class="sample-banner no-print" hidden>
+<p id="sample-status" aria-live="polite"></p>
+<button type="button" id="sample-reenter">自分の工事で入れ直す</button>
+</div>
+</details>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -761,16 +786,6 @@
 <h4>施工計画書の目次(架空)</h4>
 <pre id="sample-plan"></pre>
 </details>
-<div class="export">
-<p class="export-lead" id="export-lead">残すときは PDF か CSV にしてください(入れた内容は画面を閉じると消えます。どれも外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
-<p id="export-status" aria-live="polite"></p>
-<div class="export-item"><button type="button" id="print-btn" aria-describedby="print-note">PDF で保存・印刷<span class="btn-sub">要点のまとめ(数枚)</span></button>
-<p id="print-note">開く印刷の画面で、プリンター(送信先)を「PDF」の付く項目に替えると PDF に、そのまま「印刷」を押すと紙に出ます。</p></div>
-<div class="export-item"><button type="button" id="print-all-btn" aria-describedby="print-all-note">全部を印刷する<span class="btn-sub">根拠の条文・段取りまで(数十枚)。PDF にもできます</span></button>
-<p id="print-all-note">折りたたみを全部開いて出します。PDF にする手順は上と同じです。</p></div>
-<div class="export-item"><button type="button" id="csv-btn" aria-describedby="csv-note">結果を CSV に書き出す</button>
-<p id="csv-note">Excel で開ける CSV として、この端末に保存します(外へは送りません)。</p></div>
-</div>
 </div></section>
 <section id="panel-3" hidden><div class="pg" id="pg-3">
 <section id="ledger-check">
@@ -1098,6 +1113,7 @@
 <button type="button" id="bid-run">確認する</button>
 <button type="button" id="confirm-go">この内容で結果を見る</button>
 <button type="button" id="next-step-3">次へ: 書類を確かめる</button>
+<button type="button" id="awarded-conditions" hidden>条件を入れる</button>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </nav>
 <div id="sign-off" class="print-only sign-off" aria-hidden="true">
@@ -2354,8 +2370,11 @@ function pointLine(c, items = []) {
   return '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + (sameBasis ? '<div class="print-only">' + pointBasis(c) + '</div>' : pointBasis(c)) + '</li>';
 }
 // 同じ文の2回目から画面に出す参照の1行(F83a12)。文そのものは .print-only・.print-inline で紙にだけ残す(紙は節ごとに読むので変えない)
-const seeAbove = (name, id) => '<a class="see-above" href="#' + esc(id) + '">→ 上の「' + esc(name) + '」を見てください</a>';
-const seeBelow = (name, id) => '<a class="see-below" href="#' + esc(id) + '">→ 下の「' + esc(name) + '」を見てください</a>';
+// 飛ばない文にする(F86f)。同じ枠の中の候補は「上の」、ほかのページの物はページの語で指す
+const seeAbove = (name) => '<span class="see-above">→ 上の「' + esc(name) + '」を見てください</span>';
+const seeNext = (name) => '<span class="see-next">→ 次のページの「' + esc(name) + '」で確かめます</span>';
+// 項目の「確認が要る点」の語。ページの語は画面だけで、紙の文は変えない(F86f)
+const OPEN_POINT = '<span class="no-print">次のページの「</span>確認が要る点<span class="no-print">」</span>';
 // 結果の最後の一覧の名前。確認が要る点の全文の置き場で、ほかの節はこの名前で指す(F85a)
 const OPEN_ITEMS_TITLE = '確認が要る点と未回答の質問';
 
@@ -2420,8 +2439,8 @@ function renderBidResult(bid, values) {
     const nextLine = step ? '<p class="item-next">次にすること: ' + esc(step) + '。<span class="item-next-note print-inline">当てはまるかは「根拠を見る」で確かめてください。</span></p>' : '';
     const own = s === 'required' || s === 'not_required' ? (bid.checks ?? []).filter((c) => c.key === it.key) : [];
     const depends = own.some((c) => c.changes)
-      ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、<a href="#open-items">確認が要る点</a>の答えで変わることがあります。</p>'
-      : own.length ? '<p class="item-depends">＊ この項目には<a href="#open-items">確認が要る点</a>があります。</p>' : '';
+      ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、' + OPEN_POINT + 'の答えで変わることがあります。</p>'
+      : own.length ? '<p class="item-depends">＊ この項目には' + OPEN_POINT + 'があります。</p>' : '';
     const basis = it.basis ?? [];
     const basisPart = basis.length ? basisItems(basis) : '<p class="basis-none">根拠: 無し</p>';
     return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + nextLine + depends + unansweredNote
@@ -2430,7 +2449,7 @@ function renderBidResult(bid, values) {
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
   const checks = points.length
-    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<p class="points-note" id="bid-checks">' + BADGE_NOTE + '</p><p class="no-print">' + seeBelow(OPEN_ITEMS_TITLE, 'open-items') + '</p><div class="print-only"><ul class="checks">' + points.map((c) => pointLine(c)).join('') + '</ul></div>'
+    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<p class="points-note" id="bid-checks">' + BADGE_NOTE + '</p><p class="no-print">' + seeNext(OPEN_ITEMS_TITLE) + '</p><div class="print-only"><ul class="checks">' + points.map((c) => pointLine(c)).join('') + '</ul></div>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
   // 労務費と処遇の候補(F50a): 上の「確認が要る点」の件数には混ぜない
   const dutyList = bid.duties ?? [];
@@ -2889,7 +2908,7 @@ const PAGES = {
 };
 // 一覧の最後のページの右の席。席はどのページでも1つだけ見える
 const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'entry-back', tools: 'entry-back', ref: 'entry-back' };
-const SEATS = ['pg-next', ...new Set(Object.values(LAST_SEAT))];
+const SEATS = ['pg-next', 'awarded-conditions', ...new Set(Object.values(LAST_SEAT))];
 // 一覧の1ページ目の「戻る」の行き先(group が null なら入口)。last は行き先の一覧の最後のページへ着く印
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
 // そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
@@ -2903,8 +2922,14 @@ const LINK_PAGE = {
   'pg-2-safety': ['safety-heading', 'safety-fold', 'safety-questions', 'safety-q-subcontract', 'safety-q-workers', 'safety-q-plan', 'safety-q-works'],
   'pg-2-candidates': ['safety-result'],
   'pg-2-save': ['summary'],
-  'pg-3': ['panel-3'],
+  'pg-3': ['panel-3', 'check-result', 'plan-result'],
 };
+
+// 段取りの全部の行(F86f): 結果の一覧を段取りの1ページだけにする。右の席は「条件を入れる」、「戻る」は入口
+const SCHEDULE_ONLY = PAGES[2].filter(([id]) => id === 'pg-2-schedule');
+let scheduleOnly = false;
+const setScheduleOnly = (on) => { scheduleOnly = on; };
+const listOf = (group) => (group === 2 && scheduleOnly ? SCHEDULE_ONLY : PAGES[group]);
 
 // 進み具合の印(F86b): 入口は step-0。確かめは条件の段に数える。別の道具と使った資料はどの段にも印を付けない
 const STEP_OF = { 1: 1, confirm: 1, 2: 2, 3: 3 };
@@ -2914,7 +2939,7 @@ let at = { group: null, index: 0 };
 let cameFrom = { group: null, index: 0 }; // 使った資料の「戻る」の行き先
 let jumpFrom = null; // リンクで飛んだ直後の「戻る」の行き先(F86e)。次にページを替えると忘れる
 const flip = (doc, id, on) => { const e = doc.getElementById(id); if (e) e.hidden = !on; };
-const lastIndex = (group) => (PAGES[group]?.length ?? 1) - 1;
+const lastIndex = (group) => (listOf(group)?.length ?? 1) - 1;
 
 function markStep(doc, n) {
   for (const i of STEPS) {
@@ -2939,22 +2964,26 @@ const rememberJump = (page) => { jumpFrom = page; };
 function pageOfLink(id) {
   const pg = String(id).startsWith('bid-item-') ? 'pg-2-need' : Object.keys(LINK_PAGE).find((k) => LINK_PAGE[k].includes(id));
   if (!pg) return null;
-  const [group, list] = Object.entries(PAGES).find(([, l]) => l.some(([p]) => p === pg));
-  return { group: Number(group), index: list.findIndex(([p]) => p === pg) };
+  const [group] = Object.entries(PAGES).find(([, l]) => l.some(([p]) => p === pg));
+  const index = listOf(Number(group)).findIndex(([p]) => p === pg);
+  return index < 0 ? null : { group: Number(group), index };
 }
-const seatOf = (group, index) => (index < lastIndex(group) ? 'pg-next' : LAST_SEAT[group]);
+const seatOf = (group, index) => {
+  if (index < lastIndex(group)) return 'pg-next';
+  return group === 2 && scheduleOnly ? 'awarded-conditions' : LAST_SEAT[group];
+};
 // 「戻る」の行き先。入口なら group が null
 function backTarget() {
   if (jumpFrom) return { ...jumpFrom };
   if (at.group === 'ref') return { ...cameFrom };
   if (at.index > 0) return { group: at.group, index: at.index - 1 };
-  const out = BACK_OUT[at.group] ?? { group: null };
+  const out = (at.group === 2 && scheduleOnly ? null : BACK_OUT[at.group]) ?? { group: null };
   return { group: out.group, index: out.last ? lastIndex(out.group) : 0 };
 }
 function setSeats(doc, group, index) {
   const seat = seatOf(group, index);
   for (const id of SEATS) flip(doc, id, id === seat);
-  const next = PAGES[group]?.[index + 1];
+  const next = listOf(group)?.[index + 1];
   const nextBtn = doc.getElementById('pg-next');
   if (nextBtn && next) nextBtn.textContent = '次へ: ' + next[1];
   // 確かめのページの左の席は #confirm-back(同じ席・同じ形)
@@ -2962,19 +2991,20 @@ function setSeats(doc, group, index) {
   flip(doc, 'confirm-back', group === 'confirm');
   flip(doc, 'ref-open', group !== 'ref');
   // 要点のページの塗りは「次にすること」のボタンだけにする(F86e)
-  doc.getElementById('pager')?.classList?.toggle?.('seat-plain', PAGES[group]?.[index]?.[0] === 'pg-2-top');
+  doc.getElementById('pager')?.classList?.toggle?.('seat-plain', listOf(group)?.[index]?.[0] === 'pg-2-top');
 }
 // 見せるページを1つにする。頭へ戻し、見出しへ焦点を移す(焦点は押したボタンが隠れても消えない。画面は動かさない)
 function showPage(doc, group, index = 0) {
-  for (const [g, list] of Object.entries(PAGES)) list.forEach(([id], i) => flip(doc, id, g === String(group) && i === index));
+  const list = listOf(group);
+  const page = list?.[index];
+  for (const pages of Object.values(PAGES)) for (const [id] of pages) flip(doc, id, id === page?.[0]);
   at = { group, index };
   jumpFrom = null;
   doc.body?.classList?.add?.('in-pages');
   flip(doc, 'pager', true);
   setSeats(doc, group, index);
-  const page = PAGES[group]?.[index];
   markStep(doc, STEP_OF[group]);
-  if ((PAGES[group]?.length ?? 0) > 1) setCount(doc, (index + 1) + '/' + PAGES[group].length, page[1]);
+  if ((list?.length ?? 0) > 1) setCount(doc, (index + 1) + '/' + list.length, page[1]);
   else setCount(doc, '', '');
   const el = page ? doc.getElementById(page[0]) : null;
   if (el) el.scrollTop = 0;
@@ -3001,7 +3031,7 @@ function pageStep(doc, step, out) {
   showPage(doc, at.group, index);
 }
 
-return { PAGES, currentPage, rememberCameFrom, rememberJump, pageOfLink, seatOf, backTarget, showPage, hidePages, pageStep };
+return { PAGES, setScheduleOnly, currentPage, rememberCameFrom, rememberJump, pageOfLink, seatOf, backTarget, showPage, hidePages, pageStep };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -7294,9 +7324,9 @@ function stage1Line(values = {}, stage1 = {}) {
   return '「条件を入れる」の答え: 下請けの総額 ' + amount + ' → ' + to + '。';
 }
 
-const FIELD_ANCHOR = { subcontract: 'safety-q-subcontract', workers: 'safety-q-workers', plan: 'safety-q-plan', works: 'safety-q-works' };
 const needsText = (n) => '＊「' + n.label + '」' + (n.state === 'unknown' ? 'が分かると' : 'を入れると') + '判断できます';
-const needsLink = (n) => '<a href="#' + FIELD_ANCHOR[n.field] + '">' + esc(needsText(n)) + '</a>';
+// 問いは前のページにある。飛ばない文にし、ページの語は画面だけに出す(F86f)
+const needsShown = (n) => esc(needsText(n)) + '<span class="no-print">(前のページの問いで答えます)</span>';
 // 同じ文の2回目(F83a12)。seen は 文 → 最初に出した候補。画面は参照の1行、紙は文のまま
 const firstSeen = (seen, text, c) => { const first = seen.get(text); if (!first) seen.set(text, c); return first ?? null; };
 const titleOf = (c) => c.label + (c.work ? '(' + c.work + ')' : '');
@@ -7309,9 +7339,9 @@ function candidateBlock(c, seen = new Map()) {
   const actionFirst = c.action ? firstSeen(seen, c.action, c) : null;
   const noteFirst = c.note ? firstSeen(seen, c.note, c) : null;
   const first = actionFirst ?? noteFirst;
-  const needsLine = (n) => { const f = firstSeen(seen, needsText(n), c); return '<li>' + (f ? '<span class="no-print">' + seeAbove(titleOf(f), f.id) + '</span><span class="print-inline">' + esc(needsText(n)) + '</span>' : needsLink(n)) + '</li>'; };
+  const needsLine = (n) => { const f = firstSeen(seen, needsText(n), c); return '<li>' + (f ? '<span class="no-print">' + seeAbove(titleOf(f)) + '</span><span class="print-inline">' + esc(needsText(n)) + '</span>' : needsShown(n)) + '</li>'; };
   return '<div class="item safety-item" id="' + esc(c.id) + '"><p>' + statusBadge(c.status) + ' <strong>' + esc(title) + '</strong></p>'
-    + (c.action ? '<p' + (actionFirst ? ' class="print-only"' : '') + '>' + esc(c.action) + '</p>' : '') + (first ? '<p class="no-print">' + seeAbove(titleOf(first), first.id) + '</p>' : '') + route + matched
+    + (c.action ? '<p' + (actionFirst ? ' class="print-only"' : '') + '>' + esc(c.action) + '</p>' : '') + (first ? '<p class="no-print">' + seeAbove(titleOf(first)) + '</p>' : '') + route + matched
     + (c.caveat ? '<p class="note">原文の除外: ' + esc(c.caveat) + '</p>' : '')
     + (c.note ? '<p class="note' + (noteFirst ? ' print-only' : '') + '">' + esc(c.note) + '</p>' : '')
     + (c.needs.length ? '<ul class="safety-needs">' + c.needs.map(needsLine).join('') + '</ul>' : '')
@@ -9686,7 +9716,7 @@ __m["src/ui/app.mjs"] = (function () {
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
 const { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
-const { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink } = __m["src/ui/pager.mjs"];
+const { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly } = __m["src/ui/pager.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -9736,6 +9766,11 @@ function keepOpen(doc, ids, draw) {
   draw();
   for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
 }
+// まとめの折りたたみ(F86f)は、まとめが出ている間だけ見せる
+function setSummaryFold(doc, on) {
+  const fold = doc.getElementById('summary-fold');
+  if (fold) fold.hidden = !on;
+}
 function updateSummary(doc) {
   const el = doc.getElementById('summary');
   if (!el) return;
@@ -9745,6 +9780,7 @@ function updateSummary(doc) {
   setResultName(doc);
   keepOpen(doc, SUMMARY_FOLDS, () => { el.innerHTML = renderSummary(state); });
   el.hidden = false;
+  setSummaryFold(doc, true);
   summaryShown = true;
 }
 
@@ -10194,6 +10230,7 @@ function setAwardedText(doc) {
 }
 function setAwardedView(doc, on) {
   awardedAll = on;
+  setScheduleOnly(on);
   setAwardedText(doc);
   const box = doc.getElementById('awarded-notice');
   if (box) box.hidden = !on;
@@ -10341,9 +10378,9 @@ function openForPrint(d) {
 function openDetailsForPrint(doc) {
   for (const d of doc.querySelectorAll('details')) openForPrint(d);
 }
-// まとめの印刷は、まとめの2つのカードと、紙に常に出す1行が入った「くわしく」だけを開く(F66b・F86c)。描いていないときは飛ばす
+// まとめの印刷は、まとめの折りたたみと2つのカード、紙に常に出す1行が入った「くわしく」だけを開く(F66b・F86c・F86f)。描いていないときは飛ばす
 function openSummaryForPrint(doc) {
-  for (const id of [...SUMMARY_FOLDS, 'entry-more']) {
+  for (const id of ['summary-fold', ...SUMMARY_FOLDS, 'entry-more']) {
     const d = doc.getElementById(id);
     if (d) openForPrint(d);
   }
@@ -10415,15 +10452,16 @@ function exportCsv(doc) {
 
 // まとめの印刷。結果が無いまま印刷の画面を開くと、空の PDF を残したと思い込むので開かない
 function printResult(doc, win) {
-  if (!last) { setExportStatus(doc, stale ? STALE : '結果がまだありません。「条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。'); return; }
+  if (!last) { openFold(doc, 'export-more'); setExportStatus(doc, stale ? STALE : '結果がまだありません。「条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。'); return; }
   beginPrint(doc, 'brief');
   prepareForPrint(doc);
   win.print();
 }
 
-// 全部の印刷。もう受注した方の段取りの一覧は結果が無くても出るので、知らせを書いて印刷の画面を開く
-function printAll(doc, win) {
-  if (!last) setExportStatus(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
+// 全部の印刷。もう受注した方の段取りの一覧は結果が無くても出るので、知らせを書いて印刷の画面を開く。
+// 段取りの全部の行は段取りの1ページだけなので、知らせはそのページの欄に出す(F86f)
+function printAll(doc, win, say = setExportStatus) {
+  if (!last) say(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
   beginPrint(doc, 'all');
   prepareForPrint(doc);
   win.print();
@@ -11066,6 +11104,7 @@ function clearSample(doc) {
   for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
+  setSummaryFold(doc, false);
   const top = doc.getElementById('result-top');
   if (top) { top.hidden = true; top.innerHTML = ''; }
   setResultName(doc);
@@ -11153,6 +11192,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
     });
     on('print-btn', () => printResult(doc, win));
     on('print-all-btn', () => printAll(doc, win));
+    on('awarded-print-all', () => printAll(doc, win, setScheduleStatus));
     on('csv-btn', () => exportCsv(doc));
     on('ledger-run', () => runLedgerCheck(doc));
     on('check-csv-btn', () => exportCheckCsv(doc));

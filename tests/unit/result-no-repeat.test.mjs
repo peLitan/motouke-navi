@@ -67,7 +67,7 @@ async function samplePage() {
   return page;
 }
 const SEE_ABOVE = /→ 上の「[^」]+」を見てください/;
-const SEE_BELOW = /→ 下の「[^」]+」を見てください/;
+const SEE_NEXT = /→ 次のページの「[^」]+」で確かめます/;
 const bid = () => bidCheck(readBidForm(SAMPLE.form));
 
 test('見本の結果: 画面に見える文で、20字以上の同じ文が2回以上出ない', async () => {
@@ -90,9 +90,9 @@ test('確認が要る点の文は最後の一覧に全文で出て、入札前�
   const shown = visibleText(renderOpenItems(b, SAMPLE.form));
   const out = renderBidResult(b, SAMPLE.form);
   const section = visibleText(out);
-  assert.ok(section.includes('→ 下の「確認が要る点と未回答の質問」を見てください'), section);
-  assert.equal(section.match(new RegExp(SEE_BELOW.source, 'g')).length, 1, '1行にする');
-  assert.ok(out.includes('href="#open-items">→ 下の「'));
+  assert.ok(section.includes('→ 次のページの「確認が要る点と未回答の質問」で確かめます'), section);
+  assert.equal(section.match(new RegExp(SEE_NEXT.source, 'g')).length, 1, '1行にする');
+  assert.ok(out.includes('<span class="see-next">→ 次のページの「')); // F86f: 飛ばない文にした
   assert.ok(!SEE_ABOVE.test(shown), shown);
   assert.match(out, /<h3>確認が要る点\(\d+件\)<\/h3>(<p class="points-note">[^<]*<\/p>)?<p class="points-note" id="bid-checks">/);
   for (const c of b.checks) {
@@ -204,5 +204,8 @@ test('安全の候補: 同じ作業の文は2つ目の候補で最初の候補�
     assert.equal(shown.split(s).length - 1, 1, s);
     assert.equal(paper.split(s).length - 1, 2, '紙で減った: ' + s);
   }
-  for (const m of out.matchAll(/class="see-above" href="#([\w-]+)"/g)) assert.ok(out.includes('id="' + m[1] + '"'), m[1]);
+  // F86f: 飛ばない文にしたので、指す名前の候補が参照の行より上にあることを見る
+  const refs = [...out.matchAll(/class="see-above">→ 上の「([^」]+)」/g)];
+  assert.ok(refs.length > 0);
+  for (const m of refs) { const at = out.indexOf('<strong>' + m[1] + '</strong>'); assert.ok(at >= 0 && at < m.index, m[1]); }
 });

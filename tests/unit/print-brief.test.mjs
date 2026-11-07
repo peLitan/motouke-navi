@@ -147,14 +147,14 @@ test('帯の副題は紙に出さず、画面には出す', () => {
   assert.ok(!hiddenStrong.includes('.topbar-name'), '作品名まで紙から消える');
 });
 
-test('紙の説明の行: 画面には出ず、まとめの紙だけに出る。結果の見出しの下で #sample-banner の後・#result-top の前', () => {
+test('紙の説明の行: 画面には出ず、まとめの紙だけに出る。結果の見出しの下で #result-flag の後・#result-top の前', () => {
   assert.match(screen, /\n {2}\.brief-only \{ display: none; \}\n/);
   const panel = body.slice(body.indexOf('<section id="panel-2"'), body.indexOf('<section id="panel-3"'));
   const m = panel.match(/<p class="brief-only" id="brief-note">([\s\S]*?)<\/p>/);
   assert.ok(m, '#panel-2 に #brief-note が無い');
   const at = panel.indexOf(m[0]);
-  assert.ok(panel.indexOf('id="sample-banner"') < at && at < panel.indexOf('id="result-top"'));
-  assert.ok(/<\/div>\n<p class="brief-only" id="brief-note">/.test(panel), '#sample-banner の直後でない');
+  assert.ok(panel.indexOf('id="result-flag"') < at && at < panel.indexOf('id="result-top"')); // F86f: 見本の帯は結果を残すのページへ移した
+  assert.ok(/id="result-flag"[^\n]*\n<p class="brief-only" id="brief-note">/.test(panel), '#result-flag の直後でない');
   assert.equal((body.match(/\bbrief-only\b/g) ?? []).length, 1, 'まとめだけの要素は1つ');
   assert.ok(!/aria-live/.test(m[0]));
   assert.ok(!/no-print|print-only/.test(m[0]));

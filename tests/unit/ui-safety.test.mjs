@@ -61,10 +61,10 @@ test('下請けの道: 元請けだけに掛かるものを出さず、1行の�
   assert.match(none, /第八十八条第一項/, '見ていないものの行はいつも出す');
 });
 
-test('決められないものは欄へのリンクつきで、何を入れれば決まるかを出す', () => {
+test('決められないものは前のページの問いを指して、何を入れれば決まるかを出す', () => {
   const out = renderSafetyResult(safetyCandidates({ direct: true, subcontract: 'yes', workers: 'unknown', works: ['shoring'] }));
-  assert.match(out, /<a href="#safety-q-workers">＊「同じ場所で常時働く人の数」が分かると判断できます/);
-  assert.match(out, /<a href="#safety-q-plan">＊「工事の中に次のものがあるか」を入れると判断できます/);
+  assert.match(out, /<li>＊「同じ場所で常時働く人の数」が分かると判断できます<span class="no-print">\(前のページの問いで答えます\)<\/span>/); // F86f: 飛ばない文にした
+  assert.match(out, /<li>＊「工事の中に次のものがあるか」を入れると判断できます<span class="no-print">\(前のページの問いで答えます\)<\/span>/);
   assert.match(out, /厚生労働大臣\(30日前まで\)、または 労働基準監督署長\(14日前まで\)/);
 });
 

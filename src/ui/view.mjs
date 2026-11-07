@@ -44,8 +44,11 @@ function pointLine(c, items = []) {
   return '<li><strong>' + esc(c.label) + '</strong>: ' + esc(c.message) + (sameBasis ? '<div class="print-only">' + pointBasis(c) + '</div>' : pointBasis(c)) + '</li>';
 }
 // 同じ文の2回目から画面に出す参照の1行(F83a12)。文そのものは .print-only・.print-inline で紙にだけ残す(紙は節ごとに読むので変えない)
-export const seeAbove = (name, id) => '<a class="see-above" href="#' + esc(id) + '">→ 上の「' + esc(name) + '」を見てください</a>';
-const seeBelow = (name, id) => '<a class="see-below" href="#' + esc(id) + '">→ 下の「' + esc(name) + '」を見てください</a>';
+// 飛ばない文にする(F86f)。同じ枠の中の候補は「上の」、ほかのページの物はページの語で指す
+export const seeAbove = (name) => '<span class="see-above">→ 上の「' + esc(name) + '」を見てください</span>';
+const seeNext = (name) => '<span class="see-next">→ 次のページの「' + esc(name) + '」で確かめます</span>';
+// 項目の「確認が要る点」の語。ページの語は画面だけで、紙の文は変えない(F86f)
+const OPEN_POINT = '<span class="no-print">次のページの「</span>確認が要る点<span class="no-print">」</span>';
 // 結果の最後の一覧の名前。確認が要る点の全文の置き場で、ほかの節はこの名前で指す(F85a)
 const OPEN_ITEMS_TITLE = '確認が要る点と未回答の質問';
 
@@ -110,8 +113,8 @@ export function renderBidResult(bid, values) {
     const nextLine = step ? '<p class="item-next">次にすること: ' + esc(step) + '。<span class="item-next-note print-inline">当てはまるかは「根拠を見る」で確かめてください。</span></p>' : '';
     const own = s === 'required' || s === 'not_required' ? (bid.checks ?? []).filter((c) => c.key === it.key) : [];
     const depends = own.some((c) => c.changes)
-      ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、<a href="#open-items">確認が要る点</a>の答えで変わることがあります。</p>'
-      : own.length ? '<p class="item-depends">＊ この項目には<a href="#open-items">確認が要る点</a>があります。</p>' : '';
+      ? '<p class="item-depends">＊ この「' + esc(BID_STATUS[s] ?? s) + '」は、' + OPEN_POINT + 'の答えで変わることがあります。</p>'
+      : own.length ? '<p class="item-depends">＊ この項目には' + OPEN_POINT + 'があります。</p>' : '';
     const basis = it.basis ?? [];
     const basisPart = basis.length ? basisItems(basis) : '<p class="basis-none">根拠: 無し</p>';
     return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + nextLine + depends + unansweredNote
@@ -120,7 +123,7 @@ export function renderBidResult(bid, values) {
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
   const checks = points.length
-    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<p class="points-note" id="bid-checks">' + BADGE_NOTE + '</p><p class="no-print">' + seeBelow(OPEN_ITEMS_TITLE, 'open-items') + '</p><div class="print-only"><ul class="checks">' + points.map((c) => pointLine(c)).join('') + '</ul></div>'
+    ? '<h3>確認が要る点(' + points.length + '件)</h3>' + (pointsNote(points) ? '<p class="points-note">' + esc(pointsNote(points)) + '</p>' : '') + '<p class="points-note" id="bid-checks">' + BADGE_NOTE + '</p><p class="no-print">' + seeNext(OPEN_ITEMS_TITLE) + '</p><div class="print-only"><ul class="checks">' + points.map((c) => pointLine(c)).join('') + '</ul></div>'
     : '<h3>確認が要る点</h3><p>入力の範囲では、確認が要る点は出ませんでした(入力していない条件や、このツールが判定しない例外はあります)。</p>';
   // 労務費と処遇の候補(F50a): 上の「確認が要る点」の件数には混ぜない
   const dutyList = bid.duties ?? [];

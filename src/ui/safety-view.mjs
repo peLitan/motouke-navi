@@ -58,9 +58,9 @@ export function stage1Line(values = {}, stage1 = {}) {
   return '「条件を入れる」の答え: 下請けの総額 ' + amount + ' → ' + to + '。';
 }
 
-const FIELD_ANCHOR = { subcontract: 'safety-q-subcontract', workers: 'safety-q-workers', plan: 'safety-q-plan', works: 'safety-q-works' };
 const needsText = (n) => '＊「' + n.label + '」' + (n.state === 'unknown' ? 'が分かると' : 'を入れると') + '判断できます';
-const needsLink = (n) => '<a href="#' + FIELD_ANCHOR[n.field] + '">' + esc(needsText(n)) + '</a>';
+// 問いは前のページにある。飛ばない文にし、ページの語は画面だけに出す(F86f)
+const needsShown = (n) => esc(needsText(n)) + '<span class="no-print">(前のページの問いで答えます)</span>';
 // 同じ文の2回目(F83a12)。seen は 文 → 最初に出した候補。画面は参照の1行、紙は文のまま
 const firstSeen = (seen, text, c) => { const first = seen.get(text); if (!first) seen.set(text, c); return first ?? null; };
 const titleOf = (c) => c.label + (c.work ? '(' + c.work + ')' : '');
@@ -73,9 +73,9 @@ function candidateBlock(c, seen = new Map()) {
   const actionFirst = c.action ? firstSeen(seen, c.action, c) : null;
   const noteFirst = c.note ? firstSeen(seen, c.note, c) : null;
   const first = actionFirst ?? noteFirst;
-  const needsLine = (n) => { const f = firstSeen(seen, needsText(n), c); return '<li>' + (f ? '<span class="no-print">' + seeAbove(titleOf(f), f.id) + '</span><span class="print-inline">' + esc(needsText(n)) + '</span>' : needsLink(n)) + '</li>'; };
+  const needsLine = (n) => { const f = firstSeen(seen, needsText(n), c); return '<li>' + (f ? '<span class="no-print">' + seeAbove(titleOf(f)) + '</span><span class="print-inline">' + esc(needsText(n)) + '</span>' : needsShown(n)) + '</li>'; };
   return '<div class="item safety-item" id="' + esc(c.id) + '"><p>' + statusBadge(c.status) + ' <strong>' + esc(title) + '</strong></p>'
-    + (c.action ? '<p' + (actionFirst ? ' class="print-only"' : '') + '>' + esc(c.action) + '</p>' : '') + (first ? '<p class="no-print">' + seeAbove(titleOf(first), first.id) + '</p>' : '') + route + matched
+    + (c.action ? '<p' + (actionFirst ? ' class="print-only"' : '') + '>' + esc(c.action) + '</p>' : '') + (first ? '<p class="no-print">' + seeAbove(titleOf(first)) + '</p>' : '') + route + matched
     + (c.caveat ? '<p class="note">原文の除外: ' + esc(c.caveat) + '</p>' : '')
     + (c.note ? '<p class="note' + (noteFirst ? ' print-only' : '') + '">' + esc(c.note) + '</p>' : '')
     + (c.needs.length ? '<ul class="safety-needs">' + c.needs.map(needsLine).join('') + '</ul>' : '')

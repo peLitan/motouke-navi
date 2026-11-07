@@ -121,7 +121,7 @@ test('税抜きの知らせ: 判定は「要らない」のままで、答えで
   assert.deepEqual(c.basis.map((b) => b.quoteId), ['q-rei-27-1', 'q-mlit-guideline-tax']);
   assert.ok(c.message.includes('消費税10%を足すと 45,000,000円 以上になり'));
   assert.ok(c.message.includes('答えが変わることがあります'), '金額を超えても専任とは限らないので言い切らない');
-  assert.ok(renderBidResult(bid).includes('この「要らない」は、<a href="#open-items">確認が要る点</a>の答えで変わることがあります'));
+  assert.ok(renderBidResult(bid).replace(/<[^>]+>/g, '').includes('この「要らない」は、次のページの「確認が要る点」の答えで変わることがあります')); // F86f: リンクをやめ、ページの語にした
   assert.ok(bidCheck(input(41_000_000, kenchiku)).checks.every((x) => !x.message.includes(TAX)), '建築一式の境目は 90,000,000');
   assert.ok(bidCheck(input(85_000_000, kenchiku)).checks.find((x) => x.message.includes(TAX)).message.includes('90,000,000円'));
 });

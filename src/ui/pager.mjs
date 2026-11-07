@@ -20,7 +20,7 @@ export const PAGES = {
 };
 // 一覧の最後のページの右の席。席はどのページでも1つだけ見える
 const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'entry-back', tools: 'entry-back', ref: 'entry-back' };
-const SEATS = ['pg-next', ...new Set(Object.values(LAST_SEAT))];
+const SEATS = ['pg-next', 'awarded-conditions', ...new Set(Object.values(LAST_SEAT))];
 // 一覧の1ページ目の「戻る」の行き先(group が null なら入口)。last は行き先の一覧の最後のページへ着く印
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
 // そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
@@ -34,8 +34,14 @@ const LINK_PAGE = {
   'pg-2-safety': ['safety-heading', 'safety-fold', 'safety-questions', 'safety-q-subcontract', 'safety-q-workers', 'safety-q-plan', 'safety-q-works'],
   'pg-2-candidates': ['safety-result'],
   'pg-2-save': ['summary'],
-  'pg-3': ['panel-3'],
+  'pg-3': ['panel-3', 'check-result', 'plan-result'],
 };
+
+// 段取りの全部の行(F86f): 結果の一覧を段取りの1ページだけにする。右の席は「条件を入れる」、「戻る」は入口
+const SCHEDULE_ONLY = PAGES[2].filter(([id]) => id === 'pg-2-schedule');
+let scheduleOnly = false;
+export const setScheduleOnly = (on) => { scheduleOnly = on; };
+const listOf = (group) => (group === 2 && scheduleOnly ? SCHEDULE_ONLY : PAGES[group]);
 
 // 進み具合の印(F86b): 入口は step-0。確かめは条件の段に数える。別の道具と使った資料はどの段にも印を付けない
 const STEP_OF = { 1: 1, confirm: 1, 2: 2, 3: 3 };
@@ -45,7 +51,7 @@ let at = { group: null, index: 0 };
 let cameFrom = { group: null, index: 0 }; // 使った資料の「戻る」の行き先
 let jumpFrom = null; // リンクで飛んだ直後の「戻る」の行き先(F86e)。次にページを替えると忘れる
 const flip = (doc, id, on) => { const e = doc.getElementById(id); if (e) e.hidden = !on; };
-const lastIndex = (group) => (PAGES[group]?.length ?? 1) - 1;
+const lastIndex = (group) => (listOf(group)?.length ?? 1) - 1;
 
 function markStep(doc, n) {
   for (const i of STEPS) {
@@ -70,22 +76,26 @@ export const rememberJump = (page) => { jumpFrom = page; };
 export function pageOfLink(id) {
   const pg = String(id).startsWith('bid-item-') ? 'pg-2-need' : Object.keys(LINK_PAGE).find((k) => LINK_PAGE[k].includes(id));
   if (!pg) return null;
-  const [group, list] = Object.entries(PAGES).find(([, l]) => l.some(([p]) => p === pg));
-  return { group: Number(group), index: list.findIndex(([p]) => p === pg) };
+  const [group] = Object.entries(PAGES).find(([, l]) => l.some(([p]) => p === pg));
+  const index = listOf(Number(group)).findIndex(([p]) => p === pg);
+  return index < 0 ? null : { group: Number(group), index };
 }
-export const seatOf = (group, index) => (index < lastIndex(group) ? 'pg-next' : LAST_SEAT[group]);
+export const seatOf = (group, index) => {
+  if (index < lastIndex(group)) return 'pg-next';
+  return group === 2 && scheduleOnly ? 'awarded-conditions' : LAST_SEAT[group];
+};
 // 「戻る」の行き先。入口なら group が null
 export function backTarget() {
   if (jumpFrom) return { ...jumpFrom };
   if (at.group === 'ref') return { ...cameFrom };
   if (at.index > 0) return { group: at.group, index: at.index - 1 };
-  const out = BACK_OUT[at.group] ?? { group: null };
+  const out = (at.group === 2 && scheduleOnly ? null : BACK_OUT[at.group]) ?? { group: null };
   return { group: out.group, index: out.last ? lastIndex(out.group) : 0 };
 }
 function setSeats(doc, group, index) {
   const seat = seatOf(group, index);
   for (const id of SEATS) flip(doc, id, id === seat);
-  const next = PAGES[group]?.[index + 1];
+  const next = listOf(group)?.[index + 1];
   const nextBtn = doc.getElementById('pg-next');
   if (nextBtn && next) nextBtn.textContent = '次へ: ' + next[1];
   // 確かめのページの左の席は #confirm-back(同じ席・同じ形)
@@ -93,19 +103,20 @@ function setSeats(doc, group, index) {
   flip(doc, 'confirm-back', group === 'confirm');
   flip(doc, 'ref-open', group !== 'ref');
   // 要点のページの塗りは「次にすること」のボタンだけにする(F86e)
-  doc.getElementById('pager')?.classList?.toggle?.('seat-plain', PAGES[group]?.[index]?.[0] === 'pg-2-top');
+  doc.getElementById('pager')?.classList?.toggle?.('seat-plain', listOf(group)?.[index]?.[0] === 'pg-2-top');
 }
 // 見せるページを1つにする。頭へ戻し、見出しへ焦点を移す(焦点は押したボタンが隠れても消えない。画面は動かさない)
 export function showPage(doc, group, index = 0) {
-  for (const [g, list] of Object.entries(PAGES)) list.forEach(([id], i) => flip(doc, id, g === String(group) && i === index));
+  const list = listOf(group);
+  const page = list?.[index];
+  for (const pages of Object.values(PAGES)) for (const [id] of pages) flip(doc, id, id === page?.[0]);
   at = { group, index };
   jumpFrom = null;
   doc.body?.classList?.add?.('in-pages');
   flip(doc, 'pager', true);
   setSeats(doc, group, index);
-  const page = PAGES[group]?.[index];
   markStep(doc, STEP_OF[group]);
-  if ((PAGES[group]?.length ?? 0) > 1) setCount(doc, (index + 1) + '/' + PAGES[group].length, page[1]);
+  if ((list?.length ?? 0) > 1) setCount(doc, (index + 1) + '/' + list.length, page[1]);
   else setCount(doc, '', '');
   const el = page ? doc.getElementById(page[0]) : null;
   if (el) el.scrollTop = 0;

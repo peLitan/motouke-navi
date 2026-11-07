@@ -87,7 +87,9 @@ test('ファイルの読み込みは折りたたみの中の3つ目の選び方�
   assert.ok(fold.includes('自分の発注者の表を読み込む'));
   assert.ok(fold.includes('直轄 = 国(国土交通省の地方整備局など)が自分で発注する工事'));
   assert.ok(fold.includes('切り替えると 3 の目次の点検の記載項目も同じ例に変わります'));
-  assert.ok(!fold.includes('id="rules-status"') && !fold.includes('id="rules-clear"'), '畳んだままで見えなくなる');
+  // F86f: 切り替えと知らせは折りたたみの中。読み込んだ表の知らせだけは畳んだままで見えるよう外に残す
+  assert.ok(fold.includes('id="rules-status"') && fold.includes('id="rules-clear"') && fold.includes('id="rules-national"'));
+  assert.ok(!fold.includes('id="rules-file-on"'), '畳んだままで見えなくなる');
 
   const page = runPage();
   await page.click('rules-wakayama');

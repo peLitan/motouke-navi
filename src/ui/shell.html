@@ -416,6 +416,10 @@
     #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: flex; flex-direction: column; }
     .ref-frame { flex: 1 1 0; min-height: 6rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
     .ref-frame footer { margin-top: 1rem; }
+    /* まとめの枠(F86f): カードの枠を残し、開いてもページが長くならない高さで止める */
+    #summary-fold .ref-frame { max-height: 18rem; border: none; padding: 0; }
+    /* 見本でないときは「見本について」の見出しごと出さない */
+    #sample-more:has(> #sample-banner[hidden]) { display: none; }
     /* 結果の2つの折りたたみ(F86d): ページを開くと pager.mjs が開くので、開く見出しは要らない。紙は今のまま */
     body.in-pages #bid-fold > summary, body.in-pages #safety-fold > summary { display: none; }
     /* 確認が要る点の題はページの見出し #open-title に出す。#open-items の名前のために要素は残す */
@@ -433,9 +437,9 @@
     #pager button { margin: 0; }
     #pg-back { flex: none; }
     /* 右の席は端に寄せ、どのページでも同じ場所にする */
-    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #entry-back { margin-left: auto; }
+    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #entry-back, #pager #awarded-conditions { margin-left: auto; }
     #pg-back::before, #confirm-back::before { content: "\25C0\00A0"; content: "\25C0\00A0" / ""; }
-    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #entry-back::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
+    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #entry-back::after, #awarded-conditions::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
     /* 要点のページ(F86e): 塗りは「次にすること」のボタンだけにする */
     #pager.seat-plain #pg-next { color: var(--primary); background: var(--paper); font-weight: normal; }
     #pager.seat-plain #pg-next:hover, #pager.seat-plain #pg-next:active { color: var(--primary); background: var(--primary-bg); }
@@ -452,6 +456,7 @@
     body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
+    #summary-fold .ref-frame { max-height: none; }
   }
   /* 印刷(F38e): ボタンと通信の説明は出さず、入れた条件・結果・注意・出典を紙に出す。白黒で読めるよう、文字と線の色の変数を黒に、塗りの変数を白に置き換える(決まりごとに書くと強さで負ける所が残る)。--mark-weak は語の印なので残す
      知らせの行は紙に出さない。ただし、前の結果だと伝える3つの行(台帳・記載事項・目次)と、置き換えの漏れの注記(.note)は残す */
@@ -484,7 +489,7 @@
     /* 印刷では折りたたみを開くので、「説明」などの見出しは紙に出さない */
     details.fold > summary { display: none; }
     .other-tools { margin: 0; border: none; padding: 0; }
-    details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { margin: 0; border: none; padding: 0; }
+    details.open-card, details#bid-fold, details.schedule-table, details.safety-fold, details#summary-fold { margin: 0; border: none; padding: 0; }
     details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: none; }
     .item { margin: 0; padding: 0.5rem 0; border: none; border-top: 1px solid var(--line); border-radius: 0; }
     table { break-inside: auto; } tr { break-inside: avoid; }
@@ -683,13 +688,8 @@
 <p id="bid-status" class="no-print" aria-live="polite"></p>
 <p id="result-name" class="no-print" hidden></p>
 <p id="result-flag" class="no-print" aria-hidden="true" hidden></p>
-<div id="sample-banner" class="sample-banner no-print" hidden>
-<p id="sample-status" aria-live="polite"></p>
-<button type="button" id="sample-reenter">自分の工事で入れ直す</button>
-</div>
 <p class="brief-only" id="brief-note">この紙は Motouke Navi の結果の要点です。入れた条件は「まとめ」の最後にあります。各項目の理由と根拠の条文の抜き書き、受注後の段取り、安全の法令の候補、書類の点検の中身は入っていません(全部を印刷した版にあります)。</p>
 <div id="result-top" hidden></div>
-<p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
 </div><div class="pg" id="pg-2-need" hidden>
 <h2 id="need-title" class="pg-title no-print" tabindex="-1">要るもの</h2>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
@@ -703,16 +703,18 @@
 <p id="work-kind-schedule"></p>
 <div id="awarded-notice" class="note" hidden>
 <p id="awarded-notice-text">条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて「確認する」を押すと、要る・要らないが分かれます。</p>
-<button type="button" id="awarded-conditions">条件を入れる</button>
+<details class="fold no-print" id="awarded-print"><summary>この一覧を印刷する</summary>
+<button type="button" id="awarded-print-all">全部を印刷する</button>
+</details>
 </div>
 <p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
+<p id="rules-file-on" class="no-print" hidden>読み込んだ表を使っています</p>
+<details class="fold no-print" id="rules-more"><summary>例を切り替える・自分の表を読み込む</summary>
 <div class="row no-print rules-switch" role="group" aria-label="段取りの例の切り替え">
 <button type="button" id="rules-national" aria-pressed="true">国の直轄の例(国が発注する工事)</button>
 <button type="button" id="rules-wakayama" aria-pressed="false">和歌山県の例(7つの節だけ)</button>
-<span id="rules-file-on" hidden>読み込んだ表を使っています</span>
 <button type="button" id="rules-clear" hidden>国の直轄の例に戻す</button></div>
 <p id="rules-status" class="no-print" aria-live="polite"></p>
-<details class="fold no-print" id="rules-more"><summary>直轄とは・例の違い・自分の表を読み込む</summary>
 <p>直轄 = 国(国土交通省の地方整備局など)が自分で発注する工事。</p>
 <p>和歌山県の例は、県の「土木請負工事必携」の7つの節だけから作った行です。条件を当てはめないので、要らない行も出ます。切り替えると 3 の目次の点検の記載項目も同じ例に変わります。</p>
 <div class="row drop" data-drop="rules-load"><label for="rules-load">自分の発注者の表を読み込む(発注者の仕様書から作った行のファイル .json)</label>
@@ -753,7 +755,30 @@
 </div>
 </div><div class="pg" id="pg-2-save" hidden>
 <h2 id="save-title" class="pg-title no-print" tabindex="-1">結果を残す</h2>
+<p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
+<div class="export">
+<p class="export-lead" id="export-lead">残すときは PDF か CSV にしてください(入れた内容は画面を閉じると消えます。どれも外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
+<p id="export-status" aria-live="polite"></p>
+<div class="export-item"><button type="button" id="print-btn" aria-describedby="print-note">PDF で保存・印刷<span class="btn-sub">要点のまとめ(数枚)</span></button>
+<p id="print-note">開く印刷の画面で、プリンター(送信先)を「PDF」の付く項目に替えると PDF に、そのまま「印刷」を押すと紙に出ます。</p></div>
+<details class="fold" id="export-more"><summary>ほかの残し方</summary>
+<div class="export-item"><button type="button" id="print-all-btn" aria-describedby="print-all-note">全部を印刷する<span class="btn-sub">根拠の条文・段取りまで(数十枚)。PDF にもできます</span></button>
+<p id="print-all-note">折りたたみを全部開いて出します。PDF にする手順は上と同じです。</p></div>
+<div class="export-item"><button type="button" id="csv-btn" aria-describedby="csv-note">結果を CSV に書き出す</button>
+<p id="csv-note">Excel で開ける CSV として、この端末に保存します(外へは送りません)。</p></div>
+</details>
+</div>
+<details class="fold" id="summary-fold" hidden><summary>まとめを見る</summary>
+<div class="ref-frame">
 <div id="summary" class="summary" aria-labelledby="summary-title" hidden></div>
+</div>
+</details>
+<details class="fold no-print" id="sample-more"><summary>見本について</summary>
+<div id="sample-banner" class="sample-banner no-print" hidden>
+<p id="sample-status" aria-live="polite"></p>
+<button type="button" id="sample-reenter">自分の工事で入れ直す</button>
+</div>
+</details>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
 <h4>施工体制台帳(架空)</h4>
@@ -761,16 +786,6 @@
 <h4>施工計画書の目次(架空)</h4>
 <pre id="sample-plan"></pre>
 </details>
-<div class="export">
-<p class="export-lead" id="export-lead">残すときは PDF か CSV にしてください(入れた内容は画面を閉じると消えます。どれも外へは送りません)。印刷・書き出しは、最後に「確認する」を押したときの結果です。</p>
-<p id="export-status" aria-live="polite"></p>
-<div class="export-item"><button type="button" id="print-btn" aria-describedby="print-note">PDF で保存・印刷<span class="btn-sub">要点のまとめ(数枚)</span></button>
-<p id="print-note">開く印刷の画面で、プリンター(送信先)を「PDF」の付く項目に替えると PDF に、そのまま「印刷」を押すと紙に出ます。</p></div>
-<div class="export-item"><button type="button" id="print-all-btn" aria-describedby="print-all-note">全部を印刷する<span class="btn-sub">根拠の条文・段取りまで(数十枚)。PDF にもできます</span></button>
-<p id="print-all-note">折りたたみを全部開いて出します。PDF にする手順は上と同じです。</p></div>
-<div class="export-item"><button type="button" id="csv-btn" aria-describedby="csv-note">結果を CSV に書き出す</button>
-<p id="csv-note">Excel で開ける CSV として、この端末に保存します(外へは送りません)。</p></div>
-</div>
 </div></section>
 <section id="panel-3" hidden><div class="pg" id="pg-3">
 <section id="ledger-check">
@@ -996,6 +1011,7 @@
 <button type="button" id="bid-run">確認する</button>
 <button type="button" id="confirm-go">この内容で結果を見る</button>
 <button type="button" id="next-step-3">次へ: 書類を確かめる</button>
+<button type="button" id="awarded-conditions" hidden>条件を入れる</button>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </nav>
 <div id="sign-off" class="print-only sign-off" aria-hidden="true">

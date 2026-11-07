@@ -13,7 +13,7 @@ import { basisLabel, renderBidResult, renderOpenItems, renderResultTop, renderSu
 
 const html = buildHtml();
 const RESULT_BOXES = ['sample-status', 'result-top', 'bid-result', 'taicho-result', 'schedule-result', 'safety-result', 'open-items', 'summary'];
-const SEE_BELOW = '→ 下の「確認が要る点と未回答の質問」を見てください';
+const SEE_NEXT = '→ 次のページの「確認が要る点と未回答の質問」で確かめます'; // F86f: 飛ばない文にした
 const SEE_NEXT_STEP = '→ 上の「次にすること」';
 const VOID = new Set(['br', 'hr', 'img', 'input', 'meta', 'link']);
 const BLOCK = /^(p|li|h\d|div|summary|td|th|dt|dd|blockquote|ul|ol|tr|table|dl|details)$/;
@@ -108,24 +108,24 @@ test('次にすることの sub: 1件目の名前の短い1文で、40字以下�
   }
 });
 
-test('.next-go・項目の「確認が要る点」のリンクの行き先はどれも #open-items のままで、数のカードは押せず、行き先に点の全文がある', async () => {
+test('.next-go の行き先は #open-items のままで、項目はページの語で同じ所を指し、数のカードは押せず、行き先に点の全文がある', async () => {
   const page = await samplePage();
   const top = page.el('result-top').innerHTML;
   const go = top.match(/class="next-go" href="#([\w-]+)"/)[1];
   assert.equal(go, 'open-items');
   assert.ok(top.includes('>確認が要る点を見る</a>'));
   assert.match(top, /<div class="stat stat-check">/);
-  assert.match(page.el('bid-result').innerHTML, /class="item-depends">＊ [^<]*<a href="#open-items">確認が要る点<\/a>/);
+  assert.match(page.el('bid-result').innerHTML, /class="item-depends">＊ [^<]*<span class="no-print">次のページの「<\/span>確認が要る点<span class="no-print">」<\/span>/); // F86f: 行き先の名前の文にした
   const text = textOf(page.el(go).innerHTML);
   for (const p of points()) assert.ok(text.includes(p.message), p.label);
 });
 
-test('#bid-result の画面: 件数の見出しと説明の行と「→ 下の…」の1行で、点の文は画面に出ない', async () => {
+test('#bid-result の画面: 件数の見出しと説明の行と「→ 次のページの…」の1行で、点の文は画面に出ない', async () => {
   const page = await samplePage();
   const out = page.el('bid-result').innerHTML;
   const text = textOf(out);
-  assert.equal(text.split(SEE_BELOW).length - 1, 1, '「→ 下の…」は1回');
-  assert.ok(out.includes('href="#open-items">' + SEE_BELOW + '</a>'), '行き先が #open-items でない');
+  assert.equal(text.split(SEE_NEXT).length - 1, 1, '「→ 次のページの…」は1回');
+  assert.ok(out.includes('<span class="see-next">' + SEE_NEXT + '</span>'), '飛ばない文になっていない');
   assert.match(text, new RegExp('確認が要る点\\(' + points().length + '件\\)'));
   assert.match(out, /<p class="points-note" id="bid-checks">項目の札/);
   for (const p of points()) assert.ok(!text.includes(p.message), p.label + ' の文が画面に残っている');

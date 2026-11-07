@@ -3,7 +3,7 @@
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
-import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink } from './pager.mjs';
+import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly } from './pager.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -53,6 +53,11 @@ function keepOpen(doc, ids, draw) {
   draw();
   for (const id of opened) { const d = doc.getElementById(id); if (d) d.open = true; }
 }
+// まとめの折りたたみ(F86f)は、まとめが出ている間だけ見せる
+function setSummaryFold(doc, on) {
+  const fold = doc.getElementById('summary-fold');
+  if (fold) fold.hidden = !on;
+}
 function updateSummary(doc) {
   const el = doc.getElementById('summary');
   if (!el) return;
@@ -62,6 +67,7 @@ function updateSummary(doc) {
   setResultName(doc);
   keepOpen(doc, SUMMARY_FOLDS, () => { el.innerHTML = renderSummary(state); });
   el.hidden = false;
+  setSummaryFold(doc, true);
   summaryShown = true;
 }
 
@@ -511,6 +517,7 @@ function setAwardedText(doc) {
 }
 function setAwardedView(doc, on) {
   awardedAll = on;
+  setScheduleOnly(on);
   setAwardedText(doc);
   const box = doc.getElementById('awarded-notice');
   if (box) box.hidden = !on;
@@ -658,9 +665,9 @@ function openForPrint(d) {
 export function openDetailsForPrint(doc) {
   for (const d of doc.querySelectorAll('details')) openForPrint(d);
 }
-// まとめの印刷は、まとめの2つのカードと、紙に常に出す1行が入った「くわしく」だけを開く(F66b・F86c)。描いていないときは飛ばす
+// まとめの印刷は、まとめの折りたたみと2つのカード、紙に常に出す1行が入った「くわしく」だけを開く(F66b・F86c・F86f)。描いていないときは飛ばす
 export function openSummaryForPrint(doc) {
-  for (const id of [...SUMMARY_FOLDS, 'entry-more']) {
+  for (const id of ['summary-fold', ...SUMMARY_FOLDS, 'entry-more']) {
     const d = doc.getElementById(id);
     if (d) openForPrint(d);
   }
@@ -732,15 +739,16 @@ export function exportCsv(doc) {
 
 // まとめの印刷。結果が無いまま印刷の画面を開くと、空の PDF を残したと思い込むので開かない
 export function printResult(doc, win) {
-  if (!last) { setExportStatus(doc, stale ? STALE : '結果がまだありません。「条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。'); return; }
+  if (!last) { openFold(doc, 'export-more'); setExportStatus(doc, stale ? STALE : '結果がまだありません。「条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。'); return; }
   beginPrint(doc, 'brief');
   prepareForPrint(doc);
   win.print();
 }
 
-// 全部の印刷。もう受注した方の段取りの一覧は結果が無くても出るので、知らせを書いて印刷の画面を開く
-export function printAll(doc, win) {
-  if (!last) setExportStatus(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
+// 全部の印刷。もう受注した方の段取りの一覧は結果が無くても出るので、知らせを書いて印刷の画面を開く。
+// 段取りの全部の行は段取りの1ページだけなので、知らせはそのページの欄に出す(F86f)
+export function printAll(doc, win, say = setExportStatus) {
+  if (!last) say(doc, stale ? STALE : '結果がまだありません。「確認する」を押してから印刷すると結果が紙に出ます。');
   beginPrint(doc, 'all');
   prepareForPrint(doc);
   win.print();
@@ -1383,6 +1391,7 @@ export function clearSample(doc) {
   for (const id of ['bid-result', 'taicho-result', 'schedule-result', 'open-items']) restoreResult(doc, id);
   const sum = doc.getElementById('summary');
   if (sum) { sum.hidden = true; sum.innerHTML = ''; }
+  setSummaryFold(doc, false);
   const top = doc.getElementById('result-top');
   if (top) { top.hidden = true; top.innerHTML = ''; }
   setResultName(doc);
@@ -1470,6 +1479,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     });
     on('print-btn', () => printResult(doc, win));
     on('print-all-btn', () => printAll(doc, win));
+    on('awarded-print-all', () => printAll(doc, win, setScheduleStatus));
     on('csv-btn', () => exportCsv(doc));
     on('ledger-run', () => runLedgerCheck(doc));
     on('check-csv-btn', () => exportCheckCsv(doc));

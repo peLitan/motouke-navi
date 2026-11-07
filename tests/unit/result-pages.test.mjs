@@ -58,10 +58,10 @@ test('各ページに見出しと 07 に挙げた id があり、見出しは焦
 });
 
 test('紙の順は DOM の順のまま: 確認が要る点は DOM では安全の後ろで、画面の順だけが前に来る', () => {
-  const order = ['result-title', 'bid-status', 'sample-banner', 'brief-note', 'result-top', 'field-note', 'bid-fold', 'bid-result', 'taicho-result',
+  const order = ['result-title', 'bid-status', 'brief-note', 'result-top', 'bid-fold', 'bid-result', 'taicho-result',
     'schedule-heading', 'work-kind-schedule', 'awarded-notice', 'schedule-notice', 'schedule-about-fold', 'schedule-result', 'schedule-csv-btn',
     'safety-heading', 'safety-note', 'safety-prime-note', 'safety-fold', 'safety-questions', 'safety-status', 'safety-result', 'safety-version',
-    'open-items', 'summary', 'sample-docs', 'export-lead', 'print-btn', 'print-all-btn', 'csv-btn'];
+    'open-items', 'field-note', 'export-lead', 'print-btn', 'print-all-btn', 'csv-btn', 'summary', 'sample-banner', 'sample-docs'];
   const at = order.map((id) => panel.indexOf('id="' + id + '"'));
   at.forEach((n, i) => { assert.ok(n >= 0, order[i]); if (i) assert.ok(at[i - 1] < n, order[i - 1] + ' → ' + order[i]); });
   assert.ok(panel.indexOf('id="pg-2-candidates"') < panel.indexOf('id="pg-2-open"'), '#open-items を DOM で動かしている');
@@ -176,7 +176,7 @@ test('飛び先: 結果の中のリンクは行き先のあるページへ替わ
   const cases = { 'open-items': 'pg-2-open', 'bid-result': 'pg-2-need', 'taicho-result': 'pg-2-need', 'bid-item-x': 'pg-2-need', 'schedule-heading': 'pg-2-schedule', 'schedule-result': 'pg-2-schedule',
     'safety-fold': 'pg-2-safety', 'safety-heading': 'pg-2-safety', 'safety-q-works': 'pg-2-safety', 'safety-result': 'pg-2-candidates', summary: 'pg-2-save' };
   for (const [id, pg] of Object.entries(cases)) assert.equal(PAGES[2][pageOfLink(id).index][0], pg, id);
-  assert.equal(pageOfLink('check-result'), null, '段3 の id は結果の表に載せない');
+  assert.deepEqual(pageOfLink('check-result'), { group: 3, index: 0 }, 'F86f: まとめのリンクの行き先は全部表に載せる');
   // 表の id はどれも実際にそのページにある(動的な項目の id と問いの id の頭を除く)
   for (const [id, pg] of Object.entries(cases)) {
     if (id === 'bid-item-x') continue;
@@ -198,9 +198,9 @@ test('「もう受注した」: 段取りのページに着き、知らせとボ
   await page.click('entry-awarded');
   assert.deepEqual(visible(page), ['pg-2-schedule']);
   assert.equal(page.el('awarded-notice').hidden, false);
-  assert.ok(pageHtml('pg-2-schedule').includes('id="awarded-conditions"'));
+  assert.equal(page.el('awarded-conditions').hidden, false); // F86f: ボタンは下の帯の右の席
   assert.equal(page.el('bid-fold').open, false, '段取りのページで入札前の確認を開いている');
-  assert.equal(page.el('pg-num').textContent, '4/7');
+  assert.equal(page.el('pg-num').textContent, '', 'F86f: 一覧は段取りの1ページだけ');
 });
 
 test('「もう受注した」: 金額を読めないときは、失敗の文のある要点のページに着く', async () => {
