@@ -57,7 +57,7 @@ test('段取りの表の中に折りたたみが無く、原文の抜き書き�
 test('入札前の確認: 根拠の見出しは「根拠を見る: 建設業法 第○条…」で閉じており、結論の印は閉じない', () => {
   const bid = bidCheck(COND);
   const html = renderBidResult(bid);
-  const sums = [...html.matchAll(/<details class="basis"><summary>([^<]*)<\/summary>/g)].map((m) => m[1]);
+  const sums = [...html.matchAll(/<details class="basis"><summary>([\s\S]*?)<\/summary>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
   assert.ok(sums.length > 0, '根拠の折りたたみが無い');
   for (const s of sums) assert.match(s, /^根拠を見る: \S/, '見出しが「根拠を見る: 」で始まらない: ' + s);
   assert.ok(sums.some((s) => /^根拠を見る: 建設業法 第\d+条/.test(s)), '「根拠を見る: 建設業法 第○条」の見出しが無い');
@@ -67,7 +67,18 @@ test('入札前の確認: 根拠の見出しは「根拠を見る: 建設業法 
     assert.ok(visible.includes('id="bid-item-'), '項目が見えない');
     assert.ok(visible.includes('badge-' + it.status) || visible.includes('status-' + it.status), '結論が折りたたみの中にある: ' + it.key);
   }
-  assert.ok(visible.includes(bid.disclaimer), '断り書きが折りたたみの中にある');
+  // 断り書き(F87a): 全文は #need-about の中。上の1行はページの外の折りたたみの外。紙では開いて全文が出る
+  const about = html.match(/<details class="fold" id="need-about">[\s\S]*<\/details>$/)?.[0] ?? '';
+  assert.ok(about.includes(bid.disclaimer), '断り書きの全文が #need-about に無い');
+  const body = buildHtml();
+  const page = outsideDetails(body.slice(body.indexOf('<body>')).replace(/<script\b[\s\S]*?<\/script>/g, ''));
+  assert.match(page, /<p class="disclaimer" id="disclaimer">/, '上の断り書きが折りたたみの中にある');
+  assert.ok(body.includes('<details class="notice-more no-print" id="notice-more" hidden><summary>'), '上の1行が無い');
+  assert.ok(body.indexOf('id="notice-more"') < body.indexOf('<div class="pg'), '上の1行がページの中にある');
+  const folds = [...html.matchAll(/<details\b/g)].map(() => ({ open: false }));
+  openDetailsForPrint({ querySelectorAll: (sel) => (sel === 'details' ? folds : []) });
+  assert.ok(folds.length > 0 && folds.every((d) => d.open), '紙で開かない折りたたみがある');
+  restoreDetailsAfterPrint();
   assert.ok(!html.includes('根拠の条:'), '古い見出し「根拠の条:」が残っている');
 });
 

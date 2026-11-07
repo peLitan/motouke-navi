@@ -47,6 +47,8 @@ function visibleText(source, { pointAbove = false, paper = false } = {}) {
   if (!hiddenNow()) out += source.slice(at);
   return decode(out);
 }
+// 確認が要る点の案内は閉じた #need-more の中(F87a)。開いた形の文で見る
+const openNeedMore = (h) => h.replace('<details class="fold" id="need-more">', '<details class="fold" id="need-more" open>');
 function sentences(text) {
   return text.split('\n').flatMap((line) => line.split(/(?<=。)/)).map((s) => s.trim()).filter((s) => s.length >= MIN);
 }
@@ -89,7 +91,7 @@ test('確認が要る点の文は最後の一覧に全文で出て、入札前�
   const b = bid();
   const shown = visibleText(renderOpenItems(b, SAMPLE.form));
   const out = renderBidResult(b, SAMPLE.form);
-  const section = visibleText(out);
+  const section = visibleText(openNeedMore(out));
   assert.ok(section.includes('→ 次のページの「確認が要る点と未回答の質問」で確かめます'), section);
   assert.equal(section.match(new RegExp(SEE_NEXT.source, 'g')).length, 1, '1行にする');
   assert.ok(out.includes('<span class="see-next">→ 次のページの「')); // F86f: 飛ばない文にした
@@ -190,7 +192,7 @@ test('まとめの「このうち」の文は、入札前の確認の見出し�
   const sum = page.el('summary').innerHTML;
   assert.ok(visibleText(sum, { paper: true }).includes('このうち 2件は'));
   assert.ok(!visibleText(sum).includes('このうち 2件は'));
-  assert.ok(visibleText(page.el('bid-result').innerHTML, { pointAbove: true }).includes('このうち 2件は'));
+  assert.ok(visibleText(openNeedMore(page.el('bid-result').innerHTML), { pointAbove: true }).includes('このうち 2件は'));
 });
 
 test('安全の候補: 同じ作業の文は2つ目の候補で最初の候補を指す1行になり、紙には文が残る', async () => {

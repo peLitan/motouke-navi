@@ -19,6 +19,8 @@ const VOID = new Set(['br', 'hr', 'img', 'input', 'meta', 'link']);
 const BLOCK = /^(p|li|h\d|div|summary|td|th|dt|dd|blockquote|ul|ol|tr|table|dl|details)$/;
 const decode = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 
+// 確認が要る点の案内は閉じた #need-more の中(F87a)。開いた形の文で見る
+const openNeedMore = (h) => h.replace('<details class="fold" id="need-more">', '<details class="fold" id="need-more" open>');
 // 見える字を取り出す。画面は .print-only・.print-inline・hidden と、閉じた折りたたみの summary の外を除く。紙は .no-print を除く
 function textOf(source, { paper = false } = {}) {
   const stack = [];
@@ -123,7 +125,7 @@ test('.next-go の行き先は #open-items のままで、項目はページの�
 test('#bid-result の画面: 件数の見出しと説明の行と「→ 次のページの…」の1行で、点の文は画面に出ない', async () => {
   const page = await samplePage();
   const out = page.el('bid-result').innerHTML;
-  const text = textOf(out);
+  const text = textOf(openNeedMore(out));
   assert.equal(text.split(SEE_NEXT).length - 1, 1, '「→ 次のページの…」は1回');
   assert.ok(out.includes('<span class="see-next">' + SEE_NEXT + '</span>'), '飛ばない文になっていない');
   assert.match(text, new RegExp('確認が要る点\\(' + points().length + '件\\)'));

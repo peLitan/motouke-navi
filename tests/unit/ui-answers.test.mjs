@@ -89,7 +89,7 @@ test('「分からない」を選んだ質問を使う項目は「確認が要�
 test('各項目は 結論 → 根拠を見る(理由 → 入れた条件 → 根拠の条 → 確かめ先)の順', () => {
   const bid = bidCheck(readBidForm(FULL));
   const out = renderBidResult(bid, FULL);
-  const items = [...out.matchAll(/<li class="item[\s\S]*?(?=<li class="item|<\/ul><h3>)/g)].map((m) => m[0]);
+  const items = [...out.matchAll(/<li class="item[\s\S]*?(?=<li class="item|<\/ul><details class="fold")/g)].map((m) => m[0]);
   assert.equal(items.length, bid.items.length);
   for (const h of items) {
     const at = (re) => h.search(re);

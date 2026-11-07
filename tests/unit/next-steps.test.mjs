@@ -137,7 +137,7 @@ test('文は「(例外あり)」を足しても40字以下', () => {
 });
 
 // 節の頭の1行(受注したら要るもの の見出しの直後)を取り出す
-const headNote = (html) => html.match(/<h3>受注したら要るもの<\/h3>(<p class="points-note no-print">[\s\S]*?<\/p>)?/)?.[1] ?? '';
+const headNote = (html) => html.match(/<summary>確認が要る点の案内・労務費の候補<\/summary>(<p class="points-note no-print">[\s\S]*?<\/p>)?/)?.[1] ?? '';
 
 test('行の文に「(例外あり)」を付けない: 例外があっても無くても、note の語があっても、表の文のまま', () => {
   const item = (exceptions, note = '') => ({ key: 'taicho', exceptions, note });
@@ -206,7 +206,7 @@ test('見本の要る6項目: どのカードも h4 の直下、折りたたみ�
     assert.ok(card.html.includes('</h4>' + lineOf(it)), card.html.slice(0, 400));
     assert.ok(card.html.indexOf(lineOf(it)) < card.html.indexOf('<details'), it.key);
     assert.equal(card.html.split('class="item-next"').length - 1, 1, it.key);
-    assert.match(card.html, /<details class="basis"><summary>根拠を見る: /);
+    assert.match(card.html.replace(/<\/?span\b[^>]*>/g, ''), /<details class="basis"><summary>根拠を見る: /);
   }
 });
 
@@ -263,7 +263,7 @@ test('組み立てた画面: 見本の結果に全文が出る', async () => {
     '施工体系図を作り、見やすい場所に掲げる',
     DEDICATED_STEP,
   ].map((s) => '次にすること: ' + s + '。' + TAIL));
-  assert.ok(page.el('bid-result').innerHTML.includes('<h3>受注したら要るもの</h3><p class="points-note no-print">' + HEAD_NOTE + EXCEPTION_NOTE + '</p>'));
+  assert.ok(page.el('bid-result').innerHTML.includes('<summary>確認が要る点の案内・労務費の候補</summary><p class="points-note no-print">' + HEAD_NOTE + EXCEPTION_NOTE + '</p>'));
 });
 
 test('専任の note と根拠の折りたたみは今までどおり「根拠を見る」の中にある', () => {

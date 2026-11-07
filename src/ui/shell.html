@@ -446,6 +446,22 @@
     #bid-result .item > h4 { flex: 1 1 auto; }
     #bid-result .item > details.basis:not([open]) { flex: 0 1 auto; }
     #bid-result .item:has(> details.basis:not([open])) > .item-next { display: none; }
+    /* 要るものの項目(F87a): 閉じた項目は名前と状態の1行。行のどこを押しても根拠が開く(summary の ::after で行を覆う)。次にすること・未回答の文は開くと出る */
+    body.in-pages #bid-fold > h3:first-of-type { display: none; }
+    .need-heading { display: none; }
+    .need-hint { margin: 0 0 0.25rem; color: var(--ink-2); }
+    #bid-result .items { margin: 0; }
+    #bid-result .item { --shadow: none; position: relative; margin: 0; border: none; padding: 0 0.25rem; background-image: linear-gradient(var(--line), var(--line)); background-position: bottom; background-size: 100% 1px; background-repeat: no-repeat; }
+    #bid-result .item > details.basis { margin: 0; }
+    #bid-result .item > h4 { flex: 1 1 0; min-width: 0; margin: 0; line-height: 1.35; }
+    #bid-result .item > details.basis:not([open]) { margin-left: auto; }
+    #bid-result .item > details.basis:not([open]) > summary { padding: 0.25rem 0; }
+    #bid-result .item > details.basis:not([open]) > summary::after { content: ""; content: "" / ""; position: absolute; inset: 0; }
+    #bid-result .item > details.basis:not([open]) .basis-laws { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    #bid-result .item:has(> details.basis:not([open])) > .item-depends, #bid-result .item:has(> details.basis:not([open])) > .unanswered-note, #bid-result .item:has(> details.basis:not([open])) > .reason { display: none; }
+    #bid-result details.fold, #taicho-fold { margin: 0; }
+    #taicho-fold > h3 { display: none; }
+    #bid-result details.fold > summary, #taicho-fold > summary { padding: 0.25rem; }
     /* 別の道具のページでは開いたままにするので、開く見出しは要らない */
     body.in-pages #other-tools > summary { display: none; }
     #pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; max-width: 60rem; margin: 0 auto; padding: 0.5rem 1rem; box-sizing: border-box; border-top: 1px solid var(--line); background: var(--paper); }
@@ -467,6 +483,8 @@
   @media screen and (max-width: 40rem) {
     #ledger-input { height: 9rem; }
     #mask-input { height: 7rem; }
+    #bid-result .item > details.basis:not([open]) .basis-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    #bid-result .item { gap: 0 0.25rem; }
   }
   /* 背の低い画面(拡大 200%・横向きのスマホ): 下の帯が場所を取り切らないよう、高さの固定を外して全体が動く形に戻す(WCAG 1.4.10) */
   @media screen and (max-height: 30rem) {
@@ -744,8 +762,10 @@
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
+<details class="fold" id="taicho-fold"><summary>施工体制台帳が要るか</summary>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result"><p>条件を入れて「確認する」を押してください。</p></div>
+</details>
 </details>
 </div><div class="pg pg-framed" id="pg-2-schedule" hidden>
 <h3 id="schedule-heading" tabindex="-1">受注後の段取り(着手から完成・引き渡しまで)</h3>

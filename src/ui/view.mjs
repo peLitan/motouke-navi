@@ -38,6 +38,8 @@ export function basisList(list = []) {
 
 // 確認が要る点の1行。根拠のある点(専任の確認。F62a)は、文の下に条番号と抜き書きの折りたたみを添える。
 // items を渡すと、項目のカードと同じ根拠の折りたたみは紙にだけ出す(画面に同じ見出しを2回出さない)
+const basisWord = (t) => '<span class="basis-word">' + t + '</span>';
+const basisSummary = (list) => basisWord('根拠を見る') + '<span class="basis-laws">: ' + basisLabels(list) + '</span>';
 const pointBasis = (c) => (c.basis?.length ? '<details class="basis"><summary>根拠を見る: ' + basisLabels(c.basis) + '</summary>' + basisItems(c.basis) + '</details>' : '');
 function pointLine(c, items = []) {
   const sameBasis = c.basis?.length && items.some((it) => it.basis?.length && basisLabels(it.basis) === basisLabels(c.basis));
@@ -108,7 +110,7 @@ export function renderBidResult(bid, values) {
           ? '<p class="contact"><span class="part">確かめ先:</span> 発注者が公共か民間かで根拠の条が変わるので、「発注者」に答えると出します。</p>'
           : '<p class="contact"><span class="part">確かめ先:</span> 根拠の原文に相手の定めが無いので、出していません。</p>';
     }
-    // 1行のカード(F43c・F83a3): 見えるのは結論と、要るの項目の次にすることの1行と、確認が要る点のある項目の1行だけ。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
+    // 1行のカード(F43c・F83a3・F87a): 閉じた画面で見えるのは名前と結論だけ。次にすることの行などは開くと出る(shell.html の決まり)。理由・根拠・確かめ先は「根拠を見る」の中(印刷では開く)
     const step = s === 'required' ? nextStepText(it) : null;
     const nextLine = step ? '<p class="item-next">次にすること: ' + esc(step) + '。<span class="item-next-note print-inline">当てはまるかは「根拠を見る」で確かめてください。</span></p>' : '';
     const own = s === 'required' || s === 'not_required' ? (bid.checks ?? []).filter((c) => c.key === it.key) : [];
@@ -118,7 +120,7 @@ export function renderBidResult(bid, values) {
     const basis = it.basis ?? [];
     const basisPart = basis.length ? basisItems(basis) : '<p class="basis-none">根拠: 無し</p>';
     return '<li class="item status-' + esc(s) + '" id="' + esc(bidItemId(it.key)) + '"><h4>' + esc(it.label) + ': <span class="status">' + (STATUS_MARK[s] ? statusBadge(s, value) : esc((BID_STATUS[s] ?? s) + value)) + '</span></h4>' + nextLine + depends + unansweredNote
-      + '<details class="basis"><summary>' + (basis.length ? '根拠を見る: ' + basisLabels(basis) : '理由を見る') + '</summary>'
+      + '<details class="basis"><summary>' + (basis.length ? basisSummary(basis) : basisWord('理由を見る')) + '</summary>'
       + '<p class="reason"><span class="part">理由:</span> ' + esc(it.note) + '</p>' + condHtml
       + basisPart + exceptionList(it.exceptions) + contactHtml + '</details></li>';
   }).join('');
@@ -130,11 +132,11 @@ export function renderBidResult(bid, values) {
   const duties = dutyList.length
     ? '<h3 id="labor-duties">労務費と処遇の候補(確認が要る点の数に入れません)</h3><p class="points-note">上の件数には数えていません。原文の抜き書きを見て、担当者が確かめてください。このツールは当たる・当たらないを判定しません。</p><ul class="items">'
       + dutyList.map((d) => '<li class="duty item status-needs_check"><h4>' + esc(d.label) + ': <span class="status">' + statusBadge('needs_check') + '</span></h4><p class="reason">' + esc(d.note) + '</p>'
-        + '<details class="basis"><summary>根拠を見る: ' + basisLabels(d.basis) + '</summary>' + basisItems(d.basis) + exceptionList(d.exceptions) + '</details></li>').join('') + '</ul>'
+        + '<details class="basis"><summary>' + basisSummary(d.basis) + '</summary>' + basisItems(d.basis) + exceptionList(d.exceptions) + '</details></li>').join('') + '</ul>'
     : '';
   const un = values ? unansweredQuestions(values) : [];
   const provisional = un.length
-    ? '<p class="provisional"><strong>仮の一覧です</strong>。未回答の質問が ' + un.length + 'つあります(' + esc(un.map((q) => q.name).join('・')) + ')。答えるか「分からない」を選んでから、もう一度「確認する」を押してください。</p>'
+    ? '<details class="fold" id="need-provisional"><summary>仮の一覧です(未回答の質問 ' + un.length + 'つ)</summary><p class="provisional"><strong>仮の一覧です</strong>。未回答の質問が ' + un.length + 'つあります(' + esc(un.map((q) => q.name).join('・')) + ')。答えるか「分からない」を選んでから、もう一度「確認する」を押してください。</p></details>'
     : '';
   // カードごとの「当てはまるかは…」は紙にだけ残し、画面では節の頭に1回だけ書く(F83a12)。
   // 例外の知らせも行ごとに書かず、ここで1回だけ。指す先の折りたたみがある行があるときだけ足す(F85g。紙では折りたたみが開くので例外の本文は残る)
@@ -142,8 +144,10 @@ export function renderBidResult(bid, values) {
   const stepNote = stepItems.length
     ? '<p class="points-note no-print">次にすることの行が当てはまるかは、各項目の「根拠を見る」で確かめてください。' + (stepItems.some((it) => it.exceptions?.length) ? '例外は「根拠を見る」の「例外・読み方の注意」にあります。' : '') + '</p>'
     : '';
-  return provisional + '<h3>受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3>' + stepNote + '<ul class="items">' + rows + '</ul>' + checks + duties + amountBasisBlock(bid.amountBasis)
-    + '<p class="human">' + esc(bid.disclaimer) + '</p>';
+  // 画面は項目の一覧だけを見せ、ほかは閉じる(F87a)。紙では折りたたみが開くので、文と順は同じ
+  return provisional + '<h3 class="need-heading">受注したら要るもの' + (un.length ? '(仮の一覧)' : '') + '</h3><p class="need-hint no-print">項目を押すと、根拠と次にすることが開きます。</p><ul class="items">' + rows + '</ul>'
+    + '<details class="fold" id="need-more"><summary>確認が要る点の案内・労務費の候補</summary>' + stepNote + checks + duties + '</details>'
+    + '<details class="fold" id="need-about"><summary>' + (bid.amountBasis ? '金額の比べ方・' : '') + 'この一覧について</summary>' + amountBasisBlock(bid.amountBasis) + '<p class="human">' + esc(bid.disclaimer) + '</p></details>';
 }
 
 // 結果の最後の一覧(F14f): 「確認が要る点」と「未回答」。印刷にも出す。確認が要る点の全文は画面でもここに出す(F85a。「確認が要る点を見る」・数のカード・項目のリンクの行き先)

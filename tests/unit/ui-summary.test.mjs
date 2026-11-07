@@ -246,11 +246,11 @@ test('要る項目のカード: 結論は閉じず、理由と根拠は「根拠
   for (const h of items) {
     const head = h.slice(0, h.indexOf('<details'));
     assert.ok(head.includes('class="badge') && !head.includes('理由:'), '結論の外に理由がある');
-    assert.match(h, /<details class="basis"><summary>根拠を見る: /);
+    assert.match(h.replace(/<\/?span\b[^>]*>/g, ''), /<details class="basis"><summary>根拠を見る: /);
   }
   const mixed = renderBidResult({ items: [{ key: 'n', label: 'いらない', status: 'not_required', basis: [] }, { key: 'r', label: 'いる', status: 'required', basis: [] }], checks: [] });
   assert.ok(mixed.indexOf('いる') < mixed.indexOf('いらない'), '要るが先に来ない');
-  assert.ok(mixed.includes('<summary>理由を見る</summary>') && mixed.includes('根拠: 無し'));
+  assert.ok(mixed.replace(/<\/?span\b[^>]*>/g, '').includes('<summary>理由を見る</summary>') && mixed.includes('根拠: 無し'));
 });
 
 test('確認が要る点に左右される「要る」はそう書く。左右されない確認は言い切らない', () => {
