@@ -2,7 +2,14 @@
 // 画面の順はこの一覧だけで決める(DOM の順は紙の順のために変えない)。一覧の並びは [ページの id, 名前, 見出しの id]。
 // 受け入れの最小の DOM では closest が使えないので、id の表だけで動く
 export const PAGES = {
-  1: [['pg-1', '条件を入れる', 'bid-title']],
+  // 条件の5ページは1つの form の中にある(F86g)
+  1: [
+    ['pg-1', '発注者と立場', 'who-title'],
+    ['pg-1-work', '工事の種類', 'work-title'],
+    ['pg-1-amount', '金額', 'amount-title'],
+    ['pg-1-license', '許可と技術者', 'license-title'],
+    ['pg-1-notice', '公告', 'notice-title'],
+  ],
   confirm: [['pg-confirm', '確かめ', 'confirm-title']],
   // 確認が要る点は DOM では安全の後ろにあるが、画面では要るものの次
   2: [
@@ -25,9 +32,13 @@ const SEATS = ['pg-next', 'awarded-conditions', ...new Set(Object.values(LAST_SE
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
 // そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
 const OPEN_ON_SHOW = { 'pg-2-need': 'bid-fold', 'pg-2-safety': 'safety-fold' };
-// リンクの行き先の id → ページの表(F86d・F86e)。同じページの中で動くだけの id は載せない
+// リンクの行き先と欄の id → ページの表(F86d・F86e・F86g)。条件の欄は確かめの行の鍵でも引く。同じページの中で動くだけの id は載せない
 const LINK_PAGE = {
-  'pg-1': ['bid-form', 'bid-run'],
+  'pg-1': ['bid-form', 'orderer', 'role', 'direct'],
+  'pg-1-work': ['work-type', 'work-kind'],
+  'pg-1-amount': ['contract-amount', 'subcontract-total'],
+  'pg-1-license': ['license', 'engineer-qualification', 'ict-measure'],
+  'pg-1-notice': ['participation-conditions', 'intake-more', 'bid-run'],
   'pg-2-need': ['bid-fold', 'bid-result', 'taicho-result', 'bid-checks', 'labor-duties'],
   'pg-2-open': ['open-items'],
   'pg-2-schedule': ['schedule-heading', 'schedule-result'],

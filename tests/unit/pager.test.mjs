@@ -59,7 +59,9 @@ test('押していくと順にページが替わり、右の席のボタンは1�
   const page = runPage(html);
   assertEntry(page);
   await page.click('entry-bid');
-  await assertOn(page, 'pg-1', 'bid-run');
+  await assertOn(page, 'pg-1', 'pg-next'); // F86g: 条件は5ページなので、右の席は最後のページまで「次へ」
+  for (let i = 0; i < 4; i++) await page.click('pg-next');
+  await assertOn(page, 'pg-1-notice', 'bid-run');
   await page.click('bid-run');
   await assertOn(page, 'pg-confirm', 'confirm-go');
   await page.click('confirm-go');
@@ -98,8 +100,10 @@ test('戻るの行き先: 条件 → 入口、確かめ → 条件、結果 → 
   assert.equal(page.el('pg-back').hidden, true, '確かめに「戻る」が2つある');
   assert.equal(page.el('confirm-back').hidden, false);
   await page.click('confirm-back');
-  await assertOn(page, 'pg-1', 'bid-run');
+  await assertOn(page, 'pg-1-notice', 'bid-run'); // F86g: 確かめの「戻る」は条件の最後のページへ
   assert.equal(page.el('confirm-back').hidden, true);
+  for (let i = 0; i < 4; i++) await page.click('pg-back');
+  await assertOn(page, 'pg-1', 'pg-next');
   await page.click('pg-back');
   assertEntry(page);
 });
@@ -140,7 +144,7 @@ test('別の道具: 段のページの間は隠れ、全部の印刷が折りた
 test('ページを替えると頭へ戻り、見出しへ焦点を移す(画面は動かさない)', async () => {
   const page = runPage(html);
   const calls = [];
-  page.el('bid-title').focus = (o) => calls.push(o);
+  page.el('who-title').focus = (o) => calls.push(o); // F86g: 段の見出しは紙のためのもので、ページの見出しは別にある
   page.el('pg-1').scrollTop = 500;
   await page.click('entry-bid');
   assert.equal(page.el('pg-1').scrollTop, 0);

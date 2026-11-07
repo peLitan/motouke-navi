@@ -47,8 +47,8 @@ const atTop = (page) => { shown(page, 'panel-2', 'pg-2-top'); assert.equal(page.
 
 // nextStep の6つの枝(07 の F86e)。title は枝の取り違えを防ぐ印
 const BRANCHES = [
-  ['誤り', () => fill({ 'contract-amount': 'abc' }), /金額の欄を直す/, 'bid-form', 'panel-1', 'pg-1'],
-  ['条件の変更', async () => { const p = await samplePage(); await p.set('contract-amount', '40,000,000'); return p; }, /もう一度「確認する」を押す/, 'bid-run', 'panel-1', 'pg-1'],
+  ['誤り', () => fill({ 'contract-amount': 'abc' }), /金額の欄を直す/, 'bid-form', 'panel-1', 'pg-1-amount'], // F86g: 欄のページへ着く
+  ['条件の変更', async () => { const p = await samplePage(); await p.set('contract-amount', '40,000,000'); return p; }, /もう一度「確認する」を押す/, 'bid-run', 'panel-1', 'pg-1-notice'], // F86g: 「確認する」は条件の最後のページの席
   ['元請けの実績', () => fill({ 'participation-conditions': PRIME }), /元請けとしての施工実績/, 'open-items', 'panel-2', 'pg-2-open'],
   ['未回答', () => fill({}), /未回答の質問 \d+つに答える/, 'bid-form', 'panel-1', 'pg-1'],
   ['確認が要る点', samplePage, /確認が要る点 \d+件を確かめる/, 'open-items', 'panel-2', 'pg-2-open'],

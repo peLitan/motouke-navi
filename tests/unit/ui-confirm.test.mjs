@@ -24,13 +24,13 @@ const INTAKE = JSON.stringify({
   form: { orderer: 'public', 'work-type': 'other', 'contract-amount': '82500000' },
 });
 
-test('行の数: 判定に使う条件を全部(10行)並べ、行ごとに「変更」のボタンがあり、文は欄の選択肢と同じ', () => {
+test('行の数: 判定に使う条件を全部(10行)並べ、行ごとに「…を変更」のボタンが折りたたみの中にあり、文は欄の選択肢と同じ', () => {
   assert.equal(CONFIRM_ROWS.length, 10);
   assert.equal(section.match(/class="confirm-row"/g).length, 10);
   for (const r of CONFIRM_ROWS) {
     assert.ok(section.includes('<dt>' + r.label + '</dt>'), r.label);
     assert.match(section, new RegExp('id="confirm-value-' + r.key + '"'));
-    assert.match(section, new RegExp('<button type="button" id="confirm-change-' + r.key + '" aria-label="' + r.label + 'を変更">変更</button>'));
+    assert.match(section.slice(section.indexOf('id="confirm-edit"')), new RegExp('<button type="button" id="confirm-change-' + r.key + '">' + r.label + 'を変更</button>')); // F86g: 表から #confirm-edit へ移し、項目の名前を見せる
     // 選ぶ欄の語は入力欄の語と食い違わない(発注者は括弧の説明を除く)
     for (const [v, text] of Object.entries(r.options ?? {})) assert.ok(body.includes('<option value="' + v + '">' + text), v);
   }
@@ -223,7 +223,7 @@ test('抜き書きの文は HTML にせず、長い文は切る', () => {
 
 test('見た目: 押す所 44px の決まりの中のボタンで、狭い幅では1列寄りになり、長い値は折り返す。下の帯は「次へ」1つ', () => {
   assert.match(css, /\.confirm-row dd \{[^}]*overflow-wrap: anywhere/);
-  assert.match(css, /@media[^{]*40rem[\s\S]*\.confirm-row \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
+  assert.match(css, /@media[^{]*40rem[\s\S]*\.confirm-row \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   assert.match(css, /#next-step-3, #confirm-go \{ width: 100%; margin: 0; \}/);
   const bar = body.slice(body.indexOf('id="pager"'), body.indexOf('</nav>')); // F86a: 2つのボタンは下の帯へ移した。帯は1つで、戻るが左、結果へ進むが右
   assert.equal(body.match(/id="pager"/g).length, 1);

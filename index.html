@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-VgejrTCCR/H8E7eckwRBLGdZ+RI86uadxMhSyorxpPw='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-MvRewqGx7qcQ1kAnfGZa6P+AWI+6c6oMv02Chn26OG8='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -159,13 +159,14 @@
   #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--ink-2); }
   /* 見本の帯(F38c): 白地に主の色の枠 */
   /* 入力の確かめ(F43d): 1枚のカードに行を並べる。狭い幅では項目名を上の行へ置き、変更のボタンは右に残す */
-  .confirm { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); margin: 0 0 1rem; }
-  .confirm-row { display: grid; grid-template-columns: minmax(8rem, 16rem) minmax(0, 1fr) auto; gap: 0.5rem 1rem; align-items: center; padding: 0.75rem 1.5rem; border-top: 1px solid var(--line); }
+  .confirm { margin: 0; }
+  .confirm-row { display: grid; grid-template-columns: minmax(8rem, 16rem) minmax(0, 1fr); gap: 0.5rem 1rem; align-items: center; padding: 0.5rem 0.25rem; border-top: 1px solid var(--line); }
   .confirm-row:first-child { border-top: none; }
   .confirm-row dt { color: var(--ink-2); }
   .confirm-row dd { margin: 0; overflow-wrap: anywhere; }
   .confirm-row small { display: block; font-size: 1rem; color: var(--ink-2); }
-  .confirm-change button { margin: 0; }
+  .confirm-edit-list { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.5rem; }
+  .confirm-edit-list button { margin: 0; }
   .sample-banner { border: 1px solid var(--primary); border-radius: 8px; background: var(--paper); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   .sample-banner p { margin: 0.25rem 0; }
   /* 知らせ(F38d): 押したあとの文は太字に主の色の左線で見せる。#bid-status の頭の印(✓ か ＊)は文の中に書く。注記と見本の帯の文は太字にしない */
@@ -358,8 +359,7 @@
     /* 下の帯(F86a)。高さを固定している間は枠の一番下にあるので動かない。背の低い画面で全体が動くときは下に止まる。sticky の決まりは1つ */
     #pager { position: sticky; bottom: 0; padding: 0.5rem 0.75rem; gap: 0.5rem; background: var(--paper); border-top: 1px solid var(--line); }
     #next-step-3, #confirm-go { width: 100%; margin: 0; }
-    .confirm-row { grid-template-columns: minmax(0, 1fr) auto; }
-    .confirm-row dt { grid-column: 1 / -1; }
+    .confirm-row { grid-template-columns: minmax(0, 1fr); }
     /* 説明の折りたたみを持つ印の行(F84d): 折りたたみは行の下に回す。名前の基準の幅を 0 にして、長い名前が印の次の行へ落ちないようにする */
     .row.check-row { flex-wrap: wrap; }
     .row.check-row > label { flex: 1 1 0; }
@@ -409,6 +409,9 @@
     body.in-pages .wrap.page { display: flex; flex-direction: column; }
     body.in-pages #main { flex: 1; min-height: 14rem; display: flex; flex-direction: column; }
     #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]) { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    /* 段1 の5ページは1つの form の中(F86g)。高さを渡す。見出しはページごとの見出しに譲り、紙には今のまま出る */
+    #bid:not([hidden]), #bid-form:not([hidden]) { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    body.in-pages #bid-title { display: none; }
     .pg:not([hidden]) { flex: 1; overflow-y: auto; padding: 0 0.25rem; }
     /* 入口の説明は入口だけに出す。紙には今のまま出る */
     body.in-pages #entry-more { display: none; }
@@ -453,7 +456,7 @@
     html, body { height: auto; overflow: visible; }
     body { display: block; }
     .wrap.page, body.in-pages .wrap.page { display: block; overflow: visible; }
-    body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
+    body.in-pages #main, #bid:not([hidden]), #bid-form:not([hidden]), #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
     #summary-fold .ref-frame { max-height: none; }
@@ -573,24 +576,17 @@
 <p class="no-print note" id="offline-note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの端末の中だけで扱います。</p>
 </details>
 <p id="drop-status" class="no-print" aria-live="polite"></p>
-<section id="panel-1" hidden><div class="pg" id="pg-1">
+<section id="panel-1" hidden>
 <section id="bid">
 <h2 id="bid-title" tabindex="-1"><span class="print-num">1. </span>入札前の確認と、施工体制台帳が要るか</h2>
-<p>案件の条件を入れて「確認する」を押すと、入れた内容を確かめたあと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
+<p class="print-only" id="bid-intro">案件の条件を入れて「確認する」を押すと、入れた内容を確かめたあと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
+<div class="pg" id="pg-1">
+<h2 id="who-title" class="pg-title no-print" tabindex="-1">発注者と立場</h2>
 <p class="form-lead" id="form-lead">分からなければ「分からない」を選べます。</p>
 <details class="fold" id="form-lead-more"><summary>選び方の詳しい説明</summary>
+<p class="no-print">案件の条件を入れて「確認する」を押すと、入れた内容を確かめたあと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
 <p>「分からない」を選んだ質問を使う項目は「確認が要る」に、まだ答えていない質問を使う項目は「未回答」にします(推測で埋めません)。未回答が残るうちは、結果は「仮の一覧」です。※任意の欄は、当てはまるときだけ入れます。</p>
-</details>
-<details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
-<p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。文字の入った公告の PDF を選ぶと、文字を読んで「公告の参加の条件」の欄に入れます(見るのは元請けの実績の条件だけで、ほかの条件は拾いません)。外へ送らず、入れた内容を残しません。</p>
-<div class="row drop" data-drop="intake-load"><label for="intake-load">公告の PDF・拾った条件のファイル(.pdf・.json)</label>
-<input type="file" id="intake-load" name="intake-load" accept=".pdf,application/pdf,.json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
-<p id="intake-status" aria-live="polite"></p>
-<div id="intake-result"></div>
-<p id="intake-save-note" class="hint">「公告の参加の条件」の欄の文をこの端末に保存します(外へは送りません)。欄が空のときは押せません。</p>
-<button type="button" id="intake-save-txt" aria-describedby="intake-save-note" disabled>公告の文を .txt で保存</button>
-<p id="intake-save-status" aria-live="polite"></p>
 </details>
 <div class="row"><label for="orderer">発注者<span class="req req-must">※必須</span></label>
 <select id="orderer" name="orderer" aria-describedby="orderer-hint">
@@ -607,6 +603,8 @@
 <div><input type="radio" id="direct-unknown" name="role" value="unknown"><label for="direct-unknown">分からない</label></div>
 <details class="fold hint-fold"><summary aria-label="元請けか下請けかの説明">説明</summary><p id="direct-hint" class="hint">発注者から直接請け負うなら「元請け」、元請けやほかの下請けから請け負うなら「下請け」です。選んでいないときは、施工体制台帳・特定建設業の許可・技術者の区分を「判断できない」にします(選んでいないことを下請けと読みません)。</p></details>
 </fieldset>
+</div><div class="pg" id="pg-1-work" hidden>
+<h2 id="work-title" class="pg-title no-print" tabindex="-1">工事の種類</h2>
 <div class="row"><label for="work-type">工事の種類<span class="req req-must">※必須</span></label>
 <select id="work-type" name="work-type" aria-describedby="work-type-hint">
 <option value="">選んでください</option>
@@ -627,6 +625,8 @@
 </select>
 <p id="work-kind-plain" class="hint">段取りと目次の点検に使う表を、工種で選びます。</p>
 <details class="fold hint-fold"><summary aria-label="工種の説明をくわしく">くわしく</summary><p id="work-kind-hint" class="hint">建設業法施行令 第37条の技術検定の種目で選びます。段取りと目次の点検に使う表と、その出典が切り替わります。仕様書を読んでいない工種は「この工種の仕様書は見ていない」と出します。法令の判定・安全の法令の候補・公告の読みは工種を問わず出します。</p></details></div>
+</div><div class="pg" id="pg-1-amount" hidden>
+<h2 id="amount-title" class="pg-title no-print" tabindex="-1">金額</h2>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-plain contract-amount-hint">
 <span class="unknown-check"><input type="checkbox" id="contract-amount-unknown" name="contract-amount-unknown"><label for="contract-amount-unknown">分からない</label></span>
@@ -641,6 +641,8 @@
 <p id="subcontract-total-read" class="field-read" hidden></p>
 <p id="subcontract-total-plain" class="hint">自分が下請けに出す額の合計です(無ければ 0)。</p>
 <details class="fold hint-fold"><summary aria-label="下請けの総額の説明をくわしく">くわしく</summary><p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。「1億3,420万円」「134,200千円」のように単位を付けたときは、円にした値を欄の下に出します。</p></details></div>
+</div><div class="pg" id="pg-1-license" hidden>
+<h2 id="license-title" class="pg-title no-print" tabindex="-1">許可と技術者</h2>
 <div class="row"><label for="license">元請けの許可の種類(この工事の業種)<span class="req req-must">※必須</span></label>
 <select id="license" name="license" aria-describedby="license-plain license-hint">
 <option value="">選んでください</option>
@@ -661,27 +663,56 @@
 <details class="fold hint-fold"><summary aria-label="置ける技術者の資格の説明をくわしく">くわしく</summary><p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></details></div>
 <div class="row check-row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
 <details class="fold hint-fold"><summary aria-label="閲覧できる措置の説明">説明</summary><p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></details></div>
+</div><div class="pg" id="pg-1-notice" hidden>
+<h2 id="notice-title" class="pg-title no-print" tabindex="-1">公告</h2>
+<details class="fold no-print" id="intake-more"><summary>公告から拾った条件を読み込む</summary>
+<p class="hint">公告を読んだ AI がまとめた条件のファイルを選ぶと、確かめが要らなかった値だけを入れます。文字の入った公告の PDF を選ぶと、文字を読んで「公告の参加の条件」の欄に入れます(見るのは元請けの実績の条件だけで、ほかの条件は拾いません)。外へ送らず、入れた内容を残しません。</p>
+<div class="row drop" data-drop="intake-load"><label for="intake-load">公告の PDF・拾った条件のファイル(.pdf・.json)</label>
+<input type="file" id="intake-load" name="intake-load" accept=".pdf,application/pdf,.json,application/json"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
+<p id="intake-status" aria-live="polite"></p>
+<div id="intake-result"></div>
+<p id="intake-save-note" class="hint">「公告の参加の条件」の欄の文をこの端末に保存します(外へは送りません)。欄が空のときは押せません。</p>
+<button type="button" id="intake-save-txt" aria-describedby="intake-save-note" disabled>公告の文を .txt で保存</button>
+<p id="intake-save-status" aria-live="polite"></p>
+</details>
 <div class="row"><label for="participation-conditions">公告の参加の条件(任意)</label>
 <textarea id="participation-conditions" name="participation-conditions" rows="3" placeholder="例 平成29年度以降に、元請けとして同種工事の施工実績を有すること。" aria-describedby="participation-conditions-hint"></textarea>
 <details class="fold hint-fold"><summary aria-label="公告の参加の条件の説明">説明</summary><p id="participation-conditions-hint" class="hint">公告の施工実績の条件の文を貼ります。公告から拾った条件を読み込むと、施工実績の抜き書きがここに入ります。公告の PDF を読むと、全文がここに入ります。元請けとしての実績を求める文があれば、確認が要る点に出します。文の語を見るだけで、参加できるかどうかは判定しません。</p></details></div>
+</div>
 </form>
 </section>
-</div></section>
-<section id="panel-confirm" class="no-print" hidden><div class="pg" id="pg-confirm">
+</section>
+<section id="panel-confirm" class="no-print" hidden><div class="pg pg-framed" id="pg-confirm">
 <h2 id="confirm-title" tabindex="-1">入れた条件を確かめてください</h2>
-<p>発注者や金額の1つの違いで、要るものが変わります。違う所は「変更」で直せます。「分からない」のままでも結果は出ます(その項目は「確認が要る」になります)。</p>
+<p>発注者や金額の1つの違いで、要るものが変わります。違うときは「条件を直す」から直せます。「分からない」のままでも結果は出ます(その項目は「確認が要る」になります)。</p>
+<div class="ref-frame">
 <dl class="confirm" id="confirm-rows">
-<div class="confirm-row"><dt>発注者</dt><dd id="confirm-value-orderer"></dd><dd class="confirm-change"><button type="button" id="confirm-change-orderer" aria-label="発注者を変更">変更</button></dd></div>
-<div class="confirm-row"><dt>元請けか下請けか</dt><dd id="confirm-value-role"></dd><dd class="confirm-change"><button type="button" id="confirm-change-role" aria-label="元請けか下請けかを変更">変更</button></dd></div>
-<div class="confirm-row"><dt>工事の種類</dt><dd id="confirm-value-work-type"></dd><dd class="confirm-change"><button type="button" id="confirm-change-work-type" aria-label="工事の種類を変更">変更</button></dd></div>
-<div class="confirm-row"><dt>工種</dt><dd id="confirm-value-work-kind"></dd><dd class="confirm-change"><button type="button" id="confirm-change-work-kind" aria-label="工種を変更">変更</button></dd></div>
-<div class="confirm-row"><dt>請負代金の見込み</dt><dd id="confirm-value-contract-amount"></dd><dd class="confirm-change"><button type="button" id="confirm-change-contract-amount" aria-label="請負代金の見込みを変更">変更</button></dd></div>
-<div class="confirm-row"><dt>下請けの総額</dt><dd id="confirm-value-subcontract-total"></dd><dd class="confirm-change"><button type="button" id="confirm-change-subcontract-total" aria-label="下請けの総額を変更">変更</button></dd></div>
-<div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd><dd class="confirm-change"><button type="button" id="confirm-change-license" aria-label="元請けの許可の種類を変更">変更</button></dd></div>
-<div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd><dd class="confirm-change"><button type="button" id="confirm-change-engineer-qualification" aria-label="置ける技術者の資格を変更">変更</button></dd></div>
-<div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd><dd class="confirm-change"><button type="button" id="confirm-change-ict-measure" aria-label="発注者が台帳を閲覧できる措置を変更">変更</button></dd></div>
-<div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd><dd class="confirm-change"><button type="button" id="confirm-change-participation-conditions" aria-label="公告の参加の条件を変更">変更</button></dd></div>
+<div class="confirm-row"><dt>発注者</dt><dd id="confirm-value-orderer"></dd></div>
+<div class="confirm-row"><dt>元請けか下請けか</dt><dd id="confirm-value-role"></dd></div>
+<div class="confirm-row"><dt>工事の種類</dt><dd id="confirm-value-work-type"></dd></div>
+<div class="confirm-row"><dt>工種</dt><dd id="confirm-value-work-kind"></dd></div>
+<div class="confirm-row"><dt>請負代金の見込み</dt><dd id="confirm-value-contract-amount"></dd></div>
+<div class="confirm-row"><dt>下請けの総額</dt><dd id="confirm-value-subcontract-total"></dd></div>
+<div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd></div>
+<div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd></div>
+<div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd></div>
+<div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd></div>
 </dl>
+</div>
+<details class="fold" id="confirm-edit"><summary>条件を直す</summary>
+<div class="confirm-edit-list">
+<button type="button" id="confirm-change-orderer">発注者を変更</button>
+<button type="button" id="confirm-change-role">元請けか下請けかを変更</button>
+<button type="button" id="confirm-change-work-type">工事の種類を変更</button>
+<button type="button" id="confirm-change-work-kind">工種を変更</button>
+<button type="button" id="confirm-change-contract-amount">請負代金の見込みを変更</button>
+<button type="button" id="confirm-change-subcontract-total">下請けの総額を変更</button>
+<button type="button" id="confirm-change-license">元請けの許可の種類を変更</button>
+<button type="button" id="confirm-change-engineer-qualification">置ける技術者の資格を変更</button>
+<button type="button" id="confirm-change-ict-measure">発注者が台帳を閲覧できる措置を変更</button>
+<button type="button" id="confirm-change-participation-conditions">公告の参加の条件を変更</button>
+</div>
+</details>
 </div></section>
 <section id="panel-2" hidden><div class="pg" id="pg-2-top">
 <h2 id="result-title" tabindex="-1">結果</h2>
@@ -2890,7 +2921,14 @@ __m["src/ui/pager.mjs"] = (function () {
 // 画面の順はこの一覧だけで決める(DOM の順は紙の順のために変えない)。一覧の並びは [ページの id, 名前, 見出しの id]。
 // 受け入れの最小の DOM では closest が使えないので、id の表だけで動く
 const PAGES = {
-  1: [['pg-1', '条件を入れる', 'bid-title']],
+  // 条件の5ページは1つの form の中にある(F86g)
+  1: [
+    ['pg-1', '発注者と立場', 'who-title'],
+    ['pg-1-work', '工事の種類', 'work-title'],
+    ['pg-1-amount', '金額', 'amount-title'],
+    ['pg-1-license', '許可と技術者', 'license-title'],
+    ['pg-1-notice', '公告', 'notice-title'],
+  ],
   confirm: [['pg-confirm', '確かめ', 'confirm-title']],
   // 確認が要る点は DOM では安全の後ろにあるが、画面では要るものの次
   2: [
@@ -2913,9 +2951,13 @@ const SEATS = ['pg-next', 'awarded-conditions', ...new Set(Object.values(LAST_SE
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
 // そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
 const OPEN_ON_SHOW = { 'pg-2-need': 'bid-fold', 'pg-2-safety': 'safety-fold' };
-// リンクの行き先の id → ページの表(F86d・F86e)。同じページの中で動くだけの id は載せない
+// リンクの行き先と欄の id → ページの表(F86d・F86e・F86g)。条件の欄は確かめの行の鍵でも引く。同じページの中で動くだけの id は載せない
 const LINK_PAGE = {
-  'pg-1': ['bid-form', 'bid-run'],
+  'pg-1': ['bid-form', 'orderer', 'role', 'direct'],
+  'pg-1-work': ['work-type', 'work-kind'],
+  'pg-1-amount': ['contract-amount', 'subcontract-total'],
+  'pg-1-license': ['license', 'engineer-qualification', 'ict-measure'],
+  'pg-1-notice': ['participation-conditions', 'intake-more', 'bid-run'],
   'pg-2-need': ['bid-fold', 'bid-result', 'taicho-result', 'bid-checks', 'labor-duties'],
   'pg-2-open': ['open-items'],
   'pg-2-schedule': ['schedule-heading', 'schedule-result'],
@@ -9895,7 +9937,7 @@ function showPanel(doc, n, index = 0) {
   showExtra(doc, null);
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = true;
-  setNoticeCompact(doc, n === 2 || n === 3);
+  setNoticeCompact(doc, true);
   showPage(doc, n, index);
 }
 // 段の外の2つの枠(別の道具・使った資料)のうち、見せる物だけ hidden を外す。段の枠は showPanel が持つ
@@ -9905,7 +9947,7 @@ function showExtra(doc, shown) {
     if (panel) panel.hidden = id !== shown;
   }
 }
-// 常に出る注意を、結果と段3 では1行にまとめる(F83a4)。行の hidden を外すと CSS が全文を消す。「くわしく」を開いた形は段を移っても残す
+// 常に出る注意を、入口のほかの段では1行にまとめる(F83a4・F86g)。行の hidden を外すと CSS が全文を消す。「くわしく」を開いた形は段を移っても残す
 function setNoticeCompact(doc, on) {
   const row = doc.getElementById('notice-more');
   if (row) row.hidden = !on;
@@ -9928,11 +9970,8 @@ function showEntry(doc) {
   setBidStatus(doc, '');
   doc.getElementById('sample-load')?.focus?.();
 }
-// 段を開く。焦点は showPage がページの見出しへ移す。scrollId があれば、ページの中をその要素まで動かす
-function openPanel(doc, n, scrollId) {
-  showPanel(doc, n);
-  if (scrollId) doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
-}
+// 段を開く。焦点は showPage がページの見出しへ移す
+const openPanel = (doc, n) => showPanel(doc, n);
 // 段の外のページへ: 段を全部隠してから見せる。見出しは紙のために残し、折りたたみは開いたまま使う
 function showOutside(doc, group, panelId) {
   for (const id of ['panel-1', 'panel-2', 'panel-3', 'panel-confirm', 'entry']) {
@@ -9970,15 +10009,17 @@ function openConfirm(doc) {
     const el = doc.getElementById('confirm-value-' + r.key);
     if (el) el.innerHTML = renderConfirmRow(r);
   }
+  const edit = doc.getElementById('confirm-edit');
+  if (edit) edit.open = false;
   showPanel(doc, 'confirm');
 }
-// 「変更」: 段1 の入れ直す欄へ戻す。金額の欄が「分からない」のときは、その印へ戻す
+// 「変更」: 欄のあるページを開いて、入れ直す欄へ戻す。金額の欄が「分からない」のときは、その印へ戻す
 function changeTarget(doc, row) {
   if (row.key === 'role') return ['direct', 'direct-sub', 'direct-unknown'].find((id) => doc.getElementById(id)?.checked === true) ?? 'direct-unset';
   return doc.getElementById(row.field + '-unknown')?.checked === true ? row.field + '-unknown' : row.field;
 }
 function changeField(doc, key) {
-  showPanel(doc, 1);
+  showPageOf(doc, key);
   const el = doc.getElementById(changeTarget(doc, CONFIRM_ROWS.find((r) => r.key === key)));
   (el?.closest?.('.row') ?? el)?.scrollIntoView?.({ block: 'center' });
   el?.focus?.({ preventScroll: true });
@@ -10014,11 +10055,12 @@ function confirmGo(doc) {
   shownResult = now ?? shownResult;
   setBidStatus(doc, resultNotice(changed ? BID_NOTICE_DONE : SAMPLE_NOTICE_DONE) + diff, diff);
 }
-// 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
+// 入口の「公告を読み込む」(F43b): 公告のページの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
   const more = doc.getElementById('intake-more');
   if (more) more.open = true;
-  openPanel(doc, 1, 'intake-more');
+  showPageOf(doc, 'intake-more');
+  more?.scrollIntoView?.({ block: 'start' });
   doc.getElementById('intake-load')?.focus?.({ preventScroll: true });
 }
 // id のあるページを開く(F86d)
@@ -11024,6 +11066,8 @@ const OPENED = (name) => (name ? '「' + name + '」を開きました' : '');
 function outsideNotice(doc) {
   if (isShown(doc, 'panel-tools') && doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
   if (isShown(doc, 'panel-1')) {
+    // 知らせの欄は公告のページにある(F86g)
+    showPageOf(doc, 'intake-more');
     const opened = OPENED(openFold(doc, 'intake-more'));
     return ['intake-status', USE_FRAME + 'この段の枠: ' + frameLabel(doc, 'intake-load') + '。' + (opened ? opened + '。' : '')];
   }

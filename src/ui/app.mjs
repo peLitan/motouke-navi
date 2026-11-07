@@ -182,7 +182,7 @@ export function showPanel(doc, n, index = 0) {
   showExtra(doc, null);
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = true;
-  setNoticeCompact(doc, n === 2 || n === 3);
+  setNoticeCompact(doc, true);
   showPage(doc, n, index);
 }
 // 段の外の2つの枠(別の道具・使った資料)のうち、見せる物だけ hidden を外す。段の枠は showPanel が持つ
@@ -192,7 +192,7 @@ function showExtra(doc, shown) {
     if (panel) panel.hidden = id !== shown;
   }
 }
-// 常に出る注意を、結果と段3 では1行にまとめる(F83a4)。行の hidden を外すと CSS が全文を消す。「くわしく」を開いた形は段を移っても残す
+// 常に出る注意を、入口のほかの段では1行にまとめる(F83a4・F86g)。行の hidden を外すと CSS が全文を消す。「くわしく」を開いた形は段を移っても残す
 function setNoticeCompact(doc, on) {
   const row = doc.getElementById('notice-more');
   if (row) row.hidden = !on;
@@ -215,11 +215,8 @@ export function showEntry(doc) {
   setBidStatus(doc, '');
   doc.getElementById('sample-load')?.focus?.();
 }
-// 段を開く。焦点は showPage がページの見出しへ移す。scrollId があれば、ページの中をその要素まで動かす
-function openPanel(doc, n, scrollId) {
-  showPanel(doc, n);
-  if (scrollId) doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
-}
+// 段を開く。焦点は showPage がページの見出しへ移す
+const openPanel = (doc, n) => showPanel(doc, n);
 // 段の外のページへ: 段を全部隠してから見せる。見出しは紙のために残し、折りたたみは開いたまま使う
 function showOutside(doc, group, panelId) {
   for (const id of ['panel-1', 'panel-2', 'panel-3', 'panel-confirm', 'entry']) {
@@ -257,15 +254,17 @@ export function openConfirm(doc) {
     const el = doc.getElementById('confirm-value-' + r.key);
     if (el) el.innerHTML = renderConfirmRow(r);
   }
+  const edit = doc.getElementById('confirm-edit');
+  if (edit) edit.open = false;
   showPanel(doc, 'confirm');
 }
-// 「変更」: 段1 の入れ直す欄へ戻す。金額の欄が「分からない」のときは、その印へ戻す
+// 「変更」: 欄のあるページを開いて、入れ直す欄へ戻す。金額の欄が「分からない」のときは、その印へ戻す
 function changeTarget(doc, row) {
   if (row.key === 'role') return ['direct', 'direct-sub', 'direct-unknown'].find((id) => doc.getElementById(id)?.checked === true) ?? 'direct-unset';
   return doc.getElementById(row.field + '-unknown')?.checked === true ? row.field + '-unknown' : row.field;
 }
 export function changeField(doc, key) {
-  showPanel(doc, 1);
+  showPageOf(doc, key);
   const el = doc.getElementById(changeTarget(doc, CONFIRM_ROWS.find((r) => r.key === key)));
   (el?.closest?.('.row') ?? el)?.scrollIntoView?.({ block: 'center' });
   el?.focus?.({ preventScroll: true });
@@ -301,11 +300,12 @@ function confirmGo(doc) {
   shownResult = now ?? shownResult;
   setBidStatus(doc, resultNotice(changed ? BID_NOTICE_DONE : SAMPLE_NOTICE_DONE) + diff, diff);
 }
-// 入口の「公告から拾った条件を読み込む」(F43b): 段1 の読み込みの折りたたみを開き、ファイルの欄へ焦点を移す
+// 入口の「公告を読み込む」(F43b): 公告のページの折りたたみを開き、ファイルの欄へ焦点を移す
 function openIntake(doc) {
   const more = doc.getElementById('intake-more');
   if (more) more.open = true;
-  openPanel(doc, 1, 'intake-more');
+  showPageOf(doc, 'intake-more');
+  more?.scrollIntoView?.({ block: 'start' });
   doc.getElementById('intake-load')?.focus?.({ preventScroll: true });
 }
 // id のあるページを開く(F86d)
@@ -1311,6 +1311,8 @@ const OPENED = (name) => (name ? '「' + name + '」を開きました' : '');
 function outsideNotice(doc) {
   if (isShown(doc, 'panel-tools') && doc.getElementById('other-tools')?.open) return ['dict-file-status', USE_FRAME + 'この道具の枠: ' + ['dict-import', 'mask-file', 'map-import', 'ai-load'].map((id) => frameName(doc, id)).join('・') + '。'];
   if (isShown(doc, 'panel-1')) {
+    // 知らせの欄は公告のページにある(F86g)
+    showPageOf(doc, 'intake-more');
     const opened = OPENED(openFold(doc, 'intake-more'));
     return ['intake-status', USE_FRAME + 'この段の枠: ' + frameLabel(doc, 'intake-load') + '。' + (opened ? opened + '。' : '')];
   }

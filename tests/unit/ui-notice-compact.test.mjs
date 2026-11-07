@@ -88,14 +88,13 @@ test('たたむ決まり: 2つの物を1つの決まりで消し、行が見え�
   assert.ok(!printCss.includes('notice-more'), '紙の決まりの中で行を扱っている');
 });
 
-test('段2・段3 で1行の形、入口と段1 と入力の確かめで全文(実物の showPanel・showEntry)', () => {
+test('入口のほかの段で1行の形、入口で全文(実物の showPanel・showEntry)', () => {
   const els = {};
   const doc = { getElementById: (id) => (els[id] ??= { hidden: id === 'notice-more', setAttribute() {}, removeAttribute() {}, focus() {} }) };
   const shown = () => !els['notice-more'].hidden;
-  for (const n of [1, 'confirm']) { showPanel(doc, n); assert.equal(shown(), false, '段 ' + n); }
-  for (const n of [2, 3]) { showPanel(doc, n); assert.equal(shown(), true, '段 ' + n); }
+  for (const n of [1, 'confirm', 2, 3]) { showPanel(doc, n); assert.equal(shown(), true, '段 ' + n); } // F86g: 条件の段にも広げた
   showPanel(doc, 1);
-  assert.equal(shown(), false, '段1 に戻ったとき');
+  assert.equal(shown(), true, '段1 に戻ったとき');
   showPanel(doc, 3);
   showEntry(doc);
   assert.equal(shown(), false, '入口に戻ったとき');
@@ -107,10 +106,10 @@ test('画面の道: 入口 → 段1 → 確かめ → 結果 → 段3 → 段1 �
   assert.equal(row2().hidden, true, '開いた直後');
   await page.click('entry-bid');
   assert.equal(page.el('panel-1').hidden, false);
-  assert.equal(row2().hidden, true, '段1');
+  assert.equal(row2().hidden, false, '段1');
   await page.click('bid-run');
   assert.equal(page.el('panel-confirm').hidden, false);
-  assert.equal(row2().hidden, true, '入力の確かめ');
+  assert.equal(row2().hidden, false, '入力の確かめ');
   await page.click('confirm-go');
   assert.equal(page.el('panel-2').hidden, false);
   assert.equal(row2().hidden, false, '結果');
@@ -121,9 +120,9 @@ test('画面の道: 入口 → 段1 → 確かめ → 結果 → 段3 → 段1 �
   assert.equal(row2().hidden, false, '結果に戻ったとき');
   for (let i = 0; i < 6; i++) await page.click('pg-back'); // F86d: 結果は7ページなので、最後のページから1ページ目まで戻る
   await page.click('pg-back');
-  assert.equal(row2().hidden, true, '入力の確かめに戻ったとき');
+  assert.equal(row2().hidden, false, '入力の確かめに戻ったとき');
   await page.click('confirm-back');
-  assert.equal(row2().hidden, true, '段1 に戻ったとき');
+  assert.equal(row2().hidden, false, '段1 に戻ったとき');
   await page.click('bid-run');
   await page.click('confirm-go');
   await page.click('next-step-3');
