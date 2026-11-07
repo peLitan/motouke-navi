@@ -389,17 +389,18 @@ test('F80c 文書: コメント・manual の走らせた記録の見出しと参
   const head = heads[0];
   assert.ok(!head.includes('今の版'));
   assert.ok(head.includes('2026-11-05') && head.includes('版 156b15c'));
-  assert.ok(head.includes('F56a で替えた後の版の走らせは、下の表に統括が足す'));
+  assert.ok(head.includes('F56a で替えた後の版の走らせは、下の表'));
   assert.ok(!manual.includes('走らせた記録(今の版'));
   assert.ok(!manual.includes('今の版の回'));
   assert.ok(manual.includes(`上の「${head}」にある`), '参照が見出しと同じ');
-  // 表の枠: 見出しの行と区切りの行だけで、値の行は無い
+  // 表の枠: 見出しの行と区切りの行の次に、値の行が1行(値は manual-run-1107.test.mjs が見る)
   const lines = manual.split('\n');
   const i = lines.findIndex((l) => l.startsWith('| 版 | 日時 | 往復 | 秒 | 費用 |'));
   assert.ok(i > lines.findIndex((l) => l.startsWith(`**${head}**`)));
   assert.deepEqual(lines[i].split('|').slice(1, -1).map((c) => c.trim()), ['版', '日時', '往復', '秒', '費用', '道具の呼び出し(主と係を分けて名前ごと)', '断られた道具', '係の本文の有無', 'plugin_errors', 'mcp_servers', 'Stop の催促']);
   assert.match(lines[i + 1], /^\|(---\|){11}$/);
-  assert.ok(!lines[i + 2].startsWith('|'), '値の行は統括が足す');
+  assert.ok(lines[i + 2].startsWith('| 17b7bc2 |'), '値の行は走らせた版');
+  assert.ok(!lines[i + 3].startsWith('|'), '値の行は1行');
   // 画面なしの入口の節に公式の2行
   const section = manual.split('## Claude で点検(画面なしの Claude Code)')[1].split('\n## ')[0];
   const rows = section.split('\n');

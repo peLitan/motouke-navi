@@ -157,7 +157,7 @@ test('残っていること: 1か所にあり、番号が続き、ほかの表�
   }
 });
 
-test('評価の推移: 9列で、古い組の2行は評価.md の値で、E1〜E4 は未測', () => {
+test('評価の推移: 9列で、古い組の2行は評価.md の値で、E1〜E4 は版の印つきの値', () => {
   const rows = tableRows('評価の推移');
   for (const r of rows) assert.equal(r.length, 9, r[2]);
   const [first, second, ...rest] = rows;
@@ -166,7 +166,13 @@ test('評価の推移: 9列で、古い組の2行は評価.md の値で、E1〜E
   const eval7 = read('docs/評価.md');
   for (const v of ['$3.54', '$3.70', '965秒', '1042秒']) assert.ok(eval7.includes(v), v);
   assert.deepEqual(rest.map((r) => r[2].slice(0, 2)), ['E1', 'E2', 'E3', 'E4']);
-  for (const r of rest) for (const i of [0, 4, 5, 6, 7, 8]) assert.equal(r[i], '未測', r[2]);
+  // F85j: 走らせたので値に替えた。どの欄も未測でなく、版は走らせた版で、判定は評価.md の行の判定と同じ(値は eval-values-1107 が見る)
+  for (const r of rest) {
+    assert.equal(r[0], '17b7bc2', r[2]);
+    for (const i of [4, 5, 6, 7, 8]) assert.notEqual(r[i], '未測', r[2]);
+    const row = eval7.split('\n').find((l) => l.startsWith(`| ${r[2].slice(0, 2)} | 17b7bc2、`));
+    assert.ok(row && row.includes(`| ${r[6]} |`), r[2]);
+  }
   for (const s of ['pass^3', 'pass@3', 'scored: true', 'partial: true', 'skippedPaidGraders', 'arm: with-only', '退行の評価', '能力の評価']) {
     assert.ok(section('評価の推移').includes(s), s);
   }

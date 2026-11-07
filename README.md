@@ -38,8 +38,8 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
      claude plugin eval plugin --model <固定の値> --judge-model <別の固定の値> --scaffold --allow-real-servers --allow-tools mcp__plugin_motouke-navi-guard_masked-files__read_masked mcp__plugin_motouke-navi-guard_masked-files__list_masked mcp__plugin_motouke-navi-guard_masked-files__check_articles mcp__plugin_motouke-navi-guard_masked-files__check_conditions --ablation with-without --runs 3 --no-publish --output-dir tmp/eval --report tmp/eval/report.html
      ```
 
-   - E3(公告の拾い)も走ります。`plugin/evals/E3-bid-intake/` の架空の公告と説明書で、Skill `bid-intake` と道具 `check_conditions` が動くか、予定価格と工期の食い違いと公告の中の AI に向けた文が答えにあるか、参加を言い切らないかを見ます。拾った値の正しさは見ません。E3 は未測です(`docs/評価.md` の 7)
-   - E4(仕込みの無い書類で言い切らないか)も走ります。`plugin/evals/E4-no-planted/` の架空の台帳1冊で、答えが法令違反を言い切らず、候補・確認・判断できないの形で書くかを見る退行の評価です。E4 だけなら命令の `--ablation with-without` を外して `--case e4-no-planted --ablation none` を付けます。E4 は未測です(`docs/評価.md` の 7)
+   - E3(公告の拾い)も走ります。`plugin/evals/E3-bid-intake/` の架空の公告と説明書で、Skill `bid-intake` と道具 `check_conditions` が動くか、予定価格と工期の食い違いと公告の中の AI に向けた文が答えにあるか、参加を言い切らないかを見ます。拾った値の正しさは見ません。E3 は版 17b7bc2(2026-11-07)の値で合格です(3回とも)。ただし あり・なしの差は 0.00 で、点に入る検査では差が出ていません。点に入らない手順の最後の行は3回とも落ちました(`docs/評価.md` の 7)
+   - E4(仕込みの無い書類で言い切らないか)も走ります。`plugin/evals/E4-no-planted/` の架空の台帳1冊で、答えが法令違反を言い切らず、候補・確認・判断できないの形で書くかを見る退行の評価です。E4 だけなら命令の `--ablation with-without` を外して `--case e4-no-planted --ablation none` を付けます。E4 は版 17b7bc2(2026-11-07)の値で合格です(3回とも。`docs/評価.md` の 7)
 
 ## できること
 - 多くの経験がない若手や、元請けを請けたことがない建設会社が、入札の前と受注の後に「何が要るか」「書類に抜けが無いか」を、建設業法などの条文と国の共通仕様書を引きながら確かめる手間を減らします
@@ -50,16 +50,18 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 - 動画: (提出のときに作者が URL を書きます。台本は `docs/demo-script.md`。12場面・2:58 で、実在の公告1件を読むところから結果、架空の書類の点検、測った数字までを1本で見せます。期間中に作った機能だけを映します)
 
 ## 審査で確かめる所(5分)
-数字は版 eb63e28 で 2026-11-06 23:15 に数えた値。モデルを呼ぶ命令は最後に分けた。版はこの節を足すコミットの前の版で、試験の数はこの節の試験を足した状態の数。
+数字は版 e798f46 で 2026-11-07 18:46 に数えた値。モデルを呼ぶ命令は最後に分けた。版はこの節の数を直すコミットの前の版で、試験の数はそのコミットの中身で回した数。
 
 | 審査の基準(要点) | 開く物 | 命令(モデルを呼ばない) | 出る数(数えた日時) | 動画に映るか |
 |---|---|---|---|---|
-| 開発の中心が Claude Code か | [docs/development.md](docs/development.md) | `git log --format=%s \| head -20`<br>`git rev-list --count eb63e28`<br>`git rev-list --count eb63e28 --grep='Co-Authored-By: Claude'` | 題に機能の id と検証の中身が並ぶ。206 件、うち共著の印 203 件(2026-11-06 23:15) | 映らない |
+| 開発の中心が Claude Code か | [docs/development.md](docs/development.md) | `git log --format=%s \| head -20`<br>`git rev-list --count e798f46`<br>`git rev-list --count e798f46 --grep='Co-Authored-By: Claude'` | 題に機能の id と検証の中身が並ぶ。267 件、うち共著の印 264 件(2026-11-07 18:46) | 映らない |
 | 仕組みを目的で使い分けたか | [docs/overview.md](docs/overview.md) の仕組みの表、`plugin/hooks/hooks.json`、`plugin/agents/refuter.md`、`plugin/.mcp.json`、`plugin/skills/*/SKILL.md` | `claude plugin validate ./plugin` | 通る。注意2つ(plugin.json に author と icon が無い)は既知。Claude Code 2.1.319(2026-11-07 10:49) | 場面 2・8(Skill)、場面 7(hook)、場面 8(MCP)、場面 9(係) |
-| 試行錯誤の跡 | [docs/critic.md](docs/critic.md) の反証の節、[docs/評価.md](docs/評価.md) の 1 と 7、[docs/development.md](docs/development.md) の「見つけた → 直した → 測り直した」 | `grep -n '^## 反証' docs/critic.md` | 反証の節の見出しが並ぶ(2026-11-06 23:15)。文書の値: 仕込みの見つけた数 5→7→9(2026-11-03〜11-04)、古い組(検査9つ)の名前の検査8つで 7/8 → 8/8(2026-11-04〜11-05) | 映らない(場面 10 の札2 に古い組の 8/8 だけ) |
-| 設計と実装の確かさ | [docs/acceptance-map.md](docs/acceptance-map.md) | `node --test tests/acceptance/*.test.mjs`<br>`node --test tests/unit/*.test.mjs`<br>`node scripts/quote-rate.mjs` | 受け入れ tests 110、単体 tests 1434(どちらも fail 0。Ubuntu 24.04・WSL2、Node 24.22.0。ほかの環境では数えていない)、抜き書き 345 件(2026-11-06 23:15) | 映らない |
-| 使う人がそのまま使える形か | この README の [限界](#限界)、画面の結果の上の注意の文、[docs/development.md](docs/development.md) の「残っていること(未測・直していない)」 | `grep -c '^\| 残 ' docs/development.md` | 一覧 23 行(2026-11-06 23:15) | 場面 11(注意の文) |
-| 動画に無い仕組み | [docs/manual.md](docs/manual.md) の「走らせた記録」、[docs/評価.md](docs/評価.md) の 7、`docs/evals/2026-11-05_e1/aggregate-result.json`、`plugin/skills/construction-check/SKILL.md` の frontmatter(この版の Stop の置き場) | `node --test tests/unit/check-done.test.mjs tests/unit/refuter-check-articles.test.mjs tests/unit/plugin-eval-case.test.mjs` | tests 42(2026-11-06 23:15)。走らせた値はここに書かず、「残っていること」の 残 2・残 5・残 9・残 12 を指す | 動画には無い。ここで確かめる: `check_articles` の呼び出し、公式の評価(場面 10 の札2 は値だけ)、Stop の hook、`refuter` の実走(場面 9 は係が呼ばれた表示と数だけ) |
+| 試行錯誤の跡 | [docs/critic.md](docs/critic.md) の反証の節、[docs/評価.md](docs/評価.md) の 1 と 7、[docs/development.md](docs/development.md) の「見つけた → 直した → 測り直した」 | `grep -n '^## 反証' docs/critic.md` | 反証の節の見出しが並ぶ(2026-11-07 18:46)。文書の値: 仕込みの見つけた数 5→7→9(2026-11-03〜11-04)、古い組(検査9つ)の名前の検査8つで 7/8 → 8/8(2026-11-04〜11-05) | 映らない(場面 10 の札2 に古い組の 8/8 だけ) |
+| 設計と実装の確かさ | [docs/acceptance-map.md](docs/acceptance-map.md) | `node --test tests/acceptance/*.test.mjs`<br>`node --test tests/unit/*.test.mjs`<br>`node scripts/quote-rate.mjs` | 受け入れ tests 110、単体 tests 2194(どちらも fail 0。Ubuntu 24.04・WSL2、Node 24.22.0。ほかの環境では数えていない)、抜き書き 345 件(2026-11-07 18:46) | 映らない |
+| 使う人がそのまま使える形か | この README の [限界](#限界)、画面の結果の上の注意の文、[docs/development.md](docs/development.md) の「残っていること(未測・直していない)」 | `grep -c '^\| 残 ' docs/development.md` | 一覧 23 行(2026-11-07 18:46) | 場面 11(注意の文) |
+| 動画に無い仕組み | [docs/manual.md](docs/manual.md) の「走らせた記録」、[docs/評価.md](docs/評価.md) の 7、`docs/evals/2026-11-05_e1/aggregate-result.json`、`plugin/hooks/hooks.json`(Stop の置き場)、`plugin/skills/construction-check/SKILL.md` | `node --test tests/unit/check-done.test.mjs tests/unit/refuter-check-articles.test.mjs tests/unit/plugin-eval-case.test.mjs` | tests 68(2026-11-07 18:46)。走らせた値はここに書かず、「残っていること」の 残 2・残 5・残 9・残 12 を指す | 動画には無い。ここで確かめる: `check_articles` の呼び出し、公式の評価(場面 10 の札2 は値だけ)、Stop の hook、`refuter` の実走(場面 9 は係が呼ばれた表示と数だけ) |
+
+公式の評価の新しい組の値(版 17b7bc2、2026-11-07): E1 不合格・E2 不合格・E3 合格(差 0)・E4 合格。E1・E2 のプラグインありの回で落ちたのは判定役の検査だけで、名前の漏れは測った範囲で 0 です。E3 は差が出ておらず、点に入らない手順の最後の行は3回とも落ちました。`plugin/` はこの版から変えていません(`git diff 17b7bc2 HEAD -- plugin/` が空)。値は [docs/評価.md の 7](docs/評価.md#7-公式の評価のケースe1-の名前がやりとりの記録に出ないか) にあります。
 
 ### モデルを呼ぶ命令
 この節で挙げる命令のうち、モデルを呼ぶのは次の2つです。動かす人の契約の範囲で動きます。
@@ -152,7 +154,7 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 - 仕込みの評価: 架空の書類3件(`fixtures/`)の仕込み 11 件のうち見つけた 9・見落とし 2・言い過ぎ 0(2026-11-04 14時の採点。見つけたの数は 2026-11-03 が 5、2026-11-04 10時が 7。`docs/評価.md`)。採点した出力の版は 7ba4f4f で、書類どうしの突き合わせ(F32a)が入っています。見つけた 9 件のうち 1 件は、仕込みの欄の一部だけを指摘した部分一致です。2 件は見落としています。仕込み表と置き換えの正解の表はリポジトリに入れていません。公告の拾いの正解(架空の公告 N1〜N5)は `docs/samples/bid-intake/測り/正解/` に、初めて見る書類は `fixtures/unseen/` に入っています。`answers.json`・`score/`・岡山労働局の公告を文にしたファイルとその正解は入れていません
 - 県の仕様書で試した結果: 和歌山県の仕様書の7つの節で Skill `spec-to-rules` が作った行 31 のうち、照合で残った 31・外した 0・判断できない欄のある行 7。機械が確かめたのは抜き書きが原文のその節にあることと形だけで、意味の正しさは人が確かめます。試したのは1件だけです(`docs/評価.md` の [6](docs/評価.md#6-県の仕様書で試した結果f26c))
 - プラグインの評価のケース(`plugin/evals/`): 2ケース × あり・なし × 3回を走らせ、見落としは あり 5/30(すべて止まった1回)・なし 0/30 でした。止まった1回のほかは、どちらも0です。根拠の正しさの数え方はプラグインの側に有利で、回数も少ないので良し悪しは言い切れません。走らせ方と限界は [docs/manual.md の「評価」](docs/manual.md#評価)
-- 公式の評価 `claude plugin eval`: 古い組(検査9つ)の値で、書類の元の名前8つのうち Claude に渡らなかったのは、あり 8・なし 0(各3回。2026-11-05 に、部署名のあとの人名の漏れを直した版で走らせ直した値)。古い組の判定は合格です。直す前の 11/4 の版では、あり 7・なし 0 で、渡ったのは「丁山」でした。答えの語の組と手順の印を足した新しい組と E2・E3 のケースは未測です(`docs/評価.md` の [7](docs/評価.md#7-公式の評価のケースe1-の名前がやりとりの記録に出ないか))
+- 公式の評価 `claude plugin eval`: 古い組(検査9つ)の値で、書類の元の名前8つのうち Claude に渡らなかったのは、あり 8・なし 0(各3回。2026-11-05 に、部署名のあとの人名の漏れを直した版で走らせ直した値)。古い組の判定は合格です。直す前の 11/4 の版では、あり 7・なし 0 で、渡ったのは「丁山」でした。答えの語の組と手順の印を足した新しい組は、版 17b7bc2(2026-11-07)で E1 不合格(あり 0.933・1.000・1.000、なし 0.333・0.333・0.400、Δ +0.622)・E2 不合格(あり 0.944・0.944・1.000、なし 0.333・0.278・0.278、Δ +0.667)・E3 合格(あり・なしとも 1.000 ×3、Δ 0.00)・E4 合格(1.000 ×3)でした。E1・E2 のプラグインありの6回で落ちたのは3回で、落ちた検査は判定役の検査だけです。調べた名前はこの6回の trace に1度も出ず(測った範囲で 0)、なしでは全回で出ました。`plugin/` はこの版から変えていません(`git diff 17b7bc2 HEAD -- plugin/` が空)(`docs/評価.md` の [7](docs/評価.md#7-公式の評価のケースe1-の名前がやりとりの記録に出ないか))
 
 ## データと出典
 取得のしかた・抜き書きの範囲・加工の中身は [docs/manual.md の「データと出典の細部」](docs/manual.md#データと出典の細部) にあります。

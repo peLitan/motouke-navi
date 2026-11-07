@@ -217,13 +217,15 @@ const sub = (title) => {
   return SECTION7.slice(i, j > 0 ? j : undefined);
 };
 
-test('文書: 評価.md の 7 の結果の表に E4 の行が未測であり、E4 の節に走らせていない数字が無い', () => {
+test('文書: 評価.md の 7 の結果の表に E4 の行が版の印と値つきであり、E4 の節に走らせた数字を混ぜない', () => {
   const frame = sub('新しい組の結果');
   const row = frame.split('\n').find((l) => l.startsWith('| E4 |'));
   assert.ok(row);
-  assert.equal(row.split('|').length - 2, 8);
-  assert.ok(row.includes('未測'));
-  for (const part of [row, sub('E4 の読み方'), sub('ケースの種類と回の数え方')]) {
+  // F85j: 走らせたので値の行にし、9列にした。値は「新しい組の結果」の表にだけ置き、読み方の節には書かない決まりは保つ
+  assert.equal(row.split('|').length - 2, 9);
+  assert.equal(row.includes('未測'), false);
+  for (const w of ['17b7bc2、2026-11-07 15:37', '合格(3/3)', '$1.17', '372秒']) assert.ok(row.includes(w), w);
+  for (const part of [sub('E4 の読み方'), sub('ケースの種類と回の数え方')]) {
     assert.equal(/\$|0\.\d|[Δ差]は? ?[0-9]/.test(part), false, part.slice(0, 40));
   }
 });
@@ -251,7 +253,8 @@ test('文書: README 手順4 に E4 の1行があり、claude plugin eval の命
   const lines = read('README.md').split('\n');
   const step4 = lines.slice(lines.findIndex((l) => l.startsWith('4. Claude Code があれば')), lines.indexOf('## できること'));
   const e4 = step4.filter((l) => l.includes('E4'));
-  assert.ok(e4.some((l) => l.startsWith('   - E4(仕込みの無い書類で言い切らないか)も走ります。') && l.includes('未測')), e4.join('\n'));
+  // F85m: 走らせたので値と版に替えた
+  assert.ok(e4.some((l) => l.startsWith('   - E4(仕込みの無い書類で言い切らないか)も走ります。') && !l.includes('未測') && l.includes('17b7bc2') && l.includes('合格')), e4.join('\n'));
   const cmd = lines.filter((l) => l.includes('claude plugin eval plugin'));
   assert.equal(cmd.length, 1);
   for (const w of ['e4', '--case', '--ablation none']) assert.equal(cmd[0].includes(w), false, w);

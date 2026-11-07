@@ -601,22 +601,30 @@ test('E3 の点に入る検査は with-without で4つ・none で7つで、評�
   }
 });
 
-test('文書: 評価.md の 7 の表に E3 の行が未測であり、読み方に Write と 8 の値のことがある', () => {
-  assert.ok(SECTION7.includes('| E3 | 未測 | 未測 | 未測 | 未測 | 未測 | 未測 | 未測 |'));
+test('文書: 評価.md の 7 の表に E3 の行が版の印と値つきであり、読み方に Write と 8 の値のことがある', () => {
+  // F85j: 走らせた値に替えた。値そのものは eval-values-1107 が集計と照らす。ここは E3 の差が 0 のまま「合格」とだけ書かれていないこと(手順の最後の行が落ちた)を見る
+  const e3Row = SECTION7.split('\n').find((l) => l.startsWith('| E3 |'));
+  assert.ok(e3Row);
+  assert.equal(e3Row.split('|').length - 2, 9);
+  assert.equal(e3Row.includes('未測'), false);
+  for (const w of ['17b7bc2、2026-11-07 15:32', '| 0.00 |', '合格(3/3・3/3)', '手順の最後の行は3回とも落ちた']) assert.ok(e3Row.includes(w), w);
   assert.ok(SECTION7.includes('`plugin/evals/E3-bid-intake/`'));
   for (const w of ['### E3 の読み方', '`Write` を許していない', '拾った値の正しさは評価.md 8 のまま', '`公告/N3_市の公告.txt`', '走らせて確かめていません(未確認)']) assert.ok(SECTION7.includes(w), w);
   assert.equal(SECTION7.includes('E1 と E2 の両方が走ります'), false);
 });
 
-test('文書: README 手順4 に E3 が走ることと未測があり、overview の評価の行と manual に E3 がある', () => {
+test('文書: README 手順4 に E3 が走ることと値と版があり、overview の評価の行と manual に E3 がある', () => {
   const readme = read('README.md');
   const line = readme.split('\n').find((l) => l.includes('E3(公告の拾い)も走ります'));
   assert.ok(line);
-  assert.ok(line.includes('未測'));
+  // F85m: 走らせたので値と版に替えた。差が 0 のまま「合格」とだけ書かないことも見る
+  assert.equal(line.includes('未測'), false);
+  for (const w of ['17b7bc2', '2026-11-07', '合格', '0.00', '手順の最後の行は3回とも落ち']) assert.ok(line.includes(w), w);
   assert.ok(readme.indexOf(line) > readme.indexOf('claude plugin eval plugin'));
   assert.ok(readme.indexOf(line) < readme.indexOf('## できること'));
   const row = read('docs/overview.md').split('\n').find((l) => l.startsWith('| 評価 `plugin/evals/` |'));
-  assert.ok(row.includes('E3(bid-intake)は未測'));
+  assert.equal(row.includes('未測'), false);
+  for (const w of ['17b7bc2', 'E1 不合格', 'E2 不合格', 'E3(bid-intake)合格', 'E4 合格']) assert.ok(row.includes(w), w);
   assert.equal(row.split(' | ').length, 4);
   assert.ok(read('docs/manual.md').includes('`E3-bid-intake/`'));
 });
