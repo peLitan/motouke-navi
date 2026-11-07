@@ -76,9 +76,9 @@ const LEDGER_ROWS = [['施工体制台帳'], ['商号', '架空一建設株式�
 
 const html = buildHtml();
 const shell = fs.readFileSync(new URL('../../src/ui/shell.html', import.meta.url), 'utf8');
-const IDS = ['intake-load', 'rules-load', 'ledger-file', 'dict-import', 'mask-file', 'map-import', 'ai-load'];
+const IDS = ['intake-load', 'rules-load', 'ledger-file', 'plan-file', 'dict-import', 'mask-file', 'map-import', 'ai-load'];
 
-test('(1) 7つの input はどれも data-drop の枠の中で見えたままで、案内の文がある', () => {
+test('(1) 8つの input はどれも data-drop の枠の中で見えたままで、案内の文がある', () => {
   const inputs = [...html.matchAll(/<input type="file" id="([\w-]+)"/g)].map((m) => m[1]);
   assert.deepEqual(inputs.sort(), [...IDS].sort());
   for (const id of IDS) {

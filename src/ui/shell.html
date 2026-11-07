@@ -757,6 +757,9 @@
 </details>
 <p id="work-kind-plan"></p>
 <p class="schedule-notice note" id="plan-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
+<div class="row drop" data-drop="plan-file"><label for="plan-file">目次を PDF・Word から読む(.pdf・.docx・.txt)</label>
+<input type="file" id="plan-file" name="plan-file" accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"><span class="drop-hint">この枠にファイルをドラッグして置いても読み込めます</span></div>
+<p id="plan-file-status" aria-live="polite"></p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
 <div class="row"><button type="button" id="plan-run">目次を点検する</button>

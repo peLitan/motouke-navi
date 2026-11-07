@@ -23,6 +23,11 @@ function gap(prev, next, insideBrackets) {
 // 頁の区切りの行(src/mask/extract.mjs が頁の間に入れる行)
 export const PAGE_LINE = /^―― [0-9]+頁 ――$/gm;
 
+// 頁の区切りの行と、空の頁が残す空の行を除く(F82d)。施工計画書の目次は1行に1つの見出しなので、tidyPdfText のように行をつなげない
+export function dropPageLines(text) {
+  return String(text ?? '').replace(new RegExp(PAGE_LINE.source + '(?:\\r?\\n)*', 'gm'), '').trim();
+}
+
 // 2つ以上続く空白を1つにし、行の頭と終わりの空白と空の行を除き、文の途中の改行を詰める。1つだけの空白はそのまま
 export function tidyPdfText(text) {
   const lines = String(text ?? '').split(LINE_BREAK).map((line) => line.replace(/\s{2,}/g, ' ').trim()).filter(Boolean);

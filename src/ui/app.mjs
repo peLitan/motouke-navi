@@ -24,7 +24,7 @@ import { checkPlanToc } from '../plan-check.mjs';
 import { parseRulesFile, tableNotice, exampleNotice, RULES_MAX_BYTES } from '../rules-load.mjs';
 import { parseIntakeFile, intakeLines, intakeTxtName, pdfIntakeNotice, INTAKE_FIELD_FILLED, INTAKE_MAX_BYTES } from '../intake-load.mjs';
 import { extractFile } from '../mask/extract.mjs';
-import { tidyPdfPages } from '../pdf-text.mjs';
+import { tidyPdfPages, dropPageLines } from '../pdf-text.mjs';
 import wakayamaRows from '../../data/specs/wakayama_r0711_rows.json' with { type: 'json' };
 import { SAMPLE } from '../sample.mjs';
 import { CONFIRM_ROWS, confirmRows, markSources, renderConfirmRow, workKindWarning } from './confirm.mjs';
@@ -840,6 +840,44 @@ export function runPlanCheck(doc) {
   updateSummary(doc);
 }
 
+// 目次のファイル(F82d): 文字を読んで「施工計画書の目次」の欄に入れる。点検は走らせない(読み取りの崩れと本文の見出しを人が見てから押す)。
+// 欄に文があれば入れない。読む間に書かれた文も消さないよう、読んだ後にも見る。読む間に別のファイルが来たら、後のファイルを読む
+const PLAN_FIELD_FILLED = '「施工計画書の目次」の欄に文があるので入れていません。欄を空にしてから置き直してください。';
+const PLAN_BY_HAND = '手で入れるときは、下の「施工計画書の目次」の欄に貼ります。';
+const PLAN_LONG_PAGES = 10;
+function planFileNotice(name, pages, notes) {
+  const count = pages ? '(' + pages + '頁)' : '';
+  const long = pages > PLAN_LONG_PAGES ? ['施工計画書の全体を読んだときは、本文の見出しも目次として数えます。'] : [];
+  return ['「' + name + '」の文字を読みました' + count + '。「施工計画書の目次」の欄に入れました。中身を確かめてから「目次を点検する」を押してください。目次の頁だけを残すと確かです。', ...long, ...notes].join(' ');
+}
+let planFileRun = 0;
+export async function loadPlanFile(doc, f) {
+  const run = ++planFileRun;
+  const say = (text) => { if (run === planFileRun) writeNotice(doc.getElementById('plan-file-status'), text); };
+  const input = doc.getElementById('plan-input');
+  const filled = () => String(input?.value ?? '').trim() !== '';
+  if (filled()) { say(PLAN_FIELD_FILLED); return false; }
+  let read;
+  try {
+    read = await extractFile(f.name, new Uint8Array(await f.arrayBuffer()), {
+      onProgress: (page, pages) => say('「' + f.name + '」を読んでいます(' + page + '/' + pages + '頁)'),
+    });
+  } catch (e) {
+    if (run !== planFileRun) return null;
+    say('「' + f.name + '」を読めませんでした: ' + String(e?.message ?? e).replace(/。?$/, '。') + PLAN_BY_HAND);
+    return false;
+  }
+  if (run !== planFileRun) return null;
+  if (filled()) { say(PLAN_FIELD_FILLED); return false; }
+  const text = dropPageLines(read.text);
+  if (text === '') { say('「' + f.name + '」に文字がありませんでした。' + PLAN_BY_HAND); return false; }
+  input.value = text;
+  // 台帳の点検は目次の欄も突き合わせるので、手で書いたときと同じ知らせを出して前の結果を古くする
+  if (typeof Event === 'function') input.dispatchEvent?.(new Event('input', { bubbles: true }));
+  say(planFileNotice(f.name, read.pages, read.notes));
+  return true;
+}
+
 export function exportPlanCsv(doc) {
   if (!lastPlan) { setPlanStatus(doc, '先に「目次を点検する」を押して結果を出してください。'); return; }
   downloadText(doc, toCsv(planRows(lastPlan, shownKind.planItems, NOTICE)), '施工計画書の目次の点検_' + today() + '.csv', 'text/csv;charset=utf-8');
@@ -863,6 +901,7 @@ export function loadSample(doc) {
   const put = (id, text) => { const el = doc.getElementById(id); if (el) { if ('value' in el && /^(TEXTAREA|INPUT)$/i.test(el.tagName || '')) el.value = text; else el.textContent = text; } };
   put('ledger-input', SAMPLE.documents.ledger);
   put('plan-input', SAMPLE.documents.planToc);
+  writeNotice(doc.getElementById('plan-file-status'), '');
   put('sample-ledger', SAMPLE.documents.ledger);
   put('sample-plan', SAMPLE.documents.planToc);
   const docs = doc.getElementById('sample-docs');
@@ -1018,6 +1057,7 @@ const FILE_PORTS = {
   'intake-load': filePort('intake-status', queueIntake, setIntakeStatus),
   'rules-load': filePort('rules-status', (doc, f) => readChecked(doc, 'rules-load', f, readRules)),
   'ledger-file': filePort('ledger-file-status', loadLedgerFile),
+  'plan-file': filePort('plan-file-status', loadPlanFile),
   'dict-import': filePort('dict-file-status', (doc, f) => readChecked(doc, 'dict-import', f, readDictFile)),
   'mask-file': filePort('mask-file-status', loadMaskFile),
   'map-import': filePort('map-status', (doc, f) => readChecked(doc, 'map-import', f, readMapFile)),
@@ -1183,7 +1223,7 @@ function outsideNotice(doc) {
     const opened = OPENED(openFold(doc, 'rules-more'));
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }
-  if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'ledger-file') + '。'];
+  if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + ['ledger-file', 'plan-file'].map((id) => frameName(doc, id)).filter(Boolean).join('・') + '。'];
   if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '条件のファイル(.json)は「公告を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
   // 入力の確かめの画面には枠が無い
   return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
@@ -1281,6 +1321,7 @@ export function clearSample(doc) {
     lastPlan = null;
     summary.plan = null;
     setPlanStatus(doc, '');
+    writeNotice(doc.getElementById('plan-file-status'), '');
     restoreResult(doc, 'plan-result');
   }
   for (const id of ['sample-ledger', 'sample-plan']) {
@@ -1401,7 +1442,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       });
     }
     startMask(doc);
-    for (const id of ['dict-import', 'mask-file', 'map-import', 'ai-load']) {
+    for (const id of ['plan-file', 'dict-import', 'mask-file', 'map-import', 'ai-load']) {
       const input = doc.getElementById(id);
       if (input) input.addEventListener('change', async () => {
         const f = input.files && input.files[0];
