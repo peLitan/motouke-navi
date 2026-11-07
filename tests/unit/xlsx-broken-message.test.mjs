@@ -93,6 +93,13 @@ test('理由の文が句点で終わっていても重ならない', async () =>
   assertTidy(line);
 });
 
+test('例外の文が空でも、理由の欄を空のまま出さない', async () => {
+  // deflate の本体が壊れたファイルでは、Node の展開の部品の例外の文が空になる
+  const line = await withInflateError('', () => messageOf(withDeflate(makeXlsx([['施工体制台帳']]))));
+  assert.ok(!line.includes(': 。'), line);
+  assertTidy(line);
+});
+
 test('文の置き換えの口の文は変えない(.docx も読む口なので、もとの文のまま)', async () => {
   await assert.rejects(() => extractText('架空.xlsx', notZip()), { message: '.docx・.xlsx として読めません(壊れているか、別の形のファイルです)。保存し直すか、元のファイルをもらってください。' });
 });

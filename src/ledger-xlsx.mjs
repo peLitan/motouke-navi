@@ -140,7 +140,7 @@ const toBytes = (data) => {
 // 読めなかったときの文(F84c)。この口で読むのは .xlsx だけなので、部品の「.docx・.xlsx として読めません」は頭の語を言い換え、
 // ほかの理由は「: 」でつなぐ。理由と次の手の文は変えない
 function notXlsxMessage(e) {
-  const reason = String(e?.message ?? e);
+  const reason = e?.message || String(e);
   const why = reason.startsWith(NOT_OFFICE_HEAD) ? reason.slice(NOT_OFFICE_HEAD.length) : ': ' + reason.replace(/。?$/, '。');
   return 'Excel(.xlsx)として読めません' + why + '.xls(古い形式)は Excel で .xlsx に保存し直してください。';
 }

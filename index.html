@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5qwQ8AfSNgaMty7jaC5CVoAPaSCxq/C6eo6A/hesQuM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-0Q3yzBXSWUMpeawacgAeiDP36ipeRbN6b3dbU4SvoyM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -5276,7 +5276,7 @@ const toBytes = (data) => {
 // 読めなかったときの文(F84c)。この口で読むのは .xlsx だけなので、部品の「.docx・.xlsx として読めません」は頭の語を言い換え、
 // ほかの理由は「: 」でつなぐ。理由と次の手の文は変えない
 function notXlsxMessage(e) {
-  const reason = String(e?.message ?? e);
+  const reason = e?.message || String(e);
   const why = reason.startsWith(NOT_OFFICE_HEAD) ? reason.slice(NOT_OFFICE_HEAD.length) : ': ' + reason.replace(/。?$/, '。');
   return 'Excel(.xlsx)として読めません' + why + '.xls(古い形式)は Excel で .xlsx に保存し直してください。';
 }
