@@ -1,4 +1,4 @@
-// F37a: 入口のタイルと段の切り替え。段は hidden で1つずつ見せ、段階の表示は入口を選ぶまで押せない。印刷は段をまたいで全部出す
+// F37a: 入口のタイルと段の切り替え。段は hidden で1つずつ見せる。進み具合は押せない印(F86b)。印刷は段をまたいで全部出す
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +12,7 @@ const body = html.slice(html.indexOf('<body>')).replace(/<script\b[\s\S]*?<\/scr
 const css = html.match(/<style>([\s\S]*?)<\/style>/)[1].replace(/\/\*[\s\S]*?\*\//g, '');
 const printCss = css.match(/@media print \{([\s\S]*)\n {2}\}/)[1];
 const PANELS = ['panel-1', 'panel-2', 'panel-3'];
-const STEPS = ['step-1', 'step-2', 'step-3'];
+const STEPS = ['step-0', 'step-1', 'step-2', 'step-3'];
 
 // 開いている段の番号(1つだけのはず)
 const shown = (page) => PANELS.filter((id) => !page.el(id).hidden);
@@ -20,7 +20,6 @@ const current = (page) => STEPS.filter((id) => page.el(id).getAttribute('aria-cu
 function assertOn(page, n) {
   assert.deepEqual(shown(page), ['panel-' + n]);
   assert.deepEqual(current(page), ['step-' + n]);
-  for (const id of STEPS) assert.equal(page.el(id).disabled, false, id + ' が押せない');
   assert.equal(page.el('entry').hidden, true, 'タイルが残っている');
   assert.equal(page.el('entry-back').hidden, n !== 3, '入口に戻るは書類のページの右の席だけ'); // F86a: 下の帯の席に移した
 }
@@ -33,19 +32,17 @@ function assertOnConfirm(page) {
   assert.equal(page.el('entry').hidden, true, 'タイルが残っている');
 }
 
-test('開いた直後: 段は全部隠れ、段階は塗らず押せない。タイルが見える', () => {
+test('開いた直後: 段は全部隠れ、進み具合は入口に印が付く。タイルが見える', () => {
   for (const id of PANELS) assert.match(body, new RegExp('<section id="' + id + '" hidden>'), id);
-  for (const id of STEPS) assert.match(body, new RegExp('<button type="button" id="' + id + '" disabled[ >]'), id);
-  assert.ok(!/<ol class="steps"[\s\S]*?<\/ol>/.exec(body)[0].includes('aria-current'), '選ぶ前から印が付いている');
+  for (const id of STEPS) assert.match(body, new RegExp('<li id="' + id + '"[ >]'), id);
+  assert.equal(/<ol class="steps"[\s\S]*?<\/ol>/.exec(body)[0].split('aria-current').length - 1, 1, '印が1つでない');
   assert.match(body, /<div id="entry">/, 'タイルが最初から隠れている');
   assert.match(body, /<button type="button" id="entry-back" hidden>/);
   const page = runPage();
   assert.deepEqual(shown(page), []);
-  assert.deepEqual(current(page), []);
-  for (const id of STEPS) assert.equal(page.el(id).disabled, true);
-  // 押せない形は色でも分かる(塗らない)
-  assert.match(css, /\.steps button:disabled \{[^}]*background: transparent/);
-  assert.match(css, /\.steps button\[aria-current="step"\] \.step-dot \{[^}]*background: var\(--primary\)/);
+  assert.deepEqual(current(page), ['step-0']);
+  // 今の段は色でも分かる(塗る)
+  assert.match(css, /\.steps li\[aria-current="step"\] \.step-dot \{[^}]*background: var\(--primary\)/);
 });
 
 test('段の中身: 既存の id はそれぞれの段にあり、1つだけ。断り書き・出典・取得日は段の外で常に見える', () => {
@@ -84,7 +81,7 @@ test('公告のタイル: 段1 を開き、読み込みの折りたたみを開�
   assert.ok(!html.slice(html.indexOf('id="entry-intake"'), html.indexOf('id="entry-awarded"')).includes('準備中'));
 });
 
-test('入口の選び方: それぞれの段が開き、1つだけ見える。段階は押せるようになる', async () => {
+test('入口の選び方: それぞれの段が開き、1つだけ見える', async () => {
   let page = runPage();
   await page.click('entry-bid');
   assertOn(page, 1);
@@ -98,7 +95,7 @@ test('入口の選び方: それぞれの段が開き、1つだけ見える。�
   assertOn(page, 2);
 });
 
-test('段の移り方: 確認する→確かめ→段2、次へ→段3、段階のボタンで行き来でき、入口に戻ると選ぶ前の形になる', async () => {
+test('段の移り方: 確認する→確かめ→段2、次へ→段3、下の帯の「戻る」で行き来でき、入口に戻ると選ぶ前の形になる', async () => {
   const page = runPage();
   await page.click('entry-bid');
   await page.click('bid-run');
@@ -108,12 +105,18 @@ test('段の移り方: 確認する→確かめ→段2、次へ→段3、段階�
   assert.ok(page.text('bid-result').length > 0, '結果が書かれない');
   await page.click('next-step-3');
   assertOn(page, 3);
-  await page.click('step-1');
+  await page.click('pg-back');
+  assertOn(page, 2);
+  await page.click('pg-back');
+  assertOnConfirm(page);
+  await page.click('confirm-back');
   assertOn(page, 1);
+  await page.click('bid-run');
+  await page.click('confirm-go');
+  await page.click('next-step-3');
   await page.click('entry-back');
   assert.deepEqual(shown(page), []);
-  assert.deepEqual(current(page), []);
-  for (const id of STEPS) assert.equal(page.el(id).disabled, true);
+  assert.deepEqual(current(page), ['step-0']);
   assert.equal(page.el('entry').hidden, false);
   assert.equal(page.el('entry-back').hidden, true);
 });

@@ -55,7 +55,7 @@ export function stage1Line(values = {}, stage1 = {}) {
   const amount = values['subcontract-total-unknown'] === true ? '分からない' : raw ? raw + ' 円' : '入れていません';
   const t = stage1.subcontractTotal;
   const to = typeof t === 'number' ? (t > 0 ? '使う' : '使わない') : 'まだ分からない';
-  return '「1 条件を入れる」の答え: 下請けの総額 ' + amount + ' → ' + to + '。';
+  return '「条件を入れる」の答え: 下請けの総額 ' + amount + ' → ' + to + '。';
 }
 
 const FIELD_ANCHOR = { subcontract: 'safety-q-subcontract', workers: 'safety-q-workers', plan: 'safety-q-plan', works: 'safety-q-works' };

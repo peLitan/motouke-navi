@@ -9,9 +9,9 @@ import { bidCheck } from '../../src/bid-check.mjs';
 
 const read = (p) => fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
 const html = buildHtml();
-const BACK = '「1 条件を入れる」に戻る';
+const BACK = '「条件を入れる」に戻る';
 const OLD_BACK = '1 条件に戻る';
-const NOTICE_AMOUNT = '金額の欄を読めませんでした。「1 条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
+const NOTICE_AMOUNT = '金額の欄を読めませんでした。「条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
 const NOTICE_HALTED = '判定の途中で止まりました。結果の欄の知らせを読んでください。';
 
 const go = (page) => page.el('result-top').innerHTML.match(/class="next-go"[^>]*>([^<]*)</)?.[1];
@@ -24,9 +24,9 @@ const sample = async () => {
   return page;
 };
 
-test('戻るの語: 組み立てた画面に「1 条件に戻る」が無く、確かめの画面のボタンと同じ語がある', () => {
+test('戻るの語: 組み立てた画面に「1 条件に戻る」が無く、確かめの画面のボタンは下の帯の「戻る」', () => {
   assert.ok(!html.includes(OLD_BACK));
-  assert.ok(html.includes('<button type="button" id="confirm-back">' + BACK + '</button>'));
+  assert.ok(html.includes('<button type="button" id="confirm-back">戻る</button>'));
 });
 
 test('戻るの語: 金額の失敗の枝の go', async () => {

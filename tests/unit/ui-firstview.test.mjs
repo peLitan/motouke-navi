@@ -96,12 +96,12 @@ function estimate() {
     + block(text(b.match(/<span class="btn-sub">([\s\S]*?)<\/span>/)[1]), REM, LH, btnW)));
   // もう受注した方のリンク: 押す所 44px と上の余白
   h += 44 + marginTB('.start .entry-aside');
-  const steps = [...start.matchAll(/<button type="button" id="step-\d"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => text(m[1]));
-  assert.equal(steps.length, 3);
-  // 段階は横に並ぶ(丸 2rem・間 0.5rem・左右の内側 0.5rem ずつ・線 3rem と両脇 0.5rem)。全部の幅が枠に入らなければ2行と数える(ボタンの高さは 2.75rem)
-  const stepsW = steps.reduce((n, s) => n + ems(s) * REM + 3.5 * REM + 4 * REM, 0);
+  const steps = [...start.matchAll(/<li id="step-\d"[^>]*>([\s\S]*?)<\/li>/g)].map((m) => text(m[1]));
+  assert.equal(steps.length, 4);
+  // 進み具合は横に並ぶ(丸 1.5rem・間 0.25rem・線 1.5rem とその間 0.25rem)。全部の幅が枠に入らなければ2行と数える(1行の高さは行の高さ)。F86b で入口の上へ移した
+  const stepsW = steps.reduce((n, s) => n + ems(s) * REM + 1.75 * REM + 1.75 * REM, 0);
   const rows = Math.ceil(stepsW / inner);
-  h += marginTB('.steps') + rows * 2.75 * REM + (rows - 1) * 0.5 * REM;
+  h += marginTB('.progress') + rows * LH * REM + (rows - 1) * 0.5 * REM;
   add('入口の枠(タイルと段階の表示まで)', h);
   return { parts, total: parts.reduce((n, p) => n + p.h, 0), W };
 }
@@ -113,8 +113,8 @@ test('幅1280・高さ900の最初の1画面に、題・断り書き・できる
   assert.ok(total <= VIEW_H, `最初の1画面に入らない(見積もり ${Math.round(total)}px): ${detail}`);
 });
 
-test('並び: 題 → 断り書き → できること → 見ていない法令の1行 → 法令の一覧(閉じた details) → 入口の3択 → 段階の表示', () => {
-  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="scope-not-line"', '<details class="scope" id="scope">', 'id="sample-load"', 'id="entry-bid"', 'id="entry-intake"', 'id="entry-awarded"', 'id="steps"'].map((k) => body.indexOf(k));
+test('並び: 題 → 断り書き → できること → 見ていない法令の1行 → 法令の一覧(閉じた details) → 進み具合 → 入口の3択', () => {
+  const order = ['<h1>', 'id="disclaimer"', 'id="lead"', 'id="scope-not-line"', '<details class="scope" id="scope">', 'id="steps"', 'id="sample-load"', 'id="entry-bid"', 'id="entry-intake"', 'id="entry-awarded"'].map((k) => body.indexOf(k));
   assert.ok(order.every((n) => n >= 0), '冒頭のどれかが無い: ' + order);
   for (let i = 1; i < order.length; i++) assert.ok(order[i - 1] < order[i], '並びが違う: ' + i);
 });

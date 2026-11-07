@@ -1,4 +1,4 @@
-// F37f: 幅 40rem 以下で段取りの表を行ごとのカードにする。段取りは区切りごとに畳める。段階の表示は1行に収める。
+// F37f: 幅 40rem 以下で段取りの表を行ごとのカードにする。段取りは区切りごとに畳める。進み具合は1行に収める。
 // この環境にはブラウザが無いので、カードの見た目と実際の幅は測れない。描いた HTML の形と CSS の決まり、文字の幅の見積もりを確かめる
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -97,23 +97,17 @@ test('CSS: 幅 40rem 以下で行ごとのカードになり、列の名前を d
   assert.equal(css.replace(narrow, '').includes('attr(data-label)'), false);
 });
 
-test('進み具合は幅 320px でも3つの段が横に並び、全部の名前が字の大きさを変えずに読める(F43a)', () => {
-  assert.match(narrowRule('.steps li'), /flex: 1 1 0/);
-  assert.match(narrowRule('.steps li'), /min-width: 0/);
-  assert.match(narrowRule('.steps button'), /flex-direction: column/);
-  assert.ok(!/font-size/.test(narrowRule('.steps button')), '段階の字を小さくしている');
+test('進み具合は幅 320px でも4つの段が横に並び、全部の名前が字の大きさを変えずに読める(F43a・F86b)', () => {
+  assert.equal(narrowRule('.steps li + li::before').match(/width: ([\d.]+)rem/)[1], '0.25');
+  assert.ok(!/font-size/.test(narrowRule('.step-dot')), '段の字を小さくしている');
   assert.ok(!/step-name|step-more/.test(css.match(/@media \(max-width: 40rem\) \{[\s\S]*?\n {2}\}/)[0]), '狭い画面で名前を隠している');
-  const btns = [...shell.matchAll(/<button type="button" id="step-(\d)" disabled aria-label="([^"]+)">([\s\S]*?)<\/button>/g)];
-  assert.equal(btns.length, 3);
-  // 見積もり: 和文は1字1em。1段の幅 = (320 - 本文の左右の余白) / 3 - ボタンの内側。名前は折り返しても2行に収まる
-  const padX = parseFloat(narrowRule('.steps button').match(/padding: ([\d.]+)rem/)[1]) * REM;
-  const inner = (320 - 0.75 * REM * 2) / 3 - padX * 2;
-  assert.ok(inner >= 32, '丸が1段の幅に入らない: ' + inner);
-  for (const b of btns) {
-    const name = b[3].match(/<span class="step-name">([^<]+)<\/span>/)[1];
-    const perLine = Math.floor(inner / REM);
-    assert.ok(Math.ceil([...name].length / perLine) <= 2, name + ' が2行に入らない');
-  }
+  const items = [...shell.matchAll(/<li id="step-(\d)"[^>]*>([\s\S]*?)<\/li>/g)];
+  assert.equal(items.length, 4);
+  // 見積もり: 和文は1字1em。1段の幅 = 丸 + 間 + 名前。線と間を足した4つの段が本文の幅に入る(名前は折り返さない)
+  const dot = parseFloat(narrowRule('.step-dot').match(/width: ([\d.]+)rem/)[1]) * REM;
+  const names = items.map((b) => [...b[2].match(/<span class="step-name">([^<]+)<\/span>/)[1]].length * REM);
+  const used = names.reduce((n, w) => n + w + dot + 0.25 * REM, 0) + 3 * (0.25 + 0.25) * REM;
+  assert.ok(used <= 320 - 0.75 * REM * 2, '4つの段が1行に入らない: ' + used);
 });
 
 test('07 の決まり: 外部の読み込み・通信・保存が無く、断り書きと PDL を出し、index.html が今の src と同じ', () => {

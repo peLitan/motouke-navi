@@ -9,7 +9,8 @@ import { buildHtml } from '../../build.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const html = buildHtml();
 const body = html.slice(html.indexOf('<body>'));
-const h2s = [...body.matchAll(/<h2(?: id="(?:bid|result|ledger|tools)-title" tabindex="-1")?>([^<]*)<\/h2>/g)].map((m) => m[1]);
+// 「1.」は紙だけの .print-num の中(F86b)。紙の字のまま読む
+const h2s = [...body.replace(/<span class="print-num">([^<]*)<\/span>/g, '$1').matchAll(/<h2(?: id="(?:bid|result|ledger|tools)-title" tabindex="-1")?>([^<]*)<\/h2>/g)].map((m) => m[1]);
 
 test('h1 のすぐ後に「このツールでできること」と3つの箇条がある', () => {
   const h1 = body.indexOf('<h1>');
@@ -70,22 +71,22 @@ test('画面の文に作る側の語(Skill・ファイル名・機能の番号)�
   assert.ok(!/Skill|bid-intake|check-conditions|check-rows|spec-to-rules|\.mjs|\bF\d{2}[a-z]?\b/.test(visible), (visible.match(/.{0,20}(Skill|bid-intake|check-conditions|check-rows|spec-to-rules|\.mjs|\bF\d{2}[a-z]?\b).{0,20}/) || [])[0]);
 });
 
-test('段階の表示が 1 条件を入れる → 2 結果を見る → 3 書類を確かめる の順にある', () => {
+test('進み具合が 入口 → 条件 → 結果 → 書類 の順にある', () => {
   const ol = body.match(/<ol class="steps" id="steps"[^>]*>([\s\S]*?)<\/ol>/);
-  assert.ok(ol, '段階の表示が無い');
-  // 番号は丸、名前は別の span(F43a)。見える字は「番号+名前」、読み上げは aria-label で渡す
-  const items = [...ol[1].matchAll(/<li><button [^>]*aria-label="([^"]+)">(.*?)<\/button><\/li>/g)].map((m) => [m[1], m[2].replace(/<[^>]+>/g, '')]);
-  assert.deepEqual(items, [['1 条件を入れる', '1条件を入れる'], ['2 結果を見る', '2結果を見る'], ['3 書類を確かめる', '3書類を確かめる']]);
+  assert.ok(ol, '進み具合が無い');
+  // 番号は丸、名前は別の span(F43a)。見える字は「番号+名前」
+  const items = [...ol[1].matchAll(/<li id="step-\d"[^>]*>(.*?)<\/li>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
+  assert.deepEqual(items, ['1入口', '2条件', '3結果', '4書類']);
 });
 
-test('節の番号は 1・3-1・3-2(段3 の見出しは段の番号の下)、そのあと「ここからは別の道具」の下に A・B', () => {
+test('節の番号は紙だけの 1 のほかは無く、そのあと「ここからは別の道具」の下に A・B', () => {
   const numbered = h2s.filter((t) => /^(\d+(-\d+)?|[A-Z])\. /.test(t)).map((t) => t.split('.')[0]);
-  assert.deepEqual(numbered, ['1', '3-1', '3-2', 'A', 'B']); // F83a6: 段3 の見出しを 3-1・3-2 に
+  assert.deepEqual(numbered, ['1', 'A', 'B']); // F86b: 3-1・3-2 を外した。1 は .print-num で紙だけ
   assert.ok(!body.includes('2-2.'), '2-2 の番号が残っている');
   const other = h2s.indexOf('ここからは別の道具');
-  assert.ok(other > h2s.findIndex((t) => t.startsWith('3-2. ')) && other < h2s.findIndex((t) => t.startsWith('A. ')));
-  assert.ok(h2s.some((t) => t.startsWith('3-1. 施工体制台帳の点検')));
-  assert.ok(h2s.some((t) => t.startsWith('3-2. 施工計画書の目次の点検')));
+  assert.ok(other > h2s.findIndex((t) => t.startsWith('施工計画書の目次の点検')) && other < h2s.findIndex((t) => t.startsWith('A. ')));
+  assert.ok(h2s.some((t) => t.startsWith('施工体制台帳の点検')));
+  assert.ok(h2s.some((t) => t.startsWith('施工計画書の目次の点検')));
   assert.ok(h2s.some((t) => t.startsWith('A. 文の置き換え')));
   assert.ok(h2s.some((t) => t.startsWith('B. Claude で点検した結果')));
 });

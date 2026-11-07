@@ -115,9 +115,15 @@ test('画面の道: 入口 → 段1 → 確かめ → 結果 → 段3 → 段1 �
   await page.click('next-step-3');
   assert.equal(page.el('panel-3').hidden, false);
   assert.equal(row2().hidden, false, '段3');
-  await page.click('step-1');
+  await page.click('pg-back'); // F86b: 進み具合は押せないので下の帯で戻る(書類 → 結果 → 確かめ → 条件)
+  assert.equal(row2().hidden, false, '結果に戻ったとき');
+  await page.click('pg-back');
+  assert.equal(row2().hidden, true, '入力の確かめに戻ったとき');
+  await page.click('confirm-back');
   assert.equal(row2().hidden, true, '段1 に戻ったとき');
-  await page.click('step-3');
+  await page.click('bid-run');
+  await page.click('confirm-go');
+  await page.click('next-step-3');
   await page.click('entry-back');
   assert.equal(row2().hidden, true, '入口に戻ったとき');
   // もう受注した方の入口は、段1 を通らず結果の段を開く

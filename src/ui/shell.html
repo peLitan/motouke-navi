@@ -116,7 +116,7 @@
   #mask-review button[aria-pressed="true"]::before, #mask-candidates button[aria-pressed="true"]::before, .rules-switch button[aria-pressed="true"]::before { content: "✓ 選択中 "; content: "✓ 選択中 " / ""; }
   #mask-unchecked { font-weight: bold; }
   pre { white-space: pre-wrap; background: var(--paper-2); padding: 0.5rem; max-width: 100%; overflow-x: auto; }
-  /* 冒頭(F14a): できること・まず見本で試す・段階の表示 */
+  /* 冒頭(F14a): できること・まず見本で試す・進み具合 */
   .lead { margin: 0.5rem 0 0; }
   .lead ul { margin: 0.25rem 0 0; padding-left: 1.5rem; }
   .start { margin: 0.5rem 0 1rem; }
@@ -138,18 +138,18 @@
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
   #bid-run, #ledger-run, #plan-run, #next-step-3, #confirm-go, #pg-next, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
   #bid-run:hover, #ledger-run:hover, #plan-run:hover, #next-step-3:hover, #confirm-go:hover, #pg-next:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #next-step-3:active, #confirm-go:active, #pg-next:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
-  /* 進み具合(F43a): 番号の丸を線でつなぎ、全部の段の名前を出す。段の切り替えはボタンのまま。
-     入口を選ぶまでは丸を灰色の破線にして押せない形(主の色の輪と字を使わず、矢印も普通の形。F83a6)、今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色。線は枠線で描く(印刷で黒く残り、3:1 の検査に掛かる) */
-  .steps { display: flex; align-items: center; list-style: none; padding: 0; margin: 1rem 0 0; }
-  .steps li { display: flex; align-items: center; }
-  .steps li + li::before { content: ""; display: block; width: 3rem; margin: 0 0.5rem; border-top: 2px solid var(--line); }
-  .steps li:has(~ li > button[aria-current="step"]) + li::before { border-top-color: var(--primary); }
-  .steps button { display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0.25rem 0.5rem; border: none; }
-  .step-dot { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 2rem; height: 2rem; color: var(--primary); background: var(--paper); border: 2px solid var(--primary); border-radius: 50%; font-weight: bold; }
-  .steps button:disabled { color: var(--ink-2); background: transparent; border: none; cursor: default; }
-  .steps button:disabled .step-dot { color: var(--ink-2); background: var(--paper); border: 2px dashed var(--ink-2); }
-  .steps button[aria-current="step"] { color: var(--ink); font-weight: bold; }
-  .steps button[aria-current="step"] .step-dot { color: var(--paper); background: var(--primary); }
+  /* 進み具合(F86b): 今どこかを示すだけで押せない。番号の丸を線でつなぎ、全部の段の名前を出す。入口でも出す。行き来は下の帯の「戻る」と右の席で。
+     これからの段は丸を灰色にして押せる形に見せない(主の色の輪と字を使わない。F83a6)。今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色。線は枠線で描く(3:1 の検査に掛かる) */
+  .progress { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; }
+  .steps { display: flex; align-items: center; list-style: none; padding: 0; margin: 0; }
+  .steps li { display: flex; align-items: center; gap: 0.25rem; color: var(--ink-2); }
+  .steps li + li::before { content: ""; display: block; width: 1.5rem; border-top: 2px solid var(--line); }
+  .steps li:has(~ li[aria-current="step"]) + li::before { border-top-color: var(--primary); }
+  .step-dot { display: inline-flex; align-items: center; justify-content: center; flex: none; box-sizing: border-box; width: 1.5rem; height: 1.5rem; color: var(--ink-2); background: var(--paper); border: 2px solid var(--ink-2); border-radius: 50%; font-weight: bold; }
+  .steps li:has(~ li[aria-current="step"]) .step-dot { color: var(--primary); border-color: var(--primary); }
+  .steps li[aria-current="step"] { color: var(--ink); font-weight: bold; }
+  .steps li[aria-current="step"] .step-dot { color: var(--paper); background: var(--primary); border-color: var(--primary); }
+  #pg-count { color: var(--ink-2); }
   /* 入口に戻る(F38b): 4つ目の段に見えないよう、段の列の下の行に灰色の枠で置く。hidden で隠すので display は決めない */
   #entry-back { margin: 0.5rem 0 0; color: var(--ink); border-color: var(--line); }
   #entry-back:hover, #entry-back:active { background: var(--paper-2); border-color: var(--ink-2); }
@@ -238,6 +238,7 @@
   #bid > h2 { margin: 0.75rem 0 0.5rem; }
   .start p { margin: 0.25rem 0; }
   .print-only { display: none; }
+  .print-num { display: none; }
   .print-inline { display: none; }
   .brief-only { display: none; }
   .sign-table { border-collapse: collapse; width: 100%; }
@@ -351,11 +352,10 @@
     .row.check-row { flex-wrap: wrap; }
     .row.check-row > label { flex: 1 1 0; }
     .row.check-row > details { flex: 0 0 100%; }
-    /* 進み具合(F43a): 字は 16px のまま3つの段を等しい幅に分け、丸の下に名前を全部出す(長い名前は2行に折り返す)。線は丸と丸の間に描く */
-    .steps { align-items: flex-start; }
-    .steps li { position: relative; flex: 1 1 0; min-width: 0; justify-content: center; }
-    .steps li + li::before { position: absolute; top: 1.25rem; right: calc(50% + 1.25rem); width: calc(100% - 2.5rem); margin: 0; }
-    .steps button { flex-direction: column; gap: 0.25rem; width: 100%; padding: 0.25rem; }
+    /* 進み具合(F86b): 字は 16px のまま、丸と線を小さくして幅 320 でも4つの名前と「1/7」を1行に入れる。ページの名前は見出しにあるので隠す */
+    .step-dot { width: 1.25rem; height: 1.25rem; }
+    .steps li + li::before { width: 0.25rem; }
+    #pg-name { display: none; }
     /* 段取りの表は行ごとのカードにする(F37f)。列の見出しの代わりに、各欄の前に data-label を出す */
     table.schedule, table.schedule tbody, table.schedule tr, table.schedule td { display: block; width: 100%; }
     table.schedule thead { display: none; }
@@ -458,6 +458,7 @@
     table { break-inside: auto; } tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
     .print-only { display: block; }
+    .print-num { display: inline; }
     .print-inline { display: inline; }
     #print-head { margin: 0 0 0 auto; }
     .sign-off { break-inside: avoid; margin-top: 1.5rem; }
@@ -527,6 +528,15 @@
 </details>
 <main id="main">
 <div class="start no-print" id="start">
+<div class="progress no-print" id="progress">
+<ol class="steps" id="steps" aria-label="進み具合">
+<li id="step-0" aria-current="step"><span class="step-dot">1</span><span class="step-name">入口</span></li>
+<li id="step-1"><span class="step-dot">2</span><span class="step-name">条件</span></li>
+<li id="step-2"><span class="step-dot">3</span><span class="step-name">結果</span></li>
+<li id="step-3"><span class="step-dot">4</span><span class="step-name">書類</span></li>
+</ol>
+<span id="pg-count"><span id="pg-num"></span> <span id="pg-name"></span></span>
+</div>
 <div id="entry">
 <h2>まず、どう始めますか</h2>
 <div class="entry-prep" id="entry-prep"><strong>用意するもの</strong><ul><li>公告</li><li>許可の種類</li><li>技術者の資格</li><li>下請けの総額</li></ul><span>無くても「分からない」で進めます</span></div>
@@ -537,17 +547,12 @@
 </div>
 <p class="entry-aside"><button type="button" id="entry-awarded" class="entry-link">もう受注した方は段取りの一覧へ</button></p>
 </div>
-<ol class="steps" id="steps" aria-label="使う順番">
-<li><button type="button" id="step-1" disabled aria-label="1 条件を入れる"><span class="step-dot">1</span><span class="step-name">条件を入れる</span></button></li>
-<li><button type="button" id="step-2" disabled aria-label="2 結果を見る"><span class="step-dot">2</span><span class="step-name">結果を見る</span></button></li>
-<li><button type="button" id="step-3" disabled aria-label="3 書類を確かめる"><span class="step-dot">3</span><span class="step-name">書類を確かめる</span></button></li>
-</ol>
 </div>
 <p class="no-print note" id="offline-note">この画面は外部と通信しません(ページの設定で通信先を「無し」にしています)。入れた内容はこの端末の中だけで扱います。</p>
 <p id="drop-status" class="no-print" aria-live="polite"></p>
 <section id="panel-1" hidden><div class="pg" id="pg-1">
 <section id="bid">
-<h2 id="bid-title" tabindex="-1">1. 入札前の確認と、施工体制台帳が要るか</h2>
+<h2 id="bid-title" tabindex="-1"><span class="print-num">1. </span>入札前の確認と、施工体制台帳が要るか</h2>
 <p>案件の条件を入れて「確認する」を押すと、入れた内容を確かめたあと、要るものと確認が要る点を根拠の条つきで出します。入札するかどうかは出しません。</p>
 <form id="bid-form" class="form" autocomplete="off">
 <p class="form-lead" id="form-lead">分からなければ「分からない」を選べます。</p>
@@ -731,11 +736,11 @@
 </div></section>
 <section id="panel-3" hidden><div class="pg" id="pg-3">
 <section id="ledger-check">
-<h2 id="ledger-title" tabindex="-1">3-1. 施工体制台帳の点検</h2>
+<h2 id="ledger-title" tabindex="-1">施工体制台帳の点検</h2>
 <p id="panel-3-pc-note" class="note phone-only no-print">書類の点検はパソコンの方が楽です(台帳の文を貼る・Excel を読む・印刷)。スマホでも使えます。</p>
 <p>台帳を貼って「台帳を点検する」を押すと、抜け・食い違いの候補を根拠の条つきで出します。</p>
 <details class="no-print"><summary>台帳の書き方</summary>
-<p>見出しと「| 項目 | 内容 |」の表の形で貼ります。発注者(公共・民間)と工事の種類は、段階の「1 条件を入れる」で選んだ値を使います。決められないことは「判断できない」に出します。</p>
+<p>見出しと「| 項目 | 内容 |」の表の形で貼ります。発注者(公共・民間)と工事の種類は、「条件を入れる」で選んだ値を使います。決められないことは「判断できない」に出します。</p>
 <pre>工事名: (工事の名前)
 ## 1. 作成建設業者(元請)
 | 項目 | 内容 |
@@ -790,10 +795,10 @@
 </div>
 </section>
 <section id="plan-check">
-<h2>3-2. 施工計画書の目次の点検</h2>
+<h2>施工計画書の目次の点検</h2>
 <p>目次を貼って「目次を点検する」を押すと、仕様書の記載事項(建築・電気工事・管工事は 1.2.2 の3つの語)のうち見当たらないものを抜けの候補として出します。</p>
 <details class="fold" id="plan-about-fold"><summary>点検のしかたと範囲</summary>
-<p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。段階の「1 条件を入れる」の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
+<p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。「条件を入れる」の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
 </details>
 <p id="work-kind-plan"></p>
 <p class="schedule-notice note" id="plan-notice">国の直轄の例。自治体・民間は発注者の仕様書の記載事項で置き換えてください</p>
@@ -807,12 +812,12 @@
 <p id="plan-status" aria-live="polite"></p>
 <div id="plan-result" class="result"><p>目次を貼って「目次を点検する」を押してください。</p></div>
 </section>
-<p class="note no-print" id="panel-3-print-note">紙や PDF にするときは、上の進み具合の「2 結果を見る」に戻り、「全部を印刷する」を押してください。この書類の点検の結果も入ります。</p>
+<p class="note no-print" id="panel-3-print-note">紙や PDF にするときは、「戻る」で「結果」のページに戻り、「全部を印刷する」を押してください。この書類の点検の結果も入ります。</p>
 </div></section>
 <section id="panel-tools"><div class="pg" id="pg-tools">
 <details class="other-tools" id="other-tools">
 <summary class="no-print"><h2>ここからは別の道具</h2><span class="other-tools-sub">A 文の置き換え・B AI の候補の読み込み</span></summary>
-<p class="no-print">A・B は、上の 1.〜3.(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
+<p class="no-print">A・B は、「結果」と「書類」の画面(法令と共通仕様書の決まりで判定した結果)とは別の道具です。外の AI などを使うときに使います。</p>
 <section id="mask" class="no-print">
 <h2 id="tools-title" tabindex="-1">A. 文の置き換え(外のサービスに貼る前に)</h2>
 <p>貼り付けた文の人名・会社名・現場名・住所・電話・メール・許可番号を、〔人名1〕のような記号に置き換えます。</p>
@@ -896,7 +901,7 @@
 <section id="ai-check">
 <h2>B. Claude で点検した結果(AI の候補)</h2>
 <p>手元のプログラムが書き出した結果のファイルを読み込むと、AI の候補を下の欄に出します。</p>
-<p class="note" id="ai-note">ここに出るのは AI の候補です。上の「1.」〜「3.」の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
+<p class="note" id="ai-note">ここに出るのは AI の候補です。「結果」と「書類」の画面の、法令と共通仕様書の決まりで判定した結果とは別のものです。AI が挙げた根拠の条は、このツールでは原文と照らしていません。</p>
 <details class="fold"><summary>結果のファイルの作り方</summary>
 <p>この画面は外へ通信しません。Claude での点検は、手元で動かす別のプログラム(動かし方は説明書にあります)が、「A.」で置き換えた後の文だけを送って行います(送る前に置き換え漏れをもう一度調べ、残っていれば止めます。送る中身を全部見せ、「送る」と打ったときだけ送ります)。</p>
 </details>
@@ -926,12 +931,11 @@
 </div>
 <nav class="no-print" id="pager" aria-label="ページの移動" hidden>
 <button type="button" id="pg-back">戻る</button>
-<button type="button" id="confirm-back">「1 条件を入れる」に戻る</button>
-<span id="pg-count"></span>
+<button type="button" id="confirm-back">戻る</button>
 <button type="button" id="pg-next" hidden>次へ</button>
 <button type="button" id="bid-run">確認する</button>
 <button type="button" id="confirm-go">この内容で結果を見る</button>
-<button type="button" id="next-step-3">次へ: 3 書類を確かめる</button>
+<button type="button" id="next-step-3">次へ: 書類を確かめる</button>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </nav>
 <div id="sign-off" class="print-only sign-off" aria-hidden="true">

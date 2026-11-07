@@ -50,7 +50,8 @@ const groundOf = (r) => {
   if (bg && bg !== 'transparent') return color(bg);
   return vars['--paper'];
 };
-const isButton = (sel) => /button|#bid-run|#ledger-run|#plan-run|#next-step-3|#confirm-go|\.next-go/.test(sel);
+// 塗りのある印。今の段の丸も紙に出ない(#start は no-print)。F86b でボタンでなくなったので印の名で足した
+const isButton = (sel) => /button|#bid-run|#ledger-run|#plan-run|#next-step-3|#confirm-go|\.next-go|\.step-dot/.test(sel);
 
 test('焦点: 全部の部品が同じ2重の輪で、輪の2色は白地でも主の色の塗りの上でも見える', () => {
   const body = ruleWith('button:focus-visible');
@@ -104,8 +105,8 @@ test('角の丸み: 部品は 8px、カードは 12px、番号の丸は 50% の3
   for (const sel of ['button', 'input[type="text"], select', 'textarea', '.badge', '.radio-group', '.sample-banner', '.warning-box']) assert.equal(prop(ruleOf(sel), 'border-radius'), '8px', sel);
   for (const sel of ['.result', '.form', '.summary', '.other-tools', '.entry-button']) assert.equal(prop(ruleOf(sel), 'border-radius'), '12px', sel);
   assert.deepEqual(rules.filter((r) => prop(r.body, 'border-radius') === '50%').map((r) => r.sel), ['.step-dot']);
-  // 段階の表示も既定のボタンの丸みのまま
-  assert.equal(prop(ruleOf('.steps button'), 'border-radius'), undefined);
+  // 進み具合はボタンを持たない(F86b)
+  assert.ok(!rules.some((r) => selectors(r.sel).some((s) => s.startsWith('.steps button'))), '進み具合にボタンの決まりが残っている');
 });
 
 test('カード: 白地に --line の縁(3:1)と薄い影。影は1種で、印刷では消える', () => {
@@ -177,23 +178,21 @@ test('断り書き: 帯のすぐ下の印つきの1行。文はそのままで�
   assert.ok(!hide[0].sel.split(',').some((x) => /\.disclaimer|#disclaimer/.test(x) && !x.includes('#notice-more:not([hidden]):not([open]) ~')));
 });
 
-test('進み具合: 番号の丸と線で、全部の段の名前を出す。段の切り替えはボタンのまま', () => {
+test('進み具合: 番号の丸と線で、全部の段の名前を出す。押せない印で、今の段を塗る', () => {
   const ol = body.match(/<ol class="steps"[\s\S]*?<\/ol>/)[0];
-  const li = [...ol.matchAll(/<li><button type="button" id="step-(\d)" disabled aria-label="(\d) ([^"]+)"><span class="step-dot">(\d)<\/span><span class="step-name">([^<]+)<\/span><\/button><\/li>/g)];
-  assert.equal(li.length, 3);
-  for (const m of li) { assert.equal(m[1], m[2]); assert.equal(m[1], m[4]); assert.equal(m[3], m[5], '読み上げと見える名前が違う'); }
+  const li = [...ol.matchAll(/<li id="step-(\d)"[^>]*><span class="step-dot">(\d)<\/span><span class="step-name">([^<]+)<\/span><\/li>/g)];
+  assert.equal(li.length, 4);
+  for (const m of li) assert.equal(Number(m[1]) + 1, Number(m[2]));
   // 線は枠線で描くので、総なめの 3:1 と印刷の黒の検査に掛かる
   assert.equal(prop(ruleOf('.steps li + li::before'), 'border-top'), '2px solid var(--line)');
-  assert.equal(prop(ruleOf('.steps li:has(~ li > button[aria-current="step"]) + li::before'), 'border-top-color'), 'var(--primary)');
-  // 3つの状態が塗りと線の形で分かる: 押せない=破線の丸、押せる=実線の丸、今の段=塗った丸
-  assert.equal(prop(ruleOf('.steps button:disabled .step-dot'), 'border'), '2px dashed var(--ink-2)');
-  assert.equal(prop(ruleOf('.step-dot'), 'border'), '2px solid var(--primary)');
-  const on = ruleOf('.steps button[aria-current="step"] .step-dot');
+  assert.equal(prop(ruleOf('.steps li:has(~ li[aria-current="step"]) + li::before'), 'border-top-color'), 'var(--primary)');
+  // 3つの状態が塗りと線の色で分かる: これから=灰色の輪、前の段=主の色の輪、今の段=塗った丸
+  assert.equal(prop(ruleOf('.step-dot'), 'border'), '2px solid var(--ink-2)');
+  assert.equal(prop(ruleOf('.steps li:has(~ li[aria-current="step"]) .step-dot'), 'border-color'), 'var(--primary)');
+  const on = ruleOf('.steps li[aria-current="step"] .step-dot');
   assert.equal(color(prop(on, 'background')), vars['--primary']);
   atLeast(color(prop(on, 'color')), vars['--primary'], 4.5, '今の段の番号');
-  assert.equal(prop(ruleOf('.steps button[aria-current="step"]'), 'font-weight'), 'bold');
-  // 丸が 44px の押す所の中に収まる
-  assert.ok(toPx(prop(ruleOf('.step-dot'), 'height')) + toPx('0.25rem') * 2 <= 44);
+  assert.equal(prop(ruleOf('.steps li[aria-current="step"]'), 'font-weight'), 'bold');
 });
 
 test('ボタンの形: 既定は副、主の6つだけ塗り、押せない・選んでいるは形で分かる', () => {
@@ -204,7 +203,7 @@ test('ボタンの形: 既定は副、主の6つだけ塗り、押せない・�
   assert.equal(prop(base, 'border'), '1px solid var(--primary)');
   atLeast(vars['--primary'], vars['--primary-bg'], 4.5, '副のボタンに触れたとき');
   assert.equal(color(prop(ruleOf('button:hover'), 'background')), vars['--primary-bg']);
-  // 主: 塗りと白の太字。「次へ: 3 書類を確かめる」も主
+  // 主: 塗りと白の太字。「次へ: 書類を確かめる」も主
   const main = rules.find((r) => selectors(r.sel).includes('#bid-run'));
   assert.deepEqual(selectors(main.sel).sort(), primarySel('').sort());
   assert.equal(color(prop(main.body, 'background')), vars['--primary']);
@@ -212,7 +211,7 @@ test('ボタンの形: 既定は副、主の6つだけ塗り、押せない・�
   atLeast(color(prop(main.body, 'color')), vars['--primary'], 4.5, '主のボタンの字');
   for (const id of [...PRIMARY_IDS, 'sample-load']) assert.match(body, new RegExp('<button type="button" id="' + id + '"'), id + ' が画面に無い');
   assert.match(body, /id="sample-load" class="[^"]*sample-button/);
-  assert.match(body, /<button type="button" id="next-step-3">次へ: 3 書類を確かめる<\/button>/);
+  assert.match(body, /<button type="button" id="next-step-3">次へ: 書類を確かめる<\/button>/);
   // .sample-button は .entry-button と同じ強さなので、後に書かないと塗りが消える
   assert.ok(rules.indexOf(main) > indexOfRule('.entry-button'), '主の決まりが .entry-button より前にある');
   // 触れた・押している間も白い字のまま暗い塗りになる(.sample-button は button:active より弱いので、書かないと白い字が薄い地に乗る)
@@ -227,8 +226,6 @@ test('ボタンの形: 既定は副、主の6つだけ塗り、押せない・�
   assert.equal(color(prop(off, 'background')), vars['--paper-2']);
   assert.equal(prop(off, 'cursor'), 'not-allowed');
   atLeast(color(prop(off, 'color')), vars['--paper-2'], 4.5, '押せないボタンの字');
-  // 段階の押せない形が button:disabled:hover(同じ強さ)に負けないよう、後に書く
-  assert.ok(indexOfRule('.steps button:disabled') > rules.findIndex((r) => selectors(r.sel).includes('button:disabled:hover')));
   // 選んでいる: 3か所とも薄い地・2px の枠・太字。outline は使わない
   const on = rules.find((r) => selectors(r.sel).includes('.rules-switch button[aria-pressed="true"]'));
   assert.equal(selectors(on.sel).length, 3);

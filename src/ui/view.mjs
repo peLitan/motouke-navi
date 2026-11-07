@@ -474,13 +474,13 @@ const openCard = (id, title, count, inner) => '<details class="open-card" id="' 
 //   数字は候補の数で、押すとその節へ飛ぶ。安全の法令の候補は「要るものの候補」に混ぜない。印(▲)を付け、リンクの色にしない
 export const SAFETY_MARK = '▲';
 function nextStep(state, points, un) {
-  if (state.errors?.length) return { title: '金額の欄を直す', sub: '読めない欄に印を付けました。直してから、もう一度「確認する」を押してください。', href: 'bid-form', go: '「1 条件を入れる」に戻る' };
-  if (state.stale) return { title: 'もう一度「確認する」を押す', sub: '条件が変わりました。下の数は前の条件の結果です。', href: 'bid-run', go: '「1 条件を入れる」に戻る' };
+  if (state.errors?.length) return { title: '金額の欄を直す', sub: '読めない欄に印を付けました。直してから、もう一度「確認する」を押してください。', href: 'bid-form', go: '「条件を入れる」に戻る' };
+  if (state.stale) return { title: 'もう一度「確認する」を押す', sub: '条件が変わりました。下の数は前の条件の結果です。', href: 'bid-run', go: '「条件を入れる」に戻る' };
   // 元請けの実績の知らせは法令の項目ではないので checks の最後にあるが、参加の条件なので未回答より先に出す(F62a)。参加できないとは言い切らない(F49)
   if ((state.bid?.checks ?? []).some((c) => c.key === PRIME_CHECK_KEY)) return { title: '元請けとしての施工実績が参加の条件です', sub: '公告の抜き書きを確かめ、認められる実績の範囲を発注者の公告と説明書で確かめてください。', href: 'open-items', go: '確認が要る点を見る' };
-  if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '「1 条件を入れる」に戻る' };
+  if (un.length) return { title: '未回答の質問 ' + un.length + 'つに答える', sub: un.map((q) => q.name).join('・') + '。答えるか「分からない」を選ぶまで、結果は仮の一覧です。', href: 'bid-form', go: '「条件を入れる」に戻る' };
   if (points.length) return { title: '確認が要る点 ' + points.length + '件を確かめる', sub: '1件目: ' + points[0].label, href: 'open-items', go: '確認が要る点を見る' };
-  return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '3 書類を確かめる' };
+  return { title: '書類を確かめる', sub: '施工体制台帳と施工計画書の目次を貼ると、抜けの候補を出します。', href: 'panel-3', go: '書類を確かめる' };
 }
 export function renderResultTop(state = {}) {
   const errors = state.errors?.length > 0;

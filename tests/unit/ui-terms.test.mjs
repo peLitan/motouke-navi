@@ -9,11 +9,13 @@ import { runPage } from '../acceptance/_helpers.mjs';
 
 // 語の表: old は画面に出してはいけない呼び方、now は今の呼び方(画面のどこかに出る)
 const TERMS = [
-  { old: '条件の画面に戻る', now: '「1 条件を入れる」に戻る', why: '戻る先は段の名前で呼ぶ(F83a6)' },
+  { old: '条件の画面に戻る', now: '「条件を入れる」に戻る', why: '戻る先は段の名前で呼ぶ(F83a6)。番号は F86b で外した' },
   { old: '『確認する』', now: '「確認する」', why: 'ボタンの名前は一重のかぎで囲む(F83a6)' },
   { old: '確認が要る候補', now: '確認が要る点', why: '確かめる点の数の呼び方は「確認が要る点」(F83a1)' },
-  { old: '2. 施工体制台帳の点検', now: '3-1. 施工体制台帳の点検', why: '段3 の中の見出しは段の番号の下に置く(F83a6)' },
-  { old: '3. 施工計画書の目次の点検', now: '3-2. 施工計画書の目次の点検', why: '段3 の中の見出しは段の番号の下に置く(F83a6)' },
+  { old: '2. 施工体制台帳の点検', now: '施工体制台帳の点検', why: '見出しに段の番号を付けない(F86b)' },
+  { old: '3. 施工計画書の目次の点検', now: '施工計画書の目次の点検', why: '見出しに段の番号を付けない(F86b)' },
+  { old: '3-1. 施工体制台帳の点検', now: '施工体制台帳の点検', why: '見出しに段の番号を付けない(F86b)' },
+  { old: '3-2. 施工計画書の目次の点検', now: '施工計画書の目次の点検', why: '見出しに段の番号を付けない(F86b)' },
 ];
 
 const read = (p) => fs.readFileSync(new URL('../../' + p, import.meta.url), 'utf8');
@@ -42,12 +44,12 @@ test('語の表: 古い呼び方が画面に出る文に無く、今の呼び方
   for (const t of TERMS) assert.ok(mjsText("const x = '" + t.old + "';").includes(t.old));
 });
 
-test('戻るボタンは段の名前で呼び、段3 の見出しは 3-1・3-2。根拠の無い項目の「理由を見る」は残す', () => {
-  assert.match(html, /<button type="button" id="confirm-back">「1 条件を入れる」に戻る<\/button>/);
-  assert.match(html, /<button type="button" id="step-1" disabled aria-label="1 条件を入れる">/, '戻る先の段の名前が変わっている');
+test('確かめの戻るは下の帯の「戻る」で、次にすることの語が段の名前で呼ぶ。段3 の見出しに番号が無い。根拠の無い項目の「理由を見る」は残す', () => {
+  assert.match(html, /<button type="button" id="confirm-back">戻る<\/button>/);
+  assert.ok(SCREEN['src/ui/view.mjs'].includes("'「条件を入れる」に戻る'"), '戻る先の段の名前が変わっている');
   const panel3 = html.slice(html.indexOf('<section id="panel-3"'), html.indexOf('<details class="other-tools'));
   const h2 = [...panel3.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((m) => m[1]);
-  assert.deepEqual(h2.slice(0, 2), ['3-1. 施工体制台帳の点検', '3-2. 施工計画書の目次の点検']);
+  assert.deepEqual(h2.slice(0, 2), ['施工体制台帳の点検', '施工計画書の目次の点検']);
   assert.ok(SCREEN['src/ui/view.mjs'].includes("'理由を見る'"), '「理由を見る」が無くなっている');
 });
 
@@ -83,31 +85,28 @@ test('入口ではステップの丸を押せる見た目にしない(主の色�
   const rules = [...screen.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
   const ruleOf = (sel) => rules.find((r) => r.sel === sel)?.body;
   const prop = (body, name) => body?.match(new RegExp('(?:^|;)\\s*' + name + '\\s*:\\s*([^;]+)'))?.[1].trim();
-  const off = ruleOf('.steps button:disabled');
-  const dot = ruleOf('.steps button:disabled .step-dot');
-  assert.ok(off && dot, '押せない段の決まりが無い');
-  // 字・輪・地を押せない形で上書きし、主の色(--primary 系)を使わない
-  for (const [body, names] of [[off, ['color', 'background', 'border']], [dot, ['color', 'background', 'border']]]) {
+  const off = ruleOf('.steps li');
+  const dot = ruleOf('.step-dot');
+  assert.ok(off && dot, '段の決まりが無い');
+  // これからの段の字・輪・地に主の色(--primary 系)を使わない(F86b: 印は押せないので全部の段に掛ける。前の段と今の段だけ別の決まりで主の色)
+  for (const [body, names] of [[off, ['color']], [dot, ['color', 'background', 'border']]]) {
     for (const n of names) {
-      assert.ok(prop(body, n), n + ' を上書きしていない');
+      assert.ok(prop(body, n), n + ' を決めていない');
       assert.doesNotMatch(prop(body, n), /--primary/, n + ' が主の色');
     }
   }
-  assert.equal(prop(dot, 'border'), '2px dashed var(--ink-2)');
-  // 指の形にも「押せない」の形にもしない(案内の表示として普通の矢印)
-  assert.equal(prop(off, 'cursor'), 'default');
+  assert.equal(prop(dot, 'border'), '2px solid var(--ink-2)');
+  // 指の形にしない(ボタンでないので cursor の決まりを持たない)
+  assert.ok(!rules.some((r) => /\.steps|step-dot/.test(r.sel) && /cursor/.test(r.body)), '段の印に cursor の決まりがある');
   // 触れた・押したときに色を変える決まりが段の丸に無い
   assert.ok(!rules.some((r) => r.sel.split(',').some((s) => /\.steps|step-dot/.test(s) && /:hover|:active/.test(s))), '段の丸に触れたときの決まりがある');
-  // 決まりは一般の button の決まりより強い(.steps と :disabled の分)ので、button:hover・button:active の主の色に負けない
-  for (const sel of ['button', 'button:hover', 'button:active']) assert.ok(ruleOf(sel) !== undefined, sel + ' の決まりが無い');
-
-  // 入口にいる間は丸が押せない: 開いたとき、段を選んで「入口に戻る」で戻ったとき
+  // 入口にいる間は、入口の丸だけが塗られ、ほかの丸は主の色にならない: 開いたとき、段を選んで「戻る」で戻ったとき
   const page = runPage(html);
-  const steps = () => ['step-1', 'step-2', 'step-3'].map((id) => page.el(id).disabled);
-  assert.deepEqual(steps(), [true, true, true]);
+  const steps = () => ['step-0', 'step-1', 'step-2', 'step-3'].filter((id) => page.el(id).getAttribute('aria-current') === 'step');
+  assert.deepEqual(steps(), ['step-0']);
   await page.click('entry-bid');
-  assert.deepEqual(steps(), [false, false, false]);
-  await page.click('entry-back');
+  assert.deepEqual(steps(), ['step-1']);
+  await page.click('pg-back');
   assert.equal(page.el('entry').hidden, false);
-  assert.deepEqual(steps(), [true, true, true]);
+  assert.deepEqual(steps(), ['step-0']);
 });

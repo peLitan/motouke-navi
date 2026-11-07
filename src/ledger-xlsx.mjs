@@ -247,7 +247,7 @@ export async function readLedgerXlsx(data) {
   return { ledger, unreadable, found, form: sakuseirei ? 'mlit-sakuseirei' : null, sheet: firstSheet };
 }
 
-// 読んだ台帳を、台帳の文(「3-1. 施工体制台帳の点検」に貼る形。src/ledger-text.mjs で読める)にする。読めない欄は値を空にして行を残す
+// 読んだ台帳を、台帳の文(「施工体制台帳の点検」に貼る形。src/ledger-text.mjs で読める)にする。読めない欄は値を空にして行を残す
 const cellText = (s) => String(s ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
 const jpDate = (iso) => { const m = String(iso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${Number(m[1])}年${Number(m[2])}月${Number(m[3])}日` : ''; };
 export function ledgerToText(ledger) {

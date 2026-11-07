@@ -86,7 +86,7 @@ test('文: 古い名前と「保存もしません」が本文に無く、#field
 test('段3の最後: 外側の #panel-3 の閉じタグの直前に、全部を印刷へ戻す案内がある', () => {
   const note = pOf('panel-3-print-note');
   assert.equal(note.tag, '<p class="note no-print" id="panel-3-print-note">');
-  assert.ok(note.text.includes('全部を印刷する') && note.text.includes('2 結果を見る'));
+  assert.ok(note.text.includes('全部を印刷する') && note.text.includes('「戻る」で「結果」のページに戻り'));
   assert.doesNotMatch(note.text, /1〜3/);
   const start = body.indexOf('<section id="panel-3"');
   const at = body.indexOf('id="panel-3-print-note"');
@@ -116,7 +116,7 @@ test('結果が無いまま「PDF で保存・印刷」: 印刷の画面を開�
   const status = page.el('export-status').textContent;
   assert.match(status, /確認する/);
   assert.match(status, /全部を印刷する/);
-  assert.equal(status, '結果がまだありません。「1 条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。');
+  assert.equal(status, '結果がまだありません。「条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。');
   assert.equal(hasBrief(page), false);
   assert.equal(docOf(page).title, '');
 });

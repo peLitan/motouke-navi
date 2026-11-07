@@ -168,7 +168,7 @@ test('一覧に2ページ以上あるときの動き: 次へ・前へ・端で�
   const { PAGES, showPage, pageStep, currentPage, backTarget, seatOf } = await pager();
   const saved = PAGES[1];
   const els = {};
-  const el = (id) => (els[id] ??= { id, hidden: false, scrollTop: 9, textContent: '', focus() {} });
+  const el = (id) => (els[id] ??= { id, hidden: false, scrollTop: 9, textContent: '', focus() {}, setAttribute() {}, removeAttribute() {} });
   const doc = { getElementById: el };
   PAGES[1] = [['pg-x', '甲', 'x-title'], ['pg-y', '乙', 'y-title'], ['pg-z', '丙', 'z-title']];
   try {
@@ -178,7 +178,7 @@ test('一覧に2ページ以上あるときの動き: 次へ・前へ・端で�
     assert.equal(el('pg-next').hidden, false);
     assert.equal(el('bid-run').hidden, true);
     assert.equal(el('pg-next').textContent, '次へ: 乙');
-    assert.equal(el('pg-count').textContent, '1/3 甲');
+    assert.equal(el('pg-num').textContent + ' ' + el('pg-name').textContent, '1/3 甲'); // F86b: 幅 40rem 以下で名前だけ隠すので分けた
     assert.deepEqual(backTarget(), { group: null, index: 0 });
     pageStep(doc, 1);
     assert.deepEqual(currentPage(), { group: 1, index: 1 });

@@ -146,15 +146,15 @@ test('CSV: 確認が要る点の専任の行の根拠の列に、条番号と抜
   assert.ok(csv.includes(row[3]));
 });
 
-test('安全の問いの2か所: 「段1」を出さず、段階の表示と同じ呼び方にする', async () => {
-  assert.ok(stage1Line({ 'subcontract-total': '30,000,000' }, { subcontractTotal: 30_000_000 }).startsWith('「1 条件を入れる」の答え: 下請けの総額 30,000,000 円 → 使う。'));
+test('安全の問いの2か所: 「段1」を出さず、段の番号の無い名前で呼ぶ', async () => {
+  assert.ok(stage1Line({ 'subcontract-total': '30,000,000' }, { subcontractTotal: 30_000_000 }).startsWith('「条件を入れる」の答え: 下請けの総額 30,000,000 円 → 使う。'));
   const page = runPage(html);
   await page.click('sample-load');
   await page.click('confirm-go');
   const out = page.el('safety-stage1').innerHTML;
   assert.ok(!out.includes('段1'), out);
-  assert.ok(out.includes('「1 条件を入れる」の答え:'));
-  assert.ok(out.includes('<a href="#subcontract-total">「1 条件を入れる」で直す</a>'));
+  assert.ok(out.includes('「条件を入れる」の答え:'));
+  assert.ok(out.includes('<a href="#subcontract-total">「条件を入れる」で直す</a>'));
 });
 
 test('F54d の『段1「条件を入れる」』の文は変えていない', () => {
@@ -176,7 +176,8 @@ test('README の手順2 のとおりに押すと、請負代金を変えた結�
   await page.click('sample-load');
   await page.click('confirm-go');
   const before = page.el('bid-result').innerHTML;
-  await page.click('step-1');
+  await page.click('pg-back'); // F86b: 進み具合は押せないので下の帯で戻る。README の語は F86j で直す
+  await page.click('confirm-back');
   assert.equal(page.el('panel-1').hidden, false);
   await page.set('contract-amount', '40,000,000');
   await toResult(page);

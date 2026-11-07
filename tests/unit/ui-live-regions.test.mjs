@@ -70,7 +70,7 @@ test('bid-status: 頭を残して「要る n項目。」を足し、次の一手
   assert.ok(m, status(page, 'bid-status'));
   assert.ok(Number(m[1]) > 0, '見本には要る項目があるはず');
   assert.equal(Number(m[1]), cardNumber(page));
-  assert.ok(status(page, 'bid-status').includes('「次へ: 3 書類を確かめる」'));
+  assert.ok(status(page, 'bid-status').includes('「次へ: 書類を確かめる」'));
   assert.doesNotMatch(status(page, 'bid-status'), /確認が要る/, '「確認が要る n」は書かない');
 });
 

@@ -15,7 +15,7 @@ const ruleOf = (sel) => rules.find((r) => r.sel === sel)?.body;
 const prop = (body, name) => body?.match(new RegExp('(?:^|;)\\s*' + name + '\\s*:\\s*([^;]+)'))?.[1].trim();
 const html = buildHtml();
 const status = (page) => page.text('bid-status').trim();
-const NEXT = '「次へ: 3 書類を確かめる」';
+const NEXT = '「次へ: 書類を確かめる」';
 
 test('知らせの行は結果の見出しの直下にあり、aria-live で、印刷には出さない', () => {
   assert.match(shell, /<h2 id="result-title" tabindex="-1">結果<\/h2>\n<p id="bid-status" class="no-print" aria-live="polite"><\/p>/);

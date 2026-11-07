@@ -10,7 +10,7 @@ import { runPage } from '../acceptance/_helpers.mjs';
 
 const status = (page) => page.el('bid-status').textContent;
 const banner = (page) => page.el('sample-status').textContent;
-const NEXT = '下の「次にすること」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
+const NEXT = '下の「次にすること」から読んでください。終わったら「次へ: 書類を確かめる」を押します。';
 const DIFF_40M = '前の結果から: 要る 6→5、確認が要る点 2→1。技術者を専任で置く必要があるか: 要る→要らない。';
 const LOADED = '見本「' + SAMPLE.title + '」を読み込みました。' + SAMPLE.note + ' 欄の値を変えて、もう一度「確認する」を押すこともできます。';
 const changedBanner = (n) => '見本「' + SAMPLE.title + '」から ' + n + '欄を変えました(架空の工事を元にしています。実在のものとは関係ありません)。';
@@ -21,9 +21,14 @@ async function samplePage() {
   await page.click('confirm-go');
   return page;
 }
+// 結果から条件へ戻る(F86b: 進み具合は押せないので下の帯の「戻る」で。結果 → 確かめ → 条件)
+async function toConditions(page) {
+  await page.click('pg-back');
+  await page.click('confirm-back');
+}
 // 段1 へ戻って欄を変え、確かめの画面を通って結果を見る(README 手順2 の押し方)
 async function changeAndGo(page, fields) {
-  await page.click('step-1');
+  await toConditions(page);
   for (const [id, v] of Object.entries(fields)) await page.set(id, v);
   await page.click('bid-run');
   await page.click('confirm-go');
@@ -59,7 +64,7 @@ test('変えずに進む: 読み込んだときの知らせと帯のまま。差
 
 test('「確認する」だけでは帯を変えず、差も足さない', async () => {
   const page = await samplePage();
-  await page.click('step-1');
+  await toConditions(page);
   await page.set('contract-amount', '40,000,000');
   await page.click('bid-run');
   assert.equal(status(page), '✓ 結果が出ました。要る 5項目。' + NEXT);

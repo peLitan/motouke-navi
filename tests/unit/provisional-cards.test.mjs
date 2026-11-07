@@ -28,7 +28,7 @@ test('何も入れない: カードは「−」、知らせは「＊ 仮の結�
   assert.equal(Number(m[1]), QUESTIONS.length);
   assert.equal(nextTitle(page), '次にすること: 未回答の質問 ' + m[1] + 'つに答える');
   assert.ok(status(page).includes('結果が出ました'), status(page));
-  assert.ok(status(page).includes('「次へ: 3 書類を確かめる」'), '次の一手が消えた');
+  assert.ok(status(page).includes('「次へ: 書類を確かめる」'), '次の一手が消えた');
   assert.ok(!status(page).includes('✓'), '仮の結果に ✓ が付いている');
   assert.doesNotMatch(status(page), /要る \d/, '仮の結果に要る項目の数を書いている');
 });

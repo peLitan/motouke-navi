@@ -120,7 +120,7 @@ export function renderSafety(doc) {
   const title = doc.getElementById('safety-title');
   if (title) title.textContent = safetyTitle(r);
   const stage1El = doc.getElementById('safety-stage1');
-  if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">「1 条件を入れる」で直す</a>';
+  if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">「条件を入れる」で直す</a>';
   const qSub = doc.getElementById('safety-q-subcontract');
   if (qSub) qSub.hidden = r.mode === 'sub';
   // 問い2 は下請けを使う・まだ分からないとき、下請けの道で出す
@@ -158,21 +158,15 @@ function clearSafety(doc) {
   setSafetyStatus(doc, '');
 }
 
-// 段の切り替え(F37a): #panel-1〜3 の hidden を付け外しして1つずつ見せる。段階の表示は今いる段だけ印を付け、入口を選んだあとは押せる。
-// 要素はすべて静的な HTML にあり、ここでは作らない。結果は隠れた段にも書く。段の中のページと下の帯は pager.mjs が持つ(F86a)
-// 入力の確かめ(F43d)は結果の前の画面で、段階の表示では「1 条件を入れる」の中に数える(案D のとおり)
+// 段の切り替え(F37a): #panel-1〜3 の hidden を付け外しして1つずつ見せる。
+// 要素はすべて静的な HTML にあり、ここでは作らない。結果は隠れた段にも書く。段の中のページ・下の帯・進み具合の印は pager.mjs が持つ(F86a・F86b)
 const PANELS = [1, 2, 3];
 export function showPanel(doc, n, index = 0) {
   const confirm = doc.getElementById('panel-confirm');
   if (confirm) confirm.hidden = n !== 'confirm';
-  const current = n === 'confirm' ? 1 : n;
   for (const i of PANELS) {
     const panel = doc.getElementById('panel-' + i);
     if (panel) panel.hidden = i !== n;
-    const step = doc.getElementById('step-' + i);
-    if (!step) continue;
-    step.disabled = false;
-    if (i === current) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
   }
   const tools = doc.getElementById('panel-tools');
   if (tools) tools.hidden = true;
@@ -186,17 +180,13 @@ function setNoticeCompact(doc, on) {
   const row = doc.getElementById('notice-more');
   if (row) row.hidden = !on;
 }
-// 入口に戻す: タイルを見せ、段を隠し、段階の表示を押せない形にする。入れた値と結果は消さない
+// 入口に戻す: タイルを見せ、段を隠す。入れた値と結果は消さない
 export function showEntry(doc) {
   const confirm = doc.getElementById('panel-confirm');
   if (confirm) confirm.hidden = true;
   for (const i of PANELS) {
     const panel = doc.getElementById('panel-' + i);
     if (panel) panel.hidden = true;
-    const step = doc.getElementById('step-' + i);
-    if (!step) continue;
-    step.disabled = true;
-    step.removeAttribute('aria-current');
   }
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = false;
@@ -294,13 +284,13 @@ export function openPanelForLink(doc, href) {
 }
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
-const NEXT_STEP = '下の「次にすること」から読んでください。終わったら「次へ: 3 書類を確かめる」を押します。';
+const NEXT_STEP = '下の「次にすること」から読んでください。終わったら「次へ: 書類を確かめる」を押します。';
 const BID_NOTICE_DONE = '✓ 結果が出ました。';
 const SAMPLE_NOTICE_DONE = '✓ 見本を読み込みました。';
 const AWARDED_NOTICE_ALL = '✓ 段取りの全部の行を出しました。工事の条件が分かるなら、下の「条件を入れる」を押します。';
 const AWARDED_NOTICE_DONE = '✓ 入れた条件の段取りを出しています。下の「受注後の段取り」から読んでください。';
 const NOTICE_STALE = '＊ 条件が変わりました。もう一度「確認する」を押すと、新しい条件の結果が出ます。';
-const NOTICE_AMOUNT = '金額の欄を読めませんでした。「1 条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
+const NOTICE_AMOUNT = '金額の欄を読めませんでした。「条件を入れる」に戻って直し、もう一度「確認する」を押してください。';
 const NOTICE_HALTED = '判定の途中で止まりました。結果の欄の知らせを読んでください。';
 // 失敗の文だけに印を付ける(F58a)。印の CSS が「× 失敗: 」を足すので、失敗の文の頭に「＊」は書かない(F85d)。条件が変わった文と仮の結果の文は失敗ではないので、「＊」のままで印を付けない
 const BID_FAILED = new Set([NOTICE_AMOUNT, NOTICE_HALTED]);
@@ -675,7 +665,7 @@ export function exportCsv(doc) {
 
 // まとめの印刷。結果が無いまま印刷の画面を開くと、空の PDF を残したと思い込むので開かない
 export function printResult(doc, win) {
-  if (!last) { setExportStatus(doc, stale ? STALE : '結果がまだありません。「1 条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。'); return; }
+  if (!last) { setExportStatus(doc, stale ? STALE : '結果がまだありません。「条件を入れる」で条件を入れて「確認する」を押してください。段取りの一覧だけを残すときは「全部を印刷する」を押してください。'); return; }
   beginPrint(doc, 'brief');
   prepareForPrint(doc);
   win.print();
@@ -1394,7 +1384,6 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('entry-awarded', () => enterAwarded(doc));
     on('awarded-conditions', () => openPanel(doc, 1));
     on('entry-back', () => showEntry(doc));
-    for (const i of PANELS) on('step-' + i, () => openPanel(doc, i));
     on('next-step-3', () => openPanel(doc, 3));
     on('pg-next', () => pageStep(doc, 1));
     on('pg-back', () => pageStep(doc, -1, () => goBack(doc)));

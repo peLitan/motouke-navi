@@ -208,7 +208,7 @@ test('F54b: 2つの注記は phone-only と no-print を持ち、決まった位
   assert.ok(html.includes('<div id="result-top" hidden></div>\n' + FIELD + '\n<details class="fold" id="bid-fold">'), '#field-note が #result-top と #bid-fold の間に無い');
   const panel3 = html.slice(html.indexOf('<section id="panel-3"'));
   const firstH2 = panel3.match(/<h2[^>]*>[\s\S]*?<\/h2>/);
-  assert.equal(firstH2[0], '<h2 id="ledger-title" tabindex="-1">3-1. 施工体制台帳の点検</h2>'); // F83a6: 段3 の見出しの番号を段にそろえた
+  assert.equal(firstH2[0], '<h2 id="ledger-title" tabindex="-1">施工体制台帳の点検</h2>'); // F86b: 段の番号を文から外した
   assert.ok(panel3.slice(firstH2.index + firstH2[0].length).startsWith('\n' + PC), '#panel-3-pc-note が #panel-3 の最初の h2 の直後に無い');
   for (const note of [FIELD, PC]) {
     assert.doesNotMatch(note, /事故を防げる|指名停止を防ぐ|初心者でもできる|あらゆる公共工事に対応|積算できる|電波/);
