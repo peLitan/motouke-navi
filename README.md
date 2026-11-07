@@ -63,7 +63,7 @@ Web の画面は、開いたあとは通信しません。Claude を使う部品
 ### モデルを呼ぶ命令
 この節で挙げる命令のうち、モデルを呼ぶのは次の2つです。動かす人の契約の範囲で動きます。
 
-- 公式の評価: `claude plugin eval plugin …`。命令の全文は [docs/評価.md](docs/評価.md) の 7 の「走らせ方」にあります
+- 公式の評価: `claude plugin eval …`。命令の全文は [docs/評価.md](docs/評価.md) の 7 の「走らせ方」にあります
 - 画面なしの入口: `node scripts/claude-headless.mjs --work <作業フォルダ>`。手順は [docs/manual.md](docs/manual.md) の「Claude で点検(画面なしの Claude Code)」にあります
 
 ## 業界の構造にどう効くか(効かないことも含めて)
