@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-2Kzwq9RIY4c7sM3glFuVEQEWkpfgcScchq8IhiHl2O0='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XZmm/kN/ByhD3IyQyr8BVtujBSXsjEjOw8LFoPVeZcI='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -4835,8 +4835,20 @@ const toBytes = (data) => {
 };
 
 // ---- .txt ----
+// ISO-2022-JP の文字集合を切り替える印(F85b)。この形式は全部が 7bit で UTF-8 として読めてしまい、漢字の名前が符号の字のまま欄に入る。
+// 0x1B は UTF-8 でも Shift_JIS でも2バイトの字の途中に現れないので、バイトのまま探してよい。MCP の masked-files.mjs にも同じ一覧がある(読み込まない)
+const ISO2022_MARKS = ['\x1b$B', '\x1b$@', '\x1b(J', '\x1b(B'];
+const ISO2022_REFUSED = 'ISO-2022-JP のファイルは読めません。UTF-8 か Shift_JIS で保存し直してください。';
+function hasIso2022Mark(b) {
+  for (let i = b.indexOf(0x1b); i >= 0 && i + 2 < b.length; i = b.indexOf(0x1b, i + 1)) {
+    if (ISO2022_MARKS.includes(String.fromCharCode(b[i], b[i + 1], b[i + 2]))) return true;
+  }
+  return false;
+}
+
 // UTF-8(BOM の有無どちらも)を先に試し、UTF-8 として読めなければ Shift_JIS として読む
 function decodeText(bytes) {
+  if (hasIso2022Mark(bytes)) throw new Error(ISO2022_REFUSED);
   let b = bytes;
   if (b.length >= 3 && b[0] === 0xef && b[1] === 0xbb && b[2] === 0xbf) b = b.subarray(3);
   try {
