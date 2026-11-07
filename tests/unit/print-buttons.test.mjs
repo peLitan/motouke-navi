@@ -83,7 +83,7 @@ test('文: 古い名前と「保存もしません」が本文に無く、#field
   assert.equal(field.text, 'この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。');
 });
 
-test('段3の最後: 外側の #panel-3 の閉じタグの直前に、全部を印刷へ戻す案内がある', () => {
+test('段3の最後のページ: 目次の候補の枠の後ろに、全部を印刷へ戻す案内がある', () => {
   const note = pOf('panel-3-print-note');
   assert.equal(note.tag, '<p class="note no-print" id="panel-3-print-note">');
   assert.ok(note.text.includes('全部を印刷する') && note.text.includes('「戻る」で「結果」のページに戻り'));
@@ -92,8 +92,8 @@ test('段3の最後: 外側の #panel-3 の閉じタグの直前に、全部を�
   const at = body.indexOf('id="panel-3-print-note"');
   assert.ok(at > body.indexOf('<div id="plan-result"', start), '#plan-check の中身より後ろに無い');
   const after = body.slice(at, body.indexOf('<details class="other-tools"'));
-  assert.equal(after.match(/<\/section>/g).length, 1, '外側の #panel-3 の閉じタグの直前に無い');
-  assert.match(body.slice(start, at), /<\/section>\n<p class="note no-print" $/);
+  assert.equal(after.match(/<\/section>/g).length, 2, '#plan-check と #panel-3 の閉じタグの直前に無い'); // F86h: 段の下に常に出さず、最後のページの中へ移した
+  assert.match(body.slice(start, at), /id="pg-3-plan-result" hidden>[\s\S]*<\/div><\/div>\n<p class="note no-print" $/);
 });
 
 test('CSS: ボタンの下の行・知らせの位置・幅の狭い画面で3つのボタンを幅いっぱいに', () => {

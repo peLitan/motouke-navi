@@ -419,6 +419,12 @@
     #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: flex; flex-direction: column; }
     .ref-frame { flex: 1 1 0; min-height: 6rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
     .ref-frame footer { margin-top: 1rem; }
+    /* 書類の6ページ(F86h): 節は紙の見出しのために残し、高さは節を飛ばしてページへ渡す。書く欄の高さは画面だけの決まりで、紙は rows のまま */
+    #ledger-check, #plan-check, #checklist-section { display: contents; }
+    /* 枠が線を持つので、3つの結果のカードの線と影は画面では消す(紙は .result のまま) */
+    #check-result, #checklist-result, #plan-result { --shadow: none; margin-bottom: 0; border: none; padding: 0; }
+    #ledger-input { height: 14rem; }
+    #plan-input { height: 8rem; }
     /* まとめの枠(F86f): カードの枠を残し、開いてもページが長くならない高さで止める */
     #summary-fold .ref-frame { max-height: 18rem; border: none; padding: 0; }
     /* 見本でないときは「見本について」の見出しごと出さない */
@@ -440,9 +446,9 @@
     #pager button { margin: 0; }
     #pg-back { flex: none; }
     /* 右の席は端に寄せ、どのページでも同じ場所にする */
-    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #entry-back, #pager #awarded-conditions { margin-left: auto; }
+    #pager #pg-next, #pager #bid-run, #pager #confirm-go, #pager #next-step-3, #pager #ledger-run, #pager #plan-run, #pager #entry-back, #pager #awarded-conditions { margin-left: auto; }
     #pg-back::before, #confirm-back::before { content: "\25C0\00A0"; content: "\25C0\00A0" / ""; }
-    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #entry-back::after, #awarded-conditions::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
+    #pg-next::after, #bid-run::after, #confirm-go::after, #next-step-3::after, #ledger-run::after, #plan-run::after, #entry-back::after, #awarded-conditions::after { content: "\00A0\25B6"; content: "\00A0\25B6" / ""; }
     /* 要点のページ(F86e): 塗りは「次にすること」のボタンだけにする */
     #pager.seat-plain #pg-next { color: var(--primary); background: var(--paper); font-weight: normal; }
     #pager.seat-plain #pg-next:hover, #pager.seat-plain #pg-next:active { color: var(--primary); background: var(--primary-bg); }
@@ -450,6 +456,9 @@
     #result-flag { margin: 0.25rem 0; border-left: 4px solid var(--primary); padding: 0.25rem 0 0.25rem 0.75rem; font-weight: bold; }
     /* 結果が出たときの全文: 1行の #result-flag だけを見せ、読み上げのために画面の外に残す */
     p#bid-status.sr-only { position: absolute; width: 1px; height: 1px; margin: 0; border: 0; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
+  @media screen and (max-width: 40rem) {
+    #ledger-input { height: 9rem; }
   }
   /* 背の低い画面(拡大 200%・横向きのスマホ): 下の帯が場所を取り切らないよう、高さの固定を外して全体が動く形に戻す(WCAG 1.4.10) */
   @media screen and (max-height: 30rem) {
@@ -818,12 +827,13 @@
 <pre id="sample-plan"></pre>
 </details>
 </div></section>
-<section id="panel-3" hidden><div class="pg" id="pg-3">
+<section id="panel-3" hidden>
 <section id="ledger-check">
+<div class="pg" id="pg-3">
 <h2 id="ledger-title" tabindex="-1">施工体制台帳の点検</h2>
-<p id="panel-3-pc-note" class="note phone-only no-print">書類の点検はパソコンの方が楽です(台帳の文を貼る・Excel を読む・印刷)。スマホでも使えます。</p>
 <p>台帳を貼って「台帳を点検する」を押すと、抜け・食い違いの候補を根拠の条つきで出します。</p>
 <details class="no-print"><summary>台帳の書き方</summary>
+<p id="panel-3-pc-note" class="note phone-only no-print">書類の点検はパソコンの方が楽です(台帳の文を貼る・Excel を読む・印刷)。スマホでも使えます。</p>
 <p>見出しと「| 項目 | 内容 |」の表の形で貼ります。発注者(公共・民間)と工事の種類は、「条件を入れる」で選んだ値を使います。決められないことは「判断できない」に出します。</p>
 <pre>工事名: (工事の名前)
 ## 1. 作成建設業者(元請)
@@ -857,30 +867,42 @@
 <div id="ledger-unreadable" class="result"></div>
 <div class="row"><label for="ledger-input">施工体制台帳の文</label><br>
 <textarea id="ledger-input" name="ledger-input" rows="12" cols="80"></textarea></div>
+</div>
+<div class="pg" id="pg-3-diagram" hidden>
+<h2 id="diagram-title" class="pg-title no-print" tabindex="-1">施工体系図</h2>
 <div class="row"><label for="taikeizu-input">施工体系図の文(任意)</label><br>
 <textarea id="taikeizu-input" name="taikeizu-input" rows="8" cols="80" placeholder="例&#10;発注者: (発注者の名前)&#10;[元請] (会社名)&#10;[一次] (下請けの会社名)&#10;  主任技術者: (氏名)"></textarea></div>
 <details class="fold"><summary>施工体系図を貼ると何を見るか</summary>
-<p class="note" id="taikeizu-note">貼ると、台帳と下請負人の一覧・下請けの技術者の氏名・発注者の名前を突き合わせます。下の「施工計画書の目次」の欄に「発注者: …」の行があれば、発注者の名前もあわせて比べます。どちらも空なら台帳だけを点検します。</p>
+<p class="note" id="taikeizu-note">貼ると、台帳と下請負人の一覧・下請けの技術者の氏名・発注者の名前を突き合わせます。「施工計画書の目次」の欄に「発注者: …」の行があれば、発注者の名前もあわせて比べます。どちらも空なら台帳だけを点検します。</p>
 </details>
-<div class="row"><button type="button" id="ledger-run">台帳を点検する</button>
-<button type="button" id="check-csv-btn">点検の結果を CSV に書き出す</button></div>
+</div>
+<div class="pg pg-framed" id="pg-3-check" hidden>
+<h2 id="check-title" class="pg-title no-print" tabindex="-1">台帳の候補</h2>
+<div class="row"><button type="button" id="check-csv-btn">点検の結果を CSV に書き出す</button></div>
 <p id="check-status" aria-live="polite"></p>
-<div id="check-result" class="result"><p>台帳を貼って「台帳を点検する」を押してください。</p></div>
+<div class="ref-frame"><div id="check-result" class="result"><p>台帳を貼って「台帳を点検する」を押してください。</p></div></div>
+</div>
 <div id="checklist-section">
-<h3>台帳の記載事項の表(建設業法施行規則 第14条の2 第1項)</h3>
+<div class="pg pg-framed" id="pg-3-table" hidden>
+<h3 id="checklist-title" tabindex="-1">台帳の記載事項の表(建設業法施行規則 第14条の2 第1項)</h3>
 <p>「台帳を点検する」を押すと、記載事項ごとに、台帳の値か「空」か「判断できない」かを表で出します。</p>
 <details class="fold"><summary>この表の見方と「確認した」の印</summary>
-<p>「台帳を点検する」を押すと、上の候補とは別に、第14条の2 第1項の記載事項ごとに、台帳に見つかった値か「空」か「判断できない」かを表で出します。台帳の値は書いてあるまま出し、推測で埋めません。各行の「確認した」は、台帳や別紙を見て人が確かめた印です。チェックはこの画面の中だけに持ち、ブラウザに保存しません(ページを閉じると消えます)。印刷と CSV にはチェックの有無が出ます。</p>
+<p>「台帳を点検する」を押すと、台帳の候補とは別に、第14条の2 第1項の記載事項ごとに、台帳に見つかった値か「空」か「判断できない」かを表で出します。台帳の値は書いてあるまま出し、推測で埋めません。各行の「確認した」は、台帳や別紙を見て人が確かめた印です。チェックはこの画面の中だけに持ち、ブラウザに保存しません(ページを閉じると消えます)。印刷と CSV にはチェックの有無が出ます。</p>
 <p class="note" id="checklist-reference">{{CHECKLIST_REFERENCE}}</p>
 </details>
 <div class="row"><button type="button" id="checklist-csv-btn">記載事項の表を CSV に書き出す</button></div>
 <p id="checklist-status" aria-live="polite"></p>
-<div id="checklist-result" class="result"><p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p></div>
+<div class="ref-frame"><div id="checklist-result" class="result"><p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p></div></div>
+</div>
 </div>
 </section>
 <section id="plan-check">
-<h2>施工計画書の目次の点検</h2>
+<div class="pg" id="pg-3-plan" hidden>
+<h2 id="plan-title" tabindex="-1">施工計画書の目次の点検</h2>
+<p id="plan-intro" class="print-only">目次を貼って「目次を点検する」を押すと、仕様書の記載事項(建築・電気工事・管工事は 1.2.2 の3つの語)のうち見当たらないものを抜けの候補として出します。</p>
+<details class="fold no-print" id="plan-lead-more"><summary>この点検で見ること</summary>
 <p>目次を貼って「目次を点検する」を押すと、仕様書の記載事項(建築・電気工事・管工事は 1.2.2 の3つの語)のうち見当たらないものを抜けの候補として出します。</p>
+</details>
 <details class="fold" id="plan-about-fold"><summary>点検のしかたと範囲</summary>
 <p id="plan-about">施工計画書の目次を1行に1つの見出しで貼って「目次を点検する」を押すと、国土交通省「土木工事共通仕様書(案)令和8年3月」1-1-1-6 の記載事項((1)工事概要〜(16)その他)のうち、目次に見当たらない項目を、抜けの候補として根拠のページと原文つきで出します。見出しの言葉だけで比べ、本文の中身は見ません。「条件を入れる」の「工事の種類」で建築一式工事を選んだときは、対応する記載項目が無いので「判断できない」と出します。</p>
 </details>
@@ -891,13 +913,16 @@
 <p id="plan-file-status" aria-live="polite"></p>
 <div class="row"><label for="plan-input">施工計画書の目次</label><br>
 <textarea id="plan-input" name="plan-input" rows="10" cols="80" placeholder="例&#10;1. 工事概要&#10;2. 計画工程表"></textarea></div>
-<div class="row"><button type="button" id="plan-run">目次を点検する</button>
-<button type="button" id="plan-csv-btn">目次の点検の結果を CSV に書き出す</button></div>
+</div>
+<div class="pg pg-framed" id="pg-3-plan-result" hidden>
+<h2 id="plan-result-title" class="pg-title no-print" tabindex="-1">目次の候補</h2>
+<div class="row"><button type="button" id="plan-csv-btn">目次の点検の結果を CSV に書き出す</button></div>
 <p id="plan-status" aria-live="polite"></p>
-<div id="plan-result" class="result"><p>目次を貼って「目次を点検する」を押してください。</p></div>
-</section>
+<div class="ref-frame"><div id="plan-result" class="result"><p>目次を貼って「目次を点検する」を押してください。</p></div></div>
 <p class="note no-print" id="panel-3-print-note">紙や PDF にするときは、「戻る」で「結果」のページに戻り、「全部を印刷する」を押してください。この書類の点検の結果も入ります。</p>
-</div></section>
+</div>
+</section>
+</section>
 <section id="panel-tools" hidden><div class="pg" id="pg-tools">
 <details class="other-tools" id="other-tools">
 <summary class="no-print"><h2>ここからは別の道具</h2><span class="other-tools-sub">A 文の置き換え・B AI の候補の読み込み</span></summary>
@@ -1042,6 +1067,8 @@
 <button type="button" id="bid-run">確認する</button>
 <button type="button" id="confirm-go">この内容で結果を見る</button>
 <button type="button" id="next-step-3">次へ: 書類を確かめる</button>
+<button type="button" id="ledger-run" hidden>台帳を点検する</button>
+<button type="button" id="plan-run" hidden>目次を点検する</button>
 <button type="button" id="awarded-conditions" hidden>条件を入れる</button>
 <button type="button" id="entry-back" hidden>入口に戻る</button>
 </nav>

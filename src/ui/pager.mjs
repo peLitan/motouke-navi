@@ -21,13 +21,23 @@ export const PAGES = {
     ['pg-2-candidates', '安全の候補', 'safety-result-title'],
     ['pg-2-save', '結果を残す', 'save-title'],
   ],
-  3: [['pg-3', '書類', 'ledger-title']],
+  // 書類の6ページ(F86h)
+  3: [
+    ['pg-3', '台帳を入れる', 'ledger-title'],
+    ['pg-3-diagram', '施工体系図', 'diagram-title'],
+    ['pg-3-check', '台帳の候補', 'check-title'],
+    ['pg-3-table', '記載事項の表', 'checklist-title'],
+    ['pg-3-plan', '目次を入れる', 'plan-title'],
+    ['pg-3-plan-result', '目次の候補', 'plan-result-title'],
+  ],
   tools: [['pg-tools', '別の道具', 'tools-title']],
   ref: [['pg-ref', '使った資料', 'ref-title']],
 };
 // 一覧の最後のページの右の席。席はどのページでも1つだけ見える
 const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'entry-back', tools: 'entry-back', ref: 'entry-back' };
-const SEATS = ['pg-next', 'awarded-conditions', ...new Set(Object.values(LAST_SEAT))];
+// 一覧の途中で主のボタンが右の席に出るページ。押すと点検して次のページへ進む(F86h)
+const PAGE_SEAT = { 'pg-3-diagram': 'ledger-run', 'pg-3-plan': 'plan-run' };
+const SEATS = ['pg-next', 'awarded-conditions', ...Object.values(PAGE_SEAT), ...new Set(Object.values(LAST_SEAT))];
 // 一覧の1ページ目の「戻る」の行き先(group が null なら入口)。last は行き先の一覧の最後のページへ着く印
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
 // そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
@@ -45,7 +55,11 @@ const LINK_PAGE = {
   'pg-2-safety': ['safety-heading', 'safety-fold', 'safety-questions', 'safety-q-subcontract', 'safety-q-workers', 'safety-q-plan', 'safety-q-works'],
   'pg-2-candidates': ['safety-result'],
   'pg-2-save': ['summary'],
-  'pg-3': ['panel-3', 'check-result', 'plan-result'],
+  'pg-3': ['panel-3', 'ledger-file-status'],
+  'pg-3-check': ['check-result'],
+  'pg-3-table': ['checklist-result'],
+  'pg-3-plan': ['plan-file-status'],
+  'pg-3-plan-result': ['plan-result'],
 };
 
 // 段取りの全部の行(F86f): 結果の一覧を段取りの1ページだけにする。右の席は「条件を入れる」、「戻る」は入口
@@ -92,6 +106,8 @@ export function pageOfLink(id) {
   return index < 0 ? null : { group: Number(group), index };
 }
 export const seatOf = (group, index) => {
+  const seat = PAGE_SEAT[listOf(group)?.[index]?.[0]];
+  if (seat) return seat;
   if (index < lastIndex(group)) return 'pg-next';
   return group === 2 && scheduleOnly ? 'awarded-conditions' : LAST_SEAT[group];
 };

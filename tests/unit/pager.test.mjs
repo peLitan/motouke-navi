@@ -13,7 +13,7 @@ const printCss = css.match(/@media print \{([\s\S]*)\n {2}\}/)[1];
 const screenCss = css.slice(0, css.indexOf('@media print'));
 const pager = () => import('../../src/ui/pager.mjs');
 
-const SEATS = ['pg-next', 'bid-run', 'confirm-go', 'next-step-3', 'entry-back'];
+const SEATS = ['pg-next', 'bid-run', 'confirm-go', 'next-step-3', 'ledger-run', 'plan-run', 'entry-back'];
 const allPages = async () => Object.values((await pager()).PAGES).flat().map(([id]) => id);
 const seen = (page, ids) => ids.filter((id) => !page.el(id).hidden);
 // 右の席は1つだけ見える。bid-run などの主のボタンも同じ席に出る
@@ -67,7 +67,17 @@ test('押していくと順にページが替わり、右の席のボタンは1�
   await page.click('confirm-go');
   await assertOn(page, 'pg-2-top', 'pg-next');
   await page.click('next-step-3');
-  await assertOn(page, 'pg-3', 'entry-back');
+  await assertOn(page, 'pg-3', 'pg-next'); // F86h: 書類は6ページで、2/6 と 5/6 の右の席は点検のボタン
+  await page.click('pg-next');
+  await assertOn(page, 'pg-3-diagram', 'ledger-run');
+  await page.click('ledger-run');
+  await assertOn(page, 'pg-3-check', 'pg-next');
+  await page.click('pg-next');
+  await assertOn(page, 'pg-3-table', 'pg-next');
+  await page.click('pg-next');
+  await assertOn(page, 'pg-3-plan', 'plan-run');
+  await page.click('plan-run');
+  await assertOn(page, 'pg-3-plan-result', 'entry-back');
   await page.click('entry-back');
   assertEntry(page);
 });
@@ -80,7 +90,7 @@ test('見本で入口から書類まで押して進める。結果と書類の�
   await assertOn(page, 'pg-2-top', 'pg-next');
   assert.ok(page.text('bid-result').length > 0, '結果が書かれない');
   await page.click('next-step-3');
-  await assertOn(page, 'pg-3', 'entry-back');
+  await assertOn(page, 'pg-3', 'pg-next');
   assert.ok(page.el('ledger-input').value.length > 0, '見本の台帳が入っていない');
 });
 
@@ -89,7 +99,7 @@ test('戻るの行き先: 条件 → 入口、確かめ → 条件、結果 → 
   await page.click('sample-load');
   await page.click('confirm-go');
   await page.click('next-step-3');
-  await assertOn(page, 'pg-3', 'entry-back');
+  await assertOn(page, 'pg-3', 'pg-next');
   assert.equal(page.el('pg-back').hidden, false);
   assert.equal(page.el('confirm-back').hidden, true);
   await page.click('pg-back');
@@ -165,7 +175,7 @@ test('#main のリンクは既定の動きを止めてページを替え、行�
   page.el('main').dispatchEvent({ type: 'click', bubbles: false, preventDefault: () => { stopped += 1; }, target: { closest: () => anchor } });
   assert.equal(stopped, 1);
   assert.deepEqual(moved, ['start']);
-  await assertOn(page, 'pg-3', 'entry-back');
+  await assertOn(page, 'pg-3-check', 'pg-next'); // F86h: 候補は書類 3/6
 });
 
 test('一覧に2ページ以上あるときの動き: 次へ・前へ・端で外へ・今のページの覚え・右の席の文', async () => {

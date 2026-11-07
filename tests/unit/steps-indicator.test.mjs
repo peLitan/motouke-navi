@@ -149,7 +149,7 @@ test('「1.」の見出しの番号は画面で隠し紙に残す。3-1・3-2 �
   assert.match(css.slice(0, css.indexOf('@media print')), /(^|\n)\s*\.print-num \{ display: none; \}/);
   assert.match(printCss, /\.print-num \{ display: inline; \}/);
   assert.match(body, /<h2 id="ledger-title" tabindex="-1">施工体制台帳の点検<\/h2>/);
-  assert.match(body, /<h2>施工計画書の目次の点検<\/h2>/);
+  assert.match(body, /<h2 id="plan-title" tabindex="-1">施工計画書の目次の点検<\/h2>/); // F86h: 目次を入れるページの見出しにした
 });
 
 test('古い番号の語が画面の文に無い', () => {

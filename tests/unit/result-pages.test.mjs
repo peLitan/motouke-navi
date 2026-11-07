@@ -176,7 +176,7 @@ test('飛び先: 結果の中のリンクは行き先のあるページへ替わ
   const cases = { 'open-items': 'pg-2-open', 'bid-result': 'pg-2-need', 'taicho-result': 'pg-2-need', 'bid-item-x': 'pg-2-need', 'schedule-heading': 'pg-2-schedule', 'schedule-result': 'pg-2-schedule',
     'safety-fold': 'pg-2-safety', 'safety-heading': 'pg-2-safety', 'safety-q-works': 'pg-2-safety', 'safety-result': 'pg-2-candidates', summary: 'pg-2-save' };
   for (const [id, pg] of Object.entries(cases)) assert.equal(PAGES[2][pageOfLink(id).index][0], pg, id);
-  assert.deepEqual(pageOfLink('check-result'), { group: 3, index: 0 }, 'F86f: まとめのリンクの行き先は全部表に載せる');
+  assert.deepEqual(pageOfLink('check-result'), { group: 3, index: 2 }, 'F86f: まとめのリンクの行き先は全部表に載せる'); // F86h: 候補は書類 3/6
   // 表の id はどれも実際にそのページにある(動的な項目の id と問いの id の頭を除く)
   for (const [id, pg] of Object.entries(cases)) {
     if (id === 'bid-item-x') continue;

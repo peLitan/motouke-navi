@@ -1322,7 +1322,13 @@ function outsideNotice(doc) {
     const opened = OPENED(openFold(doc, 'rules-more'));
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }
-  if (isShown(doc, 'panel-3')) return ['ledger-file-status', USE_FRAME + 'この段の枠: ' + ['ledger-file', 'plan-file'].map((id) => frameName(doc, id)).filter(Boolean).join('・') + '。'];
+  if (isShown(doc, 'panel-3')) {
+    // 知らせの欄は枠のあるページにある(F86h)。台帳の側のページなら台帳の枠へ、目次の側のページなら目次の枠へ
+    const { group, index } = currentPage();
+    const status = group === 3 && index >= pageOfLink('plan-file-status').index ? 'plan-file-status' : 'ledger-file-status';
+    showPageOf(doc, status);
+    return [status, USE_FRAME + 'この段の枠: ' + ['ledger-file', 'plan-file'].map((id) => frameName(doc, id)).filter(Boolean).join('・') + '。'];
+  }
   if (isShown(doc, 'entry')) return ['drop-status', NOT_READ_DROP + '公告の PDF と条件のファイル(.json)は「公告を読み込む」のタイルにドラッグしてください。台帳の Excel などは段3「書類を確かめる」の枠にドラッグします。'];
   // 入力の確かめの画面には枠が無い
   return ['drop-status', NOT_READ_DROP + 'この画面にはファイルの枠がありません。公告の PDF と条件のファイル(.json)は段1「条件を入れる」の「公告から拾った条件を読み込む」で読み込みます。'];
@@ -1483,7 +1489,8 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('print-all-btn', () => printAll(doc, win));
     on('awarded-print-all', () => printAll(doc, win, setScheduleStatus));
     on('csv-btn', () => exportCsv(doc));
-    on('ledger-run', () => runLedgerCheck(doc));
+    // 右の席(F86h): 候補のページを開いてから点検する(知らせの欄が見えている間に書く)
+    on('ledger-run', () => { showPageOf(doc, 'check-result'); runLedgerCheck(doc); });
     on('check-csv-btn', () => exportCheckCsv(doc));
     on('checklist-csv-btn', () => exportChecklistCsv(doc));
     // 記載事項の表の「確認した」(表は描き直すので、枠で受ける)
@@ -1525,7 +1532,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (!f) return;
       readPortFile(doc, 'intake-load', f).then(() => { intakeFile.value = ''; });
     });
-    on('plan-run', () => runPlanCheck(doc));
+    on('plan-run', () => { showPageOf(doc, 'plan-result'); runPlanCheck(doc); });
     on('plan-csv-btn', () => exportPlanCsv(doc));
     // 目次を変えたら、前の点検の結果は書き出さない
     const planEl = doc.getElementById('plan-input');

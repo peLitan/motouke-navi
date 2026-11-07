@@ -49,7 +49,7 @@ test('確かめの戻るは下の帯の「戻る」で、次にすることの�
   assert.ok(SCREEN['src/ui/view.mjs'].includes("'「条件を入れる」に戻る'"), '戻る先の段の名前が変わっている');
   const panel3 = html.slice(html.indexOf('<section id="panel-3"'), html.indexOf('<details class="other-tools'));
   const h2 = [...panel3.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((m) => m[1]);
-  assert.deepEqual(h2.slice(0, 2), ['施工体制台帳の点検', '施工計画書の目次の点検']);
+  assert.deepEqual(h2.slice(0, 5), ['施工体制台帳の点検', '施工体系図', '台帳の候補', '施工計画書の目次の点検', '目次の候補']); // F86h: ページの見出しが増えた
   assert.ok(SCREEN['src/ui/view.mjs'].includes("'理由を見る'"), '「理由を見る」が無くなっている');
 });
 

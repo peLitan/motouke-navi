@@ -10,7 +10,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const html = buildHtml();
 const body = html.slice(html.indexOf('<body>'));
 // 「1.」は紙だけの .print-num の中(F86b)。紙の字のまま読む
-const h2s = [...body.replace(/<span class="print-num">([^<]*)<\/span>/g, '$1').matchAll(/<h2(?: id="(?:bid|result|ledger|tools)-title" tabindex="-1")?>([^<]*)<\/h2>/g)].map((m) => m[1]);
+const h2s = [...body.replace(/<span class="print-num">([^<]*)<\/span>/g, '$1').matchAll(/<h2(?: id="(?:bid|result|ledger|plan|tools)-title" tabindex="-1")?>([^<]*)<\/h2>/g)].map((m) => m[1]);
 
 test('h1 のすぐ後に「このツールでできること」と3つの箇条がある', () => {
   const h1 = body.indexOf('<h1>');

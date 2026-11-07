@@ -178,13 +178,13 @@ test('まとめの全部のリンクは id → ページの表に載り、押す
   const links = [...new Set([...page.el('summary').innerHTML.matchAll(/href="#([\w-]+)"/g)].map((m) => m[1]))];
   assert.ok(links.length >= 7, links.join(' '));
   for (const id of ['open-items', 'taicho-result', 'schedule-result', 'safety-heading', 'check-result', 'plan-result']) assert.ok(links.includes(id), id);
-  const WHERE = { 'open-items': 'pg-2-open', 'taicho-result': 'pg-2-need', 'schedule-result': 'pg-2-schedule', 'safety-heading': 'pg-2-safety', 'check-result': 'pg-3', 'plan-result': 'pg-3' };
+  const WHERE = { 'open-items': 'pg-2-open', 'taicho-result': 'pg-2-need', 'schedule-result': 'pg-2-schedule', 'safety-heading': 'pg-2-safety', 'check-result': 'pg-3-check', 'plan-result': 'pg-3-plan-result' }; // F86h: 書類を分けたので候補のページへ
   for (const id of links) {
     const want = WHERE[id] ?? (id.startsWith('bid-item-') ? 'pg-2-need' : null);
     assert.ok(want, '表に無い行き先: ' + id);
     await clickLink(page, id);
     assert.equal(page.el(want).hidden, false, id + ' で ' + want + ' が見えない');
-    if (want === 'pg-3') assert.equal(page.el('panel-3').hidden, false, id);
+    if (want.startsWith('pg-3')) assert.equal(page.el('panel-3').hidden, false, id);
     else assert.deepEqual(shownPages(page), [want], id);
     await page.click('pg-back');
     assert.equal(page.el('panel-2').hidden, false, id);

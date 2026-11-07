@@ -21,7 +21,7 @@ function assertOn(page, n) {
   assert.deepEqual(shown(page), ['panel-' + n]);
   assert.deepEqual(current(page), ['step-' + n]);
   assert.equal(page.el('entry').hidden, true, 'タイルが残っている');
-  assert.equal(page.el('entry-back').hidden, n !== 3, '入口に戻るは書類のページの右の席だけ'); // F86a: 下の帯の席に移した
+  assert.equal(page.el('entry-back').hidden, n !== 3 || page.el('pg-3-plan-result').hidden, '入口に戻るは書類の最後のページの右の席だけ'); // F86a: 下の帯の席に移した。F86h: 書類は6ページ
 }
 
 // 入力の確かめ: 段の1つではなく段1 の中の画面。段階の印は 1 のまま
@@ -115,6 +115,8 @@ test('段の移り方: 確認する→確かめ→段2、次へ→段3、下の�
   await page.click('bid-run');
   await page.click('confirm-go');
   await page.click('next-step-3');
+  for (const id of ['pg-next', 'ledger-run', 'pg-next', 'pg-next', 'plan-run']) await page.click(id); // F86h: 入口に戻るは最後のページ
+  assertOn(page, 3);
   await page.click('entry-back');
   assert.deepEqual(shown(page), []);
   assert.deepEqual(current(page), ['step-0']);
