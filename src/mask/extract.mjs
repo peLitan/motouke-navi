@@ -61,7 +61,9 @@ async function inflateRaw(data, limit) {
 }
 
 // 読めないときの文。画面にそのまま出るので、zip の語を使わない(F83a2)
-const NOT_OFFICE = '.docx・.xlsx として読めません(壊れているか、別の形のファイルです)。保存し直すか、元のファイルをもらってください。';
+// 頭の語は台帳の口(src/ledger-xlsx.mjs)が言い換えるので、分けて出す(F84c)
+export const NOT_OFFICE_HEAD = '.docx・.xlsx として読めません';
+const NOT_OFFICE = NOT_OFFICE_HEAD + '(壊れているか、別の形のファイルです)。保存し直すか、元のファイルをもらってください。';
 
 // zip の中央ディレクトリを読み、名前 → 取り出す関数 の表を返す
 export function listZip(bytes) {

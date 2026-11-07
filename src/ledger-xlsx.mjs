@@ -10,7 +10,7 @@
 //
 // 返り値: { ledger, unreadable: [{ key, field, reason, cause, raw? }], found: { key: { label, value } }, form, sheet }
 //   ledger は src/ledger-text.mjs の parseLedgerText と同じ形({ project, prime, subcontractors, warnings })
-import { openXlsx, cellValue, colIndex } from './mask/extract.mjs';
+import { openXlsx, cellValue, colIndex, NOT_OFFICE_HEAD } from './mask/extract.mjs';
 import { parseAmount, parseDate, parsePeriod } from './ledger-text.mjs';
 
 const MAX_FILE = 30 * 1024 * 1024;
@@ -137,6 +137,14 @@ const toBytes = (data) => {
   throw new Error('ファイルの中身が読めません(バイトの並びを渡してください)');
 };
 
+// 読めなかったときの文(F84c)。この口で読むのは .xlsx だけなので、部品の「.docx・.xlsx として読めません」は頭の語を言い換え、
+// ほかの理由は「: 」でつなぐ。理由と次の手の文は変えない
+function notXlsxMessage(e) {
+  const reason = String(e?.message ?? e);
+  const why = reason.startsWith(NOT_OFFICE_HEAD) ? reason.slice(NOT_OFFICE_HEAD.length) : ': ' + reason.replace(/。?$/, '。');
+  return 'Excel(.xlsx)として読めません' + why + '.xls(古い形式)は Excel で .xlsx に保存し直してください。';
+}
+
 export async function readLedgerXlsx(data) {
   const bytes = toBytes(data);
   if (bytes.length > MAX_FILE) throw new Error('ファイルが大きすぎます(上限 ' + (MAX_FILE / 1024 / 1024) + 'MB)');
@@ -144,7 +152,7 @@ export async function readLedgerXlsx(data) {
   try {
     book = await openXlsx(bytes);
   } catch (e) {
-    throw new Error('Excel(.xlsx)として読めません: ' + (e && e.message ? e.message : String(e)) + '。.xls(古い形式)は Excel で .xlsx に保存し直してください');
+    throw new Error(notXlsxMessage(e));
   }
   const sheets = book.sheets.map((s) => ({ name: s.name, ...readSheet(s.xml, book.shared) }));
 

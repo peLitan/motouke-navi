@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-MYySEU5mmUTc8B1783fQg9zsAcFvHpgnQGAXo+/VUv4='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5qwQ8AfSNgaMty7jaC5CVoAPaSCxq/C6eo6A/hesQuM='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -4875,7 +4875,9 @@ async function inflateRaw(data, limit) {
 }
 
 // 読めないときの文。画面にそのまま出るので、zip の語を使わない(F83a2)
-const NOT_OFFICE = '.docx・.xlsx として読めません(壊れているか、別の形のファイルです)。保存し直すか、元のファイルをもらってください。';
+// 頭の語は台帳の口(src/ledger-xlsx.mjs)が言い換えるので、分けて出す(F84c)
+const NOT_OFFICE_HEAD = '.docx・.xlsx として読めません';
+const NOT_OFFICE = NOT_OFFICE_HEAD + '(壊れているか、別の形のファイルです)。保存し直すか、元のファイルをもらってください。';
 
 // zip の中央ディレクトリを読み、名前 → 取り出す関数 の表を返す
 function listZip(bytes) {
@@ -5129,7 +5131,7 @@ async function extractFile(name, data, { onProgress } = {}) {
 
 const extractText = async (name, data) => (await extractFile(name, data)).text;
 
-return { MASK_FILE_TYPES, decodeText, listZip, unescapeXml, colIndex, openXlsx, cellValue, extractFile, extractText };
+return { MASK_FILE_TYPES, decodeText, NOT_OFFICE_HEAD, listZip, unescapeXml, colIndex, openXlsx, cellValue, extractFile, extractText };
 })();
 __m["src/ledger-xlsx.mjs"] = (function () {
 // 台帳の Excel の読み込み(F04c): 国交省の「施工体制台帳(作成例)」の様式の .xlsx を、そのまま読んで台帳の入力の形にする。
@@ -5144,7 +5146,7 @@ __m["src/ledger-xlsx.mjs"] = (function () {
 //
 // 返り値: { ledger, unreadable: [{ key, field, reason, cause, raw? }], found: { key: { label, value } }, form, sheet }
 //   ledger は src/ledger-text.mjs の parseLedgerText と同じ形({ project, prime, subcontractors, warnings })
-const { openXlsx, cellValue, colIndex } = __m["src/mask/extract.mjs"];
+const { openXlsx, cellValue, colIndex, NOT_OFFICE_HEAD } = __m["src/mask/extract.mjs"];
 const { parseAmount, parseDate, parsePeriod } = __m["src/ledger-text.mjs"];
 
 const MAX_FILE = 30 * 1024 * 1024;
@@ -5271,6 +5273,14 @@ const toBytes = (data) => {
   throw new Error('ファイルの中身が読めません(バイトの並びを渡してください)');
 };
 
+// 読めなかったときの文(F84c)。この口で読むのは .xlsx だけなので、部品の「.docx・.xlsx として読めません」は頭の語を言い換え、
+// ほかの理由は「: 」でつなぐ。理由と次の手の文は変えない
+function notXlsxMessage(e) {
+  const reason = String(e?.message ?? e);
+  const why = reason.startsWith(NOT_OFFICE_HEAD) ? reason.slice(NOT_OFFICE_HEAD.length) : ': ' + reason.replace(/。?$/, '。');
+  return 'Excel(.xlsx)として読めません' + why + '.xls(古い形式)は Excel で .xlsx に保存し直してください。';
+}
+
 async function readLedgerXlsx(data) {
   const bytes = toBytes(data);
   if (bytes.length > MAX_FILE) throw new Error('ファイルが大きすぎます(上限 ' + (MAX_FILE / 1024 / 1024) + 'MB)');
@@ -5278,7 +5288,7 @@ async function readLedgerXlsx(data) {
   try {
     book = await openXlsx(bytes);
   } catch (e) {
-    throw new Error('Excel(.xlsx)として読めません: ' + (e && e.message ? e.message : String(e)) + '。.xls(古い形式)は Excel で .xlsx に保存し直してください');
+    throw new Error(notXlsxMessage(e));
   }
   const sheets = book.sheets.map((s) => ({ name: s.name, ...readSheet(s.xml, book.shared) }));
 
