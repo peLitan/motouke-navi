@@ -553,12 +553,21 @@ export function exportScheduleCsv(doc) {
   setScheduleStatus(doc, 'CSV をこの端末に保存しました(Excel で開けます。外へは送っていません)。');
 }
 
+// 知らせを書くと、その下の物は下へ動く。押したボタンや入力が下に止まる帯の裏へ隠れないよう、画面に入れ直す(F84g)。
+// 帯の分の余白は html の scroll-padding-bottom が取る。文字を打っている欄は動かさない
+function keepFocusInView(doc) {
+  const focused = doc.activeElement;
+  if (focused?.tagName === 'BUTTON' || focused?.type === 'file') focused.scrollIntoView?.({ block: 'nearest' });
+}
+
 function setExportStatus(doc, text) {
   const el = doc.getElementById('export-status');
   if (!el) return;
   el.textContent = text;
-  // 押したボタンから離れた所に出るので、書いたら画面に入れる(幅390 で見えないままにしない)
-  if (text) el.scrollIntoView?.({ block: 'nearest' });
+  if (!text) return;
+  // 押したボタンから離れた所に出るので、書いたら画面に入れる(幅390 で見えないままにしない)。焦点は最後に入れ直す
+  el.scrollIntoView?.({ block: 'nearest' });
+  keepFocusInView(doc);
 }
 
 // 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)。
@@ -1405,6 +1414,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
       if (!f) return;
       await readPortFile(doc, 'rules-load', f);
       rulesFile.value = '';
+      keepFocusInView(doc);
     });
     const intakeFile = doc.getElementById('intake-load');
     if (intakeFile) intakeFile.addEventListener('change', () => {
