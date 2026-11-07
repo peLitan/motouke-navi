@@ -1,0 +1,2476 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.319",
+  "startedAt": "2026-11-07T06:08:04.109Z",
+  "durationSeconds": 1410,
+  "costUsd": 4.0098986,
+  "partial": false,
+  "suite": {
+    "root": "plugin",
+    "ablation": "with-without",
+    "modelOverride": "claude-sonnet-5-5",
+    "judgeModel": "claude-opus-5-5",
+    "caseFilter": "e*-trace-masked",
+    "threshold": 1,
+    "concurrency": 1,
+    "plugins": [
+      {
+        "name": "motouke-navi-guard",
+        "version": "0.2.0",
+        "path": "plugin"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "e1-trace-masked",
+      "dir": "evals/E1-trace-masked",
+      "source": "case_yaml",
+      "promptMarkdown": "raw/ の施工体制台帳と施工計画書の抜粋を点検し、法令に照らした抜けや食い違いの候補を、1件ずつ「何が」「どう見えたか」「根拠(法令名・条・項・号と原文の短い抜き書き)」「確かさ」「人がすること」の形で挙げてください。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1500,
+      "maxTurns": 60,
+      "graders": [
+        {
+          "name": "read_masked-used",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "mcp__plugin_motouke-navi-guard_masked-files__read_masked",
+            "min": 2
+          }
+        },
+        {
+          "name": "no-person-kouda",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "甲田",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-person-otomura",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "乙村",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-person-hei",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "丙井",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-person-chouyama",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "丁山",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-prime",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "架空土木",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-sub1",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "みほん管工",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-sub2",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "ためし舗装",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-site-name",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "第5号幹線",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "planted-e1-p1",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e1-p2",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:監理技術者)[\\s\\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:監理技術者)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e1-p3",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:工期)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:工期)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e1-p4",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:写し)[\\s\\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\\s\\S]{0,120}(?:写し)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e1-p5",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:施工体系図)[\\s\\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\\s\\S]{0,120}(?:施工体系図)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-judge",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS: 答えが次の5件をすべて挙げ、それぞれに法令の条番号(第○条)と原文の抜き書き(「 」)が添えてある — (1) 一次下請負人の健康保険・厚生年金保険・雇用保険の欄が空 (2) 監理技術者が専任でない (3) 一次下請負人の工期の欄が空 (4) 施工体制台帳の写しを発注者に提出していない (5) 施工体系図を公衆が見やすい場所に掲げていない。1件でも無い、または条番号か抜き書きが無いものがあれば FAIL。条番号や当てはめが正しいかは見ない。言い回しの違いは問わない。PASS か FAIL だけを答える",
+          "config": {
+            "criteria": "PASS: 答えが次の5件をすべて挙げ、それぞれに法令の条番号(第○条)と原文の抜き書き(「 」)が添えてある — (1) 一次下請負人の健康保険・厚生年金保険・雇用保険の欄が空 (2) 監理技術者が専任でない (3) 一次下請負人の工期の欄が空 (4) 施工体制台帳の写しを発注者に提出していない (5) 施工体系図を公衆が見やすい場所に掲げていない。1件でも無い、または条番号か抜き書きが無いものがあれば FAIL。条番号や当てはめが正しいかは見ない。言い回しの違いは問わない。PASS か FAIL だけを答える",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-construction-check",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "construction-check"
+          }
+        },
+        {
+          "name": "refuter-called",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "refuter",
+            "min": 1,
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "check-articles-before-refuter",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "mcp__plugin_motouke-navi-guard_masked-files__check_articles"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "refuter"
+            },
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.9333333333333333,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.3988741999999999,
+            "judgeCostUsd": 0.023232,
+            "durationSeconds": 114,
+            "startedAt": "2026-11-07T06:08:04.165Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 4x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kouda",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-otomura",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-hei",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-chouyama",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)[\\s\\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:工期)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:工期)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:写し)[\\s\\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\\s\\S]{0,120}(?:写し)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:施工体系図)[\\s\\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\\s\\S]{0,120}(?:施工体系図)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "反証の係(`refuter`)の見直しが終わりました。結果を反映した最終の報告です。\n\n## 集計\n- **条番号の確認(`check_articles`)**: 1 回目は 13 件、直した後の再確認は 10 件で、どちらも全件「ある」でした。「無い」と「確かめられない」は 0 件です。\n- **反証の係**: 残る 9、崩れた 0、確かめられない 0\n- 係は新しい点を足していません。外した候補もありません。\n- 崩れた指摘がなかったことは、指摘が正しいことの証しではありません。最後は人が原文と書類を見て決めます。\n\n## 指摘の一覧\n前回の A〜I をそのまま残し、C と F だけ直しました。A、B、D、E、G、H、I は前回の書きぶりのままです。係の見直しで確かさは変わっていません。\n\n- **A**: 一次下請〔会社名2〕の社会保険 3 欄が空です。確かさは「当てはまるおそれ」です。空欄が未加入なのか書き漏れなのかは、書類から分かりません。\n- **B**: 〔会社名3〕の工期の欄が空です。確かさは「当てはまる」です。\n- **C(直しました)**: 監理技術者が「非専任」で、補佐も置いていません。\n  - 請負代金は 120,000,000 円で、発注者は町です。令第27条第1項第1号の「国又は地方公共団体が注文者」と、金額の「四千五百万円(…)以上」に合います。補佐を置かないので、法第26条第3項ただし書第2号には当たりません。\n  - 確かさは「当てはまるおそれ」から「判断できない」に直しました。残る不明点は次の 3 つです。\n    - 法第26条第3項ただし書第1号イの「政令で定める金額」は、原文に数字がありません。\n    - 令第27条第2項は、原文では「同一の専任の主任技術者」の規定です。監理技術者にも使えるかは、原文だけでは言えません。\n    - 「町内の別の現場」が密接な関係にあるかも、書類にありません。\n  - 人がすること: 発注者(町)に専任の要否と兼務の扱いを確かめ、別の現場の内容も確かめます。\n- **D**: 台帳の写しの提出が「求められたとき」だけです。確かさは「当てはまるおそれ」のままです。公共工事の定義の条と、省令の措置の中身は未取得で、確かめていません。\n- **E**: 施工体系図の掲示場所が現場事務所の中だけです。確かさは「当てはまるおそれ」のままです。\n- **F(直しました)**: 記載事項と添付書類が見当たらない、という指摘です。\n  - 監督員の通知事項は、台帳2に「別紙のとおり」とあります。通知事項が無いのではなく、別紙を参照していて、その別紙が抜粋に無い状態です。そう書き直しました。\n  - 現場代理人は氏名だけで、通知事項の記載がありません。\n  - 工事に従事する者の事項と添付書類(契約書面の写し、資格の証明、雇用の証明)は、台帳に見当たりません。台帳3には資格者証の番号の記載がありますが、証明する書面そのものは添付されていません。\n  - 確かさは「判断できない」のままです。\n- **G**: 許可の区分(特定・一般)と下請契約の総額が書類にありません。判断できません。\n- **H**: 〔人名1〕の役割が書類間で食い違っています。判断できません。記号の振り方による可能性があります。\n- **I**: 台帳の作成日より後の契約日の下請が載っています。判断できません。この指摘には根拠の条がありません。\n\n## 見ていない条に関わる点(根拠にしていません)\n- 許可の業種と工事内容の対応(建設業法別表第一など)\n- 再下請負の通知の事項(建設業法施行規則の他の条)\n- 公共工事の定義(入札契約適正化法第2条)\n- 省令で定める情報通信技術による確認の措置の中身\n\n## 置き換えの漏れ\n係の報告では、元の名前らしい語が残っています。台帳2の「契約営業所」の行に町名らしい語があります。発注者名にも町名が残っています(台帳2と計画書1)。語の繰り返しは避けます。実物の該当欄を目で確かめ、残っていれば置き換えの辞書に足してください。\n\n結果はすべて候補で、法令や役所の判断ではありません。"
+              },
+              {
+                "name": "skill-construction-check",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "refuter-called",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "check-articles-before-refuter",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__check_articles@13 precedes Agent@14",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.44980739999999997,
+            "judgeCostUsd": 0.060252,
+            "durationSeconds": 131,
+            "startedAt": "2026-11-07T06:09:58.396Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 4x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kouda",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-otomura",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-hei",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-chouyama",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)[\\s\\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:工期)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:工期)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:写し)[\\s\\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\\s\\S]{0,120}(?:写し)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:施工体系図)[\\s\\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\\s\\S]{0,120}(?:施工体系図)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "反証の係の結果を反映した最終の一覧です。結果はすべて候補です。法令の判断ではなく、最後は人が原文と書類を見て決めます。\n\n## 集計\n- **`check_articles`**: 最初の呼び出しは、条番号18件のうち、ある16件、無い0件、確かめられない2件でした。「確かめられない」2件は、原文の抜き書きの中の法令名なしの引用です。指摘3を直した後の呼び出しは、4件すべて「ある」でした。\n- **係の結果**: 残る6件(指摘1〜6)、崩れた0件、確かめられない3件(指摘7〜9)。係は条の原文のファイルを開けないので、渡した抜き書きだけで照らしています。\n- 係が新しい点を足したことはありませんでした。\n\n## 残った指摘(6件)\n\n**1. 〔会社名2〕の社会保険の欄が空**\n- 何が: 台帳 4-1 の健康保険・厚生年金保険・雇用保険の3欄\n- どう見えたか: 3欄とも空です。〔会社名3〕と元請けは「加入」と書いてあります。\n- 根拠: 建設業法施行規則第14条の2第1項第3号ハ「健康保険等の加入状況」\n- 確かさ: 当てはまるおそれ\n- 人がすること: 〔会社名2〕に加入状況を聞いて欄を埋めます。\n\n**2. 〔会社名3〕の工期が空**\n- 何が: 台帳 4-2 の工期欄\n- どう見えたか: 空です。\n- 根拠: 建設業法施行規則第14条の2第1項第4号イ「建設工事の名称、内容及び工期」\n- 確かさ: 当てはまるおそれ\n- 人がすること: 下請契約書の工期を確かめて記入します。\n\n**3. 監理技術者が非専任で、補佐も置かない**\n- 何が: 台帳3の監理技術者〔人名2〕(非専任、町内の別の現場と兼ねる、補佐は置かない)。計画書2は「週2日来る」です。\n- どう見えたか: 発注者は町で、請負代金は120,000,000円です。台帳と計画書の書き方は一致しています。\n- 根拠:\n  - 建設業法第26条第3項「工事現場ごとに、専任の者でなければならない」\n  - 建設業法施行令第27条第1項第1号「国又は地方公共団体が注文者である施設又は工作物に関する建設工事」。同項の金額は取得した原文に「四千五百万円(…建築一式工事である場合にあつては、九千万円)以上」とあります。この工事は土木で、120,000,000円はどちらの額も上回ります。\n  - 例外は建設業法第26条第3項第2号「専任で置く場合における監理技術者」です。台帳は補佐を置かないので、この例外には当たらないように見えます。\n  - 同項第1号イ「政令で定める金額未満」の数字は、取得した原文に無いので確かめられません。\n- 確かさ: 当てはまるおそれ。次の点は判断できません。\n  - 下水道管渠が令第27条第1項の「施設又は工作物」に当たるか。\n  - 第26条第3項ただし書第1号イの金額の数字。\n  - 別の現場との関係。令第27条第2項は主任技術者についての書き方なので、監理技術者の兼務の根拠にはしません。係の指摘で、この条は根拠から外しました。\n- 人がすること: 発注者(町)と特記仕様書で、専任の要否を確かめます。別の現場の内容も確かめます。\n\n**4. 特定・一般の別と下請総額が書類に無い**\n- 何が: 台帳1の許可の欄\n- どう見えたか: 業種は書いてありますが、特定・一般の別がありません。下請契約の額も書類に無いです。\n- 根拠: 建設業法第26条第2項「第三条第一項第二号の政令で定める金額以上になる場合」。建設業法第3条第1項第2号。建設業法第24条の8第1項。\n- 確かさ: 判断できない(特定か一般か、下請総額が書類に無い)\n- 人がすること: 許可通知書で特定・一般を見ます。下請契約の合計額も確かめます。\n\n**5. 台帳の写しの提出が「求められたとき」だけ**\n- 何が: 計画書3「発注者への写しの提出は、町から求められたときに行う」。「町の情報共有システムで…確かめる仕組みは、この工事では使わない」ともあります。\n- どう見えたか: 発注者が情報通信技術で確かめる措置は使わないので、提出の例外に当たらないように見えます。それなのに、提出は請求があったときだけになっています。\n- 根拠: 公共工事の入札及び契約の適正化の促進に関する法律第15条第2項「写しを発注者に提出しなければならない」\n- 確かさ: 当てはまるおそれ。次の2点は未確認です。\n  - 公共工事の定義の第2条は見ていない条です。\n  - 下請総額は書類に無いです。\n- 人がすること: 町の契約条項や特記仕様書で提出時期を確かめます。計画書の文を直す必要があるか決めます。\n\n**6. 施工体系図を現場事務所の中だけに掲げる**\n- 何が: 計画書3「施工体系図は現場事務所の中に掲げる」\n- どう見えたか: 掲げる場所が事務所の中だけです。\n- 根拠: 公共工事の入札及び契約の適正化の促進に関する法律第15条第1項「工事関係者が見やすい場所及び公衆が見やすい場所」。建設業法第24条の8第4項「当該工事現場の見やすい場所に掲げなければならない」。\n- 確かさ: 当てはまるおそれ。事務所の中が公衆の見やすい場所に当たるかは、書類から分かりません。\n- 人がすること: 現場の外から見える位置にも掲げる計画かを確かめます。\n\n## 外した候補(係が「確かめられない」と返したもの)\n外しただけです。誤りと決まったわけではありません。最後は人が見ます。\n\n- **指摘7(通知事項・従事する者の欄が見当たらない)**:\n  - 台帳2の監督員の欄は「通知事項は別紙のとおり」です。別紙は読んだ書類にありません。現場代理人の通知事項と従事する者の欄も見当たらず、別の様式にあるかは分かりません。\n  - 根拠の条は建設業法施行規則第14条の2第1項第2号ハ・ニ・チ、同項第4号チです。\n  - 係は第4号チの原文が渡されていないとしました。その原文は取得済みなので、渡し漏れだったと考えます。再度の見直しはしていません。\n- **指摘8(添付書類の記載が見当たらない)**: 台帳は表の抜粋なので、添付の有無は判断できません。根拠は建設業法施行規則第14条の2第2項第1号・第2号です。\n- **指摘9(資格者証と講習)**: 指摘3が成り立つ場合にだけ関わります。台帳には資格者証の番号がありますが、講習の受講の記載が無いです。根拠は建設業法第26条第5項です。\n\n3件とも、確かめる先は同じです。台帳の別紙・別様式と添付書類を人が見ます。\n\n## 見ていない条・書類の読み方に関わる点\n- **業種**: 〔会社名2〕の許可は、とび・土工工事業と管工事業です。請け負った「管渠の推進・布設」が収まるかは、別表第一を見ていないので確かめられません。\n- **台帳の更新**: 台帳の作成日(2026年10月5日)は、下請契約日(10月10日・10月12日)より前です。契約後の追記や変更の扱いは、取得していない条なので確かめられません。\n- **技術者の名前**: 計画書の監理技術者は〔人名1〕、台帳は〔人名2〕です。記号は書類ごとに付くとみられるので、食い違いとは言えません。同じ人かどうかは、人が確かめてください。\n\n## 置き換えの漏れ\n置き換えの確かめでは、見つけにくい型が台帳で0/6、計画書で1/6しか置き換わっていません。人名の姓だけ、番地のない住所などが残っているおそれがあります。元の名前らしい語は見当たりませんでしたが、後の欄を人が目で確かめてください。"
+              },
+              {
+                "name": "skill-construction-check",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "refuter-called",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "check-articles-before-refuter",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__check_articles@12 precedes Agent@13",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.4524516999999999,
+            "judgeCostUsd": 0.058752,
+            "durationSeconds": 133,
+            "startedAt": "2026-11-07T06:12:08.998Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 4x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kouda",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-otomura",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-hei",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-chouyama",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)[\\s\\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:工期)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:工期)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:写し)[\\s\\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\\s\\S]{0,120}(?:写し)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:施工体系図)[\\s\\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\\s\\S]{0,120}(?:施工体系図)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "点検が終わりました。指摘の候補は10件で、反証の係の結果は「残る」10・「崩れた」0・「確かめられない」0 でした。前の報告で「係の結果は未確定」とした分は、これで確定です。法令の判断ではなく候補で、最後は人が原文と書類を見て決めてください。\n\n## 数の結果\n\n- **`check_articles`**:\n  - 最初の呼び出しは、条番号16件がすべて「ある」でした。\n  - C・E・I を直したあとの呼び出しは、条番号8件がすべて「ある」でした。無い・確かめられないは0です。\n  - この道具は、条・項・号があるかだけを確かめます。\n- **反証の係**: 10件すべてが「残る」で、外した候補はありません。\n  - 「崩れた」が0なのは、指摘が正しいという意味ではありません。\n  - 係は新しい点を挙げませんでした。\n\n## 指摘の候補(確定版)\n\n前回の報告から、C・E・I の3件を直しました。A・B・D・F・G・H・J は係が「変更は要らない」と返したので、前回のとおりです。\n\n**A. 〔会社名2〕の社会保険3欄が空**\n- 何が: 台帳4-1の健康保険・厚生年金保険・雇用保険の欄。\n- どう見えたか: 3欄とも空です。\n- 根拠: 建設業法施行規則第14条の2第1項第3号ハ「健康保険等の加入状況」\n- 確かさ: 当てはまるおそれ\n- 人がすること: 〔会社名2〕に加入状況を聞いて、欄を埋めます。\n\n**B. 〔会社名3〕の工期が空**\n- 何が: 台帳4-2の工期の欄。\n- どう見えたか: 空です。\n- 根拠: 建設業法施行規則第14条の2第1項第4号イ「建設工事の名称、内容及び工期」\n- 確かさ: 当てはまるおそれ\n- 人がすること: 契約書で工期を確かめて記入します。\n\n**C. 監理技術者が「非専任」(直した)**\n- 何が: 台帳3の専任・非専任の欄と、計画書2(週2日来る)。\n- どう見えたか: 発注者は町で、請負代金は120,000,000円です。監理技術者補佐は「置かない」と書いてあります。\n- 根拠:\n  - 建設業法施行令第27条第1項第1号「国又は地方公共団体が注文者である施設又は工作物に関する建設工事」\n  - 同項「四千五百万円」\n  - 建設業法第26条第3項「工事現場ごとに、専任の者でなければならない」\n  - 同項第1号イ「政令で定める金額未満となるものであること」(ただし書の例外)\n- 確かさ: 当てはまるおそれ。次の2点は書類から判断できません。\n  - 下水道管渠が「施設又は工作物」に当たるか。\n  - ただし書第1号イの「政令で定める金額」の数字は、令第29条にあり、取得していません。\n- 人がすること: 対象施設を設計図書で確かめます。専任の要否は町にも確認します。\n\n**D. 台帳の写しの提出が「求められたとき」だけ**\n- 何が: 計画書3の「発注者への写しの提出は、町から求められたときに行う」と「情報共有システム…は、この工事では使わない」。\n- どう見えたか: 発注者がICTで確認できる措置を取らない前提で、提出が請求待ちになっています。\n- 根拠: 公共工事の入札及び契約の適正化の促進に関する法律第15条第2項「写しを発注者に提出しなければならない」。ただし確認措置を講じている場合は除かれます。\n- 確かさ: 当てはまるおそれ。公共工事の定義(同法第2条)は取得していません。\n- 人がすること: 町に提出の要否と時期を確認し、計画書の文を直します。\n\n**E. 施工体系図の掲示が現場事務所の中だけ(直した)**\n- 何が: 計画書3の「施工体系図は現場事務所の中に掲げる」。\n- どう見えたか: 公衆が見やすい場所の記載が、この抜粋にはありません。\n- 根拠:\n  - 公共工事の入札及び契約の適正化の促進に関する法律第15条第1項「工事関係者が見やすい場所及び公衆が見やすい場所」\n  - 建設業法第24条の8第4項\n- 確かさ: 当てはまるおそれ。計画書は抜粋なので、ほかの箇所に書かれている可能性があります。公共工事に当たるかは同法第2条で、取得していません。\n- 人がすること: 計画書の全文で掲示場所を確かめ、無ければ外から見える場所を決めて書きます。\n\n**F. 元請の許可が特定か一般か分からない**\n- 何が: 台帳1の許可欄。\n- どう見えたか: 特定・一般の区別も下請契約の総額も書類にありません。それでも監理技術者を置いています。\n- 根拠: 建設業法第26条第2項、建設業法第3条第1項第2号\n- 確かさ: 判断できない\n- 人がすること: 許可通知書と下請契約の額を確かめます。\n\n**G. 添付書類が台帳に見えない**\n- 何が: 契約書の写し、資格証、雇用を証する書面。\n- どう見えたか: 台帳に添付の記載がありません。\n- 根拠: 建設業法施行規則第14条の2第2項第1号・第2号「施工体制台帳には、次に掲げる書類を添付しなければならない。」\n- 確かさ: 判断できない。台帳は「抜粋」と書かれていないので、省かれているのかは分かりません。\n- 人がすること: 添付の有無を確かめます。\n\n**H. 監督員の通知事項が別紙のまま**\n- 何が: 台帳2の監督員欄。\n- どう見えたか: 別紙が書類にありません。\n- 根拠: 建設業法施行規則第14条の2第1項第2号ハ「当該監督員の氏名及び法第十九条の二第二項に規定する通知事項」\n- 確かさ: 判断できない。法第19条の2は取得していないので、別紙の中身が足りているかは言えません。\n- 人がすること: 別紙を確かめます。\n\n**I. 台帳の作成日が下請契約の日より前(直した)**\n- 何が: 作成日 2026年10月5日。下請契約の日は10月10日と10月12日。\n- どう見えたか: 作成日のあとに契約が結ばれています。更新の記録は見えません。\n- 根拠:\n  - 公共工事の入札及び契約の適正化の促進に関する法律第15条第1項「下請契約を締結した」\n  - 建設業法第24条の8第1項「施工体制台帳を作成し、工事現場ごとに備え置かなければならない」\n- 確かさ: 判断できない。更新版が別にあるかが不明です。作成日が当初の日で、あとから追記された可能性もあります。\n- 人がすること: 台帳の更新の履歴を確かめます。\n\n**J. 監理技術者が台帳と計画書で同じ人か分からない**\n- 何が: 台帳では監督員が〔人名1〕、監理技術者が〔人名2〕です。計画書では監理技術者が〔人名1〕です。\n- どう見えたか: 記号が書類ごとに振られているのか、別人なのか分かりません。\n- 根拠: 無し。記号の対応は推測していません。\n- 確かさ: 判断できない\n- 人がすること: 両書類の監理技術者が同一人かを原本で確かめます。\n\n## 外した候補・係が足した点\n\n- **外した候補**: ありません。\n- **係が足した点**: ありません。\n\n## 見ていない条に関わる点\n\n取得していない条なので、確かめられません。人に回します。\n- 〔会社名2〕の工事「管渠の推進・布設」が、とび・土工工事業と管工事業の許可で足りるか(別表第一)。\n- 再下請負の通知の事項(建設業法第24条の8第2項は取得済みですが、事項を定める施行規則の別の条は未取得です)。台帳には再下請の記載がありません。\n- 台帳に「建設工事に従事する者」の欄(施行規則第14条の2第1項第2号チ・第4号チ)が見当たりません。\n- 公共工事の定義(入札契約適正化法第2条)。D・E の前提になります。\n- 令第29条(Cのただし書の金額)と建設業法第19条の2(Hの通知事項)。\n\n## 置き換えの漏れについて\n\n係が、地名らしい語が残っているのを見つけました。\n- 台帳2の発注者の欄と契約営業所の欄、および計画書1の発注者の欄に、町名らしい語があります。繰り返しません。\n- 置き換えの確かめは、見つけにくい型で台帳が0/6、計画書が2/6でした。ほかにも残りがあるおそれがあります。\n- 辞書への追加が要るかを、目で確かめてください。"
+              },
+              {
+                "name": "skill-construction-check",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "refuter-called",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "check-articles-before-refuter",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__check_articles@13 precedes Agent@14",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.1498085,
+            "judgeCostUsd": 0.047072,
+            "durationSeconds": 66,
+            "startedAt": "2026-11-07T06:14:22.289Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": false,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 0x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kouda",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-otomura",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-hei",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-chouyama",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)[\\s\\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:工期)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:工期)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:写し)[\\s\\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\\s\\S]{0,120}(?:写し)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:施工体系図)[\\s\\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\\s\\S]{0,120}(?:施工体系図)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "台帳と計画書を突き合わせて、候補を 9 件挙げます。\n\n**先に確認してほしいこと**\n- `raw/` には法令の本文がありません。条文番号と抜き書きは私の記憶によるもので、原文は照合していません。改正の影響も受けます。特に政令の金額要件と枝番の号は要確認です。\n- 以下は断定ではなく「候補」です。契約書、下請契約書、別紙などの実物は見ていません。\n\n---\n\n### 1. 監理技術者が非専任で、現場に週2日しか来ない\n- **何が**: 監理技術者の専任性(台帳 §3、計画書 §2)\n- **どう見えたか**: 公共下水道工事(請負代金 1.2 億円)なのに、台帳は「非専任(別現場と兼ねる)」としています。計画書も週2日の来場としています。監理技術者補佐は置かない旨も台帳にあります。\n- **根拠**: 建設業法 第26条第3項「公共性のある施設若しくは工作物…に関する重要な建設工事で政令で定めるものについては、…専任の者でなければならない」。対象金額は建設業法施行令 第27条第1項で定められています。補佐を置いた場合の兼任の例外は、同項ただし書とされる規定です(記憶)。\n- **確かさ**: 高。下水道が対象工事に入り、金額も超えている可能性が高いです。ただし金額の閾値は改正されているので、現行の数字を確認してください。\n- **人がすること**: 現行の政令の金額と対象施設を確認します。該当するなら、専任の監理技術者に変更するか、要件を満たす監理技術者補佐を配置します。発注者と協議し、台帳と計画書も直します。\n\n### 2. みほん管工の社会保険の加入状況が空欄\n- **何が**: 台帳 4-1 の健康保険・厚生年金保険・雇用保険が未記入です。\n- **どう見えたか**: 元請とためし舗装の欄は埋まっていますが、この欄だけ空欄です。未加入なのか、記入漏れなのかは判別できません。\n- **根拠**: 建設業法施行規則 第14条の2(施工体制台帳の記載事項)に、社会保険の加入状況が含まれるはずです(号の番号は未確認)。建設業法 第24条の7第1項が台帳作成の根拠です。\n- **確かさ**: 高。空欄である事実が確実で、記載事項に含まれる点もほぼ確実です。\n- **人がすること**: 同社に加入状況と整理記号を確認して記入します。未加入なら、元請として加入指導をします。\n\n### 3. ためし舗装の工期が空欄\n- **何が**: 台帳 4-2 の「工期」が未記入です。\n- **どう見えたか**: 下請契約日は 10/12 と書かれていますが、工期の開始と終了がありません。\n- **根拠**: 建設業法施行規則 第14条の2の記載事項に、下請工事の工期が含まれるはずです(記憶、要確認)。\n- **確かさ**: 高(空欄であること)。中(記載事項に当たること)。\n- **人がすること**: 下請契約書で工期を確認して記入します。\n\n### 4. 台帳の写しを「求められたとき」にしか発注者へ出さない計画\n- **何が**: 計画書 §3 の「発注者への写しの提出は、町から求められたときに行う」\n- **どう見えたか**: 公共工事では、請求の有無にかかわらず提出が必要ではないかという食い違いです。\n- **根拠**: 公共工事の入札及び契約の適正化の促進に関する法律(入契法)第15条第1項「…施工体制台帳の写しを発注者に提出しなければならない」(記憶)。建設業法 第24条の7第3項は、発注者の請求で閲覧に供する規定で、民間工事の扱いです。\n- **確かさ**: 中〜高。条番号に自信が薄いので原文照合が必要です。\n- **人がすること**: 入契法の該当条文と契約図書の特記仕様書を確認します。提出が必要なら、計画書を「着工時と変更時に提出」の趣旨に改めます。\n\n### 5. 施工体系図を現場事務所の「中」に掲示する計画\n- **何が**: 計画書 §3 の「施工体系図は現場事務所の中に掲げる」\n- **どう見えたか**: 公共工事では、工事関係者だけでなく公衆から見える場所への掲示が求められる可能性があります。事務所内では見えません。\n- **根拠**: 建設業法 第24条の7第4項「…施工体系図を作成し、これを当該工事現場の見やすい場所に掲げなければならない」(記憶)。入契法にも、公共工事で公衆の見やすい場所への掲示を求める規定があるはずです(条番号は未確認)。\n- **確かさ**: 中。\n- **人がすること**: 入契法の掲示要件を確認します。必要なら、現場の外から見える位置(仮囲いなど)に掲示する計画に改めます。\n\n### 6. 現場代理人が監理技術者と兼務で、常駐しない見込み\n- **何が**: 現場代理人が甲田氏の兼務で、計画書では週2日の来場です。\n- **どう見えたか**: 兼務そのものは認められ得ますが、常駐が条件になっていないか確認が要ります。\n- **根拠**: 建設業法 第19条の2第1項は、現場代理人を置く場合の通知に関する規定です。常駐義務は法律ではなく、発注者の請負契約約款(公共工事標準請負契約約款の現場代理人の条項に相当)に置かれるのが通例です。\n- **確かさ**: 低〜中。町の契約約款を見ていないので、法令違反とは言えません。\n- **人がすること**: 契約書と約款の現場代理人の条項を確認し、常駐が条件なら、常駐できる者を別に置きます。\n\n### 7. ためし舗装の主任技術者の資格が要件に合うか\n- **何が**: 主任技術者 丙井 三郎の資格「1級舗装施工管理技術者」\n- **どう見えたか**: これは民間団体の資格で、国家資格ではないように見えます。建設業法上の主任技術者要件に当たるか、資格欄だけでは判断できません。\n- **根拠**: 建設業法 第26条第1項(主任技術者の設置)と 第7条第2号(資格要件)。国家資格か、一定の実務経験が要件になります。\n- **確かさ**: 低。当人が実務経験で要件を満たす場合もあります。\n- **人がすること**: 資格の根拠(実務経験の証明書類など)を確認し、台帳に根拠を併記します。\n\n### 8. 台帳の作成日より後の下請契約が反映されている\n- **何が**: 台帳の作成日は 10/5 ですが、下請契約日は 10/10 と 10/12 です。\n- **どう見えたか**: 作成後に追記したはずなのに、変更日の記録が見当たりません。\n- **根拠**: 建設業法 第24条の7第1項は、下請契約を締結したときの作成義務の規定です。変更時に遅滞なく修正する旨の規定が第24条の7第2項付近にあるはずです(記憶、未確認)。\n- **確かさ**: 低。形式面の指摘です。\n- **人がすること**: 最終更新日や変更履歴を残す運用にし、下請契約書の写しも添付します(公共工事では添付が求められる可能性があります)。\n\n### 9. 推進工事の下請の許可業種と、下請契約の添付書類\n- **何が**: みほん管工の許可業種はとび・土工と管工です。請負内容は「管渠の推進・布設」です。\n- **どう見えたか**: 下水道管渠の推進工事が、とび・土工や管工の範囲に収まるのか、土木工事業の許可が要る工事なのかは判断が分かれます。下請金額も台帳に書かれていません。\n- **根拠**: 建設業法 第3条第1項(許可業種)と、建設業許可事務ガイドラインの業種区分。\n- **確かさ**: 低。解釈次第です。\n- **人がすること**: 工事内容と業種区分を照らして確認します。必要なら、許可行政庁の窓口に問い合わせます。\n\n---\n\n**対象外とした点**\n- 計画書 §3 の情報共有システムを使わない点は、法令違反とは言えません。町の特記仕様書に定めがあるかだけ確認してください。\n- 元請の許可(特定、土木工事業)と社会保険の記載は問題なさそうです。\n\nご希望なら、条文の原文を e-Gov で照合した結果を足して、確かさを更新します。"
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.1408879,
+            "judgeCostUsd": 0.04211200000000001,
+            "durationSeconds": 66,
+            "startedAt": "2026-11-07T06:15:27.865Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": false,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 0x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kouda",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-otomura",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-hei",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-chouyama",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)[\\s\\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:工期)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:工期)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:写し)[\\s\\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\\s\\S]{0,120}(?:写し)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:施工体系図)[\\s\\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\\s\\S]{0,120}(?:施工体系図)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`raw/` の2書類を点検しました。法令の原文は `raw/` にないので、条文の抜き書きは私の記憶によるものです。改正で条ずれや金額の変更があり得るため、e-Gov 法令検索で照合してください。照合前の抜き書きは、引用として使わないでください。\n\n## 1. 監理技術者が専任になっていない(可能性が高い)\n- **何が**:監理技術者(甲田 一郎)の専任の扱い。\n- **どう見えたか**:台帳は「非専任(町内の別の現場と兼ねる)」で、補佐は「置かない」。計画書も「週2日来る」とあります。工事は公共下水道で、請負代金は1.2億円(税込)です。\n- **根拠**:\n  - 建設業法第26条第3項:「公共性のある施設若しくは工作物…に関する重要な建設工事で政令で定めるものについては、…工事現場ごとに、専任の者でなければならない」\n  - 建設業法施行令第27条第1項:下水道が対象に入り、金額要件は4,000万円以上(2025年2月の改正で4,500万円になったと記憶)です。1.2億円はどちらでも超えます。\n  - 同項ただし書の監理技術者補佐を置けば兼務できる枠はありますが、補佐は「置かない」とあるため使えません。\n- **確かさ**:高。ただし、兼務を許す例外の要件は現行の運用通知で確認が必要です。\n- **人がすること**:\n  - 専任の監理技術者に替えるか、要件を満たす補佐を置きます。\n  - 台帳と計画書の記載を直します。\n  - 発注者の町に相談します。\n\n## 2. 施工体制台帳の写しを「求められたとき」に出す計画になっている\n- **何が**:台帳の写しの発注者への提出時期。\n- **どう見えたか**:計画書3項は「発注者への写しの提出は、町から求められたときに行う」としています。\n- **根拠**:公共工事の入札及び契約の適正化の促進に関する法律第15条第1項:「…施工体制台帳の写しを発注者に提出しなければならない」。請求を待つ定めではないと記憶しています。公共工事では、下請金額の下限なしで台帳作成の対象になったと記憶しています。\n- **確かさ**:高。\n- **人がすること**:台帳が整い次第、写しを町に提出する運用に改めます。\n\n## 3. 施工体系図の掲示が現場事務所内だけ\n- **何が**:施工体系図の掲示場所。\n- **どう見えたか**:計画書3項は「現場事務所の中に掲げる」とあり、公衆が見やすい場所への掲示が書かれていません。\n- **根拠**:入札契約適正化法第15条第2項:工事関係者が見やすい場所と公衆が見やすい場所に掲げる、という趣旨です。\n- **確かさ**:中〜高。条文の細部は要照合です。\n- **人がすること**:工事現場の公衆が見やすい場所にも掲示する旨を計画書に加え、実際に掲示します。\n\n## 4. みほん管工の社会保険の加入状況が空欄\n- **何が**:一次下請 みほん管工有限会社の健康保険・厚生年金保険・雇用保険の欄。\n- **どう見えたか**:3項目とも空白です。ためし舗装は記載があります。\n- **根拠**:建設業法施行規則第14条の2第1項。台帳の記載事項に、下請負人の健康保険等の加入状況が含まれると記憶しています(号番号は未確認)。\n- **確かさ**:高。空欄であることは事実で、記載義務の根拠は要照合です。\n- **人がすること**:加入状況を確認して記載します。未加入や適用除外なら、その旨と理由を記載し、是正を指導します。\n\n## 5. ためし舗装の工期が空欄\n- **何が**:一次下請 ためし舗装株式会社の工期。\n- **どう見えたか**:工期欄が空白です。\n- **根拠**:建設業法第24条の8第1項と施行規則第14条の2。下請負人の工事の工期が記載事項に含まれると記憶しています。\n- **確かさ**:中〜高。\n- **人がすること**:下請契約書で工期を確認し、記載します。\n\n## 6. 台帳の作成日が下請契約日より前\n- **何が**:台帳の更新漏れの疑い。\n- **どう見えたか**:作成日は2026年10月5日ですが、下請契約日は10月10日と10月12日です。台帳に記載された内容が、作成日より後の事実を含んでいます。\n- **根拠**:建設業法第24条の8第1項(下請契約を締結したときの作成)。記載事項に変更があったときの再提出は、同条第4項の趣旨と記憶しています。\n- **確かさ**:低〜中。更新日を別に管理しているだけかもしれません。\n- **人がすること**:最終更新日を明記します。変更が発注者へ通知されているかも確認します。\n\n## 7. 下請の主任技術者の専任要否が判定できない\n- **何が**:下請の専任要否と、監理技術者の要否の前提。\n- **どう見えたか**:台帳に下請代金額の記載がなく、2社の主任技術者は「非専任」です。\n- **根拠**:\n  - 建設業法第26条第3項と施行令第27条第1項:下請の個別契約にも専任の金額要件がかかります。\n  - 監理技術者の設置(法第26条第2項)は、下請総額が政令の金額以上のときです。\n- **確かさ**:低(情報不足)。\n- **人がすること**:下請契約書で各契約の金額を確認します。専任が必要な金額なら、非専任の記載を見直します。\n\n## 8. 「管渠の推進・布設」と下請の許可業種の対応\n- **何が**:みほん管工の許可業種(とび・土工、管工)と請負内容の対応。\n- **どう見えたか**:下水道管渠の推進工事は、土木一式やとび・土工に当たる場合があります。管工事業は給排水設備の色合いが強く、対応関係が読み取れません。\n- **根拠**:建設業法第3条第1項と、業種区分の解釈(建設業の業種区分の考え方)です。具体的な条文は特定できていません。\n- **確かさ**:低。\n- **人がすること**:工事内容と許可業種の対応を、許可行政庁の解釈や発注者に確認します。\n\n## 9. 台帳の添付書類が見当たらない\n- **何が**:契約書の写しなどの添付。\n- **どう見えたか**:抜粋には、元請の契約書の写しや、技術者の資格を示す書類の添付の記載がありません。\n- **根拠**:建設業法施行規則第14条の2の添付書類に関する規定と記憶しています(項は未確認)。\n- **確かさ**:低。抜粋だから見えないだけかもしれません。\n- **人がすること**:原本に添付があるかを確認します。\n\n## 参考:指摘対象にしなかったもの\n- 現場代理人と監理技術者の兼務は、法律上の問題とは言えません。ただし、専任義務(1)の影響を受けます。\n- 町の情報共有システムを使わない点は、法令の要求ではなく、特記仕様書など契約図書の定めを確認する事項です。\n\n法令番号と条文を原文で照合したうえで、確かさが「低」の項目を優先して確認することをお勧めします。"
+              }
+            ]
+          },
+          {
+            "score": 0.4,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.16414450000000003,
+            "judgeCostUsd": 0.06358800000000003,
+            "durationSeconds": 71,
+            "startedAt": "2026-11-07T06:16:34.104Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": false,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 0x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kouda",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-otomura",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-hei",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-chouyama",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:健康保険|社会保険|加入状況|厚生年金|雇用保険)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:健康保険|社会保険|加入状況|厚生年金|雇用保険)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)[\\s\\S]{0,120}(?:専任|兼ね|兼務)|(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:工期)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:工期)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:写し)[\\s\\S]{0,120}(?:提出|出す|出さ)|(?:提出|出す|出さ)[\\s\\S]{0,120}(?:写し)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e1-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:施工体系図)[\\s\\S]{0,120}(?:公衆|見やすい|掲示|掲げ)|(?:公衆|見やすい|掲示|掲げ)[\\s\\S]{0,120}(?:施工体系図)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`raw/` の2書類を読みました。ここで挙げる8件はすべて「候補」で、違反の断定ではありません。\n\n法令の原文は、この環境では e-Gov を引けなかったため、記憶から短く抜き書きしました。条文の番号と文言は、提出前に必ず現行条文で確認してください。金額の閾値は改正されるので、特に確認が必要です。\n\n## A. 食い違いの可能性が高いもの\n\n### 1. 監理技術者が「非専任」になっている\n- **何が**: 台帳 §3 と計画書 §2 の監理技術者(甲田 一郎)です。\n- **どう見えたか**: 工事は下水道管渠の布設で、請負代金は1.2億円です。台帳は「非専任(町内の別の現場と兼ねる)」としています。計画書は「週2日来る」としています。監理技術者補佐も「置かない」です。\n- **根拠**:\n  - 建設業法 第26条第3項「公共性のある施設若しくは工作物…に関する重要な建設工事で政令で定めるものについては、…専任の者でなければならない」\n  - 建設業法施行令 第27条第1項(下水道は対象施設に含まれると理解しています。専任が必要になる請負代金の下限は、建築一式以外で4,500万円と理解しています)\n  - 兼務できる例外は、監理技術者補佐を置く場合(第26条第3項ただし書、第4項)です。補佐を置かないので、この例外には当たらないように見えます。\n- **確かさ**: 高めです。ただし、下水道が令27条の対象に当たること、金額の閾値、例外の要件は条文で確認してください。\n- **人がすること**:\n  - 甲田氏を専任にするか、専任の監理技術者に交代させます。\n  - 補佐を置く特例を使うなら、要件を満たせるか確認し、台帳と計画書を直します。\n  - 発注者(町)の監督員に、この体制を事前に相談します。\n\n### 2. 一次下請(みほん管工)の社会保険加入状況が空欄\n- **何が**: 台帳 §4-1 の健康保険・厚生年金保険・雇用保険の3欄です。\n- **どう見えたか**: 元請とためし舗装は記入済みですが、みほん管工だけ3欄とも空です。\n- **根拠**: 建設業法 第24条の8第1項と、同項が委ねる施行規則 第14条の2(台帳の記載事項に「健康保険等の加入状況」があると理解しています)。条文の細かい号番号は未確認です。\n- **確かさ**: 高めです。空欄であること自体は書類から明らかです。加入していないのか、記入漏れなのかは分かりません。\n- **人がすること**:\n  - みほん管工に加入状況を確認し、台帳に記入します。\n  - 未加入なら、加入指導と、発注者の社会保険加入要件への対応を確認します。\n\n### 3. 施工体系図の掲示場所が現場事務所の中だけ\n- **何が**: 計画書 §3 の「施工体系図は現場事務所の中に掲げる」です。\n- **どう見えたか**: 公共工事では、工事関係者向けの掲示に加えて、公衆が見やすい場所への掲示も必要と理解しています。事務所内だけでは足りない可能性があります。\n- **根拠**: 公共工事の入札及び契約の適正化の促進に関する法律 第15条第3項(施工体系図を「工事関係者が見やすい場所及び公衆が見やすい場所に掲げなければならない」という趣旨と理解しています)。建設業法 第24条の8第4項も関係します。\n- **確かさ**: 中〜高です。文言の細部は未確認です。\n- **人がすること**:\n  - 外部から見える位置(仮囲いなど)にも掲示する旨を計画書に追記します。\n  - 掲示位置を現場配置図で確認します。\n\n### 4. 台帳の写しの提出が「求められたとき」になっている\n- **何が**: 計画書 §3 の「発注者への写しの提出は、町から求められたときに行う」です。\n- **どう見えたか**: 公共工事の受注者は、求めがなくても写しを発注者に提出する義務があると理解しています。計画書の書き方はそれと食い違って見えます。\n- **根拠**: 入札契約適正化法 第15条第2項(施工体制台帳の「写しを発注者に提出しなければならない」という趣旨と理解しています)。\n- **確かさ**: 中〜高です。契約図書に別の定めがないかも確認してください。\n- **人がすること**: 台帳作成後と変更のたびに、写しを提出する運用に改めます。計画書の記述も改めます。\n\n## B. 記載漏れ・整合の疑い\n\n### 5. ためし舗装の工期が空欄\n- **何が**: 台帳 §4-2 の「工期」欄です。\n- **どう見えたか**: 下請契約日(2026/10/12)は入っていますが、工期は空です。\n- **根拠**: 建設業法 第24条の8第1項と施行規則 第14条の2(下請負人の「工事の内容及び工期」が記載事項と理解しています)。号番号は未確認です。\n- **確かさ**: 高めです。空欄であることは書類から明らかです。\n- **人がすること**: 下請契約書で工期を確認して記入します。元請の工期内(〜2027/3/15)に収まるかも確認します。\n\n### 6. 台帳の作成日より後に下請契約が結ばれている\n- **何が**: 台帳の作成日(10/5)と、下請契約日(みほん 10/10、ためし 10/12)です。\n- **どう見えたか**: 作成日が下請契約より前です。台帳に後から追記したのか、日付が不正確なのかが分かりません。\n- **根拠**: 建設業法 第24条の8第1項(下請契約を締結したときの台帳作成)と、変更時の再作成・追記(同法施行規則 第14条の4など。条番号は未確認)。\n- **確かさ**: 低〜中です。追記や変更の履歴が別にあるかもしれません。\n- **人がすること**: 台帳の版管理(最終更新日、変更届出の有無)を確認します。必要なら日付を直します。\n\n### 7. 台帳に添付すべき契約書の写しが見当たらない\n- **何が**: 発注者との契約と下請契約の関係書類です。\n- **どう見えたか**: 台帳には契約書類の添付の記載がありません。ただし、これは抜粋で、添付書類が別にあるだけかもしれません。\n- **根拠**: 建設業法 第24条の8第3項(請負契約に関する書類の写しの備え置き・添付と理解しています)。施行規則 第14条の2も関係します。\n- **確かさ**: 低いです。抜粋である可能性が大きいです。\n- **人がすること**: 現物の台帳に、元請契約書と各下請の注文書・請書の写しが付いているか確認します。\n\n## C. 技術者要件(情報不足で判断できない)\n\n### 8. 下請の主任技術者の専任・資格\n- **何が**: 台帳 §4-1 と §4-2 の主任技術者(乙村、丙井)です。\n- **どう見えたか**:\n  - 2人とも「非専任」です。専任が必要になるかどうかは、各下請契約の金額で決まります。台帳に下請金額がないので、判断できません。\n  - 乙村氏は2級土木施工管理技士です。みほん管工の許可業種には管工事業があり、管工事の主任技術者としては資格の種類が合わない可能性があります。「推進・布設」がどの業種の工事に当たるかによります。\n  - 丙井氏の「1級舗装施工管理技術者」は、建設業法上の技術者要件に当たらない資格の可能性があります。実務経験などで要件を満たす場合は、その旨の確認が必要です。\n- **根拠**:\n  - 建設業法 第26条第1項「主任技術者を置かなければならない」\n  - 同条第3項(専任要件)\n  - 同法 第7条第2号(技術者の資格要件)\n- **確かさ**: 低いです。金額、工事の業種区分、資格の扱いはどれも書類だけでは決まりません。\n- **人がすること**:\n  - 下請契約金額と専任要件を確認します。\n  - 各技術者の資格・実務経験の証明書を確認します。\n  - 台帳に資格内容を記載します。\n\n## 補足(法令違反とは限らないもの)\n- **現場代理人の常駐**: 現場代理人を甲田氏が兼ね、週2日しか来ない点は、公共工事標準請負契約約款の常駐の定めに照らして確認が要ります。契約約款上の論点で、法令の話ではありません。\n- **情報共有システム**: 計画書 §3 は、町の情報共有システムでの体制確認を使わないとしています。これは法令上の義務ではなく、町の運用や特記仕様書との整合の確認事項です。\n\n優先順位は、**1(専任違反の疑い)→ 2・5(記載漏れ)→ 3・4(公共工事の手続)**の順を勧めます。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.9777777777777779,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0.35555555555555557,
+        "passRateWithout": 0,
+        "delta": 0.6222222222222222
+      }
+    },
+    {
+      "name": "e2-trace-masked",
+      "dir": "evals/E2-trace-masked",
+      "source": "case_yaml",
+      "promptMarkdown": "raw/ の施工体制台帳と施工体系図を点検し、法令に照らした抜けや食い違いの候補を、1件ずつ「何が」「どう見えたか」「根拠(法令名・条・項・号と原文の短い抜き書き)」「確かさ」「人がすること」の形で挙げてください。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1500,
+      "maxTurns": 60,
+      "graders": [
+        {
+          "name": "read_masked-used",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "mcp__plugin_motouke-navi-guard_masked-files__read_masked",
+            "min": 2
+          }
+        },
+        {
+          "name": "no-person-boumoto",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "戊本",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-person-kisawa",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "己沢",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-person-kanoeda",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "庚田",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-person-karamura",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "辛村",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-prime",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "みほん建設",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-client",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "架空不動産",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-sub1",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "架空内装",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-sub2",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "ためし電気工業",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-sub3",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "みほん設備",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-site-name",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "あおば台",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "no-company-second-tier",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "架空電設サービス",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "planted-e2-p1",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:特定)[\\s\\S]{0,120}(?:許可)|(?:許可)[\\s\\S]{0,120}(?:特定)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e2-p2",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:監理技術者)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e2-p3",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\\s\\S]{0,120}(?:専任|兼ね|兼務)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e2-p4",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:再下請)[\\s\\S]{0,120}(?:通知)|(?:通知)[\\s\\S]{0,120}(?:再下請)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-e2-p5",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "(?:主任技術者)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:主任技術者)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "planted-judge",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS: 答えが次の5件をすべて挙げ、それぞれに法令の条番号(第○条)と原文の抜き書き(「 」)が添えてある — (1) 元請が一般建設業の許可で、特定建設業の許可が要る工事を請けている (2) 主任技術者でなく監理技術者を置く必要がある (3) 共同住宅の工事で元請の技術者が専任でない (4) 再下請負通知書を受け取っていない (5) 一次下請負人の主任技術者の欄が空。1件でも無い、または条番号か抜き書きが無いものがあれば FAIL。条番号や当てはめが正しいかは見ない。言い回しの違いは問わない。PASS か FAIL だけを答える",
+          "config": {
+            "criteria": "PASS: 答えが次の5件をすべて挙げ、それぞれに法令の条番号(第○条)と原文の抜き書き(「 」)が添えてある — (1) 元請が一般建設業の許可で、特定建設業の許可が要る工事を請けている (2) 主任技術者でなく監理技術者を置く必要がある (3) 共同住宅の工事で元請の技術者が専任でない (4) 再下請負通知書を受け取っていない (5) 一次下請負人の主任技術者の欄が空。1件でも無い、または条番号か抜き書きが無いものがあれば FAIL。条番号や当てはめが正しいかは見ない。言い回しの違いは問わない。PASS か FAIL だけを答える",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-construction-check",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "construction-check"
+          }
+        },
+        {
+          "name": "refuter-called",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "refuter",
+            "min": 1,
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "check-articles-before-refuter",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "mcp__plugin_motouke-navi-guard_masked-files__check_articles"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "refuter"
+            },
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.9444444444444444,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.5587452,
+            "judgeCostUsd": 0.09706799999999999,
+            "durationSeconds": 188,
+            "startedAt": "2026-11-07T06:17:45.562Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 4x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-boumoto",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kisawa",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kanoeda",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-karamura",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-client",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-second-tier",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:特定)[\\s\\S]{0,120}(?:許可)|(?:許可)[\\s\\S]{0,120}(?:特定)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\\s\\S]{0,120}(?:専任|兼ね|兼務)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:再下請)[\\s\\S]{0,120}(?:通知)|(?:通知)[\\s\\S]{0,120}(?:再下請)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:主任技術者)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:主任技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "係の見直しが終わりました。結果は **残る9件・崩れた0件・確かめられない1件(指摘9)** です。崩れた指摘がなかったことは、指摘が正しいことの証しではありません。\n\n`check_articles` は、私の側では29件すべて「ある」でした(無い 0・確かめられない 0)。係の側でも16件すべて「ある」でした。係の結果を受けた直しでは、新しい条番号は足していません(指摘6は、すでに確かめた建設業法第26条第3項を足しただけです)。そのため、`check_articles` は再実行していません。\n\n## 指摘の一覧(係の結果を反映済み)\n\n記号は書類のままです。台帳と体系図では、記号が書類ごとに振り直されています。たとえば〔会社名5〕は、台帳では一次の管工事、体系図では二次の弱電です。別の会社と見るのが自然ですが、記号の並びからの推測です。\n\n### 1. 体系図にある二次下請が台帳に無い(残る)\n- **何が**: 台帳の4・5の欄。体系図の「二次 〔会社名5〕(弱電・インターホン設備)」。\n- **どう見えたか**: 台帳には一次3社の節だけで、二次の記載がありません。体系図には二次があります。\n- **根拠**:\n  - 建設業法第24条の8第2項「その請け負つた建設工事を他の建設業を営む者に請け負わせたときは」\n  - 建設業法施行規則第14条の2第1項第3号イ「商号又は名称及び住所」\n  - 第24条の8第2項は、下請負人から元請への通知の義務です。台帳の記載漏れの直接の根拠には弱いので、記載事項の根拠として規則第14条の2を添えています。係の指摘です。\n- **確かさ**: 当てはまるおそれ。ただし、元請が特定建設業者であることが前提です(特定か一般かは書類に無い)。記号が同じ会社を指すかも確かめられません。\n- **人がすること**: 現場の下請の全体を元請の工事部に確かめます。二次下請があれば台帳に加えます。\n\n### 2. 再下請負通知書を受け取っていない(残る)\n- **何が**: 体系図の「再下請負通知書の受け取り」表の〔会社名4〕の行。\n- **どう見えたか**: 「あり(〔会社名5〕)」で、通知書は「受け取っていない」。\n- **根拠**: 建設業法第24条の8第2項「通知しなければならない」\n- **確かさ**: 当てはまるおそれ(指摘1と同じく、特定建設業者が前提)\n- **人がすること**: 〔会社名4〕に通知書を出してもらいます。\n\n### 3. 元請の許可が特定か一般か書類に無い(残る)\n- **何が**: 台帳1の「許可を受けた建設業」の欄。\n- **どう見えたか**: 「建築工事業、内装仕上工事業」だけで、特定・一般の別がありません。下請契約の合計は150,000,000円で、60,000,000+45,000,000+45,000,000と計算が合います。工事は建築一式です。\n- **根拠**:\n  - 建設業法施行令第7条の4「八千万円とする」(建築一式の場合)\n  - 建設業法施行令第2条「八千万円とする」(建築工事業の場合)\n  - 建設業法第24条の8第1項「特定建設業者は、発注者から直接建設工事を請け負つた場合において」\n  - 建設業法第3条第1項第2号\n- **確かさ**: 判断できない(許可の区分が書類に無い)\n- **人がすること**: 許可通知書で区分を確かめます。一般なら、この下請の額で請け負えるかを確かめます。\n\n### 4. 特定なら置くのは監理技術者(残る)\n- **何が**: 台帳3の「主任技術者」の欄。体系図の元請の欄。\n- **どう見えたか**: 「主任技術者」だけで、監理技術者や資格者証の記載がありません。\n- **根拠**: 建設業法第26条第2項「監理技術者」を置かなければならない(下請契約の総額が政令の金額以上の場合)\n- **確かさ**: 判断できない(特定かどうかが指摘3で分かりません)\n- **人がすること**: 特定と分かれば、監理技術者資格者証と講習の受講を確かめます(建設業法第26条第5項)。\n\n### 5. 元請の主任技術者が非専任(残る・直しあり)\n- **何が**: 台帳3の「専任・非専任」の欄。\n- **どう見えたか**: 「非専任(本店の工事部長と兼ねる)」。共同住宅、建築一式、請負代金額600,000,000円です。\n- **根拠**:\n  - 建設業法施行令第27条第1項「九千万円）以上のもの」(建築一式の場合)\n  - 同項第3号カ「共同住宅、寄宿舎又は下宿」\n  - 建設業法第26条第3項「工事現場ごとに、専任の者でなければならない」\n  - 係の指摘で、ただし書第2号(監理技術者の補佐を専任で置く場合)は主任技術者には使えないので、根拠から外しました。\n- **確かさ**: 当てはまるおそれ(ただし書第1号の3つの要件に当たるかは、書類から判断できません。金額の基準は原文を取得していません。移動時間とICT措置の記載も書類に無い)\n- **人がすること**: 専任にするか、ただし書の要件を確かめます。\n\n### 6. 下請の主任技術者が非専任(残る・直しあり)\n- **何が**: 台帳5-2〔会社名4〕(電気)と5-3〔会社名5〕(管工事)の主任技術者の欄。\n- **どう見えたか**: どちらも請負代金額が45,000,000円(税込)で、「非専任」。令第27条第1項の四千五百万円と同額です。\n- **根拠**:\n  - 建設業法施行令第27条第1項「四千五百万円（…）以上のもの」\n  - 建設業法第26条第3項(専任を求める根拠として係の指摘で足しました)\n- **確かさ**: 当てはまるおそれ(境目ちょうどです。下請の額を「工事一件」の額として数えるのか、令第27条第2項の例外に当たるのかは判断できません)\n- **人がすること**: 専任が要るかを発注者や元請の技術担当と確かめます。\n\n### 7. 一次〔会社名3〕の主任技術者が空欄(残る・直しあり)\n- **何が**: 台帳5-1の「主任技術者」の欄。\n- **どう見えたか**: 欄が空です。工期は2027年4月1日からで、台帳の作成日(2026年11月2日)より先なので、未定なだけかもしれません。\n- **根拠**:\n  - 建設業法施行規則第14条の2第1項第4号ホ「その者が置く主任技術者の氏名」\n  - 建設業法第26条第1項は、工事を施工するときに置く義務なので、工期前の段階では補助の根拠にとどめます。\n- **確かさ**: 当てはまるおそれ(未定の可能性あり)\n- **人がすること**: 〔会社名3〕に氏名・資格・専任かどうかを聞いて埋めます。\n\n### 8. 下請ごとの営業所の欄が無い(残る・直しあり)\n- **何が**: 台帳4の下請契約の一覧。\n- **どう見えたか**: 「発注者との契約」の欄(2)には契約営業所(本店)がありますが、下請契約ごとの営業所の欄がありません。\n- **根拠**: 建設業法施行規則第14条の2第1項第4号ト「作成建設業者の営業所の名称及び所在地」\n- **確かさ**: 当てはまるおそれ\n- **人がすること**: 欄を足します。\n\n### 10. 体系図を掲げたか(残る)\n- **何が**: 体系図。\n- **どう見えたか**: 台帳にも体系図にも、掲示の記載がありません。\n- **根拠**: 建設業法第24条の8第4項「これを当該工事現場の見やすい場所に掲げなければならない」\n- **確かさ**: 判断できない\n- **人がすること**: 現場の掲示を確かめます。\n\n## 外した候補\n\n### 9. 従事者の事項と添付書類(係の結果は「確かめられない」)\n- **何が**: 台帳全体。\n- **どう見えたか**: 台帳に別紙や添付の記載は見えません。ただし、台帳3に「外国人建設就労者の従事 | なし」の欄があります。元請分の従事の欄は一部あります。それ以外の従事者の事項と添付書類は見えません。\n- **根拠**:\n  - 建設業法施行規則第14条の2第1項第2号チ「建設工事に従事する者に関する次に掲げる事項」\n  - 同項第4号チ\n  - 同条第2項「次に掲げる書類を添付しなければならない」\n- **外した理由**: 係に渡した抜き書きに細目が無く、台帳の「外国人建設就労者」の欄が第2号チの細目に当たるかを確かめられませんでした。誤りと決まったのではなく、細目の原文を渡し直せば見直せます。\n- **人がすること**: 作業員名簿などの別紙と、契約書の写し・資格の書面の添付があるかを確かめます。\n\n## 別に並べる点\n- **見ていない条**:\n  - 公共工事かどうかは書類に無く、公共なら入札契約適正化法第15条が関わります。ただし、第2条(公共工事の定義)は取得していないので確かめられません。\n  - 電気工事の主任技術者の資格の要件(建設業法第7条)も見ていない条です。\n- **記号の食い違い**: 台帳では〔会社名1〕が元請、〔会社名2〕が発注者です。体系図では逆に、〔会社名1〕が発注者、〔会社名2〕が元請になっています。記号の振り直しの可能性が高いですが、確かめてください。\n- **置き換えの漏れの疑い**: 係は漏れらしい語を見つけていません。ただ、私は台帳の「契約営業所」の欄に、番地の無い市と町だけの住所のような語が見えました。残っているおそれがあるので、ご自身で目で確かめてください。"
+              },
+              {
+                "name": "skill-construction-check",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "refuter-called",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "check-articles-before-refuter",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__check_articles@15 precedes Agent@16",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0.9444444444444444,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.553747,
+            "judgeCostUsd": 0.07691600000000004,
+            "durationSeconds": 189,
+            "startedAt": "2026-11-07T06:20:53.881Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 4x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-boumoto",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kisawa",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kanoeda",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-karamura",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-client",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-second-tier",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:特定)[\\s\\S]{0,120}(?:許可)|(?:許可)[\\s\\S]{0,120}(?:特定)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\\s\\S]{0,120}(?:専任|兼ね|兼務)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:再下請)[\\s\\S]{0,120}(?:通知)|(?:通知)[\\s\\S]{0,120}(?:再下請)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:主任技術者)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:主任技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "施工体制台帳と施工体系図を点検し、法令に照らした抜けや食い違いの候補を6件挙げます。どれも候補で、法令や役所の判断ではありません。最後は人が原文と書類を見て決めてください。\n\n## 確認の結果\n- **条番号の確認(`check_articles`)**: 1回目は21件すべて「ある」でした。指摘を直したあとの2回目は18件すべて「ある」で、「無い」と「確かめられない」は0件です。この道具は条・項・号があるかだけを確かめます。指摘の中身が原文に合うかは、私と反証の係が原文と見比べました。\n- **反証の係の結果**: 残る5件、崩れた1件、確かめられない1件でした。\n  - 残るのは指摘1、2、4、5、7です。\n  - 崩れたのは指摘3の5-1の部分です。5-2と5-3の部分は残ります。\n  - 確かめられないのは旧指摘6です。\n- 係が崩せなかったことは、指摘が正しいことの証しではありません。\n\n## 指摘の候補\n\n**1. 二次下請負人の再下請負通知書が無く、台帳にも載っていない**\n- 何が: 施工体系図の二次〔会社名5〕(弱電・インターホン設備、〔会社名4〕の下)と、施工体制台帳の下請の欄\n- どう見えたか: 体系図の再下請負通知書の表で、〔会社名4〕は「あり」、通知書は「受け取っていない」です。台帳の下請は一次3社だけで、二次の記載がありません。\n- 記号の注意: 体系図の〔会社名5〕は弱電の二次です。台帳の〔会社名5〕は管工事の一次で、別のものです。記号の番号はファイルごとに違い、台帳と体系図の一次3社が同じ会社かは番号では言えません。言えるのは、工事の種類(内装仕上・電気・管)が3つずつ一致することまでです。\n- 根拠:\n  - 建設業法第24条の8第2項「請け負わせたときは」(原文は「…他の建設業を営む者に請け負わせたときは、…通知しなければならない」)\n  - 建設業法施行規則第14条の2第1項第3号イ「商号又は名称及び住所」\n  - 建設業法施行規則第14条の2第1項第4号イ「建設工事の名称、内容及び工期」\n- 確かさ: 当てはまるおそれ。第2項は「同項の特定建設業者に対して」通知する規定です。元請が特定建設業者か、公共工事かが書類に無く、台帳の作成義務があるかは判断できません。\n- 人がすること: 体系図の〔会社名4〕に再下請負通知書を出してもらいます。その後、台帳に二次の欄を足します。\n\n**2. 元請の主任技術者が「非専任」になっている**\n- 何が: 台帳3「元請の技術者等」の主任技術者〔人名1〕の専任・非専任の欄\n- どう見えたか: 「非専任(本店の工事部長と兼ねる)」です。工事は共同住宅で建築一式工事、請負代金は600,000,000円です。\n- 根拠:\n  - 建設業法第26条第3項「工事現場ごとに、専任の者でなければならない」\n  - 建設業法施行令第27条第1項第3号カ「共同住宅、寄宿舎又は下宿」\n  - 建設業法施行令第27条第1項「九千万円」(建築一式工事の金額)。600,000,000円はこれを超えます。\n- 確かさ: 当てはまるおそれ。第26条第3項ただし書の第1号が引く「政令で定める金額」が令第27条のものかは、私の推定です。渡した抜き書きには対応が書かれていません。第2号の補佐者は監理技術者についての規定で、主任技術者には当たりません。元請が特定建設業者で下請総額が基準以上なら、必要なのは主任技術者でなく監理技術者です(指摘4と合わせて読んでください)。\n- 人がすること: 専任にできるか、ただし書の例外に当たるかを、発注者と社内で確かめます。\n\n**3. 下請の主任技術者が「非専任」になっている(5-2・5-3)**\n- 何が: 台帳5-2〔会社名4〕電気工事と5-3〔会社名5〕管工事の主任技術者の専任の欄(台帳側の記号)\n- どう見えたか: どちらも請負代金は45,000,000円で、主任技術者は「非専任」です。\n- 根拠:\n  - 建設業法第26条第3項\n  - 建設業法施行令第27条第1項「四千五百万円(当該建設工事が建築一式工事である場合にあつては、九千万円)以上」。ちょうど45,000,000円も「以上」に含まれます。\n- 確かさ: 判断できない寄りの「当てはまるおそれ」です。\n  - 下請の工事一件に令第27条を当てる扱いは、取得した原文だけでは確かめられません。\n  - 台帳の金額は税込です。令第27条の金額が税込で数えるのかは、抜き書きに無く確かめられません。\n  - 令第27条第2項の「同一の建設業者」は、5-2と5-3が別会社なので当たりません。\n- 人がすること: 発注者または監督官庁に、下請工事の専任の扱いと金額の数え方を確かめます。\n- 係の結果: 5-1(内装仕上、60,000,000円)の部分は、5-1の欄が「非専任」でなく空欄のため崩れました。5-1は指摘4で扱います。\n\n**4. 元請の許可が一般か特定か、台帳から分からない**\n- 何が: 台帳1「許可を受けた建設業」の欄\n- どう見えたか: 「建築工事業、内装仕上工事業」だけで、一般・特定の別がありません。下請契約の総額は150,000,000円で、建築一式の境目の8,000万円を超えています。\n- 根拠:\n  - 建設業法第24条の8第1項「政令で定める金額以上になるとき」(原文は「…下請契約の請負代金の額…が政令で定める金額以上になるときは、…施工体制台帳を作成し…」)\n  - 建設業法施行令第7条の4「八千万円とする」(原文は「五千万円とする。ただし、…建築一式工事である場合においては、八千万円とする」)\n  - 建設業法施行令第2条「五千万円とする。ただし、同項の許可を受けようとする建設業が建築工事業である場合においては、八千万円とする」\n  - 建設業法第3条第1項第2号\n  - 建設業法第26条第2項「監理技術者」\n- 確かさ: 判断できない(許可の区分が書類に無い)。特定なら、台帳の作成と監理技術者の設置が関わります。台帳の技術者欄は主任技術者(1級建築施工管理技士)だけで、資格者証などの記載もありません。公共工事なら、入札契約適正化法第15条第1項により建設業者でも台帳の作成が関わりますが、これも書類から判断できません。\n- 人がすること: 許可通知書で一般・特定の区分を確かめます。特定なら、監理技術者を置いているかを確かめます。\n\n**5. 〔会社名3〕の主任技術者欄が空**\n- 何が: 台帳5-1〔会社名3〕(内装仕上、60,000,000円)の「主任技術者」欄\n- どう見えたか: 空欄です。台帳の他の欄や注記にも、5-1の技術者の記載はありません。\n- 根拠: 建設業法施行規則第14条の2第1項第4号ホ「その者が置く主任技術者の氏名」(原文は「当該下請負人が建設業者であるときは、その者が置く主任技術者の氏名、…」)\n- 確かさ: 当てはまる。ただし5-1の工期は2027年4月1日からで、まだ選任前の可能性があります。\n- 人がすること: 〔会社名3〕に、主任技術者の氏名・資格・専任の別と、選任の時期を聞きます。欄を埋めます。\n\n**6. 発注者の監督員の欄、公共か民間か、体系図の掲示場所**\n- 何が: 台帳2の発注者の欄と、体系図の掲示の記載\n- どう見えたか: 監督員の欄がありません。公共工事か民間工事か書類に無く、体系図を掲げる場所の記載もありません。\n- 根拠:\n  - 建設業法施行規則第14条の2第1項第2号ハ「発注者が監督員を置くときは、当該監督員の氏名…」。監督員を置くかが書類に無く、欄が無いことが不足と言い切れません。\n  - 公共工事の入札及び契約の適正化の促進に関する法律第15条第1項\n  - 建設業法第24条の8第4項「見やすい場所に掲げなければならない」。抜き書きでは前後の主語が確かめられません。\n- 確かさ: 判断できない\n- 人がすること: 発注者に、監督員を置くか、公共工事かを聞きます。体系図を現場のどこに掲げるかも決めます。\n\n## 外した候補\n- **従事する者の事項と添付書類の表示が台帳に無い**(旧指摘6、係の結果は「確かめられない」)。理由は次のとおりです。\n  - 第2号チ・第4号チで何を書くべきかが、渡した抜き書きから分かりません。\n  - 台帳3に「外国人建設就労者の従事 なし」の欄があり、第2号チの事項の一部に当たる可能性があります。\n  - 契約書面の写しなどの添付は、別添の可能性があります。\n  - 誤りと決まったわけではありません。台帳の本文に、従事者の事項(氏名・生年月日・職種・社会保険の加入状況など)と添付書類があるかを、人が見てください。\n- **指摘3のうち5-1の部分**: 5-1の欄が空で「非専任」と書かれていないため外しました。指摘5で扱っています。\n\n## 係が足した点(見直しを受けていない)\n- 台帳と体系図で記号の番号が揃わず、同じ番号が同じ会社を指すとは限りません。元請と発注者の番号も、2書類で入れ替わっています。主任技術者〔人名1〕が両書類で同じ人かも、記号からは確かめられません。元の名前は推し量らず、原本で突き合わせてください。\n- 二次の契約日は体系図にありません。通知義務がいつ発生するかは、書類から分かりません。\n\n## 見ていない条に関わる点\n- 施工体系図の書き方と、再下請負通知の事項は、施工規則の別の条にあり、取得していません。体系図の中身は条文に照らして点検できていません。\n- 指摘2のただし書の第1号が引く政令の金額は、対応する条を確かめていません。\n- 置き換えの確認では、体系図で「姓だけ」の人名などが残るおそれがあるとの結果でした。元の名前らしい語は、読んだ範囲では見えませんでした。"
+              },
+              {
+                "name": "skill-construction-check",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "refuter-called",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "check-articles-before-refuter",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__check_articles@15 precedes Agent@16",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.6125052999999999,
+            "judgeCostUsd": 0.08579199999999998,
+            "durationSeconds": 206,
+            "startedAt": "2026-11-07T06:24:02.942Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 6x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-boumoto",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kisawa",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kanoeda",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-karamura",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-client",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-second-tier",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:特定)[\\s\\S]{0,120}(?:許可)|(?:許可)[\\s\\S]{0,120}(?:特定)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\\s\\S]{0,120}(?:専任|兼ね|兼務)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:再下請)[\\s\\S]{0,120}(?:通知)|(?:通知)[\\s\\S]{0,120}(?:再下請)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:主任技術者)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:主任技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "反証の見直しが終わり、指摘を直しました。見直しの結果は2回分あります。\n\n## 指摘の一覧(見直し後)\n\n条の原文は `reference/sources/` から写しました。記号は書類ごとに振られているので、2書類をまたいで同じ番号を同じ会社とは見なしていません。\n\n**1. 元請の許可区分(特定・一般)が書類に無い**\n- **何が:** 台帳1の「許可を受けた建設業」欄と、台帳4の下請契約の一覧です。\n- **どう見えたか:** 許可は「建築工事業、内装仕上工事業」とだけあり、特定か一般かの記載がありません。工事は建築一式で、下請合計は150,000,000円(60,000,000+45,000,000+45,000,000)です。\n- **根拠:**\n  - 建設業法施行令第7条の4「特定建設業者が発注者から直接請け負つた建設工事が建築一式工事である場合においては、八千万円とする。」\n  - 建設業法第24条の8第1項「特定建設業者は、発注者から直接建設工事を請け負つた場合において」\n  - 建設業法第3条第1項第2号「下請代金の額の総額)が政令で定める金額以上となる下請契約を締結して施工しようとするもの」\n  - 建設業法施行令第2条「建築工事業である場合においては、八千万円とする。」\n- **確かさ:** 判断できない(特定か一般かが書類に無い)。特定の許可が要るおそれがあります。\n- **人がすること:** 許可通知書で、特定か一般かを確かめます。\n- **係の結果:** 残る。\n\n**2. 一次下請〔会社名3〕の主任技術者欄が空**\n- **何が:** 台帳 5-1 の「主任技術者」欄です。\n- **どう見えたか:** 空欄です。ほかの2社は記入があります。\n- **根拠:** 建設業法施行規則第14条の2第1項第4号ホ「当該下請負人が建設業者であるときは、その者が置く主任技術者の氏名、当該主任技術者が有する主任技術者資格及び当該主任技術者が専任の者であるか否かの別」。建設業法第26条第1項は、主任技術者を置く定めです。\n- **確かさ:** 当てはまるおそれ。この下請の工期は2027年4月開始で、未定のため空という事情もあり得ますが、書類からは分かりません。\n- **人がすること:** 〔会社名3〕に、主任技術者の氏名・資格・専任の別を聞きます。\n- **係の結果:** 残る。\n\n**3. 元請の主任技術者が「非専任」**\n- **何が:** 台帳3の「専任・非専任」欄で、「非専任(本店の工事部長と兼ねる)」とあります。\n- **どう見えたか:** 工事は共同住宅(42戸)で、請負代金は600,000,000円です。\n- **根拠:**\n  - 建設業法施行令第27条第1項「工事一件の請負代金の額が四千五百万円(当該建設工事が建築一式工事である場合にあつては、九千万円)以上のもの」\n  - 同条第1項第3号カ「共同住宅、寄宿舎又は下宿」\n  - 建設業法第26条第3項「工事現場ごとに、専任の者でなければならない。」\n- **確かさ:** 当てはまるおそれ。第26条第3項ただし書の例外に当たるかは、書類から判断できません。\n- **人がすること:** 専任が要る工事かを確かめます。例外を使うなら、その要件の資料があるかも確かめます。\n- **係の結果:** 残る。\n\n**4. 監理技術者の記載が無い**\n- **何が:** 台帳3の元請の技術者欄です。\n- **どう見えたか:** 主任技術者(1級建築施工管理技士)だけで、監理技術者と資格者証の記載がありません。\n- **根拠:** 建設業法第26条第2項「発注者から直接建設工事を請け負つた特定建設業者は、…第三条第一項第二号の政令で定める金額以上になる場合においては、…監理技術者…を置かなければならない」(原文の省略あり)\n- **確かさ:** 判断できない(特定か一般かが不明。指摘1に連動)。\n- **人がすること:** 指摘1の結果しだいで、監理技術者の配置と資格者証(同条第5項)を確かめます。\n- **係の結果:** 残る。\n\n**5. 再下請負通知書を受け取っていない(係の指摘で書き直し)**\n- **何が:** 体系図の「再下請負通知書の受け取り」の表です。\n- **どう見えたか:** 〔会社名4〕に再下請負「あり(〔会社名5〕)」とあり、通知書は「受け取っていない」です。台帳には、二次下請の記載が見当たりません。ただし、体系図と台帳の〔会社名5〕が同じ会社かは分かりません。\n- **根拠:**\n  - 建設業法第24条の8第1項「特定建設業者は、発注者から直接建設工事を請け負つた場合において」\n  - 同条第2項「その請け負つた建設工事を他の建設業を営む者に請け負わせたときは、…通知しなければならない。」(通知する義務を負うのは下請負人です)\n- **確かさ:** 判断できない(特定建設業者かが不明)。通知書の未受領を確かめる必要はあります。\n- **人がすること:** 〔会社名4〕に通知の有無を聞き、特定建設業者なら再下請の項目を台帳に足します。\n- **係の結果:** 最初は「崩れた」でした(当てはまるおそれと書いたため)。書き直した形で、2回目は残るでした。\n\n**6. 台帳に添付書類の記載が無い**\n- **何が:** 台帳全体です。\n- **どう見えたか:** 契約書の写しや、技術者の資格・雇用の書面を添付した記載がありません。\n- **根拠:** 建設業法施行規則第14条の2第2項第1号「請負契約及び同項第四号ロの下請契約に係る法第十九条第一項及び第二項の規定による書面の写し」。同項第2号は、主任技術者の資格と雇用を証する書面の定めです。\n- **確かさ:** 判断できない(別添があるのか分かりません)。\n- **人がすること:** 別添が揃っているかを確かめます。\n- **係の結果:** 第1号は残る。第2号は2回目に残るでした。\n\n**7. 下請ごとの営業所欄が無い**\n- **何が:** 台帳5-1から5-3です。\n- **どう見えたか:** 下請ごとの、請負契約を締結した作成建設業者の営業所の欄がありません。台帳2に、元請と発注者の契約の営業所はあります。\n- **根拠:** 建設業法施行規則第14条の2第1項第4号ト「当該建設工事について請負契約を締結した作成建設業者の営業所の名称及び所在地」\n- **確かさ:** 判断できない。\n- **人がすること:** 台帳の様式に、その欄があるかを確かめます。\n- **係の結果:** 営業所の部分は、書き直した形では係に見せていません。見直しを受けていない点として残しています。\n\n**8. 2書類の間で、記号が食い違って見える**\n- **何が:** 台帳と体系図の「発注者」「元請」の記号と、管工事の会社の記号です。\n- **どう見えたか:** 台帳は元請が〔会社名1〕、発注者が〔会社名2〕で、体系図は逆に見えます。管工事は、台帳が〔会社名5〕、体系図が〔会社名6〕です。\n- **根拠:** 取得した条には、体系図の記載事項の定めがなく、根拠はありません。\n- **確かさ:** 判断できない。記号が書類ごとなので、2書類の会社は比べられません。\n- **人がすること:** 原本で、発注者と元請が取り違えられていないかを見比べます。\n- **係の結果:** 残る。書き方は直しました。\n\n## 外した候補・係が足した点\n\n- **従事者の欄(旧指摘7の後半):** 規則第14条の2第1項第2号チ・第4号チに関する点です。\n  - 係は「残る」と返しました。第2号チは、台帳に個々の従事者の欄が無い点で書類と合っています。別紙があるかは分かりません。\n  - 第4号チの原文は、係に渡していません。そのため一覧から外しました。\n  - 人が、作業員名簿などの別紙があるかを確かめてください。\n- **係が足した点:** 台帳2の「契約営業所」の行に、住所らしい語が残っているように見えます。置き換えの漏れの疑いです。その語は繰り返しません。\n\n## 道具の結果\n\n- **`check_articles`:** 1回目は条番号20件、直した後は14件です。どちらも、ある全件、無い0件、確かめられない0件でした。確かめたのは条・項・号があることだけで、内容は私が原文と見比べました。\n- **反証の係(1回目):** 残る6、崩れた1(指摘5)、確かめられない1(旧指摘7)でした。\n- **反証の係(2回目):** 外した候補2点と、直した指摘5を見直してもらいました。残る3、崩れた0、確かめられない0でした。\n- **注意:** 係は、省略した抜き書きの一字一句の一致を確かめられていません。崩れた指摘が少ないことは、残る指摘が正しいことの証しではありません。\n\n## 見ていない条なので確かめられない点\n\n- 施工体系図の書き方(建設業法施行規則)と、再下請負通知書の記載事項は、取得していません。体系図に一次・二次の主任技術者が無い点などは、人に回します。\n- 公共工事かどうかが書類から分かりません。公共工事なら入札契約適正化法第15条第1項に切り替わります。公共工事の定義(同法第2条)は取得していません。\n- 軽微な工事の定めと技術者の要件(建設業法第7条・第15条)は、取得していません。\n- 第26条第3項ただし書の例外にある政令の金額は、取得していません。\n\nこれらは候補です。法令や役所の判断ではなく、最後は人が原本と原文を見て決めます。書類は置き換え後の内容だけを読んでいて、置き換えの漏れも0にはなりません。"
+              },
+              {
+                "name": "skill-construction-check",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "refuter-called",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 2x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "check-articles-before-refuter",
+                "passed": true,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__check_articles@15 precedes Agent@16",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.20367089999999996,
+            "judgeCostUsd": 0.08186799999999994,
+            "durationSeconds": 94,
+            "startedAt": "2026-11-07T06:27:29.049Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": false,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 0x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-boumoto",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kisawa",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kanoeda",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-karamura",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-client",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub3",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-second-tier",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:特定)[\\s\\S]{0,120}(?:許可)|(?:許可)[\\s\\S]{0,120}(?:特定)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\\s\\S]{0,120}(?:専任|兼ね|兼務)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:再下請)[\\s\\S]{0,120}(?:通知)|(?:通知)[\\s\\S]{0,120}(?:再下請)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:主任技術者)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:主任技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: FAIL PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  true,
+                  true
+                ],
+                "evidence": "# 点検結果:施工体制台帳・施工体系図の抜け・食い違い候補\n\n- 対象は `raw/施工体制台帳.md` と `raw/施工体系図.md` です。どちらも評価用の架空書類です。\n- 法令の条文はこの環境で原文を確認できていません。抜き書きは記憶に基づく要旨なので、**e-Gov法令検索で原文を確認してください**。\n- 金額要件(政令)は改正が続いています。2025年2月改正後の数字で書きましたが、現行値も確認してください。\n- 以下は候補です。法的な結論ではありません。\n\n## 1. 二次下請(架空電設サービス)が台帳に載っておらず、再下請負通知書もない\n- **何が**:体系図の二次下請と、その再下請負通知書。\n- **どう見えたか**\n  - 体系図には、ためし電気工業の下に二次下請「架空電設サービス(弱電・インターホン設備)」があります。\n  - 台帳には、第4・5項に架空電設サービスの記載がありません。\n  - 体系図の受領表は、ためし電気工業からの「再下請負通知書」を「受け取っていない」としています。\n  - 台帳の一次下請の工事は「電気工事」だけで、再下請の記載がありません。\n- **根拠**\n  - 建設業法24条の8第2項:一次下請が工事を他者に請け負わせたときは、元請の特定建設業者に商号・工事内容・工期等を「通知しなければならない」。\n  - 同条第1項:台帳には下請負人に関する事項を記載し、変更があれば更新する。\n  - 同条第4項:体系図は各下請負人の施工の分担関係を表示する。\n  - 施行規則14条の2(台帳の記載事項)。\n- **確かさ**:高い。書類間で事実が食い違っており、条文の趣旨にも合います。\n- **人がすること**\n  - ためし電気工業に通知書の提出を求めます。\n  - 契約内容(金額・工期・許可の要否・技術者)を確認し、台帳に追記します。\n  - 台帳の再下請欄を更新します。\n  - 通知が遅れた経緯を記録します。\n\n## 2. 一般建設業許可の元請が、下請総額1.5億円で施工体制台帳を作成している\n- **何が**:元請の許可区分と、下請契約の総額(特定建設業許可の要否)。\n- **どう見えたか**\n  - 元請の許可は「般-04」(一般建設業)です。\n  - 下請契約の合計は150,000,000円です(60M+45M+45M。合計の計算自体は合っています)。\n  - 工事の種類は建築一式です。\n- **根拠**\n  - 建設業法3条1項2号と施行令2条:発注者から直接請け負う工事で、下請代金の総額が政令の金額以上になる場合は、特定建設業の許可が必要。建築一式の金額は8,000万円(2025年2月改正後。以前は7,000万円)。\n  - 同法24条の8第1項:台帳を作成するのは「特定建設業者」。\n- **確かさ**:中〜高。書類上は金額が明らかに超えています。ただし、許可の種類が誤記の可能性もあり、許可通知書を見ないと断定できません。\n- **人がすること**\n  - 元請の許可通知書・許可票で、建築一式の「特定/一般」を確認します。\n  - 一般のままなら、契約の組み方か許可の問題として、社内の法務や行政書士に相談します。\n  - 誤記なら台帳を訂正します。\n\n## 3. 元請の技術者が「主任技術者」「非専任」になっている\n- **何が**:元請の技術者の区分と専任性。\n- **どう見えたか**\n  - 台帳は元請の技術者を「主任技術者 戊本 五郎」としています(体系図も同じ)。\n  - 専任・非専任は「非専任(本店の工事部長と兼ねる)」です。\n  - 工事は6階建て・42戸の共同住宅で、請負代金は6億円です。\n  - 下請総額は1.5億円です。\n- **根拠**\n  - 建設業法26条2項:特定建設業者が、下請契約の総額が政令の金額以上になる工事を請け負う場合は、主任技術者に代えて「監理技術者」を置く。\n  - 同条3項:公共性のある施設や多数の者が利用する施設の重要な工事で政令で定めるものは、主任技術者・監理技術者を「専任の者」とする。\n  - 施行令27条1項:共同住宅は対象施設に含まれる。請負金額の基準は建築一式で9,000万円(2025年2月改正後。以前は8,000万円)。\n  - 同法26条5項:専任の監理技術者は、監理技術者資格者証の交付を受けた者から選ぶ。\n- **確かさ**:専任違反の疑いは中〜高。共同住宅・6億円なので、金額の改正値が変わっても要件に該当する可能性が高いです。監理技術者の要否は項目2とセットで、中程度です。\n- **人がすること**\n  - 戊本氏が他の工事や本店業務を兼ねていないか確認します。\n  - 専任の技術者を配置するか、変更を検討します。\n  - 監理技術者の要否を項目2とあわせて判断します。\n  - 監理技術者の場合は資格者証と講習修了を確認します。\n  - 台帳・体系図の肩書きを修正します。\n\n## 4. 架空内装株式会社の主任技術者が空欄\n- **何が**:一次下請の主任技術者の記載漏れ。\n- **どう見えたか**:台帳5-1の「主任技術者」欄が空欄です。他の2社は氏名と資格が記載されています。\n- **根拠**\n  - 建設業法26条1項:建設業者は、請け負った工事を施工するときは主任技術者を「置かなければならない」。\n  - 同法24条の8第1項と施行規則14条の2:台帳には、下請負人が置く主任技術者の氏名・資格等を記載する。\n- **確かさ**:高い(記載漏れとして)。技術者が未配置なのか、単に未記入なのかは書類からは分かりません。\n- **人がすること**\n  - 同社に主任技術者の氏名・資格内容(国家資格や実務経験)を確認します。\n  - 建設業法7条2号の要件を満たすか確認します。\n  - 台帳を補完します。\n  - 工期開始(2027年4月1日)までに配置されることを確認します。\n\n## 5. 施工体系図の記載事項が薄い\n- **何が**:体系図の記載内容(監理技術者、各下請の工期・技術者・許可番号など)。\n- **どう見えたか**\n  - 体系図は、会社名・工事名・技術者の氏名(元請のみ)だけで、ほぼ樹形図です。\n  - 各下請の主任技術者、工期、許可番号、専門技術者の記載がありません。\n  - 元請の技術者の名称は「主任技術者」です(項目3)。\n- **根拠**\n  - 建設業法24条の8第4項:各下請負人の施工の分担関係を表示した図面を作成し、工事現場の見やすい場所に掲げる。\n  - 施行規則14条の6:体系図の記載事項(作成業者の名称、監理技術者の氏名、下請負人の名称、工事内容、工期、技術者など)。\n  - 規則の細目は記憶があいまいなので、条文で確認してください。\n- **確かさ**:低〜中。この書類は簡略版かもしれません。必須事項は規則の原文で照合が必要です。\n- **人がすること**\n  - 規則14条の6の項目と、国交省の標準様式を並べて照合します。\n  - 不足があれば追記します。\n  - 現場の見やすい場所に掲示されているかを確認します(書類からは分かりません)。\n\n## 6. 下請の記載項目の不足(外国人従事・社会保険の詳細)\n- **何が**:台帳の下請側の欄に、元請と同じ項目がない。\n- **どう見えたか**\n  - 元請には「外国人建設就労者の従事:なし」と社保の整理記号があります。\n  - 一次下請3社にはどちらもなく、社保は「加入」とだけあります。\n  - 「外国人建設就労者」は旧制度の名称です。技能実習・特定技能の外国人の従事有無を問う様式になっているか疑問です。\n- **根拠**\n  - 建設業法24条の8第1項と施行規則14条の2:台帳には、下請負人の健康保険等の加入状況と、外国人の従事に関する事項を記載する。\n  - 具体的な項目は様式と通達で確認が必要です。\n- **確かさ**:低。法令上の必須項目の範囲を、私が断定できていません。\n- **人がすること**\n  - 現行の国交省様式(外国人技能実習生・特定技能外国人の従事状況欄など)と照合します。\n  - 下請3社に外国人の従事の有無と社保の詳細を確認します。\n  - 元請と同じ水準に揃えます。\n\n## 7. 電気工事の主任技術者の資格表記があいまい\n- **何が**:ためし電気工業の主任技術者の資格。\n- **どう見えたか**:庚田氏の資格が「第一種電気工事士・実務の経験」と書かれています。免状だけで足りるのか、実務経験が要件なのか、年数も不明です。\n- **根拠**\n  - 建設業法7条2号:主任技術者の資格(学歴+実務経験、10年の実務経験、国家資格など)。\n  - 電気工事業の対象資格は告示・規則で定められています。資格ごとの要件は確認が必要です。\n- **確かさ**:低。表記があいまいというだけです。\n- **人がすること**\n  - 免状の写しなどで資格を確認します。\n  - 台帳に、免状の種類や実務経験の年数を明確に書きます。\n\n## 問題としていない点(確認済み)\n- 下請合計額150,000,000円は、3契約の合計と一致しています。\n- 下請契約の工期は、元請の工期(2026/11/2〜2027/12/24)の範囲内です。\n- 各下請の許可業種は、担当する工事と対応しています。\n- 台帳の作成日(11/2)は下請契約日(10/28〜29)より後です。\n- みほん設備有限会社と元請の商号は似ています。ただし書類から読み取れるのは商号の類似だけなので、指摘は見送りました。\n\n## 優先順位\n1. 項目2と3(許可区分と技術者の区分・専任性)は、工事全体の適法性に関わります。\n2. 項目1と4(再下請の通知漏れと主任技術者の空欄)は、書類の補完で解消できます。\n3. 項目5〜7は、様式・規則との照合が先です。"
+              }
+            ]
+          },
+          {
+            "score": 0.2777777777777778,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.17440619999999996,
+            "judgeCostUsd": 0.05901999999999996,
+            "durationSeconds": 81,
+            "startedAt": "2026-11-07T06:29:02.798Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": false,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 0x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-boumoto",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kisawa",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kanoeda",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-karamura",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-client",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub3",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-second-tier",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:特定)[\\s\\S]{0,120}(?:許可)|(?:許可)[\\s\\S]{0,120}(?:特定)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\\s\\S]{0,120}(?:専任|兼ね|兼務)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:再下請)[\\s\\S]{0,120}(?:通知)|(?:通知)[\\s\\S]{0,120}(?:再下請)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:主任技術者)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:主任技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`raw/` の2書類を点検しました。法令の条文は、この環境から e-Gov で確認できていません。そのため下の「根拠」の抜き書きは、私の記憶にもとづく要旨です。**原文との照合は必ず人が行ってください。** 金額要件は令和7年2月改正後の額(特定建設業・監理技術者は5,000万円、建築一式は8,000万円。専任は4,500万円、建築一式は9,000万円)で書いています。号番号は不確かなものがあり、その場合は「要確認」と付けました。\n\n## 1. 元請が一般建設業許可なのに、下請総額が特定建設業の基準を超えている\n\n- **何が**:元請の許可区分と下請契約の総額が食い違っている。\n- **どう見えたか**:台帳§1の元請許可は「般-04」(一般)です。§4の下請契約合計は150,000,000円で、建築一式の基準(8,000万円)を超えています。\n- **根拠**:建設業法3条1項2号と同法施行令2条。要旨は「発注者から直接請け負った工事を、下請代金の合計が政令で定める額以上となる下請契約を締結して施工するには、特定建設業の許可が必要」です。\n- **確かさ**:中。書類上は明確な食い違いですが、許可番号の表記ミスの可能性もあります。\n- **人がすること**:許可通知書や国交省の許可業者検索で、元請の許可が一般か特定かを確認します。一般なら、契約・施工体制の組み方そのものを見直します。特定なら台帳の許可番号を訂正します。\n\n## 2. 元請の技術者が「主任技術者・非専任」になっている\n\n- **何が**:元請の技術者の種別と専任性が、工事規模に合っていない。\n- **どう見えたか**:台帳§3と体系図は、元請を「主任技術者 戊本五郎・非専任(工事部長と兼務)」としています。工事は共同住宅(RC造6階建て、請負代金6億円)で、下請総額も基準を超えています。\n- **根拠**:\n  - 建設業法26条2項:「発注者から直接請け負った建設工事を施工するために締結した下請契約の請負代金の額が…政令で定める金額以上になる場合には、…監理技術者を置かなければならない」\n  - 同法26条3項:「公共性のある施設若しくは工作物又は多数の者が利用する施設若しくは工作物に関する重要な建設工事で政令で定めるもの」は、技術者を「工事現場ごとに専任の者でなければならない」\n  - 同法施行令27条1項:共同住宅は専任を要する対象に含まれたと記憶しています(号は要確認)。\n- **確かさ**:高(専任性)/中(監理技術者の要否。1と連動します)。\n- **人がすること**:工事部長との兼務を解く、または専任の技術者に差し替えます。監理技術者を置く場合は、監理技術者資格者証と監理技術者講習の修了を確認します(26条5項、要確認)。台帳と体系図の肩書も直します。\n\n## 3. 内装下請の主任技術者欄が空欄\n\n- **何が**:一次下請(内装)の主任技術者が未記載。\n- **どう見えたか**:台帳§5-1の「主任技術者」が空欄です。契約額は6,000万円で、工期は2027/4/1〜11/30です。\n- **根拠**:建設業法26条1項は、請け負った建設工事を施工するときは、主任技術者を置かなければならないと定めています。台帳の記載事項は同法24条の8第1項と施行規則14条の2に定められています。号は要確認です。\n- **確かさ**:高(記載漏れ)。\n- **人がすること**:内装会社に配置予定の技術者を確認し、氏名・資格・専任性を記入します。工期開始(2027/4)までに配置が確定している必要があります。\n\n## 4. 電気・管工事下請の「非専任」が専任要件に当たる可能性\n\n- **何が**:一次下請2社の主任技術者が非専任になっている。\n- **どう見えたか**:電気工事(45,000,000円)の庚田七郎と管工事(45,000,000円)の辛村八郎が、台帳§5-2・5-3で「非専任」です。内装(60,000,000円)も、技術者が決まれば同じ問題が生じます。\n- **根拠**:建設業法26条3項と施行令27条1項。専任が必要なのは、共同住宅など対象施設の工事で、工事1件の請負代金が4,500万円(建築一式は9,000万円)以上の場合です。下請工事も1件ごとの額で判定されます。\n- **確かさ**:中。45,000,000円は基準額とちょうど同額で「以上」に当たります。ただし、基準額が現行の額かどうかと、税込で判定するかどうかの確認が要ります。\n- **人がすること**:現行の施行令の額を確認します。該当するなら、2社に専任の技術者を配置させます。\n\n## 5. 二次下請(架空電設サービス)が台帳に載っていない\n\n- **何が**:体系図にいる二次下請が、台帳に載っていない。\n- **どう見えたか**:体系図は、ためし電気工業の下に「二次 架空電設サービス(弱電・インターホン設備)」を載せています。台帳には、この会社の記載も再下請契約の記録もありません。許可の有無、保険加入、技術者も不明です。\n- **根拠**:建設業法24条の8第1項と施行規則14条の2。台帳には、下請負人の名称、許可の種類、技術者、社会保険の加入状況などを記載します。\n- **確かさ**:高(2書類間の食い違い)。\n- **人がすること**:ためし電気工業に、再下請の契約内容、工期、金額、許可、技術者を確認します。確認後、台帳に追記します。\n\n## 6. 再下請負通知書を受け取っていない\n\n- **何が**:再下請があるのに、通知書が未受領。\n- **どう見えたか**:体系図の表で、ためし電気工業は「再下請あり(架空電設サービス)」、通知書は「受け取っていない」です。\n- **根拠**:建設業法24条の8第2項。要旨は「台帳を作成する特定建設業者の下請負人が、請け負った工事をさらに他の建設業者に請け負わせたときは、国交省令で定めるところにより、元請に再下請負通知書を提出しなければならない」です。通知事項は施行規則14条の4です。\n- **確かさ**:高。\n- **人がすること**:ためし電気工業に通知書を提出させます。内容は、再下請負人の商号、工事内容、工期、許可、保険加入状況、技術者などです。台帳(5)と体系図も更新します。\n\n## 7. 体系図の元請の肩書が主任技術者のままになっている\n\n- **何が**:体系図の記載が、要求される記載事項とずれている可能性がある。\n- **どう見えたか**:体系図に「元請 みほん建設(主任技術者 戊本五郎)」とあります。\n- **根拠**:建設業法24条の8第4項(体系図の作成と掲示)と施行規則14条の6。体系図には、監理技術者または主任技術者の氏名と、各下請の分担関係を載せます。条・項は要確認です。\n- **確かさ**:低〜中。2の結論に連動します。\n- **人がすること**:2が決まったら、肩書を「監理技術者」に直します。あわせて、各社の技術者名、工事内容、工期の記載も確認します。\n\n## 8. 台帳の記載項目や添付書類が不足している可能性\n\n- **何が**:記載項目と添付書類の不足の可能性。\n- **どう見えたか**:\n  - 下請3社の欄に、外国人技能実習生・建設就労者の従事の有無、専門技術者の有無がありません。元請の欄にはあります。\n  - 発注者との契約書や下請契約書の写し、技術者の資格証の写しは、`raw/` にありません。\n- **根拠**:建設業法24条の8第1項、施行規則14条の2・14条の4。要旨は、台帳と一緒に契約書の写しなどを備え置くことです。号は要確認です。\n- **確かさ**:低。実際の台帳に別紙で付いている可能性があります。\n- **人がすること**:原本の綴りを確認します。足りなければ補います。\n\n## 問題として挙げなかった点\n\n- 下請契約の合計(60+45+45=150百万円)は一致しています。\n- 下請の工期は元請の工期内に収まっています。\n- 契約の日付の前後関係は自然です。\n- 3社とも社会保険は「加入」と記載されています。\n- 建築一式の許可は、元請の許可業種「建築工事業」に含まれています。\n\n最優先は1と2です。許可区分と技術者の配置が決まれば、3、4、7も確定します。"
+              }
+            ]
+          },
+          {
+            "score": 0.2777777777777778,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.1508498,
+            "judgeCostUsd": 0.049956,
+            "durationSeconds": 70,
+            "startedAt": "2026-11-07T06:30:23.503Z",
+            "error": null,
+            "tracePath": "",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "read_masked-used",
+                "passed": false,
+                "weight": 1,
+                "explanation": "mcp__plugin_motouke-navi-guard_masked-files__read_masked called 0x (expected 2..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-boumoto",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kisawa",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-kanoeda",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-person-karamura",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-prime",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-client",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub1",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub2",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-sub3",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-site-name",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-company-second-tier",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern found (expected absent)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p1",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:特定)[\\s\\S]{0,120}(?:許可)|(?:許可)[\\s\\S]{0,120}(?:特定)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p2",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:監理技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p3",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:専任|兼ね|兼務)[\\s\\S]{0,120}(?:共同住宅|第27条|第二十七条|重要な建設工事)|(?:共同住宅|第27条|第二十七条|重要な建設工事)[\\s\\S]{0,120}(?:専任|兼ね|兼務)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p4",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:再下請)[\\s\\S]{0,120}(?:通知)|(?:通知)[\\s\\S]{0,120}(?:再下請)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-e2-p5",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched (?:主任技術者)[\\s\\S]{0,120}(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)|(?:空|未記入|記載が無|記載がな|書かれていない|書いていない|無い|抜け|欠け)[\\s\\S]{0,120}(?:主任技術者)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "planted-judge",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`raw/` の2書類を読みました。結果は次のとおりです。\n\n**注意点**\n- `raw/` に法令の条文はありません。条番号は私の知識にもとづきます。抜き書きは要旨か短い引用で、e-Gov での原文照合は未実施です。\n- 金額の基準は2025年2月施行の改正後の額で書いています。専任は4,500万円(建築一式は9,000万円)、特定建設業は下請総額5,000万円(建築一式は8,000万円)です。ここも原文で確認してください。\n- どの件も「候補」です。書類に書かれていない事実で、結論が変わる場合があります。\n\n## 1. 元請の許可区分が「般」のまま\n- **何が**:元請の建設業許可の区分\n- **どう見えたか**:台帳§1は「般-04」です。一方、§4の下請総額は1億5,000万円で、建築一式の基準を超えています。\n- **根拠**:建設業法3条1項2号(特定建設業の許可)と施行令2条。要旨は「発注者から直接請け負った工事で、下請代金総額が政令の額以上になる場合は特定建設業許可が必要」です。\n- **確かさ**:中〜高。許可番号の表記は架空ですが、「般」と読める記載です。\n- **人がすること**:許可通知書で区分を確認します。特定でなければ、契約形態が許可の範囲内か、法務の確認を受けます。\n\n## 2. 元請の技術者が「非専任」で、「監理技術者」でもない\n- **何が**:元請の技術者の配置\n- **どう見えたか**:請負6億円の共同住宅で、戊本五郎氏は「主任技術者・非専任(本店の工事部長と兼務)」です。下請総額が特定建設業の基準を超えるなら、置くべきは監理技術者です。\n- **根拠**\n  - 法26条3項。要旨は「政令で定める重要な建設工事では、主任技術者又は監理技術者は工事現場ごとに専任の者でなければならない」です。\n  - 施行令27条1項。共同住宅は対象施設に含まれると理解しています。号の確認は要です。\n  - 法26条2項(監理技術者の設置)。\n- **確かさ**:高。専任の点は金額と用途から明確です。監理技術者にあたるかどうかは、1の結論に連動します。\n- **人がすること**:専任の技術者に替えるか、専任できる体制にします。監理技術者資格者証と講習の有効期限も確認します(法26条5項・6項)。\n\n## 3. 架空内装の主任技術者が空欄\n- **何が**:台帳§5-1の主任技術者\n- **どう見えたか**:欄が空です。他の2社は氏名と資格が入っています。\n- **根拠**:法24条の8第1項と施行規則14条の2。台帳には下請負人の主任技術者の氏名等を記載します。法26条1項では、下請も主任技術者を置くことが前提です。\n- **確かさ**:高。空欄は事実です。\n- **人がすること**:同社に氏名・資格・雇用関係を照会し、台帳に追記します。実際に配置されているかも確認します。\n\n## 4. 下請3社の専任要否(60M・45M・45M)\n- **何が**:一次下請の主任技術者の専任\n- **どう見えたか**\n  - 内装は6,000万円で、技術者が空欄です。\n  - 電気と管は各4,500万円(税込)で、どちらも「非専任」です。\n  - 専任の基準は金額が「以上」なので、4,500万円はちょうど境界です。\n- **根拠**:法26条3項と施行令27条1項。下請契約の請負代金額が基準になります。\n- **確かさ**:中。次の2点で結論が変わります。\n  - 基準額を改正前後のどちらで見るか。\n  - 契約日が2026年10月で、改正後の額で判定できるか。\n- **人がすること**:基準額と契約金額(税込・税抜の扱いを含む)を確認し、該当するなら専任配置に変えます。\n\n## 5. 二次下請(架空電設サービス)が台帳にない\n- **何が**:再下請負人の台帳への記載\n- **どう見えたか**:体系図では、ためし電気工業の下に二次下請として載っています。台帳には、一次下請までしか記載がありません。\n- **根拠**:法24条の8第1項と施行規則14条の2。台帳には、すべての下請負人(次数を問わない)を記載します。\n- **確かさ**:高。2書類の食い違いが明確です。\n- **人がすること**:同社の商号、許可の有無、工事内容、工期、契約日、技術者、保険加入状況を確認し、台帳に追記します。\n\n## 6. 再下請負通知書が未受領\n- **何が**:再下請負通知\n- **どう見えたか**:体系図の表に「ためし電気工業:再下請あり、通知書は受け取っていない」とあります。\n- **根拠**:法24条の8第2項。要旨は「下請負人が工事をさらに他者に請け負わせたときは、元請(作成建設業者)に通知しなければならない」です。\n- **確かさ**:高。書類自身が未受領と認めています。\n- **人がすること**:ためし電気工業に通知書を提出させます。5の台帳追記と同時に進めます。\n\n## 7. 二次下請の許可と技術者が不明\n- **何が**:弱電・インターホン設備工事の許可と技術者\n- **どう見えたか**:二次下請の許可、金額、技術者の情報がありません。ためし電気の許可は「電気工事業」のみです。\n- **根拠**\n  - 法3条1項ただし書と施行令1条の2。軽微な工事(500万円未満)は許可不要です。\n  - 法26条1項。許可が必要な工事なら、技術者の配置も必要です。\n- **確かさ**:低。情報不足のため、不備とは言えません。\n- **人がすること**:5と6で情報を集めます。そのうえで、軽微な工事か、電気工事業か電気通信工事業の許可があるかを確認します。\n\n## 8. 体系図の記載項目が不足している可能性\n- **何が**:体系図の記載内容\n- **どう見えたか**:元請の技術者は「主任技術者」と書かれています。各下請の工期と技術者名の記載もありません。\n- **根拠**:法24条の8第4項と施行規則14条の6。要旨は「施工体系図は、下請負人ごとの工事内容・技術者等を記載し、現場の見やすい場所に掲げる」です。\n- **確かさ**:中。規則の具体的な記載項目は、原文で確認してください。\n- **人がすること**:記載項目を規則と照合して書き直します。1・2の結論次第で「監理技術者」に改めます。掲示場所と、台帳の現場備え置きも確認します。\n\n## 問題なしと見たもの\n- 下請代金の合計は、60+45+45=150(百万円)で一致しています。\n- 下請の工期はすべて元請の工期内です。\n- 保険の加入状況は全社「加入」です。\n- 許可業種は、各社の工事内容と一致しています。\n\n## 優先順位\n1、2、5、6を先に確認してください。ほかの項目の前提になるか、書類同士の食い違いが明確なものです。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.9629629629629629,
+        "passRate": 0.3333333333333333,
+        "scoreWithout": 0.29629629629629634,
+        "passRateWithout": 0,
+        "delta": 0.6666666666666665
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 0,
+    "overallScore": 0.9703703703703703,
+    "overallPassRate": 0.5,
+    "meanDelta": 0.6444444444444444
+  }
+}

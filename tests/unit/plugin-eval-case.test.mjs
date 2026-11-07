@@ -601,8 +601,13 @@ test('E3 の点に入る検査は with-without で4つ・none で7つで、評�
   }
 });
 
-test('文書: 評価.md の 7 の表に E3 の行が未測であり、読み方に Write と 8 の値のことがある', () => {
-  assert.ok(SECTION7.includes('| E3 | 未測 | 未測 | 未測 | 未測 | 未測 | 未測 | 未測 |'));
+test('文書: 評価.md の 7 の表に E3 の行が版の印と値つきであり、読み方に Write と 8 の値のことがある', () => {
+  // F85j: 走らせた値に替えた。値そのものは eval-values-1107 が集計と照らす。ここは E3 の差が 0 のまま「合格」とだけ書かれていないこと(手順の最後の行が落ちた)を見る
+  const e3Row = SECTION7.split('\n').find((l) => l.startsWith('| E3 |'));
+  assert.ok(e3Row);
+  assert.equal(e3Row.split('|').length - 2, 9);
+  assert.equal(e3Row.includes('未測'), false);
+  for (const w of ['17b7bc2、2026-11-07 15:32', '| 0.00 |', '合格(3/3・3/3)', '手順の最後の行は3回とも落ちた']) assert.ok(e3Row.includes(w), w);
   assert.ok(SECTION7.includes('`plugin/evals/E3-bid-intake/`'));
   for (const w of ['### E3 の読み方', '`Write` を許していない', '拾った値の正しさは評価.md 8 のまま', '`公告/N3_市の公告.txt`', '走らせて確かめていません(未確認)']) assert.ok(SECTION7.includes(w), w);
   assert.equal(SECTION7.includes('E1 と E2 の両方が走ります'), false);
