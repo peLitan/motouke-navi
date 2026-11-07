@@ -88,7 +88,7 @@ test('bid-status: 結果が無いときは件数を言わない。金額を読�
   assert.ok(status(page, 'bid-status').startsWith('＊ 条件が変わりました。'), status(page, 'bid-status'));
   assert.doesNotMatch(status(page, 'bid-status'), /要る \d/);
   await page.click('bid-run');
-  assert.ok(status(page, 'bid-status').startsWith('＊ 金額の欄を読めませんでした。'), status(page, 'bid-status'));
+  assert.ok(status(page, 'bid-status').startsWith('金額の欄を読めませんでした。'), status(page, 'bid-status'));
   assert.doesNotMatch(status(page, 'bid-status'), /要る \d/);
 });
 

@@ -175,7 +175,7 @@ const sharedOver = (input, s) => isAmount(input.contractAmount) && input.contrac
 // 金額の条件は第26条第3項ただし書の第1号だけで、第2号(監理技術者を補佐する者を専任で置く)には無いので、境目以上でも特例全部が無くなるとは書かない
 function sharedSiteSentence(input, s) {
   const amounts = (word) => '請負代金が' + oku(s.other) + word + '(建築一式は' + oku(s.kenchiku) + word + ')';
-  const undecided = 'この道具は特例を判定していません。';
+  const undecided = 'このツールは特例を判定していません。';
   if (sharedOver(input, s)) return amounts('以上') + 'なので、情報通信技術を使って' + s.sites + 'つの現場まで兼ねる特例は使えません。監理技術者を補佐する者を専任で置く場合の特例があります。' + undecided;
   return amounts('未満') + 'などの条件を満たすと、' + s.sites + 'つの現場まで兼ねられる特例があります。' + undecided;
 }
@@ -223,7 +223,7 @@ function dedicatedPersonCheck() {
     key: 'dedicated',
     label: '専任の技術者の資格と雇用関係',
     basis: basisOf('q-kensetsu-26-5', 'q-mlit-manual-koyo'),
-    message: DEDICATED_ENGINEER_SENTENCE + '公共工事の元請けでは、専任の主任技術者・監理技術者などに、入札の申込の日以前に3か月以上の雇用関係が要ります(申込の無い指名競争は入札の執行日、随意契約は見積書の提出の日が基準です)。これは国土交通省の監理技術者制度運用マニュアルによる運用で、法令の条ではないので、この道具は判定していません。',
+    message: DEDICATED_ENGINEER_SENTENCE + '公共工事の元請けでは、専任の主任技術者・監理技術者などに、入札の申込の日以前に3か月以上の雇用関係が要ります(申込の無い指名競争は入札の執行日、随意契約は見積書の提出の日が基準です)。これは国土交通省の監理技術者制度運用マニュアルによる運用で、法令の条ではないので、このツールは判定していません。',
   };
 }
 

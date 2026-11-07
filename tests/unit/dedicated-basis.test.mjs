@@ -18,7 +18,7 @@ const input = (contractAmount, over = {}) => ({ ...ANSWERED, contractAmount, ...
 const ded = (i) => bidCheck(i).items.find((x) => x.key === 'dedicated');
 const check = (i) => bidCheck(i).checks.find((c) => c.key === 'dedicated');
 const kenchiku = { workType: 'kenchiku-ikkatsu' };
-const SPECIAL = '特例があります。この道具は特例を判定していません';
+const SPECIAL = '特例があります。このツールは特例を判定していません';
 const CANNOT = /兼ねる特例は使えません/;
 const ARTICLE = /第\s*[0-9０-９一二三四五六七八九十百]+\s*[条項号]|施行令|建設業法/;
 const NEW_QUOTES = ['q-rei-27-1-2', 'q-rei-27-1-3', 'q-rei-15-1', 'q-rei-15-3', 'q-rei-28', 'q-rei-30', 'q-kensetsu-26-5'];
@@ -134,5 +134,5 @@ test('組み立てた画面: 見本の「次にすること」の飛び先に、
   const top = page.el('result-top').innerHTML;
   const open = page.el(top.match(/class="next-go" href="#([\w-]+)"/)[1]).innerHTML;
   assert.match(open, /<strong>技術者を専任で置く必要があるか<\/strong>: 公告で、発注者が国か地方公共団体か/);
-  assert.ok(open.includes('この道具は特例を判定していません。'), open);
+  assert.ok(open.includes('このツールは特例を判定していません。'), open);
 });

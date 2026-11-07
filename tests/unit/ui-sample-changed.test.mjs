@@ -99,7 +99,7 @@ test('変えた欄の数: 別の欄・消した欄・読めない値も数える
 test('読めない金額: 失敗の文をそのまま出して印を付け、差を付けない。直したら最後に見せた結果と比べる', async () => {
   const page = await samplePage();
   await changeAndGo(page, { 'contract-amount': '4千万の見込み' });
-  assert.ok(status(page).startsWith('＊ 金額の欄を読めませんでした。'), status(page));
+  assert.ok(status(page).startsWith('金額の欄を読めませんでした。'), status(page));
   assert.doesNotMatch(status(page), /前の結果から/);
   assert.equal(page.el('bid-status').getAttribute('data-kind'), 'error');
   await changeAndGo(page, { 'contract-amount': '40,000,000' });

@@ -61,11 +61,11 @@ test('金額を読めないとき: 「結果が出ました」も ✓ も出さ�
   const page = runPage();
   await page.set('contract-amount', '約2億円');
   await page.click('bid-run');
-  assert.ok(status(page).startsWith('＊ 金額の欄を読めませんでした。'), status(page));
+  assert.ok(status(page).startsWith('金額の欄を読めませんでした。'), status(page));
   assert.ok(!status(page).includes('✓') && !status(page).includes('結果が出ました'), status(page));
   await page.click('entry-back');
   await page.click('entry-awarded');
-  assert.ok(status(page).startsWith('＊ 金額の欄を読めませんでした。'), status(page));
+  assert.ok(status(page).startsWith('金額の欄を読めませんでした。'), status(page));
 });
 
 test('条件を変えたら、前の「結果が出ました」を残さない。もう受注したでも古い結果を出たと言わない', async () => {

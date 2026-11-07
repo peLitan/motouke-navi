@@ -231,7 +231,7 @@ test('#bid-status: 金額を読めないと印が付き、戻る(空)・条件�
   const page = runPage(html);
   await page.set('contract-amount', '約2億円');
   await page.click('bid-run');
-  assert.ok(line(page, 'bid-status').startsWith('＊ 金額の欄を読めませんでした。'), line(page, 'bid-status'));
+  assert.ok(line(page, 'bid-status').startsWith('金額の欄を読めませんでした。'), line(page, 'bid-status'));
   assert.equal(kind(page, 'bid-status'), 'error');
 
   await page.click('entry-back');
@@ -239,7 +239,7 @@ test('#bid-status: 金額を読めないと印が付き、戻る(空)・条件�
   assert.equal(kind(page, 'bid-status'), null, '空の文に印が残っている');
 
   await page.click('entry-awarded');
-  assert.ok(line(page, 'bid-status').startsWith('＊ 金額の欄を読めませんでした。'));
+  assert.ok(line(page, 'bid-status').startsWith('金額の欄を読めませんでした。'));
   assert.equal(kind(page, 'bid-status'), 'error', 'もう受注したの道でも同じ');
 
   await page.set('contract-amount', '1000');
@@ -252,7 +252,7 @@ test('#bid-status: 判定の途中で止まると印が付く', async () => {
   assert.notEqual(broken, html, '判定の呼び出しの文が見つからない');
   const page = runPage(broken);
   await page.click('bid-run');
-  assert.ok(line(page, 'bid-status').startsWith('＊ 判定の途中で止まりました。'), line(page, 'bid-status'));
+  assert.ok(line(page, 'bid-status').startsWith('判定の途中で止まりました。'), line(page, 'bid-status'));
   assert.equal(kind(page, 'bid-status'), 'error');
 });
 
