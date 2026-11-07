@@ -205,7 +205,7 @@ test('07 の決まり: 外部の読み込み・通信が無く、断り書きと
 test('F54b: 2つの注記は phone-only と no-print を持ち、決まった位置にあり、言わない語が無い', () => {
   const FIELD = '<p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>';
   const PC = '<p id="panel-3-pc-note" class="note phone-only no-print">書類の点検はパソコンの方が楽です(台帳の文を貼る・Excel を読む・印刷)。スマホでも使えます。</p>';
-  assert.ok(html.includes('<div id="result-top" hidden></div>\n' + FIELD + '\n<details class="fold" id="bid-fold">'), '#field-note が #result-top と #bid-fold の間に無い');
+  assert.ok(html.includes('<div id="result-top" hidden></div>\n' + FIELD + '\n</div><div class="pg" id="pg-2-need" hidden>'), '#field-note が #result-top と #bid-fold の間に無い');
   const panel3 = html.slice(html.indexOf('<section id="panel-3"'));
   const firstH2 = panel3.match(/<h2[^>]*>[\s\S]*?<\/h2>/);
   assert.equal(firstH2[0], '<h2 id="ledger-title" tabindex="-1">施工体制台帳の点検</h2>'); // F86b: 段の番号を文から外した

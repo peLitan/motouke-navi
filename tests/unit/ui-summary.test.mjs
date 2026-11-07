@@ -208,15 +208,17 @@ test('#schedule-result へ飛ぶと閉じた表も開く。querySelector の無�
   const table = { open: false };
   const asked = [];
   const target = { querySelector: (s) => { asked.push(s); return table; } };
-  openPanelForLink({ getElementById: () => target }, '#schedule-result');
+  // F86d: 飛ぶとページも替わるので、段の要素は無い形にして飛び先の要素だけを渡す
+  const only = (id, el) => ({ getElementById: (x) => (x === id ? el : null) });
+  openPanelForLink(only('schedule-result', target), '#schedule-result');
   assert.equal(table.open, true);
   assert.deepEqual(asked, ['details.schedule-table']);
   // ほかの飛び先では開かない
   const other = { open: false };
-  openPanelForLink({ getElementById: () => ({ querySelector: () => other }) }, '#safety-fold');
+  openPanelForLink(only('safety-fold', { querySelector: () => other }), '#safety-fold');
   assert.equal(other.open, false);
-  openPanelForLink({ getElementById: () => ({}) }, '#schedule-result');
-  openPanelForLink({ getElementById: () => ({ querySelector: () => null }) }, '#schedule-result');
+  openPanelForLink(only('schedule-result', {}), '#schedule-result');
+  openPanelForLink(only('schedule-result', { querySelector: () => null }), '#schedule-result');
   openPanelForLink({ getElementById: () => null }, '#schedule-result');
 });
 

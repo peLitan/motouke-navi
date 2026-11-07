@@ -45,6 +45,7 @@
   /* 見出しは4種だけ */
   h2 { font-size: 1.5rem; line-height: 1.4; margin: 1.5rem 0 0.5rem; }
   h3 { font-size: 1.1875rem; line-height: 1.4; margin: 1rem 0 0.5rem; }
+  .pg-title { font-size: 1.1875rem; margin: 0.25rem 0 0.5rem; }
   h4 { font-size: 1rem; line-height: 1.4; margin: 0.75rem 0 0.25rem; }
   a { color: var(--primary); }
   /* 焦点(F38b): どの部品でも同じ2重の輪。内の黄は濃い地で、外の黒は白地で見える。outline は焦点のためだけに使う */
@@ -217,7 +218,7 @@
   .next-go { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 1rem; color: var(--paper); background: var(--primary); border-radius: 8px; font-weight: bold; text-decoration: none; }
   .next-go:hover, .next-go:active { color: var(--paper); background: var(--primary-dark); }
   /* 件数つきの開くカード(F43c)。開く・閉じるの字は CSS で足す */
-  details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0 1rem; margin: 0.5rem 0; }
+  details.open-card, details.schedule-table { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0 1rem; margin: 0.5rem 0; }
   details.open-card > summary, details#bid-fold > summary, details.schedule-table > summary, details.safety-fold > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; color: var(--ink); font-size: 1.1875rem; font-weight: bold; }
   details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: "開く ▾"; margin-left: auto; color: var(--primary); font-size: 1rem; }
   details.open-card[open] > summary::after, details#bid-fold[open] > summary::after, details.schedule-table[open] > summary::after, details.safety-fold[open] > summary::after { content: "閉じる ▴"; }
@@ -415,9 +416,19 @@
     /* 入口の説明は入口だけに出す。紙には今のまま出る */
     body.in-pages #entry-more { display: none; }
     /* 参照物の枠(F86c): 縦に動くのはこの中だけ。紙では動かす決まりが無いので全部出る */
-    #pg-ref:not([hidden]) { display: flex; flex-direction: column; }
+    #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: flex; flex-direction: column; }
     .ref-frame { flex: 1 1 0; min-height: 6rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
     .ref-frame footer { margin-top: 1rem; }
+    /* 結果の2つの折りたたみ(F86d): ページを開くと pager.mjs が開くので、開く見出しは要らない。紙は今のまま */
+    body.in-pages #bid-fold > summary, body.in-pages #safety-fold > summary { display: none; }
+    /* 確認が要る点の題はページの見出し #open-title に出す。#open-items の名前のために要素は残す */
+    body.in-pages #open-items-title { display: none; }
+    /* 要るものの項目(作者の答え 第3回): 1件を名前と状態の1行にして、根拠は「根拠を見る」で開く。次にすることの行も開くと出る。枠で動かさない */
+    #bid-result .item { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; }
+    #bid-result .item > * { flex: 0 0 100%; }
+    #bid-result .item > h4 { flex: 1 1 auto; }
+    #bid-result .item > details.basis:not([open]) { flex: 0 1 auto; }
+    #bid-result .item:has(> details.basis:not([open])) > .item-next { display: none; }
     /* 別の道具のページでは開いたままにするので、開く見出しは要らない */
     body.in-pages #other-tools > summary { display: none; }
     #pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; max-width: 60rem; margin: 0 auto; padding: 0.5rem 1rem; box-sizing: border-box; border-top: 1px solid var(--line); background: var(--paper); }
@@ -434,7 +445,7 @@
     html, body { height: auto; overflow: visible; }
     body { display: block; }
     .wrap.page, body.in-pages .wrap.page { display: block; overflow: visible; }
-    body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]) { display: block; overflow: visible; }
+    body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
   }
@@ -481,7 +492,7 @@
     #print-head { margin: 0 0 0 auto; }
     .sign-off { break-inside: avoid; margin-top: 1.5rem; }
     /* まとめの紙(F66c)。print-brief は「PDF で保存・印刷」の間だけ body に付くので、全部の紙とブラウザのメニューからの印刷は変わらない。rem は紙の字の大きさに連動しないので pt で書く */
-    body.print-brief #lead, body.print-brief #can-do-more, body.print-brief #scope, body.print-brief #panel-1, body.print-brief #bid-fold, body.print-brief #schedule-heading, body.print-brief #work-kind-schedule, body.print-brief #awarded-notice, body.print-brief #schedule-notice, body.print-brief #schedule-about-fold, body.print-brief #schedule-result, body.print-brief #safety-heading, body.print-brief #safety-note, body.print-brief #safety-prime-note, body.print-brief #safety-fold, body.print-brief #panel-3, body.print-brief #other-tools, body.print-brief .stats, body.print-brief .human, body.print-brief ul.print-only + p { display: none !important; }
+    body.print-brief #lead, body.print-brief #can-do-more, body.print-brief #scope, body.print-brief #panel-1, body.print-brief #bid-fold, body.print-brief #schedule-heading, body.print-brief #work-kind-schedule, body.print-brief #awarded-notice, body.print-brief #schedule-notice, body.print-brief #schedule-about-fold, body.print-brief #schedule-result, body.print-brief #safety-heading, body.print-brief #safety-note, body.print-brief #safety-prime-note, body.print-brief #safety-fold, body.print-brief #safety-result, body.print-brief #safety-version, body.print-brief #panel-3, body.print-brief #other-tools, body.print-brief .stats, body.print-brief .human, body.print-brief ul.print-only + p { display: none !important; }
     body.print-brief .brief-only { display: block; }
     body.print-brief { line-height: 1.4; }
     body.print-brief h2 { font-size: 13pt; margin: 8pt 0 2pt; }
@@ -664,7 +675,7 @@
 <div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd><dd class="confirm-change"><button type="button" id="confirm-change-participation-conditions" aria-label="公告の参加の条件を変更">変更</button></dd></div>
 </dl>
 </div></section>
-<section id="panel-2" hidden><div class="pg" id="pg-2">
+<section id="panel-2" hidden><div class="pg" id="pg-2-top">
 <h2 id="result-title" tabindex="-1">結果</h2>
 <p id="bid-status" class="no-print" aria-live="polite"></p>
 <div id="sample-banner" class="sample-banner no-print" hidden>
@@ -674,13 +685,16 @@
 <p class="brief-only" id="brief-note">この紙は Motouke Navi の結果の要点です。入れた条件は「まとめ」の最後にあります。各項目の理由と根拠の条文の抜き書き、受注後の段取り、安全の法令の候補、書類の点検の中身は入っていません(全部を印刷した版にあります)。</p>
 <div id="result-top" hidden></div>
 <p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
+</div><div class="pg" id="pg-2-need" hidden>
+<h2 id="need-title" class="pg-title no-print" tabindex="-1">要るもの</h2>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result"><p>条件を入れて「確認する」を押してください。</p></div>
 </details>
-<h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
+</div><div class="pg pg-framed" id="pg-2-schedule" hidden>
+<h3 id="schedule-heading" tabindex="-1">受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p id="work-kind-schedule"></p>
 <div id="awarded-notice" class="note" hidden>
 <p id="awarded-notice-text">条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて「確認する」を押すと、要る・要らないが分かれます。</p>
@@ -702,23 +716,38 @@
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
+<div class="ref-frame" id="schedule-frame">
 <div id="schedule-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
+</div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
 </div>
-<h3 id="safety-heading">安全の法令の候補</h3>
+</div><div class="pg pg-framed" id="pg-2-safety" hidden>
+<h3 id="safety-heading" tabindex="-1">安全の法令の候補</h3>
 <p class="note" id="safety-note">法令から拾った候補です。届出は届出先(労働基準監督署長、大規模なものは厚生労働大臣)に、工事の進め方の決まり(安全の計画書の出し方など)は発注者に確かめてください。この一覧だけでは現場の安全は確保できません。</p>
 <p class="note" id="safety-prime-note" hidden>この一覧は元請けの場合です。</p>
+<div class="ref-frame">
 <details class="safety-fold" id="safety-fold"><summary id="safety-title">労働安全衛生法で、元請けに掛かりそうなもの(条件を入れると出ます)</summary>
 <div id="safety-questions" class="no-print">
 {{SAFETY_QUESTIONS}}
 </div>
 <p id="safety-status" class="no-print" aria-live="polite"></p>
+</details>
+</div>
+</div><div class="pg pg-framed" id="pg-2-candidates" hidden>
+<h2 id="safety-result-title" class="pg-title no-print" tabindex="-1">労働安全衛生法で、元請けに掛かりそうなもの(条件を入れると出ます)</h2>
+<div class="ref-frame">
 <div id="safety-result" class="result-plain"><p>条件を入れると、ここに候補を出します。</p></div>
 <p class="note" id="safety-version"></p>
-</details>
+</div>
+</div><div class="pg pg-framed" id="pg-2-open" hidden>
+<h2 id="open-title" class="pg-title no-print" tabindex="-1">確認が要る点と未回答の質問</h2>
+<div class="ref-frame">
 <div id="open-items" class="result open-items" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
+</div>
+</div><div class="pg" id="pg-2-save" hidden>
+<h2 id="save-title" class="pg-title no-print" tabindex="-1">結果を残す</h2>
 <div id="summary" class="summary" aria-labelledby="summary-title" hidden></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>

@@ -151,7 +151,7 @@ test('注意の文: 段取りの行が無い表や空の表では国の例の文
 test('静的な HTML: 注意は一覧の上で隠してあり、ボタンは印刷に出ず、結果の id は折りたたみの中にある', () => {
   const at = (s) => { const i = body.indexOf(s); assert.ok(i >= 0, s); return i; };
   assert.ok(at('id="bid-fold"') < at('id="bid-result"'));
-  assert.ok(at('id="taicho-result"') < at('</details>\n<h3 id="schedule-heading">'));
+  assert.ok(at('id="taicho-result"') < at('</details>\n</div><div class="pg pg-framed" id="pg-2-schedule" hidden>\n<h3 id="schedule-heading" tabindex="-1">'));
   assert.ok(at('id="schedule-heading"') < at('id="awarded-notice"'));
   assert.ok(at('id="awarded-notice"') < at('id="schedule-result"'));
   assert.match(body, /<div id="awarded-notice" class="note" hidden>/);

@@ -59,7 +59,7 @@ test('印刷のブロックは1つのままで入れ子が無く、規則は4つ
 });
 
 test('まとめの紙で隠す規則: 要点の外と画面向けの文を、全部 body.print-brief 付きで隠す', () => {
-  const want = ['#lead', '#can-do-more', '#scope', '#panel-1', '#bid-fold', '#schedule-heading', '#work-kind-schedule', '#awarded-notice', '#schedule-notice', '#schedule-about-fold', '#schedule-result', '#safety-heading', '#safety-note', '#safety-prime-note', '#safety-fold', '#panel-3', '#other-tools', '.stats', '.human', 'ul.print-only + p'];
+  const want = ['#lead', '#can-do-more', '#scope', '#panel-1', '#bid-fold', '#schedule-heading', '#work-kind-schedule', '#awarded-notice', '#schedule-notice', '#schedule-about-fold', '#schedule-result', '#safety-heading', '#safety-note', '#safety-prime-note', '#safety-fold', '#safety-result', '#safety-version', '#panel-3', '#other-tools', '.stats', '.human', 'ul.print-only + p'];
   assert.deepEqual(briefHidden.slice().sort(), want.map((s) => 'body.print-brief ' + s).sort());
   // 全部の紙を巻き込まない: 同じものを印が無いまま隠す規則を足していない
   for (const s of want) assert.ok(!hiddenStrong.includes(s), s + ' が全部の紙からも消える');
@@ -67,7 +67,7 @@ test('まとめの紙で隠す規則: 要点の外と画面向けの文を、全
 
 test('隠す規則の id は実際にある(打ち間違いで隠れないままにしない)', () => {
   const ids = briefHidden.map((s) => s.match(/#([a-z0-9-]+)$/)?.[1]).filter(Boolean);
-  assert.equal(ids.length, 17);
+  assert.equal(ids.length, 19); // F86d: 候補と版の行が折りたたみの外へ出たので2つ増えた
   const seen = ancestors();
   for (const id of ids) assert.ok(seen.has(id), id + ' が画面に無い');
 });

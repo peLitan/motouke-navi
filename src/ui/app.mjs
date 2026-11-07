@@ -3,7 +3,7 @@
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
-import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom } from './pager.mjs';
+import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, pageOfLink } from './pager.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -117,8 +117,11 @@ export function renderSafety(doc) {
   const r = untouched ? safetyCandidates(safetyInput({ ...snap.answers, subcontract: undefined }, stage1)) : snap.result;
   const out = doc.getElementById('safety-result');
   if (out) out.innerHTML = renderSafetyResult(r, snap.answerRows);
-  const title = doc.getElementById('safety-title');
-  if (title) title.textContent = safetyTitle(r);
+  // 折りたたみの見出しは画面で隠すので、候補のページの見出しにも同じ題を出す(F86d)
+  for (const id of ['safety-title', 'safety-result-title']) {
+    const title = doc.getElementById(id);
+    if (title) title.textContent = safetyTitle(r);
+  }
   const stage1El = doc.getElementById('safety-stage1');
   if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">「条件を入れる」で直す</a>';
   const qSub = doc.getElementById('safety-q-subcontract');
@@ -285,12 +288,18 @@ function openIntake(doc) {
   openPanel(doc, 1, 'intake-more');
   doc.getElementById('intake-load')?.focus?.({ preventScroll: true });
 }
-// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開き、行き先まで動かす
+// 結果の中で id のあるページを開く(F86d)
+function showResultPage(doc, id) {
+  const { group, index } = pageOfLink(id);
+  showPanel(doc, group, index);
+}
+// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段とページを開き、行き先まで動かす
 export function openPanelForLink(doc, href) {
   const id = String(href ?? '').replace(/^#/, '');
   const target = doc.getElementById(id);
   const panel = target?.closest?.('[id^="panel-"]');
-  if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
+  if (pageOfLink(id)) showResultPage(doc, id);
+  else if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
   // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
   for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
   // 段取りの行から飛ぶと、閉じて出る表も開く(F54a)
@@ -476,8 +485,9 @@ function setAwardedView(doc, on) {
 export function enterAwarded(doc) {
   if (!awardedAll && !lastScheduleInput && !summary.errors.length) setAwardedView(doc, true);
   if (awardedAll) runSchedule(doc, { workKind: readWorkKind(collect(doc)) });
-  // 全部の行のときは知らせの行のすぐ下に段取りがあるので、知らせの行まで動かす(段取りの見出しまで動かすと知らせが画面の上へ隠れる)
-  openPanel(doc, 2, awardedAll ? 'bid-status' : 'schedule-heading');
+  // 失敗の文と条件が変わった文は #bid-status にしか無いので、要点のページで見せる
+  if (!awardedAll && bidNotice(null)) showPanel(doc, 2);
+  else showResultPage(doc, 'schedule-heading');
   setBidStatus(doc, awardedAll ? (summary.scheduleNotRead ? '✓ ' + NOT_READ + 'ので、段取りの行はありません。' : AWARDED_NOTICE_ALL) : bidNotice(AWARDED_NOTICE_DONE));
 }
 
@@ -1258,6 +1268,8 @@ function outsideNotice(doc) {
     return ['intake-status', USE_FRAME + 'この段の枠: ' + frameLabel(doc, 'intake-load') + '。' + (opened ? opened + '。' : '')];
   }
   if (isShown(doc, 'panel-2')) {
+    // 知らせの欄は段取りのページにある(F86d)
+    showResultPage(doc, 'schedule-heading');
     const opened = OPENED(openFold(doc, 'rules-more'));
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }

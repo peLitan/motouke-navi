@@ -119,6 +119,7 @@ test('画面の道: 入口 → 段1 → 確かめ → 結果 → 段3 → 段1 �
   assert.equal(row2().hidden, false, '段3');
   await page.click('pg-back'); // F86b: 進み具合は押せないので下の帯で戻る(書類 → 結果 → 確かめ → 条件)
   assert.equal(row2().hidden, false, '結果に戻ったとき');
+  for (let i = 0; i < 6; i++) await page.click('pg-back'); // F86d: 結果は7ページなので、最後のページから1ページ目まで戻る
   await page.click('pg-back');
   assert.equal(row2().hidden, true, '入力の確かめに戻ったとき');
   await page.click('confirm-back');

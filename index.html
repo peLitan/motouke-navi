@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sB8/rrFQR5DaBuTZLfefdBuhVJt5bLWiZh82fvRXmeA='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kYMSZoQMtAamqI8MPAZwPmQn/VU0U9SZKXUgxCRa6lc='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -45,6 +45,7 @@
   /* 見出しは4種だけ */
   h2 { font-size: 1.5rem; line-height: 1.4; margin: 1.5rem 0 0.5rem; }
   h3 { font-size: 1.1875rem; line-height: 1.4; margin: 1rem 0 0.5rem; }
+  .pg-title { font-size: 1.1875rem; margin: 0.25rem 0 0.5rem; }
   h4 { font-size: 1rem; line-height: 1.4; margin: 0.75rem 0 0.25rem; }
   a { color: var(--primary); }
   /* 焦点(F38b): どの部品でも同じ2重の輪。内の黄は濃い地で、外の黒は白地で見える。outline は焦点のためだけに使う */
@@ -217,7 +218,7 @@
   .next-go { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 1rem; color: var(--paper); background: var(--primary); border-radius: 8px; font-weight: bold; text-decoration: none; }
   .next-go:hover, .next-go:active { color: var(--paper); background: var(--primary-dark); }
   /* 件数つきの開くカード(F43c)。開く・閉じるの字は CSS で足す */
-  details.open-card, details#bid-fold, details.schedule-table, details.safety-fold { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0 1rem; margin: 0.5rem 0; }
+  details.open-card, details.schedule-table { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 0 1rem; margin: 0.5rem 0; }
   details.open-card > summary, details#bid-fold > summary, details.schedule-table > summary, details.safety-fold > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; color: var(--ink); font-size: 1.1875rem; font-weight: bold; }
   details.open-card > summary::after, details#bid-fold > summary::after, details.schedule-table > summary::after, details.safety-fold > summary::after { content: "開く ▾"; margin-left: auto; color: var(--primary); font-size: 1rem; }
   details.open-card[open] > summary::after, details#bid-fold[open] > summary::after, details.schedule-table[open] > summary::after, details.safety-fold[open] > summary::after { content: "閉じる ▴"; }
@@ -415,9 +416,19 @@
     /* 入口の説明は入口だけに出す。紙には今のまま出る */
     body.in-pages #entry-more { display: none; }
     /* 参照物の枠(F86c): 縦に動くのはこの中だけ。紙では動かす決まりが無いので全部出る */
-    #pg-ref:not([hidden]) { display: flex; flex-direction: column; }
+    #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: flex; flex-direction: column; }
     .ref-frame { flex: 1 1 0; min-height: 6rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
     .ref-frame footer { margin-top: 1rem; }
+    /* 結果の2つの折りたたみ(F86d): ページを開くと pager.mjs が開くので、開く見出しは要らない。紙は今のまま */
+    body.in-pages #bid-fold > summary, body.in-pages #safety-fold > summary { display: none; }
+    /* 確認が要る点の題はページの見出し #open-title に出す。#open-items の名前のために要素は残す */
+    body.in-pages #open-items-title { display: none; }
+    /* 要るものの項目(作者の答え 第3回): 1件を名前と状態の1行にして、根拠は「根拠を見る」で開く。次にすることの行も開くと出る。枠で動かさない */
+    #bid-result .item { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; }
+    #bid-result .item > * { flex: 0 0 100%; }
+    #bid-result .item > h4 { flex: 1 1 auto; }
+    #bid-result .item > details.basis:not([open]) { flex: 0 1 auto; }
+    #bid-result .item:has(> details.basis:not([open])) > .item-next { display: none; }
     /* 別の道具のページでは開いたままにするので、開く見出しは要らない */
     body.in-pages #other-tools > summary { display: none; }
     #pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; max-width: 60rem; margin: 0 auto; padding: 0.5rem 1rem; box-sizing: border-box; border-top: 1px solid var(--line); background: var(--paper); }
@@ -434,7 +445,7 @@
     html, body { height: auto; overflow: visible; }
     body { display: block; }
     .wrap.page, body.in-pages .wrap.page { display: block; overflow: visible; }
-    body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]) { display: block; overflow: visible; }
+    body.in-pages #main, #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
   }
@@ -481,7 +492,7 @@
     #print-head { margin: 0 0 0 auto; }
     .sign-off { break-inside: avoid; margin-top: 1.5rem; }
     /* まとめの紙(F66c)。print-brief は「PDF で保存・印刷」の間だけ body に付くので、全部の紙とブラウザのメニューからの印刷は変わらない。rem は紙の字の大きさに連動しないので pt で書く */
-    body.print-brief #lead, body.print-brief #can-do-more, body.print-brief #scope, body.print-brief #panel-1, body.print-brief #bid-fold, body.print-brief #schedule-heading, body.print-brief #work-kind-schedule, body.print-brief #awarded-notice, body.print-brief #schedule-notice, body.print-brief #schedule-about-fold, body.print-brief #schedule-result, body.print-brief #safety-heading, body.print-brief #safety-note, body.print-brief #safety-prime-note, body.print-brief #safety-fold, body.print-brief #panel-3, body.print-brief #other-tools, body.print-brief .stats, body.print-brief .human, body.print-brief ul.print-only + p { display: none !important; }
+    body.print-brief #lead, body.print-brief #can-do-more, body.print-brief #scope, body.print-brief #panel-1, body.print-brief #bid-fold, body.print-brief #schedule-heading, body.print-brief #work-kind-schedule, body.print-brief #awarded-notice, body.print-brief #schedule-notice, body.print-brief #schedule-about-fold, body.print-brief #schedule-result, body.print-brief #safety-heading, body.print-brief #safety-note, body.print-brief #safety-prime-note, body.print-brief #safety-fold, body.print-brief #safety-result, body.print-brief #safety-version, body.print-brief #panel-3, body.print-brief #other-tools, body.print-brief .stats, body.print-brief .human, body.print-brief ul.print-only + p { display: none !important; }
     body.print-brief .brief-only { display: block; }
     body.print-brief { line-height: 1.4; }
     body.print-brief h2 { font-size: 13pt; margin: 8pt 0 2pt; }
@@ -664,7 +675,7 @@
 <div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd><dd class="confirm-change"><button type="button" id="confirm-change-participation-conditions" aria-label="公告の参加の条件を変更">変更</button></dd></div>
 </dl>
 </div></section>
-<section id="panel-2" hidden><div class="pg" id="pg-2">
+<section id="panel-2" hidden><div class="pg" id="pg-2-top">
 <h2 id="result-title" tabindex="-1">結果</h2>
 <p id="bid-status" class="no-print" aria-live="polite"></p>
 <div id="sample-banner" class="sample-banner no-print" hidden>
@@ -674,13 +685,16 @@
 <p class="brief-only" id="brief-note">この紙は Motouke Navi の結果の要点です。入れた条件は「まとめ」の最後にあります。各項目の理由と根拠の条文の抜き書き、受注後の段取り、安全の法令の候補、書類の点検の中身は入っていません(全部を印刷した版にあります)。</p>
 <div id="result-top" hidden></div>
 <p id="field-note" class="note phone-only no-print">この画面は外へ送らず、入れた内容を残しません。閉じたり読み直されたりすると消え、ほかの端末にも出ません。残すときは下の「PDF で保存・印刷」か CSV で。</p>
+</div><div class="pg" id="pg-2-need" hidden>
+<h2 id="need-title" class="pg-title no-print" tabindex="-1">要るもの</h2>
 <details class="fold" id="bid-fold"><summary>入札前の確認・台帳が要るか<span id="bid-fold-hint" hidden>(条件を入れると出ます)</span></summary>
 <h3>入札前の確認</h3>
 <div id="bid-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
 <h3>施工体制台帳が要るか</h3>
 <div id="taicho-result" class="result"><p>条件を入れて「確認する」を押してください。</p></div>
 </details>
-<h3 id="schedule-heading">受注後の段取り(着手から完成・引き渡しまで)</h3>
+</div><div class="pg pg-framed" id="pg-2-schedule" hidden>
+<h3 id="schedule-heading" tabindex="-1">受注後の段取り(着手から完成・引き渡しまで)</h3>
 <p id="work-kind-schedule"></p>
 <div id="awarded-notice" class="note" hidden>
 <p id="awarded-notice-text">条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて「確認する」を押すと、要る・要らないが分かれます。</p>
@@ -702,23 +716,38 @@
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
 </details>
+<div class="ref-frame" id="schedule-frame">
 <div id="schedule-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
+</div>
 <div class="export no-print">
 <button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
 </div>
-<h3 id="safety-heading">安全の法令の候補</h3>
+</div><div class="pg pg-framed" id="pg-2-safety" hidden>
+<h3 id="safety-heading" tabindex="-1">安全の法令の候補</h3>
 <p class="note" id="safety-note">法令から拾った候補です。届出は届出先(労働基準監督署長、大規模なものは厚生労働大臣)に、工事の進め方の決まり(安全の計画書の出し方など)は発注者に確かめてください。この一覧だけでは現場の安全は確保できません。</p>
 <p class="note" id="safety-prime-note" hidden>この一覧は元請けの場合です。</p>
+<div class="ref-frame">
 <details class="safety-fold" id="safety-fold"><summary id="safety-title">労働安全衛生法で、元請けに掛かりそうなもの(条件を入れると出ます)</summary>
 <div id="safety-questions" class="no-print">
 <fieldset class="row radio-group" id="safety-q-subcontract"><legend>1. 仕事の一部を他社(個人を含む)に請け負わせるか</legend><p id="safety-stage1" class="hint"></p><div><input type="radio" id="safety-sub-yes" name="safety-sub" value="yes" autocomplete="off"><label for="safety-sub-yes">はい</label></div><div><input type="radio" id="safety-sub-no" name="safety-sub" value="no" autocomplete="off"><label for="safety-sub-no">いいえ</label></div><div><input type="radio" id="safety-sub-unknown" name="safety-sub" value="unknown" autocomplete="off"><label for="safety-sub-unknown">まだ分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-workers"><legend>2. 同じ場所で常時働く人の数(自社・下請け・一人親方などを含む)</legend><p class="hint">条文の言葉は「常時」と「作業従事者」です。「常時」の意味は条文に書いてありません。迷うときは「分からない」を選び、労働基準監督署に確かめてください。</p><div><input type="radio" id="safety-workers-under" name="safety-workers" value="under" autocomplete="off"><label for="safety-workers-under">30人未満</label></div><div><input type="radio" id="safety-workers-mid" name="safety-workers" value="mid" autocomplete="off"><label for="safety-workers-mid">30人以上50人未満</label></div><div><input type="radio" id="safety-workers-high" name="safety-workers" value="high" autocomplete="off"><label for="safety-workers-high">50人以上</label></div><div><input type="radio" id="safety-workers-unknown" name="safety-workers" value="unknown" autocomplete="off"><label for="safety-workers-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-plan"><legend>3. 工事の中に次のものがあるか</legend><p class="hint">届出の項目と、統括安全衛生責任者の人数の境目を変える項目です。当たるものをすべて選びます。</p><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel" autocomplete="off"><label for="safety-plan-plan-tunnel">ずい道等の建設等の仕事（ずい道等の内部に労働者が立ち入らないものを除く。）</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel-noentry" autocomplete="off"><label for="safety-plan-plan-tunnel-noentry">ずい道等の建設の仕事で、内部に人が立ち入らないもの</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-pressure" autocomplete="off"><label for="safety-plan-plan-pressure">圧気工法による作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-excavation" autocomplete="off"><label for="safety-plan-plan-excavation">掘削の高さ又は深さが十メートル以上である地山の掘削（ずい道等の掘削及び岩石の採取のための掘削を除く。以下同じ。）の作業（掘削機械を用いる作業で、掘削面の下方に労働者が立ち入らないものを除く。）を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-structure" autocomplete="off"><label for="safety-plan-plan-structure">高さ三十一メートルを超える建築物又は工作物（橋梁を除く。）の建設、改造、解体又は破壊（以下「建設等」という。）の仕事</label></div><details class="fold" id="safety-plan-more"><summary>大規模な工事・石綿・焼却炉・土石の採取</summary><div class="check-row"><input type="checkbox" id="safety-plan-plan-tower" autocomplete="off"><label for="safety-plan-plan-tower">高さが三百メートル以上の塔の建設の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-dam" autocomplete="off"><label for="safety-plan-plan-dam">堤高（基礎地盤から堤頂までの高さをいう。）が百五十メートル以上のダムの建設の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel-long" autocomplete="off"><label for="safety-plan-plan-tunnel-long">長さが三千メートル以上のずい道等の建設の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-tunnel-shaft" autocomplete="off"><label for="safety-plan-plan-tunnel-shaft">長さが千メートル以上三千メートル未満のずい道等の建設の仕事で、深さが五十メートル以上のたて坑（通路として使用されるものに限る。）の掘削を伴うもの</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-pressure-high" autocomplete="off"><label for="safety-plan-plan-pressure-high">ゲージ圧力が〇・三メガパスカル以上の圧気工法による作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-asbestos-spray" autocomplete="off"><label for="safety-plan-plan-asbestos-spray">建築物、工作物又は船舶（鋼製の船舶に限る。次号において同じ。）に吹き付けられている石綿等（石綿等が使用されている仕上げ用塗り材を除く。）の除去、封じ込め又は囲い込みの作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-asbestos-cover" autocomplete="off"><label for="safety-plan-plan-asbestos-cover">建築物、工作物又は船舶に張り付けられている石綿等が使用されている保温材、耐火被覆材（耐火性能を有する被覆材をいう。）等の除去、封じ込め又は囲い込みの作業（石綿等の粉じんを著しく発散するおそれのあるものに限る。）を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-incinerator" autocomplete="off"><label for="safety-plan-plan-incinerator">ダイオキシン類対策特別措置法施行令別表第一第五号に掲げる廃棄物焼却炉（火格子面積が二平方メートル以上又は焼却能力が一時間当たり二〇〇キログラム以上のものに限る。）を有する廃棄物の焼却施設に設置された廃棄物焼却炉、集じん機等の設備の解体等の仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-quarry" autocomplete="off"><label for="safety-plan-plan-quarry">掘削の高さ又は深さが十メートル以上の土石の採取のための掘削の作業を行う仕事</label></div><div class="check-row"><input type="checkbox" id="safety-plan-plan-quarry-mine" autocomplete="off"><label for="safety-plan-plan-quarry-mine">坑内掘りによる土石の採取のための掘削の作業を行う仕事</label></div></details><div class="check-row"><input type="checkbox" id="safety-plan-none" autocomplete="off"><label for="safety-plan-none">どれにも当たらない</label></div><div class="check-row"><input type="checkbox" id="safety-plan-unknown" autocomplete="off"><label for="safety-plan-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-bridge"><legend>3 の続き. 橋梁の工事</legend><div><input type="radio" id="safety-bridge-none" name="safety-bridge" value="none" autocomplete="off"><label for="safety-bridge-none">橋梁の工事は無い</label></div><div><input type="radio" id="safety-bridge-large" name="safety-bridge" value="large" autocomplete="off"><label for="safety-bridge-large">最大支間 500m 以上(つり橋のときは 1,000m 以上)</label></div><div><input type="radio" id="safety-bridge-ge" name="safety-bridge" value="ge" autocomplete="off"><label for="safety-bridge-ge">最大支間 50m 以上で、上に当たらないもの(つり橋の 500m 以上 1,000m 未満を含む)</label></div><div><input type="radio" id="safety-bridge-mid" name="safety-bridge" value="mid" autocomplete="off"><label for="safety-bridge-mid">最大支間 30m 以上 50m 未満</label></div><div><input type="radio" id="safety-bridge-lt" name="safety-bridge" value="lt" autocomplete="off"><label for="safety-bridge-lt">最大支間 30m 未満</label></div><div><input type="radio" id="safety-bridge-unknown" name="safety-bridge" value="unknown" autocomplete="off"><label for="safety-bridge-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-place" hidden><legend>3 の続き. 橋梁の場所は、次に当たるか</legend><p class="hint">令第七条第二項第一号の厚生労働省令で定める場所は、人口が集中している地域内における道路上若しくは道路に隣接した場所又は鉄道の軌道上若しくは軌道に隣接した場所とする。</p><div><input type="radio" id="safety-place-yes" name="safety-place" value="yes" autocomplete="off"><label for="safety-place-yes">当たる</label></div><div><input type="radio" id="safety-place-no" name="safety-place" value="no" autocomplete="off"><label for="safety-place-no">当たらない</label></div><div><input type="radio" id="safety-place-unknown" name="safety-place" value="unknown" autocomplete="off"><label for="safety-place-unknown">分からない</label></div></fieldset><fieldset class="row radio-group" id="safety-q-works"><legend>4. 行う作業(作業主任者)</legend><div class="check-row"><input type="checkbox" id="safety-work-excavation" autocomplete="off"><label for="safety-work-excavation">地山の掘削: 掘削面の高さが二メートル以上となる地山の掘削（ずい道及びたて坑以外の坑の掘削を除く。）の作業（第十一号に掲げる作業を除く。）</label></div><div class="check-row"><input type="checkbox" id="safety-work-shoring" autocomplete="off"><label for="safety-work-shoring">土止め支保工: 土止め支保工の切りばり又は腹起こしの取付け又は取り外しの作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-formwork" autocomplete="off"><label for="safety-work-formwork">型枠支保工: 型枠支保工（支柱、はり、つなぎ、筋かい等の部材により構成され、建設物におけるスラブ、桁等のコンクリートの打設に用いる型枠を支持する仮設の設備をいう。以下同じ。）の組立て又は解体の作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-scaffold" autocomplete="off"><label for="safety-work-scaffold">足場: つり足場（ゴンドラのつり足場を除く。以下同じ。）、張出し足場又は高さが五メートル以上の構造の足場の組立て、解体又は変更の作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-steel-frame" autocomplete="off"><label for="safety-work-steel-frame">金属製の建築物の骨組み・塔: 建築物の骨組み又は塔であつて、金属製の部材により構成されるもの（その高さが五メートル以上であるものに限る。）の組立て、解体又は変更の作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-wood-frame" autocomplete="off"><label for="safety-work-wood-frame">木造建築物の構造部材の組立て等: 建築基準法施行令（昭和二十五年政令第三百三十八号）第二条第一項第七号に規定する軒の高さが五メートル以上の木造建築物の構造部材の組立て又はこれに伴う屋根下地若しくは外壁下地の取付けの作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-concrete-demolition" autocomplete="off"><label for="safety-work-concrete-demolition">コンクリート造の工作物の解体・破壊: コンクリート造の工作物（その高さが五メートル以上であるものに限る。）の解体又は破壊の作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-oxygen" autocomplete="off"><label for="safety-work-oxygen">酸素欠乏危険場所: 別表第六に掲げる酸素欠乏危険場所における作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-asbestos" autocomplete="off"><label for="safety-work-asbestos">石綿等の取扱い: 石綿若しくは石綿をその重量の〇・一パーセントを超えて含有する製剤その他の物（以下「石綿等」という。）を取り扱う作業（試験研究のため取り扱う作業を除く。）又は石綿等を試験研究のため製造する作業若しくは第十六条第一項第四号イからハまでに掲げる石綿で同号の厚生労働省令で定めるもの若しくはこれらの石綿をその重量の〇・一パーセントを超えて含有する製剤その他の物（以下「石綿分析用試料等」という。）を製造する作業</label></div><div class="check-row"><input type="checkbox" id="safety-work-none" autocomplete="off"><label for="safety-work-none">どれも行わない</label></div><div class="check-row"><input type="checkbox" id="safety-work-unknown" autocomplete="off"><label for="safety-work-unknown">まだ分からない</label></div></fieldset>
 </div>
 <p id="safety-status" class="no-print" aria-live="polite"></p>
+</details>
+</div>
+</div><div class="pg pg-framed" id="pg-2-candidates" hidden>
+<h2 id="safety-result-title" class="pg-title no-print" tabindex="-1">労働安全衛生法で、元請けに掛かりそうなもの(条件を入れると出ます)</h2>
+<div class="ref-frame">
 <div id="safety-result" class="result-plain"><p>条件を入れると、ここに候補を出します。</p></div>
 <p class="note" id="safety-version"></p>
-</details>
+</div>
+</div><div class="pg pg-framed" id="pg-2-open" hidden>
+<h2 id="open-title" class="pg-title no-print" tabindex="-1">確認が要る点と未回答の質問</h2>
+<div class="ref-frame">
 <div id="open-items" class="result open-items" aria-labelledby="open-items-title"><h3 id="open-items-title">確認が要る点と未回答の質問</h3><p>「確認する」を押すと、ここに一覧を出します。</p></div>
+</div>
+</div><div class="pg" id="pg-2-save" hidden>
+<h2 id="save-title" class="pg-title no-print" tabindex="-1">結果を残す</h2>
 <div id="summary" class="summary" aria-labelledby="summary-title" hidden></div>
 <details id="sample-docs" class="no-print" hidden>
 <summary>見本の書類(架空)を見る</summary>
@@ -2844,7 +2873,16 @@ __m["src/ui/pager.mjs"] = (function () {
 const PAGES = {
   1: [['pg-1', '条件を入れる', 'bid-title']],
   confirm: [['pg-confirm', '確かめ', 'confirm-title']],
-  2: [['pg-2', '結果', 'result-title']],
+  // 確認が要る点は DOM では安全の後ろにあるが、画面では要るものの次
+  2: [
+    ['pg-2-top', '要点', 'result-title'],
+    ['pg-2-need', '要るもの', 'need-title'],
+    ['pg-2-open', '確認が要る点', 'open-title'],
+    ['pg-2-schedule', '受注後の段取り', 'schedule-heading'],
+    ['pg-2-safety', '安全の問い', 'safety-heading'],
+    ['pg-2-candidates', '安全の候補', 'safety-result-title'],
+    ['pg-2-save', '結果を残す', 'save-title'],
+  ],
   3: [['pg-3', '書類', 'ledger-title']],
   tools: [['pg-tools', '別の道具', 'tools-title']],
   ref: [['pg-ref', '使った資料', 'ref-title']],
@@ -2854,6 +2892,17 @@ const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'e
 const SEATS = ['pg-next', ...new Set(Object.values(LAST_SEAT))];
 // 一覧の1ページ目の「戻る」の行き先(group が null なら入口)。last は行き先の一覧の最後のページへ着く印
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
+// そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
+const OPEN_ON_SHOW = { 'pg-2-need': 'bid-fold', 'pg-2-safety': 'safety-fold' };
+// 結果の中のページをまたぐリンクの行き先(F86d)。同じページの中で動くだけの id は載せない
+const LINK_PAGE = {
+  'pg-2-need': ['bid-fold', 'bid-result', 'taicho-result', 'bid-checks', 'labor-duties'],
+  'pg-2-open': ['open-items'],
+  'pg-2-schedule': ['schedule-heading', 'schedule-result'],
+  'pg-2-safety': ['safety-heading', 'safety-fold', 'safety-questions', 'safety-q-subcontract', 'safety-q-workers', 'safety-q-plan', 'safety-q-works'],
+  'pg-2-candidates': ['safety-result'],
+  'pg-2-save': ['summary'],
+};
 
 // 進み具合の印(F86b): 入口は step-0。確かめは条件の段に数える。別の道具と使った資料はどの段にも印を付けない
 const STEP_OF = { 1: 1, confirm: 1, 2: 2, 3: 3 };
@@ -2881,6 +2930,11 @@ function setCount(doc, num, name) {
 const currentPage = () => ({ ...at });
 // 使った資料を開く前に呼ぶ。今のページを「戻る」の行き先として覚える
 const rememberCameFrom = () => { cameFrom = { ...at }; };
+// リンクの行き先の id が結果のどのページにあるか。表に無ければ null(段3 の id は段を開く側が持つ)
+function pageOfLink(id) {
+  const pg = String(id).startsWith('bid-item-') ? 'pg-2-need' : Object.keys(LINK_PAGE).find((k) => LINK_PAGE[k].includes(id));
+  return pg ? { group: 2, index: PAGES[2].findIndex(([p]) => p === pg) } : null;
+}
 const seatOf = (group, index) => (index < lastIndex(group) ? 'pg-next' : LAST_SEAT[group]);
 // 「戻る」の行き先。入口なら group が null
 function backTarget() {
@@ -2913,6 +2967,8 @@ function showPage(doc, group, index = 0) {
   else setCount(doc, '', '');
   const el = page ? doc.getElementById(page[0]) : null;
   if (el) el.scrollTop = 0;
+  const fold = OPEN_ON_SHOW[page?.[0]] ? doc.getElementById(OPEN_ON_SHOW[page[0]]) : null;
+  if (fold) fold.open = true;
   if (page) doc.getElementById(page[2])?.focus?.({ preventScroll: true });
 }
 // 入口へ: 下の帯を隠し、ページを1ページ目の形に戻す
@@ -2933,7 +2989,7 @@ function pageStep(doc, step, out) {
   showPage(doc, at.group, index);
 }
 
-return { PAGES, currentPage, rememberCameFrom, seatOf, backTarget, showPage, hidePages, pageStep };
+return { PAGES, currentPage, rememberCameFrom, pageOfLink, seatOf, backTarget, showPage, hidePages, pageStep };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -9614,7 +9670,7 @@ __m["src/ui/app.mjs"] = (function () {
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
 const { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
-const { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom } = __m["src/ui/pager.mjs"];
+const { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, pageOfLink } = __m["src/ui/pager.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -9728,8 +9784,11 @@ function renderSafety(doc) {
   const r = untouched ? safetyCandidates(safetyInput({ ...snap.answers, subcontract: undefined }, stage1)) : snap.result;
   const out = doc.getElementById('safety-result');
   if (out) out.innerHTML = renderSafetyResult(r, snap.answerRows);
-  const title = doc.getElementById('safety-title');
-  if (title) title.textContent = safetyTitle(r);
+  // 折りたたみの見出しは画面で隠すので、候補のページの見出しにも同じ題を出す(F86d)
+  for (const id of ['safety-title', 'safety-result-title']) {
+    const title = doc.getElementById(id);
+    if (title) title.textContent = safetyTitle(r);
+  }
   const stage1El = doc.getElementById('safety-stage1');
   if (stage1El) stage1El.innerHTML = esc(stage1Line(snap.values, stage1)) + ' <a href="#subcontract-total">「条件を入れる」で直す</a>';
   const qSub = doc.getElementById('safety-q-subcontract');
@@ -9896,12 +9955,18 @@ function openIntake(doc) {
   openPanel(doc, 1, 'intake-more');
   doc.getElementById('intake-load')?.focus?.({ preventScroll: true });
 }
-// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開き、行き先まで動かす
+// 結果の中で id のあるページを開く(F86d)
+function showResultPage(doc, id) {
+  const { group, index } = pageOfLink(id);
+  showPanel(doc, group, index);
+}
+// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段とページを開き、行き先まで動かす
 function openPanelForLink(doc, href) {
   const id = String(href ?? '').replace(/^#/, '');
   const target = doc.getElementById(id);
   const panel = target?.closest?.('[id^="panel-"]');
-  if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
+  if (pageOfLink(id)) showResultPage(doc, id);
+  else if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
   // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
   for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
   // 段取りの行から飛ぶと、閉じて出る表も開く(F54a)
@@ -10087,8 +10152,9 @@ function setAwardedView(doc, on) {
 function enterAwarded(doc) {
   if (!awardedAll && !lastScheduleInput && !summary.errors.length) setAwardedView(doc, true);
   if (awardedAll) runSchedule(doc, { workKind: readWorkKind(collect(doc)) });
-  // 全部の行のときは知らせの行のすぐ下に段取りがあるので、知らせの行まで動かす(段取りの見出しまで動かすと知らせが画面の上へ隠れる)
-  openPanel(doc, 2, awardedAll ? 'bid-status' : 'schedule-heading');
+  // 失敗の文と条件が変わった文は #bid-status にしか無いので、要点のページで見せる
+  if (!awardedAll && bidNotice(null)) showPanel(doc, 2);
+  else showResultPage(doc, 'schedule-heading');
   setBidStatus(doc, awardedAll ? (summary.scheduleNotRead ? '✓ ' + NOT_READ + 'ので、段取りの行はありません。' : AWARDED_NOTICE_ALL) : bidNotice(AWARDED_NOTICE_DONE));
 }
 
@@ -10869,6 +10935,8 @@ function outsideNotice(doc) {
     return ['intake-status', USE_FRAME + 'この段の枠: ' + frameLabel(doc, 'intake-load') + '。' + (opened ? opened + '。' : '')];
   }
   if (isShown(doc, 'panel-2')) {
+    // 知らせの欄は段取りのページにある(F86d)
+    showResultPage(doc, 'schedule-heading');
     const opened = OPENED(openFold(doc, 'rules-more'));
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }

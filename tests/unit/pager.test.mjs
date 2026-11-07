@@ -48,7 +48,7 @@ test('見出し: どのページも頭に焦点を受ける見出しがある', 
   const { PAGES } = await pager();
   for (const [id, , title] of Object.values(PAGES).flat()) {
     assert.ok(title, id + ' の見出しの id が無い');
-    assert.match(body, new RegExp('<h2\\b[^>]*\\bid="' + title + '"[^>]*\\btabindex="-1"|<h2\\b[^>]*\\btabindex="-1"[^>]*\\bid="' + title + '"'), id);
+    assert.match(body, new RegExp('<h[23]\\b[^>]*\\bid="' + title + '"[^>]*\\btabindex="-1"|<h[23]\\b[^>]*\\btabindex="-1"[^>]*\\bid="' + title + '"'), id);
     const pgAt = body.indexOf('id="' + id + '"');
     const at = body.indexOf('id="' + title + '"');
     assert.ok(at > pgAt, title + ' がページより前にある');
@@ -63,7 +63,7 @@ test('押していくと順にページが替わり、右の席のボタンは1�
   await page.click('bid-run');
   await assertOn(page, 'pg-confirm', 'confirm-go');
   await page.click('confirm-go');
-  await assertOn(page, 'pg-2', 'next-step-3');
+  await assertOn(page, 'pg-2-top', 'pg-next');
   await page.click('next-step-3');
   await assertOn(page, 'pg-3', 'entry-back');
   await page.click('entry-back');
@@ -75,7 +75,7 @@ test('見本で入口から書類まで押して進める。結果と書類の�
   await page.click('sample-load');
   await assertOn(page, 'pg-confirm', 'confirm-go');
   await page.click('confirm-go');
-  await assertOn(page, 'pg-2', 'next-step-3');
+  await assertOn(page, 'pg-2-top', 'pg-next');
   assert.ok(page.text('bid-result').length > 0, '結果が書かれない');
   await page.click('next-step-3');
   await assertOn(page, 'pg-3', 'entry-back');
@@ -91,7 +91,8 @@ test('戻るの行き先: 条件 → 入口、確かめ → 条件、結果 → 
   assert.equal(page.el('pg-back').hidden, false);
   assert.equal(page.el('confirm-back').hidden, true);
   await page.click('pg-back');
-  await assertOn(page, 'pg-2', 'next-step-3');
+  await assertOn(page, 'pg-2-save', 'next-step-3');
+  for (let i = 0; i < 6; i++) await page.click('pg-back'); // F86d: 結果は7ページなので、最後のページから1ページ目まで戻る
   await page.click('pg-back');
   await assertOn(page, 'pg-confirm', 'confirm-go');
   assert.equal(page.el('pg-back').hidden, true, '確かめに「戻る」が2つある');
@@ -133,7 +134,7 @@ test('別の道具: 段のページの間は隠れ、全部の印刷が折りた
   const tools = page.el('other-tools');
   tools.open = true;
   tools.dispatchEvent({ type: 'toggle', bubbles: false });
-  await assertOn(page, 'pg-2', 'next-step-3');
+  await assertOn(page, 'pg-2-top', 'pg-next');
 });
 
 test('ページを替えると頭へ戻り、見出しへ焦点を移す(画面は動かさない)', async () => {

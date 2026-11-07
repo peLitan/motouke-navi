@@ -107,6 +107,7 @@ test('段の移り方: 確認する→確かめ→段2、次へ→段3、下の�
   assertOn(page, 3);
   await page.click('pg-back');
   assertOn(page, 2);
+  for (let i = 0; i < 6; i++) await page.click('pg-back'); // F86d: 結果は7ページなので、最後のページから1ページ目まで戻る
   await page.click('pg-back');
   assertOnConfirm(page);
   await page.click('confirm-back');

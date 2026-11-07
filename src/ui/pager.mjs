@@ -4,7 +4,16 @@
 export const PAGES = {
   1: [['pg-1', '条件を入れる', 'bid-title']],
   confirm: [['pg-confirm', '確かめ', 'confirm-title']],
-  2: [['pg-2', '結果', 'result-title']],
+  // 確認が要る点は DOM では安全の後ろにあるが、画面では要るものの次
+  2: [
+    ['pg-2-top', '要点', 'result-title'],
+    ['pg-2-need', '要るもの', 'need-title'],
+    ['pg-2-open', '確認が要る点', 'open-title'],
+    ['pg-2-schedule', '受注後の段取り', 'schedule-heading'],
+    ['pg-2-safety', '安全の問い', 'safety-heading'],
+    ['pg-2-candidates', '安全の候補', 'safety-result-title'],
+    ['pg-2-save', '結果を残す', 'save-title'],
+  ],
   3: [['pg-3', '書類', 'ledger-title']],
   tools: [['pg-tools', '別の道具', 'tools-title']],
   ref: [['pg-ref', '使った資料', 'ref-title']],
@@ -14,6 +23,17 @@ const LAST_SEAT = { 1: 'bid-run', confirm: 'confirm-go', 2: 'next-step-3', 3: 'e
 const SEATS = ['pg-next', ...new Set(Object.values(LAST_SEAT))];
 // 一覧の1ページ目の「戻る」の行き先(group が null なら入口)。last は行き先の一覧の最後のページへ着く印
 const BACK_OUT = { 1: { group: null }, confirm: { group: 1, last: true }, 2: { group: 'confirm' }, 3: { group: 2, last: true }, tools: { group: null } };
+// そのページを開くと開く折りたたみ(F86d)。閉じて始まる形は保ち、開く見出しは画面で隠す
+const OPEN_ON_SHOW = { 'pg-2-need': 'bid-fold', 'pg-2-safety': 'safety-fold' };
+// 結果の中のページをまたぐリンクの行き先(F86d)。同じページの中で動くだけの id は載せない
+const LINK_PAGE = {
+  'pg-2-need': ['bid-fold', 'bid-result', 'taicho-result', 'bid-checks', 'labor-duties'],
+  'pg-2-open': ['open-items'],
+  'pg-2-schedule': ['schedule-heading', 'schedule-result'],
+  'pg-2-safety': ['safety-heading', 'safety-fold', 'safety-questions', 'safety-q-subcontract', 'safety-q-workers', 'safety-q-plan', 'safety-q-works'],
+  'pg-2-candidates': ['safety-result'],
+  'pg-2-save': ['summary'],
+};
 
 // 進み具合の印(F86b): 入口は step-0。確かめは条件の段に数える。別の道具と使った資料はどの段にも印を付けない
 const STEP_OF = { 1: 1, confirm: 1, 2: 2, 3: 3 };
@@ -41,6 +61,11 @@ function setCount(doc, num, name) {
 export const currentPage = () => ({ ...at });
 // 使った資料を開く前に呼ぶ。今のページを「戻る」の行き先として覚える
 export const rememberCameFrom = () => { cameFrom = { ...at }; };
+// リンクの行き先の id が結果のどのページにあるか。表に無ければ null(段3 の id は段を開く側が持つ)
+export function pageOfLink(id) {
+  const pg = String(id).startsWith('bid-item-') ? 'pg-2-need' : Object.keys(LINK_PAGE).find((k) => LINK_PAGE[k].includes(id));
+  return pg ? { group: 2, index: PAGES[2].findIndex(([p]) => p === pg) } : null;
+}
 export const seatOf = (group, index) => (index < lastIndex(group) ? 'pg-next' : LAST_SEAT[group]);
 // 「戻る」の行き先。入口なら group が null
 export function backTarget() {
@@ -73,6 +98,8 @@ export function showPage(doc, group, index = 0) {
   else setCount(doc, '', '');
   const el = page ? doc.getElementById(page[0]) : null;
   if (el) el.scrollTop = 0;
+  const fold = OPEN_ON_SHOW[page?.[0]] ? doc.getElementById(OPEN_ON_SHOW[page[0]]) : null;
+  if (fold) fold.open = true;
   if (page) doc.getElementById(page[2])?.focus?.({ preventScroll: true });
 }
 // 入口へ: 下の帯を隠し、ページを1ページ目の形に戻す

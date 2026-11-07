@@ -66,6 +66,7 @@ test('今の段だけ aria-current: 入口でも印が付き、確かめは条�
   assert.deepEqual(current(page), ['step-3'], '書類');
   await page.click('pg-back');
   assert.deepEqual(current(page), ['step-2'], '書類から戻る');
+  for (let i = 0; i < 6; i++) await page.click('pg-back'); // F86d: 結果は7ページなので、最後のページから1ページ目まで戻る
   await page.click('pg-back');
   assert.deepEqual(current(page), ['step-1'], '結果から確かめへ戻る');
   await page.click('confirm-back');

@@ -37,24 +37,22 @@ test('見本で試す: 見本を読み込んだことと次の一手が入る', 
   assert.ok(page.text('sample-status').includes('見本'), '帯の文が消えた');
 });
 
-test('もう受注した: 条件が無ければ全部の行を出した旨が入り、知らせの行まで動く', async () => {
+test('もう受注した: 条件が無ければ全部の行を出した旨が入り、段取りのページと注意が見える', async () => {
   const page = runPage();
-  const moved = [];
-  for (const id of ['bid-status', 'schedule-heading']) page.el(id).scrollIntoView = () => moved.push(id);
   await page.click('entry-awarded');
   assert.ok(status(page).startsWith('✓ 段取りの全部の行を出しました。'), status(page));
-  assert.deepEqual(moved, ['bid-status']);
+  assert.equal(page.el('pg-2-schedule').hidden, false);
+  assert.equal(page.el('awarded-notice').hidden, false);
 });
 
-test('もう受注した: 条件から出した結果があれば、その旨が入り、段取りの見出しまで動く', async () => {
+test('もう受注した: 条件から出した結果があれば、その旨が入り、段取りのページに着く', async () => {
   const page = runPage();
   await page.click('bid-run');
   await page.click('entry-back');
-  const moved = [];
-  for (const id of ['bid-status', 'schedule-heading']) page.el(id).scrollIntoView = () => moved.push(id);
   await page.click('entry-awarded');
   assert.ok(status(page).startsWith('✓ 入れた条件の段取りを出しています。'), status(page));
-  assert.deepEqual(moved, ['schedule-heading']);
+  assert.equal(page.el('pg-2-schedule').hidden, false);
+  assert.equal(page.el('awarded-notice').hidden, true);
 });
 
 test('金額を読めないとき: 「結果が出ました」も ✓ も出さず、直す所を言う。もう受注したでも同じ', async () => {
