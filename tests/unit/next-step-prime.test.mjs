@@ -168,7 +168,7 @@ test('README: 試し方1 は数字のカードと「次にすること」から�
   assert.ok(!tryOut.includes('「まとめ」の枠'));
   const step2 = lines.find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
   assert.ok(step2.includes('確かめの画面で「この内容で結果を見る」'));
-  assert.ok(step2.includes('上の「1 条件を入れる」を押して請負代金を変え、「確認する」'));
+  assert.ok(step2.includes('「条件を直す」の「請負代金の見込みを変更」で請負代金を変え、「次へ」で公告のページまで進んで「確認する」'));
 });
 
 test('README の手順2 のとおりに押すと、請負代金を変えた結果が出る', async () => {
@@ -176,10 +176,12 @@ test('README の手順2 のとおりに押すと、請負代金を変えた結�
   await page.click('sample-load');
   await page.click('confirm-go');
   const before = page.el('bid-result').innerHTML;
-  await page.click('pg-back'); // F86b: 進み具合は押せないので下の帯で戻る。README の語は F86j で直す
-  await page.click('confirm-back');
-  assert.equal(page.el('panel-1').hidden, false);
+  await page.click('pg-back');
+  await page.click('confirm-change-contract-amount'); // F86j: README の語のとおり「条件を直す」から金額のページへ
+  assert.equal(page.el('pg-1-amount').hidden, false);
   await page.set('contract-amount', '40,000,000');
+  await page.click('pg-next');
+  await page.click('pg-next');
   await toResult(page);
   assert.notEqual(page.el('bid-result').innerHTML, before);
   assert.doesNotMatch(page.text('result-top'), /もう一度「確認する」を押す/);

@@ -178,10 +178,10 @@ test('resultSnapshot: 要るの数は決まった項目の数。仮の結果な�
   assert.ok(s.items.some((it) => it.status === 'unanswered'));
 });
 
-test('README: 試し方の文に段1 へ戻る押し方がある。手順2 の文はそのまま', () => {
+test('README: 試し方の文と手順2 に、結果から条件へ戻る押し方がある(F86j でページの語にした)', () => {
   const lines = fs.readFileSync(new URL('../../README.md', import.meta.url), 'utf8').split('\n');
   const line = lines.find((l) => l.includes('入力欄の値を変えて'));
-  assert.ok(line.includes('上の「1 条件を入れる」を押して'), line);
+  assert.ok(line.includes('要点のページの「戻る」で確かめのページへ戻り、「条件を直す」から'), line);
   const step2 = lines.find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
-  assert.ok(step2.includes('上の「1 条件を入れる」を押して請負代金を変え、「確認する」'));
+  assert.ok(step2.includes('「戻る」で確かめのページへ戻り、「条件を直す」の「請負代金の見込みを変更」で請負代金を変え、「次へ」で公告のページまで進んで「確認する」'));
 });
