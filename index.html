@@ -177,6 +177,8 @@
   .result-plain > p:only-child { color: var(--ink-2); margin: 0.5rem 0; }
   /* 中身の無い枠は出さない(入力欄に見えるため。F79a)。aria-live の知らせは除く(隠すと、文が入っても読み上げが出ないことがある) */
   .result:empty, pre:empty, .note:empty:not([aria-live]) { display: none; }
+  /* 文の置き換え A の2つの注記は読み上げの行なので隠さず、空のときの線と余白だけを消す(F85e) */
+  #mask-decoy:empty, #mask-residual:empty { border-left: none; padding: 0; margin: 0; }
   /* 結論の札とまとめの枠(F14b・F38c)。白地に色の枠。色だけで区別しない: 太字の印(● ! ✓ ?)と言葉を必ず添え、白黒で印刷しても分かる。文字と地の色のコントラストは 4.5:1 以上 */
   .badge { display: inline-block; border: 2px solid; border-radius: 8px; padding: 0 0.5rem; font-weight: bold; white-space: nowrap; }
   .badge .mark { display: inline-block; min-width: 1em; text-align: center; font-weight: bold; }
@@ -293,7 +295,7 @@
   /* ファイルの口のボタン(F83a9): ほかのボタンと同じ枠・色・角丸・高さ。焦点の輪は input の焦点の決まりで欄の全体に付く */
   input[type="file"]::file-selector-button { min-height: 2.75rem; padding: 0.5rem 1rem; margin: 0 0.5rem 0 0; font: inherit; cursor: pointer; color: var(--primary); background: var(--paper); border: 1px solid var(--primary); border-radius: 8px; }
   input[type="file"]::file-selector-button:hover { background: var(--primary-bg); }
-  input[type="radio"], input[type="checkbox"] { width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; accent-color: var(--primary); }
+  input[type="radio"], input[type="checkbox"] { flex: none; width: 1.25rem; height: 1.25rem; margin: 0 0.5rem 0 0; vertical-align: middle; accent-color: var(--primary); }
   /* 四角の印とラベルの行も、押せる高さにする */
   .check-row { display: flex; align-items: center; min-height: 2.75rem; }
   .check-row > input { flex: none; }
@@ -599,21 +601,21 @@
 <option value="other">その他</option>
 </select>
 <p id="work-kind-plain" class="hint">段取りと目次の点検に使う表を、工種で選びます。</p>
-<details class="fold hint-fold"><summary aria-label="工種の説明">くわしく</summary><p id="work-kind-hint" class="hint">建設業法施行令 第37条の技術検定の種目で選びます。段取りと目次の点検に使う表と、その出典が切り替わります。仕様書を読んでいない工種は「この工種の仕様書は見ていない」と出します。法令の判定・安全の法令の候補・公告の読みは工種を問わず出します。</p></details></div>
+<details class="fold hint-fold"><summary aria-label="工種の説明をくわしく">くわしく</summary><p id="work-kind-hint" class="hint">建設業法施行令 第37条の技術検定の種目で選びます。段取りと目次の点検に使う表と、その出典が切り替わります。仕様書を読んでいない工種は「この工種の仕様書は見ていない」と出します。法令の判定・安全の法令の候補・公告の読みは工種を問わず出します。</p></details></div>
 <div class="row"><label for="contract-amount">請負代金の見込み(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="contract-amount" name="contract-amount" inputmode="numeric" placeholder="例 200,000,000" aria-describedby="contract-amount-plain contract-amount-hint">
 <span class="unknown-check"><input type="checkbox" id="contract-amount-unknown" name="contract-amount-unknown"><label for="contract-amount-unknown">分からない</label></span>
 <p id="contract-amount-error" class="field-error" hidden></p>
 <p id="contract-amount-read" class="field-read" hidden></p>
 <p id="contract-amount-plain" class="hint">自分が請け負う額を、消費税を含めて入れます。</p>
-<details class="fold hint-fold"><summary aria-label="請負代金の見込みの説明">くわしく</summary><p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。「1億3,420万円」「134,200千円」のように単位を付けたときは、円にした値を欄の下に出します。</p></details></div>
+<details class="fold hint-fold"><summary aria-label="請負代金の見込みの説明をくわしく">くわしく</summary><p id="contract-amount-hint" class="hint">自分が請け負う額です(下請けならその下請契約の額)。消費税を含めた額を、円で入れます。「1億3,420万円」「134,200千円」のように単位を付けたときは、円にした値を欄の下に出します。</p></details></div>
 <div class="row"><label for="subcontract-total">下請けの総額(円・税込み)<span class="req req-must">※必須</span></label>
 <input type="text" id="subcontract-total" name="subcontract-total" inputmode="numeric" placeholder="例 60,000,000" aria-describedby="subcontract-total-plain subcontract-total-hint">
 <span class="unknown-check"><input type="checkbox" id="subcontract-total-unknown" name="subcontract-total-unknown"><label for="subcontract-total-unknown">分からない</label></span>
 <p id="subcontract-total-error" class="field-error" hidden></p>
 <p id="subcontract-total-read" class="field-read" hidden></p>
 <p id="subcontract-total-plain" class="hint">自分が下請けに出す額の合計です(無ければ 0)。</p>
-<details class="fold hint-fold"><summary aria-label="下請けの総額の説明">くわしく</summary><p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。「1億3,420万円」「134,200千円」のように単位を付けたときは、円にした値を欄の下に出します。</p></details></div>
+<details class="fold hint-fold"><summary aria-label="下請けの総額の説明をくわしく">くわしく</summary><p id="subcontract-total-hint" class="hint">自分が結ぶ下請契約の額です。二以上ならその合計を入れ、下請けが無ければ 0 を入れます。「1億3,420万円」「134,200千円」のように単位を付けたときは、円にした値を欄の下に出します。</p></details></div>
 <div class="row"><label for="license">元請けの許可の種類(この工事の業種)<span class="req req-must">※必須</span></label>
 <select id="license" name="license" aria-describedby="license-plain license-hint">
 <option value="">選んでください</option>
@@ -622,7 +624,7 @@
 <option value="unknown">分からない</option>
 </select>
 <p id="license-plain" class="hint">この工事の業種で持っている許可の種類を選びます。</p>
-<details class="fold hint-fold"><summary aria-label="元請けの許可の種類の説明">くわしく</summary><p id="license-hint" class="hint">この工事の業種で持っている許可が、特定建設業か一般建設業かを選びます(許可は業種ごとに分かれます)。</p></details></div>
+<details class="fold hint-fold"><summary aria-label="元請けの許可の種類の説明をくわしく">くわしく</summary><p id="license-hint" class="hint">この工事の業種で持っている許可が、特定建設業か一般建設業かを選びます(許可は業種ごとに分かれます)。</p></details></div>
 <div class="row"><label for="engineer-qualification">置ける技術者の資格<span class="req req-must">※必須</span></label>
 <select id="engineer-qualification" name="engineer-qualification" aria-describedby="engineer-qualification-plain engineer-qualification-hint">
 <option value="">選んでください</option>
@@ -631,7 +633,7 @@
 <option value="unknown">分からない</option>
 </select>
 <p id="engineer-qualification-plain" class="hint">この工事に置ける人の資格を選びます(どちらが要るかは結果に出します)。</p>
-<details class="fold hint-fold"><summary aria-label="置ける技術者の資格の説明">くわしく</summary><p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></details></div>
+<details class="fold hint-fold"><summary aria-label="置ける技術者の資格の説明をくわしく">くわしく</summary><p id="engineer-qualification-hint" class="hint">この工事に置ける人が、監理技術者になれる人か、主任技術者になれる人かを選びます。どちらが要るかは結果に出します。</p></details></div>
 <div class="row check-row"><input type="checkbox" id="ict-measure" name="ict-measure" aria-describedby="ict-measure-hint"><label for="ict-measure">公共工事で、台帳を発注者が閲覧できる措置(情報通信技術を使う方法)を講じる<span class="req req-optional">※任意</span></label>
 <details class="fold hint-fold"><summary aria-label="閲覧できる措置の説明">説明</summary><p id="ict-measure-hint" class="hint">公共工事で、台帳の写しを出す代わりに、発注者が台帳を見られるようにするときだけ印を付けます。その方法でよいかは発注者に確かめてください。</p></details></div>
 <div class="row"><label for="participation-conditions">公告の参加の条件(任意)</label>
