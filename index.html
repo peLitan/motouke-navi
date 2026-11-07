@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-68xSB8g/1kUQvj+q5O7DX/8qJun6YfugOZZXGeIauts='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kOzKx4eSroY8E+5alsFmHN3fhjhpOksMwrt+y0jZfhU='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -462,6 +462,15 @@
     #bid-result details.fold, #taicho-fold { margin: 0; }
     #taicho-fold > h3 { display: none; }
     #bid-result details.fold > summary, #taicho-fold > summary { padding: 0.25rem; }
+    /* 受注後の段取り(F87b): 枠の上は見出し・注記・閉じた折りたたみだけ。枠がページの残りの高さを取る */
+    #pg-2-schedule > .schedule-notice { margin: 0 0 0.25rem; padding: 0.25rem 0.75rem; }
+    #schedule-heading { margin: 0.25rem 0; }
+    #schedule-more { margin: 0; flex: none; }
+    #schedule-frame { min-height: 12rem; }
+    #schedule-result details.schedule-table { --shadow: none; margin: 0; border: none; padding: 0; }
+    #schedule-result details.schedule-table > summary { display: none; }
+    #pg-2-schedule > .export { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.75rem; margin: 0.25rem 0 0; }
+    #pg-2-schedule > .export p { margin: 0; }
     /* 別の道具のページでは開いたままにするので、開く見出しは要らない */
     body.in-pages #other-tools > summary { display: none; }
     #pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; max-width: 60rem; margin: 0 auto; padding: 0.5rem 1rem; box-sizing: border-box; border-top: 1px solid var(--line); background: var(--paper); }
@@ -485,6 +494,7 @@
     #mask-input { height: 7rem; }
     #bid-result .item > details.basis:not([open]) .basis-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #bid-result .item { gap: 0 0.25rem; }
+    #schedule-heading .heading-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   }
   /* 背の低い画面(拡大 200%・横向きのスマホ): 下の帯が場所を取り切らないよう、高さの固定を外して全体が動く形に戻す(WCAG 1.4.10) */
   @media screen and (max-height: 30rem) {
@@ -768,7 +778,10 @@
 </details>
 </details>
 </div><div class="pg pg-framed" id="pg-2-schedule" hidden>
-<h3 id="schedule-heading" tabindex="-1">受注後の段取り(着手から完成・引き渡しまで)</h3>
+<h3 id="schedule-heading" tabindex="-1">受注後の段取り<span class="heading-more">(着手から完成・引き渡しまで)</span></h3>
+<p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
+<p id="rules-file-on" class="no-print" hidden>読み込んだ表を使っています</p>
+<details class="fold" id="schedule-more"><summary>この一覧について(工種・例の切り替え・作り方)</summary>
 <p id="work-kind-schedule"></p>
 <div id="awarded-notice" class="note" hidden>
 <p id="awarded-notice-text">条件を入れていないので、国の直轄の例の全部の行を出しています。工事の条件を入れて「確認する」を押すと、要る・要らないが分かれます。</p>
@@ -776,8 +789,6 @@
 <button type="button" id="awarded-print-all">全部を印刷する</button>
 </details>
 </div>
-<p class="schedule-notice note" id="schedule-notice">国の直轄の例。自治体・民間は発注者の仕様書・契約書で置き換えてください</p>
-<p id="rules-file-on" class="no-print" hidden>読み込んだ表を使っています</p>
 <details class="fold no-print" id="rules-more"><summary>例を切り替える・自分の表を読み込む</summary>
 <div class="row no-print rules-switch" role="group" aria-label="段取りの例の切り替え">
 <button type="button" id="rules-national" aria-pressed="true">国の直轄の例(国が発注する工事)</button>
@@ -791,6 +802,7 @@
 </details>
 <details class="fold" id="schedule-about-fold"><summary>この一覧の作り方</summary>
 <p id="schedule-about">国土交通省「土木工事共通仕様書(案)令和8年3月」から、着手まで・施工中・完成・引き渡しの段に分けて、受注者がすることを、いつ・何を・誰に・根拠(該当箇所と原文)で並べます。段に分けたのはこのツールの整理です。工事目的物そのものの引き渡しは契約書(公共工事標準請負契約約款 第32条)によるもので、このツールは契約書を取得していないので、一覧に入れていません。</p>
+</details>
 </details>
 <div class="ref-frame" id="schedule-frame">
 <div id="schedule-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
@@ -2749,7 +2761,7 @@ const SCHEDULE_NOTE_LABEL = '発注者の仕様書では';
 const SCHEDULE_NOTE_WARNING = '「' + SCHEDULE_NOTE_LABEL + '」の欄に書いたことは、ページを閉じると消えます。残すときは印刷か CSV で書き出してください。例や表を切り替えても、書いたことは残ります。書いた内容はこのツールは原文と照らしていません。';
 const scheduleNoteKey = (r) => r.id || r.basis.section + '|' + r.what;
 // notes は 鍵 → 書いた文 の Map。画面のメモリ(app.mjs)にだけ持ち、ブラウザに保存しない
-function renderSchedule(rows = [], detail = {}, notes = new Map()) {
+function renderSchedule(rows = [], detail = {}, notes = new Map(), { foldNotes = false } = {}) {
   if (detail.notRead) return '<p class="human"><strong>' + NOT_READ + '</strong>(工種: ' + esc(workKindLabel(detail.workKind)) + ')ので、段取りの行は出していません。発注者の仕様書で確かめてください。' + ALWAYS_SHOWN + '。</p>';
   const noteList = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
@@ -2790,13 +2802,16 @@ function renderSchedule(rows = [], detail = {}, notes = new Map()) {
   const lead = rows.length
     ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。' + (detail.all ? '' : '表は下の「受注後の段取り」にあります。') + '</p>'
     : '';
+  const warningLine = '<p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>';
   const body = rows.length
-    ? '<details class="schedule-table"' + (detail.all || rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary><p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>' + tables + '</details>'
+    ? '<details class="schedule-table"' + (detail.all || rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary>' + (foldNotes ? '' : warningLine) + tables + '</details>'
     : '<p>入れた条件では、出す段取りの行がありません。</p>';
   const skipped = (detail.skipped ?? []).length
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
-  return lead + hiddenLine + noteList + body + skipped
+  // 画面では表を先に見せるので、注意は閉じる(F87b)。紙と CSV の中身は同じ
+  const notesPart = foldNotes && rows.length ? '<details class="fold" id="schedule-notes"><summary>この表の注意(書いた欄はページを閉じると消えます)</summary>' + warningLine + noteList + '</details>' : noteList;
+  return lead + hiddenLine + notesPart + body + skipped
     + '<p class="human">' + (detail.custom ? docLabel + 'の行です' : esc(detail.exampleLabel ?? '国の直轄の例') + 'です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 
@@ -3156,7 +3171,13 @@ function showPage(doc, group, index = 0) {
   if (el) el.scrollTop = 0;
   const fold = OPEN_ON_SHOW[page?.[0]] ? doc.getElementById(OPEN_ON_SHOW[page[0]]) : null;
   if (fold) fold.open = true;
+  if (page?.[0] === 'pg-2-schedule') openScheduleTable(doc);
   if (page) doc.getElementById(page[2])?.focus?.({ preventScroll: true });
+}
+// 段取りのページでは表がそのページの中身なので、開いて見せる(F87b)。紙と閉じて始まる形は今のまま
+function openScheduleTable(doc) {
+  const table = doc.getElementById('schedule-result')?.querySelector?.('details.schedule-table');
+  if (table) table.open = true;
 }
 // 入口へ: 下の帯を隠し、ページを1ページ目の形に戻す
 function hidePages(doc) {
@@ -3177,7 +3198,7 @@ function pageStep(doc, step, out) {
   showPage(doc, at.group, index);
 }
 
-return { PAGES, setScheduleOnly, currentPage, rememberCameFrom, rememberJump, pageOfLink, seatOf, backTarget, showPage, hidePages, pageStep };
+return { PAGES, setScheduleOnly, currentPage, rememberCameFrom, rememberJump, pageOfLink, seatOf, backTarget, showPage, openScheduleTable, hidePages, pageStep };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -9862,7 +9883,7 @@ __m["src/ui/app.mjs"] = (function () {
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
 const { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
-const { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly } = __m["src/ui/pager.mjs"];
+const { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly, openScheduleTable } = __m["src/ui/pager.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -10197,11 +10218,6 @@ function openLinkTarget(doc, id) {
   else if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
   // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
   for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
-  // 段取りの行から飛ぶと、閉じて出る表も開く(F54a)
-  if (id === 'schedule-result') {
-    const table = target?.querySelector?.('details.schedule-table');
-    if (table) table.open = true;
-  }
   // リンクの既定の動きは止めてあるので、折りたたみを開いたあとで行き先まで動かす
   target?.scrollIntoView?.({ block: 'start' });
 }
@@ -10348,7 +10364,8 @@ function runSchedule(doc, input, errors = []) {
     shownKind.schedule = input.workKind ?? DEFAULT_WORK_KIND;
     applyRulesSides(doc);
     const detail = buildScheduleDetail(input, tableFor(shownKind.schedule), { all: awardedAll });
-    out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
+    out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes, { foldNotes: true });
+    if (!doc.getElementById('pg-2-schedule')?.hidden) openScheduleTable(doc);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
     if (!detail.notRead) setScheduleStatus(doc, '段取り ' + detail.rows.length + '行。');
@@ -11188,6 +11205,7 @@ function outsideNotice(doc) {
   if (isShown(doc, 'panel-2')) {
     // 知らせの欄は段取りのページにある(F86d)
     showPageOf(doc, 'schedule-heading');
+    openFold(doc, 'schedule-more'); // 枠のある折りたたみの外側(F87b)。閉じたままだと知らせの欄も枠も見えない
     const opened = OPENED(openFold(doc, 'rules-more'));
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }

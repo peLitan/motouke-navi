@@ -136,7 +136,8 @@ test('読み込んだ表を使うと、国の例の説明は折りたたみの�
   for (const id of ['schedule-about', 'plan-about']) assert.equal(doc.getElementById(id).fold.hidden, true, id);
   clearRulesTable(doc);
   for (const id of ['schedule-about', 'plan-about']) assert.equal(doc.getElementById(id).fold.hidden, false, id);
-  for (const id of ['schedule-about', 'plan-about']) assert.equal(foldsAround(id).length, 1, id + ' の折りたたみの中身が1つでない');
+  assert.deepEqual(foldsAround('schedule-about'), ['schedule-more', 'schedule-about-fold']);
+  assert.deepEqual(foldsAround('plan-about'), ['plan-about-fold']);
   for (const fold of ['schedule-about-fold', 'plan-about-fold']) {
     assert.equal((body.match(new RegExp('<details class="fold" id="' + fold + '">[\\s\\S]*?</details>'))[0].match(/<p\b/g) ?? []).length, 1, fold);
   }

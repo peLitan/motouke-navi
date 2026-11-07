@@ -162,7 +162,13 @@ export function showPage(doc, group, index = 0) {
   if (el) el.scrollTop = 0;
   const fold = OPEN_ON_SHOW[page?.[0]] ? doc.getElementById(OPEN_ON_SHOW[page[0]]) : null;
   if (fold) fold.open = true;
+  if (page?.[0] === 'pg-2-schedule') openScheduleTable(doc);
   if (page) doc.getElementById(page[2])?.focus?.({ preventScroll: true });
+}
+// 段取りのページでは表がそのページの中身なので、開いて見せる(F87b)。紙と閉じて始まる形は今のまま
+export function openScheduleTable(doc) {
+  const table = doc.getElementById('schedule-result')?.querySelector?.('details.schedule-table');
+  if (table) table.open = true;
 }
 // 入口へ: 下の帯を隠し、ページを1ページ目の形に戻す
 export function hidePages(doc) {

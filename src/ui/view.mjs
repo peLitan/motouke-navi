@@ -321,7 +321,7 @@ export const SCHEDULE_NOTE_LABEL = '発注者の仕様書では';
 export const SCHEDULE_NOTE_WARNING = '「' + SCHEDULE_NOTE_LABEL + '」の欄に書いたことは、ページを閉じると消えます。残すときは印刷か CSV で書き出してください。例や表を切り替えても、書いたことは残ります。書いた内容はこのツールは原文と照らしていません。';
 export const scheduleNoteKey = (r) => r.id || r.basis.section + '|' + r.what;
 // notes は 鍵 → 書いた文 の Map。画面のメモリ(app.mjs)にだけ持ち、ブラウザに保存しない
-export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
+export function renderSchedule(rows = [], detail = {}, notes = new Map(), { foldNotes = false } = {}) {
   if (detail.notRead) return '<p class="human"><strong>' + NOT_READ + '</strong>(工種: ' + esc(workKindLabel(detail.workKind)) + ')ので、段取りの行は出していません。発注者の仕様書で確かめてください。' + ALWAYS_SHOWN + '。</p>';
   const noteList = (detail.notes ?? []).length ? '<ul class="notes">' + detail.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '';
   const phases = [...new Set(rows.map((r) => r.phase))];
@@ -362,13 +362,16 @@ export function renderSchedule(rows = [], detail = {}, notes = new Map()) {
   const lead = rows.length
     ? '<p class="schedule-lead"><strong>受注後の段取りは ' + rows.length + '件です</strong>(' + phases.map((ph) => esc(SCHEDULE_PHASE[ph] ?? ph) + ' ' + rows.filter((r) => r.phase === ph).length + '件').join('・') + ')。' + (detail.all ? '' : '表は下の「受注後の段取り」にあります。') + '</p>'
     : '';
+  const warningLine = '<p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>';
   const body = rows.length
-    ? '<details class="schedule-table"' + (detail.all || rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary><p class="note no-print schedule-note-warning">' + esc(SCHEDULE_NOTE_WARNING) + '</p>' + tables + '</details>'
+    ? '<details class="schedule-table"' + (detail.all || rows.some(written) ? ' open' : '') + '><summary>受注後の段取り(' + rows.length + '件)</summary>' + (foldNotes ? '' : warningLine) + tables + '</details>'
     : '<p>入れた条件では、出す段取りの行がありません。</p>';
   const skipped = (detail.skipped ?? []).length
     ? '<details class="skipped"><summary>条件に合わないので出していない行(' + detail.skipped.length + '件)</summary><ul>' + detail.skipped.map((s) => '<li>' + esc(s.what) + ' — ' + esc(s.reason) + '</li>').join('') + '</ul></details>'
     : '';
-  return lead + hiddenLine + noteList + body + skipped
+  // 画面では表を先に見せるので、注意は閉じる(F87b)。紙と CSV の中身は同じ
+  const notesPart = foldNotes && rows.length ? '<details class="fold" id="schedule-notes"><summary>この表の注意(書いた欄はページを閉じると消えます)</summary>' + warningLine + noteList + '</details>' : noteList;
+  return lead + hiddenLine + notesPart + body + skipped
     + '<p class="human">' + (detail.custom ? docLabel + 'の行です' : esc(detail.exampleLabel ?? '国の直轄の例') + 'です') + '。期日・相手・提出の方法は、特記仕様書・契約書と監督職員の指示で確かめてください</p>';
 }
 

@@ -111,7 +111,7 @@ test('主の動作: 要点は次にすること、段取りは CSV、結果を�
 // ---- (2) 段取り ----
 test('段取り: 切り替えと知らせは「例を切り替える・自分の表を読み込む」の中。読み込んだ表の知らせは折りたたみの外', () => {
   assert.match(body, /<details class="fold no-print" id="rules-more"><summary>例を切り替える・自分の表を読み込む<\/summary>/);
-  for (const id of ['rules-national', 'rules-wakayama', 'rules-clear', 'rules-status', 'rules-load']) assert.deepEqual(foldsAround(id), ['rules-more'], id);
+  for (const id of ['rules-national', 'rules-wakayama', 'rules-clear', 'rules-status', 'rules-load']) assert.deepEqual(foldsAround(id), ['schedule-more', 'rules-more'], id);
   assert.deepEqual(foldsAround('rules-file-on'), []);
   assert.ok(pageHtml('pg-2-schedule').includes('id="rules-file-on"'));
 });
@@ -241,7 +241,7 @@ test('#awarded-conditions は下の帯の席にあり、ほかの席と同じ形
 test('段取りの全部の行のページからも全部を印刷でき、知らせはそのページに出る', async () => {
   const page = runPage(html);
   await page.click('entry-awarded');
-  assert.deepEqual(foldsAround('awarded-print-all'), ['awarded-print']);
+  assert.deepEqual(foldsAround('awarded-print-all'), ['schedule-more', 'awarded-print']);
   assert.ok(pageHtml('pg-2-schedule').includes('id="awarded-print-all"'));
   await page.click('awarded-print-all');
   assert.equal(page.printed.count, 1);

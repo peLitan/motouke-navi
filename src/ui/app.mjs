@@ -3,7 +3,7 @@
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
-import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly } from './pager.mjs';
+import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly, openScheduleTable } from './pager.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -338,11 +338,6 @@ function openLinkTarget(doc, id) {
   else if (panel && panel.hidden) showPanel(doc, Number(panel.id.slice('panel-'.length)));
   // 飛ぶ先が閉じた折りたたみの中なら開く(F43c)。外の折りたたみまで順に開く
   for (let d = target?.closest?.('details'); d; d = d.parentElement?.closest?.('details')) d.open = true;
-  // 段取りの行から飛ぶと、閉じて出る表も開く(F54a)
-  if (id === 'schedule-result') {
-    const table = target?.querySelector?.('details.schedule-table');
-    if (table) table.open = true;
-  }
   // リンクの既定の動きは止めてあるので、折りたたみを開いたあとで行き先まで動かす
   target?.scrollIntoView?.({ block: 'start' });
 }
@@ -489,7 +484,8 @@ function runSchedule(doc, input, errors = []) {
     shownKind.schedule = input.workKind ?? DEFAULT_WORK_KIND;
     applyRulesSides(doc);
     const detail = buildScheduleDetail(input, tableFor(shownKind.schedule), { all: awardedAll });
-    out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes);
+    out.innerHTML = renderSchedule(detail.rows, detail, scheduleNotes, { foldNotes: true });
+    if (!doc.getElementById('pg-2-schedule')?.hidden) openScheduleTable(doc);
     lastSchedule = detail.rows;
     lastScheduleInput = input;
     if (!detail.notRead) setScheduleStatus(doc, '段取り ' + detail.rows.length + '行。');
@@ -1329,6 +1325,7 @@ function outsideNotice(doc) {
   if (isShown(doc, 'panel-2')) {
     // 知らせの欄は段取りのページにある(F86d)
     showPageOf(doc, 'schedule-heading');
+    openFold(doc, 'schedule-more'); // 枠のある折りたたみの外側(F87b)。閉じたままだと知らせの欄も枠も見えない
     const opened = OPENED(openFold(doc, 'rules-more'));
     return ['rules-status', USE_FRAME + 'この段の枠: ' + frameName(doc, 'rules-load') + (opened ? '(' + opened + ')' : '') + '。'];
   }

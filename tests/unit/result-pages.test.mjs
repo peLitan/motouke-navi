@@ -59,7 +59,7 @@ test('各ページに見出しと 07 に挙げた id があり、見出しは焦
 
 test('紙の順は DOM の順のまま: 確認が要る点は DOM では安全の後ろで、画面の順だけが前に来る', () => {
   const order = ['result-title', 'bid-status', 'brief-note', 'result-top', 'bid-fold', 'bid-result', 'taicho-result',
-    'schedule-heading', 'work-kind-schedule', 'awarded-notice', 'schedule-notice', 'schedule-about-fold', 'schedule-result', 'schedule-csv-btn',
+    'schedule-heading', 'schedule-notice', 'work-kind-schedule', 'awarded-notice', 'schedule-about-fold', 'schedule-result', 'schedule-csv-btn',
     'safety-heading', 'safety-note', 'safety-prime-note', 'safety-fold', 'safety-questions', 'safety-status', 'safety-result', 'safety-version',
     'open-items', 'field-note', 'export-lead', 'print-btn', 'print-all-btn', 'csv-btn', 'summary', 'sample-banner', 'sample-docs'];
   const at = order.map((id) => panel.indexOf('id="' + id + '"'));
