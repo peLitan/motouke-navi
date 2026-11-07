@@ -42,10 +42,10 @@ const all = rulesIn(screenCss);
 
 // 帯の高さ = 上の線 + 上下の余白 + ボタン(一番高いのは指の端末)+ ボタンの上下の余白
 function barHeight() {
-  const line = toPx(valueIn(phone, '.step-next', 'border-top').split(/\s+/)[0]);
+  const line = toPx(valueIn(phone, '#pager', 'border-top').split(/\s+/)[0]);
   const button = Math.max(toPx(valueIn(all, 'button', 'min-height')), toPx(valueIn(coarse, 'button', 'min-height')));
   const margins = ['#next-step-3', '#confirm-go'].map((id) => verticalSum(valueIn(phone, id, 'margin')));
-  return line + verticalSum(valueIn(phone, '.step-next', 'padding')) + button + Math.max(...margins);
+  return line + verticalSum(valueIn(phone, '#pager', 'padding')) + button + Math.max(...margins);
 }
 // 焦点の輪は要素の外に出る。輪まで帯の上に残す
 function ringOutside() {
@@ -77,8 +77,8 @@ test('F84g (1) scroll-padding-bottom が帯の高さと焦点の輪を足した�
 });
 
 test('F84g (2) 帯と scroll-padding-bottom は同じ幅の決まりの中にあり、帯は下に止まる', () => {
-  assert.equal(valueIn(phone, '.step-next', 'position'), 'sticky');
-  assert.equal(valueIn(phone, '.step-next', 'bottom'), '0');
+  assert.equal(valueIn(phone, '#pager', 'position'), 'sticky');
+  assert.equal(valueIn(phone, '#pager', 'bottom'), '0');
   assert.ok(!screenCss.replace(block('@media (max-width: 40rem)'), '').includes('scroll-padding-bottom'), '幅の決まりの外にもある');
 });
 

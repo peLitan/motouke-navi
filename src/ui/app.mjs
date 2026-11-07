@@ -3,6 +3,7 @@
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
+import { showPage, hidePages, pageStep, backTarget, currentPage } from './pager.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -158,10 +159,10 @@ function clearSafety(doc) {
 }
 
 // 段の切り替え(F37a): #panel-1〜3 の hidden を付け外しして1つずつ見せる。段階の表示は今いる段だけ印を付け、入口を選んだあとは押せる。
-// 要素はすべて静的な HTML にあり、ここでは作らない。結果は隠れた段にも書く
+// 要素はすべて静的な HTML にあり、ここでは作らない。結果は隠れた段にも書く。段の中のページと下の帯は pager.mjs が持つ(F86a)
 // 入力の確かめ(F43d)は結果の前の画面で、段階の表示では「1 条件を入れる」の中に数える(案D のとおり)
 const PANELS = [1, 2, 3];
-export function showPanel(doc, n) {
+export function showPanel(doc, n, index = 0) {
   const confirm = doc.getElementById('panel-confirm');
   if (confirm) confirm.hidden = n !== 'confirm';
   const current = n === 'confirm' ? 1 : n;
@@ -173,11 +174,12 @@ export function showPanel(doc, n) {
     step.disabled = false;
     if (i === current) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
   }
+  const tools = doc.getElementById('panel-tools');
+  if (tools) tools.hidden = true;
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = true;
-  const back = doc.getElementById('entry-back');
-  if (back) back.hidden = false;
   setNoticeCompact(doc, n === 2 || n === 3);
+  showPage(doc, n, index);
 }
 // 常に出る注意を、結果と段3 では1行にまとめる(F83a4)。行の hidden を外すと CSS が全文を消す。「くわしく」を開いた形は段を移っても残す
 function setNoticeCompact(doc, on) {
@@ -198,17 +200,34 @@ export function showEntry(doc) {
   }
   const entry = doc.getElementById('entry');
   if (entry) entry.hidden = false;
-  const back = doc.getElementById('entry-back');
-  if (back) back.hidden = true;
+  hidePages(doc);
+  const tools = doc.getElementById('panel-tools');
+  if (tools) tools.hidden = false;
+  const fold = doc.getElementById('other-tools');
+  if (fold) fold.open = false;
   setNoticeCompact(doc, false);
   setBidStatus(doc, '');
   doc.getElementById('sample-load')?.focus?.();
 }
-// 段を開き、今の段の印へ焦点を移す(押したボタンが隠れて焦点が消えないように)。画面は scrollId の要素まで動かす
-function openPanel(doc, n, scrollId = 'steps') {
+// 段を開く。焦点は showPage がページの見出しへ移す。scrollId があれば、ページの中をその要素まで動かす
+function openPanel(doc, n, scrollId) {
   showPanel(doc, n);
-  doc.getElementById('step-' + n)?.focus?.({ preventScroll: true });
-  doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
+  if (scrollId) doc.getElementById(scrollId)?.scrollIntoView?.({ block: 'start' });
+}
+// 入口の折りたたみ「ここからは別の道具」を開くと、別の道具のページになる(F86a)。段のページの間に開くのは全部の印刷だけなので、ページは替えない
+function openTools(doc) {
+  const fold = doc.getElementById('other-tools');
+  if (!fold?.open || currentPage().group !== null) return;
+  const entry = doc.getElementById('entry');
+  if (entry) entry.hidden = true;
+  showPage(doc, 'tools', 0);
+}
+// 下の帯の「戻る」: 同じ一覧の中は前のページ、一覧の1ページ目は決まった行き先へ
+function goBack(doc) {
+  const { group, index } = backTarget();
+  if (group === null) showEntry(doc);
+  else if (group === 'confirm') openConfirm(doc);
+  else showPanel(doc, group, index);
 }
 // 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
 let fieldSources = {};
@@ -218,8 +237,6 @@ export function openConfirm(doc) {
     if (el) el.innerHTML = renderConfirmRow(r);
   }
   showPanel(doc, 'confirm');
-  doc.getElementById('steps')?.scrollIntoView?.({ block: 'start' });
-  doc.getElementById('confirm-title')?.focus?.({ preventScroll: true });
 }
 // 「変更」: 段1 の入れ直す欄へ戻す。金額の欄が「分からない」のときは、その印へ戻す
 function changeTarget(doc, row) {
@@ -259,7 +276,7 @@ function openIntake(doc) {
   openPanel(doc, 1, 'intake-more');
   doc.getElementById('intake-load')?.focus?.({ preventScroll: true });
 }
-// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開く。動くのはリンクの既定の動きに任せる
+// 隠れた段の中へのリンク(まとめの #check-result など): 行き先の段を開き、行き先まで動かす
 export function openPanelForLink(doc, href) {
   const id = String(href ?? '').replace(/^#/, '');
   const target = doc.getElementById(id);
@@ -272,6 +289,8 @@ export function openPanelForLink(doc, href) {
     const table = target?.querySelector?.('details.schedule-table');
     if (table) table.open = true;
   }
+  // リンクの既定の動きは止めてあるので、折りたたみを開いたあとで行き先まで動かす
+  target?.scrollIntoView?.({ block: 'start' });
 }
 
 // 押したあとの知らせの1行(F38d)。✓ は結果が出たときだけ付ける
@@ -1363,7 +1382,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     setAwardedView(doc, false); // 入札前の確認の折りたたみは、全部の行を出すとき以外は開いておく
     on('bid-run', () => afterIntake(() => { runBid(doc); setBidStatus(doc, resultNotice(BID_NOTICE_DONE)); openConfirm(doc); }));
     on('confirm-go', () => afterIntake(() => confirmGo(doc)));
-    on('confirm-back', () => openPanel(doc, 1));
+    on('confirm-back', () => goBack(doc));
     for (const r of CONFIRM_ROWS) on('confirm-change-' + r.key, () => changeField(doc, r.key));
     on('sample-load', () => loadSample(doc));
     on('intake-save-txt', () => saveIntakeTxt(doc));
@@ -1377,10 +1396,16 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('entry-back', () => showEntry(doc));
     for (const i of PANELS) on('step-' + i, () => openPanel(doc, i));
     on('next-step-3', () => openPanel(doc, 3));
+    on('pg-next', () => pageStep(doc, 1));
+    on('pg-back', () => pageStep(doc, -1, () => goBack(doc)));
+    doc.getElementById('other-tools')?.addEventListener?.('toggle', () => openTools(doc));
     const main = doc.getElementById('main');
     if (main) main.addEventListener('click', (ev) => {
       const a = ev && ev.target && ev.target.closest ? ev.target.closest('a[href^="#"]') : null;
-      if (a) openPanelForLink(doc, a.getAttribute('href'));
+      if (!a) return;
+      // 外の高さを固定しているので、既定の動きに任せると隠した所まで画面がずれる
+      ev.preventDefault?.();
+      openPanelForLink(doc, a.getAttribute('href'));
     });
     on('print-btn', () => printResult(doc, win));
     on('print-all-btn', () => printAll(doc, win));

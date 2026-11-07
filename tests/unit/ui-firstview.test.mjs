@@ -80,7 +80,7 @@ function estimate() {
   assert.equal(text(between), '', '法令の一覧と入口の枠の間に、見積もっていない文がある: ' + text(between));
 
   // 入口(枠なし): 見出しと、用意するものの1行と、同じ大きさの3つのタイルと、もう受注した方のリンクと、段階の表示
-  const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="entry-back"'));
+  const start = body.slice(body.indexOf('id="start"'), body.indexOf('id="offline-note"'));
   const inner = W;
   let h = marginTB('.start');
   h += block(text(start.match(/<h2>([\s\S]*?)<\/h2>/)[1]), px(cssValue('.start h2', 'font-size')), LH, inner) + marginTB('.start h2');

@@ -18,7 +18,7 @@ const status = (page) => page.text('bid-status').trim();
 const NEXT = '「次へ: 3 書類を確かめる」';
 
 test('知らせの行は結果の見出しの直下にあり、aria-live で、印刷には出さない', () => {
-  assert.match(shell, /<h2>結果<\/h2>\n<p id="bid-status" class="no-print" aria-live="polite"><\/p>/);
+  assert.match(shell, /<h2 id="result-title" tabindex="-1">結果<\/h2>\n<p id="bid-status" class="no-print" aria-live="polite"><\/p>/);
 });
 
 test('確認する: 何も入れないと未回答だけなので、仮の結果と次の一手が ＊ 付きで入る', async () => {

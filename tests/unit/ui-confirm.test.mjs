@@ -36,7 +36,7 @@ test('行の数: 判定に使う条件を全部(10行)並べ、行ごとに「�
   }
   // 手で入れる欄は読み取りの対象に全部入っている(抜けた条件が結果にだけ効くことがない)
   assert.deepEqual(confirmRows({}).map((r) => r.key), CONFIRM_ROWS.map((r) => r.key));
-  assert.match(section, /<button type="button" id="confirm-go">この内容で結果を見る<\/button>/);
+  assert.match(body.slice(body.indexOf('id="pager"'), body.indexOf('</nav>')), /<button type="button" id="confirm-go">この内容で結果を見る<\/button>/); // F86a: 下の帯の右の席へ移した
   assert.match(section, /<section id="panel-confirm" class="no-print" hidden>/);
 });
 
@@ -225,7 +225,9 @@ test('見た目: 押す所 44px の決まりの中のボタンで、狭い幅で
   assert.match(css, /\.confirm-row dd \{[^}]*overflow-wrap: anywhere/);
   assert.match(css, /@media[^{]*40rem[\s\S]*\.confirm-row \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
   assert.match(css, /#next-step-3, #confirm-go \{ width: 100%; margin: 0; \}/);
-  assert.equal(section.match(/step-next/g).length, 1);
-  assert.ok(section.indexOf('confirm-back') < section.indexOf('step-next'));
+  const bar = body.slice(body.indexOf('id="pager"'), body.indexOf('</nav>')); // F86a: 2つのボタンは下の帯へ移した。帯は1つで、戻るが左、結果へ進むが右
+  assert.equal(body.match(/id="pager"/g).length, 1);
+  assert.ok(bar.indexOf('confirm-back') >= 0 && bar.indexOf('confirm-back') < bar.indexOf('confirm-go'));
+  assert.ok(!section.includes('confirm-back') && !section.includes('confirm-go'), '確かめの本文に残っている');
   assert.ok(!/style=/.test(section));
 });

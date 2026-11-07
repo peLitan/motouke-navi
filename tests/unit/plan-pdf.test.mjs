@@ -255,7 +255,7 @@ test('ドラッグ: .docx も読み、頁の数は言わない。壊れた PDF �
 });
 
 test('台帳と体系図の欄の近くに PDF を受ける口が無く、manual に理由と次の手がある', () => {
-  const part = shell.slice(shell.indexOf('<h2>3-1.'), shell.indexOf('<section id="plan-check">'));
+  const part = shell.slice(shell.indexOf('<h2 id="ledger-title"'), shell.indexOf('<section id="plan-check">'));
   assert.ok(part.includes('id="ledger-input"') && part.includes('id="taikeizu-input"'));
   const inputs = [...part.matchAll(/<input type="file"[^>]*>/g)].map((m) => m[0]);
   assert.equal(inputs.length, 1);

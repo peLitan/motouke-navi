@@ -18,7 +18,7 @@ const pOf = (id) => {
 const exportBlock = () => {
   const from = body.indexOf('<div class="export">');
   assert.ok(from >= 0, '.export が無い');
-  return body.slice(from, body.indexOf('<div class="row no-print step-next">', from));
+  return body.slice(from, body.indexOf('<section id="panel-3"', from));
 };
 const TITLE_DAY = '\\d{4}-\\d{2}-\\d{2}';
 const docOf = (page) => page.el('print-btn').ownerDocument;

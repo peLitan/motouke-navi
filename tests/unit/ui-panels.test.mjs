@@ -22,7 +22,7 @@ function assertOn(page, n) {
   assert.deepEqual(current(page), ['step-' + n]);
   for (const id of STEPS) assert.equal(page.el(id).disabled, false, id + ' が押せない');
   assert.equal(page.el('entry').hidden, true, 'タイルが残っている');
-  assert.equal(page.el('entry-back').hidden, false);
+  assert.equal(page.el('entry-back').hidden, n !== 3, '入口に戻るは書類のページの右の席だけ'); // F86a: 下の帯の席に移した
 }
 
 // 入力の確かめ: 段の1つではなく段1 の中の画面。段階の印は 1 のまま
@@ -55,8 +55,11 @@ test('段の中身: 既存の id はそれぞれの段にあり、1つだけ。�
     return body.slice(from, to);
   };
   const has = (panel, id) => range(panel).includes('id="' + id + '"');
-  for (const id of ['bid', 'bid-form', 'bid-run']) assert.ok(has('panel-1', id), id);
-  for (const id of ['summary', 'bid-result', 'taicho-result', 'schedule-result', 'open-items', 'print-btn', 'csv-btn', 'sample-banner', 'next-step-3']) assert.ok(has('panel-2', id), id);
+  for (const id of ['bid', 'bid-form']) assert.ok(has('panel-1', id), id);
+  for (const id of ['summary', 'bid-result', 'taicho-result', 'schedule-result', 'open-items', 'print-btn', 'csv-btn', 'sample-banner']) assert.ok(has('panel-2', id), id);
+  // F86a: 段の最後のボタンは下の帯の右の席へ移した
+  const bar = body.slice(body.indexOf('id="pager"'), body.indexOf('</nav>'));
+  for (const id of ['bid-run', 'next-step-3']) assert.ok(bar.includes('id="' + id + '"'), id);
   for (const id of ['ledger-check', 'ledger-input', 'plan-check', 'plan-input', 'check-result', 'plan-result']) assert.ok(has('panel-3', id), id);
   const firstPanel = body.indexOf('<section id="panel-1"');
   const panelsEnd = body.indexOf('id="other-tools"');
@@ -223,7 +226,7 @@ test('印刷: 隠れた段も紙に出す(CSS)。段を切り替えずに印刷�
   assert.match(printCss, /#panel-1\[hidden\], #panel-2\[hidden\], #panel-3\[hidden\] \{ display: block; \}/);
   // 入口の枠・見本の知らせ・次へは紙に出さない
   assert.match(body, /<div class="start no-print" id="start">/);
-  assert.match(body, /<div class="row no-print step-next"><button type="button" id="next-step-3">/);
+  assert.match(body, /<nav class="no-print" id="pager"[^>]*>[\s\S]*?<button type="button" id="next-step-3">[\s\S]*?<\/nav>/);
   const page = runPage();
   await page.click('sample-load');
   await page.click('confirm-go');

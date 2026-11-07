@@ -38,7 +38,7 @@ const atLeast = (fg, bg, min, label) => {
   assert.ok(r >= min, label + ': ' + fg + ' と ' + bg + ' の比 ' + r.toFixed(2) + ' < ' + min);
 };
 
-const PRIMARY_IDS = ['bid-run', 'ledger-run', 'plan-run', 'next-step-3', 'confirm-go'];
+const PRIMARY_IDS = ['bid-run', 'ledger-run', 'plan-run', 'next-step-3', 'confirm-go', 'pg-next'];
 const primarySel = (suffix) => [...PRIMARY_IDS.map((id) => '#' + id + suffix), '.sample-button' + suffix];
 // :not( の中のカンマでは分けない
 const selectors = (sel) => sel.split(/,(?![^(]*\))/).map((s) => s.trim());
@@ -253,7 +253,7 @@ test('入力欄: 1px の灰色の枠で、文字入力・選ぶ欄・複数行�
 test('入口に戻る: 段の列の外の別の行に、灰色の枠で置く', () => {
   const ol = body.match(/<ol class="steps"[\s\S]*?<\/ol>/)[0];
   assert.ok(!ol.includes('entry-back'), '入口に戻るが段の列の中にある');
-  assert.match(body, /<\/ol>\s*<button type="button" id="entry-back" hidden>入口に戻る<\/button>/);
+  assert.match(body, /<button type="button" id="entry-back" hidden>入口に戻る<\/button>\n<\/nav>/); // F86a: 下の帯の右の席へ移した
   assert.equal(prop(ruleOf('.steps'), 'display'), 'flex');
   const r = ruleOf('#entry-back');
   assert.equal(color(prop(r, 'color')), vars['--ink']);
@@ -452,12 +452,12 @@ test('開くカード: 件数つきのカードの見出しは 44px で、開く
 
 test('スマホで下に止まる帯は「次へ」の1つだけ。流れの中に置き、紙には出ない', () => {
   assert.equal((html.match(/position: (sticky|fixed)/g) ?? []).length, 1);
-  assert.match(html, /@media \(max-width: 40rem\) \{[\s\S]*?\.step-next \{ position: sticky; bottom: 0;/);
-  const bar = body.match(/<div class="row no-print step-next">([\s\S]*?)<\/div>/)[1];
-  assert.equal((bar.match(/<button/g) ?? []).length, 1);
+  // F86a: 段ごとの帯を、全部の幅の下の帯 #pager に置き換えた。どのボタンを見せるかは pager.test.mjs が押して確かめる
+  assert.match(html, /@media \(max-width: 40rem\) \{[\s\S]*?#pager \{ position: sticky; bottom: 0;/);
+  const bar = body.match(/<nav class="no-print" id="pager"[^>]*>([\s\S]*?)<\/nav>/)[1];
   assert.ok(bar.includes('次へ'));
   // 太字の知らせや広い面を止めない: 帯の中身はボタン1つで、幅の広い決まりを持たない
-  assert.ok(!/\.step-next \{[^}]*height/.test(html));
+  assert.ok(!/#pager \{[^}]*height/.test(html));
 });
 
 test('印刷: 幅の枠は紙の幅いっぱいになる', () => {
