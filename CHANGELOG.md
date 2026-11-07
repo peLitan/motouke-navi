@@ -43,6 +43,7 @@
 - F80c: 画面なしの入口の数え上げに、プラグインと MCP の読み込みの結果・往復と時間・係の本文の有無を足し、道具の呼び出しを主と係の中に分けた。読み込みに失敗した記録は失敗として返す。係の本文を記録に残す環境変数を付けて動かすようにした
 - F83b7: 架空の工事 A・B・C にかけた `run-fixtures` の出力を `tests/unit/golden/run-fixtures.json` に固定し、`tests/unit/run-fixtures-golden.test.mjs` で比べるようにした。子プロセスを許さない権限の下では比較を飛ばす。
 - F83b8: 直下に `package.json` を足した(部品なし。`npm test` は受け入れと単体の試験を回し、`npm run build` は `index.html` を組み立てる)
+- F83b9: `scripts/sync-plugin.mjs` と `scripts/claude-headless.mjs` に `--help`・`-h` を足し、知らない引数は何も書かずに断るようにした。引数の無いときと `--check` の動きは変わらない
 
 ### 2026-11-07
 - F83b6: MCP の `read_masked` と `check_conditions` が、呼ぶたびに断る物の実体の集合を作って開いたファイルと比べるようにした(開いた後に途中のフォルダを差し替えて戻す形と、名前が `raw`・`secrets` のリンクの先を断る)。Linux では開いた物の実体のパスにも同じ決まりを当てる。`raw/` などが大きすぎるか深すぎて確かめられないときは、次の手を添えて断る

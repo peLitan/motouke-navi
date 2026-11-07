@@ -13,11 +13,13 @@
 // 使い方(コマンド):
 //   node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]
 //   作業フォルダには raw/ を置く。答えは標準出力へ、道具の数え上げは標準エラーへ出す
+//   --help・-h で使い方。知らない引数は claude を動かさず何も書かずに終了コード 2(F83b9)
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { handleArgs, defaultIo } from './cli.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const PLUGIN_DIR = path.join(ROOT, 'plugin');
@@ -247,43 +249,70 @@ export async function runHeadless({ work, log, docs = [], maxBudgetUsd = DEFAULT
 }
 
 // ---- コマンドとして動かすとき ----
+export const USAGE_LINE = '使い方: node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]';
+export const USAGE = [
+  USAGE_LINE,
+  '',
+  'Claude Code(claude -p)を画面なしで動かし、プラグイン plugin/ の Skill で書類を点検します。Claude Code のログインで動き、鍵は渡しません。--help では claude を動かしません。',
+  '読むもの: 作業フォルダの raw/ の書類(claude が道具を通して、置き換えた後の中身を読みます)',
+  '書くもの: 記録のファイル(既定は 作業フォルダ/headless-logs/<日時>.jsonl。既にあれば止まります)。答えは標準出力へ、道具の数え上げは標準エラーへ出します',
+  '終わり方: 点検が終われば 0。claude の失敗・記録の注意で失敗にしたとき・止まったときは 1。引数の誤りと --work が無いときは 2',
+  '',
+  '引数:',
+  '  --work 作業フォルダ      raw/ のあるフォルダ。plugin/ と重ねない',
+  '  --doc raw/書類.txt       点検する書類。いくつでも書ける。省くと raw/ の書類すべて',
+  '  --log 記録.jsonl         記録の置き場所。raw/ の外にする',
+  '  --max-budget-usd 3       1回の上限の額。0 より大きい数',
+  '  --help, -h               この使い方を出す',
+  '',
+  '例: node scripts/claude-headless.mjs --work tmp/点検 --doc raw/書類.txt',
+].join('\n');
+
+// cli.mjs の readArgs は同じオプションを2回取れないので(--doc はいくつでも書ける)、ここで読み、結果の形だけをそろえる。
+// --max-budget-usd の値は - で始まってもよい(負の数は下の決まりで止める)
 function parseArgs(argv) {
+  if (argv.some((a) => a === '--help' || a === '-h')) return { help: true };
   const out = { work: null, docs: [], log: null, maxBudgetUsd: DEFAULT_BUDGET_USD };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--work') out.work = argv[++i];
-    else if (a === '--doc') out.docs.push(argv[++i]);
-    else if (a === '--log') out.log = argv[++i];
-    else if (a === '--max-budget-usd') out.maxBudgetUsd = Number(argv[++i]);
-    else throw new Error('知らない指定: ' + a);
+    if (!['--work', '--doc', '--log', '--max-budget-usd'].includes(a)) return { error: '知らない引数: ' + a };
+    const v = argv[++i];
+    if (v === undefined || (v.startsWith('-') && a !== '--max-budget-usd')) return { error: '値がありません: ' + a };
+    if (a === '--work') out.work = v;
+    else if (a === '--doc') out.docs.push(v);
+    else if (a === '--log') out.log = v;
+    else out.maxBudgetUsd = Number(v);
   }
   if (!(out.maxBudgetUsd > 0)) throw new Error('--max-budget-usd は 0 より大きい数にしてください。');
   return out;
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+// 終了コードを返す。run は試験で本物の claude を呼ばないものに差し替える
+export async function main(argv, io, run = runHeadless) {
+  const args = parseArgs(argv);
+  const done = handleArgs(args, io, { usage: USAGE, usageLine: USAGE_LINE });
+  if (done !== null) return done;
   if (!args.work) {
-    console.log('使い方: node scripts/claude-headless.mjs --work <作業フォルダ> [--doc raw/書類.txt]... [--log <記録.jsonl>] [--max-budget-usd 3]');
-    process.exitCode = 2;
-    return;
+    io.log(USAGE_LINE);
+    return 2;
   }
   const work = validateWork(args.work);
   const docs = validateDocs(args.docs, work);
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*$/, '');
   const log = validateLog(args.log ?? path.join(work, 'headless-logs', `${stamp}.jsonl`), work);
-  const { code, summary: s } = await runHeadless({ work, log, docs, maxBudgetUsd: args.maxBudgetUsd });
-  if (s.answer) console.log(s.answer);
-  console.error('記録: ' + log + '(置き換えた後の書類の中身が入ります。外へ渡さないでください)');
-  for (const l of summaryLines(s)) console.error(l);
-  for (const w of s.warnings) console.error('注意: ' + w);
+  const { code, summary: s } = await run({ work, log, docs, maxBudgetUsd: args.maxBudgetUsd });
+  if (s.answer) io.log(s.answer);
+  io.error('記録: ' + log + '(置き換えた後の書類の中身が入ります。外へ渡さないでください)');
+  for (const l of summaryLines(s)) io.error(l);
+  for (const w of s.warnings) io.error('注意: ' + w);
   if (code !== 0 || !s.ok) {
     const hint = s.warnings.length ? '上の「注意:」を見てください。' : '';
-    console.error(`失敗しました(終了コード ${code})。${hint}ログインしていないときは claude auth login を動かしてください。`);
-    process.exitCode = 1;
+    io.error(`失敗しました(終了コード ${code})。${hint}ログインしていないときは claude auth login を動かしてください。`);
+    return 1;
   }
+  return 0;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch((e) => { console.error('止まりました: ' + e.message); process.exitCode = 1; });
+  main(process.argv.slice(2), defaultIo()).then((c) => { process.exitCode = c; }, (e) => { console.error('止まりました: ' + e.message); process.exitCode = 1; });
 }

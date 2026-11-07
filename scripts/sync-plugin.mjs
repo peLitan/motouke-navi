@@ -1,10 +1,12 @@
 // plugin/ の中の写しを、元のファイル(F13 の integration/claude-code/、src/mask/、F20b・F26a の src/quote-check.mjs と data/sources/ の法令の原文)から作り直す(F20a・F20b)
 // 使い方: node scripts/sync-plugin.mjs        写しを作り直す
 //         node scripts/sync-plugin.mjs --check 写しが元と同じかだけを確かめる(違えば終了コード 1)
+//         --help・-h で使い方。知らない引数は何も書かずに終了コード 2(F83b9)
 // プラグインは入れたときに別の場所(Claude Code のキャッシュ)へ写されるので、道具が使う src/mask/ も plugin/ の中に置く。
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readArgs, handleArgs, runMain } from './cli.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -66,14 +68,35 @@ export function syncCopies(root = ROOT) {
   }
 }
 
-const isMain = Boolean(process.argv[1]) && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain) {
-  if (process.argv.includes('--check')) {
-    const s = staleCopies();
-    if (s.length) { console.error('元と違う写し: ' + s.join(', ')); process.exit(1); }
-    console.log('plugin の写しは元と同じ(' + PLUGIN_COPIES.length + ' ファイル)');
+export const USAGE_LINE = '使い方: node scripts/sync-plugin.mjs [--check](くわしくは --help)';
+export const USAGE = [
+  '使い方: node scripts/sync-plugin.mjs [--check]',
+  '',
+  'plugin/ の中の写しを、元のファイルから作り直します。プラグインは入れたときに別の場所へ写されるので、道具が使う部品も plugin/ の中に置きます。',
+  '読むもの: 写しの元(integration/claude-code/・src/・data/ と scripts/ の一部)',
+  '書くもの: plugin/ の中の写し(--check のときは何も書きません)',
+  '終わり方: 作り直せば 0。--check は元と同じなら 0、違えば 1。引数の誤りは 2',
+  '',
+  '引数:',
+  '  --check     写しが元と同じかだけを確かめる',
+  '  --help, -h  この使い方を出す',
+  '',
+  '例: node scripts/sync-plugin.mjs --check',
+].join('\n');
+
+export function main(argv, io, root = ROOT) {
+  const done = handleArgs(readArgs(argv.filter((a) => a !== '--check')), io, { usage: USAGE, usageLine: USAGE_LINE });
+  if (done !== null) return done;
+  if (argv.includes('--check')) {
+    const s = staleCopies(root);
+    if (s.length) { io.error('元と違う写し: ' + s.join(', ')); return 1; }
+    io.log('plugin の写しは元と同じ(' + PLUGIN_COPIES.length + ' ファイル)');
   } else {
-    syncCopies();
-    console.log('plugin の写しを作り直した(' + PLUGIN_COPIES.length + ' ファイル)');
+    syncCopies(root);
+    io.log('plugin の写しを作り直した(' + PLUGIN_COPIES.length + ' ファイル)');
   }
+  return 0;
 }
+
+const isMain = Boolean(process.argv[1]) && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) runMain(main);
