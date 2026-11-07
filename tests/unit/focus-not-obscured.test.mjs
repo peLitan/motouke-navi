@@ -59,10 +59,12 @@ async function sampleResult() {
   await page.click('confirm-go');
   return page;
 }
-// id の部品に焦点を置き、画面に入れた順を記録する
-function watch(page, focusId, ids) {
+// id の部品に焦点を置き、画面に入れた順を記録する。notice を渡すと、呼ばれた時にその知らせが書かれていたかも見る
+// (文を書く前に入れ直しても、ボタンはまだ動いていないので意味が無い)
+function watch(page, focusId, ids, notice) {
   const calls = [];
-  for (const id of ids) page.el(id).scrollIntoView = (o) => calls.push(id + ':' + o.block);
+  const early = () => (notice && page.el(notice).textContent === '' ? ':知らせの前' : '');
+  for (const id of ids) page.el(id).scrollIntoView = (o) => calls.push(id + ':' + o.block + early());
   docOf(page).activeElement = page.el(focusId);
   return calls;
 }
@@ -83,7 +85,7 @@ test('F84g (2) 帯と scroll-padding-bottom は同じ幅の決まりの中にあ
 // ---- 上に知らせが入るボタン ----
 test('F84g (3) 結果の CSV を押す: 知らせを画面に入れてから、焦点のあるボタンを入れ直す', async () => {
   const page = await sampleResult();
-  const calls = watch(page, 'csv-btn', ['export-status', 'csv-btn']);
+  const calls = watch(page, 'csv-btn', ['export-status', 'csv-btn'], 'export-status');
   await page.click('csv-btn');
   assert.match(page.el('export-status').textContent, /CSV をこの端末に保存しました/);
   assert.deepEqual(calls, ['export-status:nearest', 'csv-btn:nearest']);
@@ -92,7 +94,7 @@ test('F84g (3) 結果の CSV を押す: 知らせを画面に入れてから、�
 for (const id of ['print-btn', 'print-all-btn', 'csv-btn']) {
   test('F84g (4) 結果が無いまま ' + id + ' を押す: 知らせの後に焦点のボタンを入れ直す', async () => {
     const page = runPage(html);
-    const calls = watch(page, id, ['export-status', id]);
+    const calls = watch(page, id, ['export-status', id], 'export-status');
     await page.click(id);
     assert.notEqual(page.el('export-status').textContent, '');
     assert.deepEqual(calls, ['export-status:nearest', id + ':nearest']);
@@ -151,15 +153,29 @@ for (const [name, text, expected] of [['読めたとき', RULES, /を読みま�
     const input = page.el('rules-load');
     input.type = 'file';
     input.files = [{ name: '表.json', size: text.length, type: 'application/json', text: async () => text }];
-    const calls = watch(page, 'rules-load', ['rules-load']);
+    const calls = watch(page, 'rules-load', ['rules-load'], 'rules-status');
     await page.set('rules-load', '');
     assert.match(page.el('rules-status').textContent, expected);
     assert.deepEqual(calls, ['rules-load:nearest']);
   });
 }
 
+// ---- 上の注記が伸びるボタン ----
+test('F84g (11) 和歌山県の例を押す: 真上の注記が伸びた後に、下の知らせと焦点のボタンを入れ直す', async () => {
+  const page = await sampleResult();
+  const notice = page.el('schedule-notice');
+  const before = notice.textContent.length;
+  const calls = watch(page, 'rules-wakayama', ['rules-status', 'rules-wakayama'], 'rules-status');
+  const atFocus = [];
+  const record = page.el('rules-wakayama').scrollIntoView;
+  page.el('rules-wakayama').scrollIntoView = (o) => { atFocus.push(notice.textContent.length); record(o); };
+  await page.click('rules-wakayama');
+  assert.deepEqual(calls, ['rules-status:nearest', 'rules-wakayama:nearest']);
+  assert.ok(atFocus[0] > before, '注記が伸びる前に入れ直している: ' + before + ' → ' + atFocus[0]);
+});
+
 // ---- 入れ直しの要らない所 ----
-test('F84g (10) 帯のある段のほかの知らせは、焦点のある部品より下にあり、部品を動かさない', () => {
+test('F84g (10) 段取り・安全・切り替えの知らせは焦点のある部品より下にあり、確かめの段には知らせの行が無い', () => {
   const panel = body.slice(body.indexOf('<section id="panel-2"'), body.indexOf('<section id="panel-3"'));
   const after = (first, second) => assert.ok(panel.indexOf(first) >= 0 && panel.indexOf(first) < panel.indexOf(second), first + ' の下に ' + second + ' が無い');
   after('id="schedule-csv-btn"', 'id="schedule-status"');

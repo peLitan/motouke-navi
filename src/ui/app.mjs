@@ -559,15 +559,19 @@ function keepFocusInView(doc) {
   const focused = doc.activeElement;
   if (focused?.tagName === 'BUTTON' || focused?.type === 'file') focused.scrollIntoView?.({ block: 'nearest' });
 }
+// 知らせを画面に入れてから、焦点のある物を入れ直す。背の低い画面で両方が入らないときは焦点を優先する
+function showNotice(doc, el) {
+  el?.scrollIntoView?.({ block: 'nearest' });
+  keepFocusInView(doc);
+}
 
 function setExportStatus(doc, text) {
   const el = doc.getElementById('export-status');
   if (!el) return;
   el.textContent = text;
   if (!text) return;
-  // 押したボタンから離れた所に出るので、書いたら画面に入れる(幅390 で見えないままにしない)。焦点は最後に入れ直す
-  el.scrollIntoView?.({ block: 'nearest' });
-  keepFocusInView(doc);
+  // 押したボタンから離れた所に出るので、書いたら画面に入れる(幅390 で見えないままにしない)
+  showNotice(doc, el);
 }
 
 // 印刷のとき、根拠の条などの折りたたみ(details)を開いておく(閉じたままだと中身が紙に出ない)。
@@ -1407,7 +1411,11 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     renderSafety(doc);
     on('rules-clear', () => clearRulesTable(doc));
     on('rules-national', () => clearRulesTable(doc));
-    on('rules-wakayama', () => useWakayamaExample(doc));
+    on('rules-wakayama', () => {
+      useWakayamaExample(doc);
+      // ボタンの真上の注記が長くなり、ボタンとその下の知らせが大きく動く(F84g)
+      showNotice(doc, doc.getElementById('rules-status'));
+    });
     const rulesFile = doc.getElementById('rules-load');
     if (rulesFile) rulesFile.addEventListener('change', async () => {
       const f = rulesFile.files && rulesFile.files[0];
