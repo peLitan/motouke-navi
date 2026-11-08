@@ -179,8 +179,10 @@ test('F85m: 表のすぐ下の1行に、新しい組の判定と版と評価の�
   assert.ok(evalLine.includes('評価.md#7-'), '7 の節へのリンク');
 });
 
-test('F85m: 版を書いた所に plugin/ の差が空であることが添えてあり、git でも空(.git の無い写しでは git を見ない)', (t) => {
-  const NOTE = `\`git diff ${EVAL_VERSION} HEAD -- plugin/\` が空`;
+// 2026-11-08 統括: 版の後に plugin/ を変えた(作者の欄・様式の Excel の注・hook の Windows のパスの直し)ので、「空」から「変えたのはこの3つだけ」に替えた
+const PLUGIN_CHANGED_AFTER_EVAL = ['plugin/.claude-plugin/plugin.json', 'plugin/scripts/guard-raw.mjs', 'plugin/skills/construction-check/reference/sources/index.json'];
+test('F85m: 版を書いた所に、版の後の plugin/ の差が添えてあり、git でもその3つのファイルだけ(.git の無い写しでは git を見ない)', (t) => {
+  const NOTE = `\`git diff ${EVAL_VERSION} HEAD -- plugin/\``;
   assert.ok(evalLine.includes(NOTE));
   const evalSection = readme.split('\n').find((l) => l.startsWith('- 公式の評価 `claude plugin eval`:')) ?? '';
   assert.ok(evalSection.includes(NOTE));
@@ -188,12 +190,13 @@ test('F85m: 版を書いた所に plugin/ の差が空であることが添え�
   assert.ok(row.includes(NOTE));
   let out;
   try {
-    out = execFileSync('git', ['diff', '--stat', EVAL_VERSION, 'HEAD', '--', 'plugin/'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    out = execFileSync('git', ['diff', '--name-only', EVAL_VERSION, 'HEAD', '--', 'plugin/'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   } catch {
     t.skip('git で版を読めない');
     return;
   }
-  assert.equal(out, '', '版より後に plugin/ を変えたら、この文を書き直す');
+  for (const f of out.split('\n').filter(Boolean)) assert.ok(PLUGIN_CHANGED_AFTER_EVAL.includes(f), `版より後に plugin/ の ${f} を変えたら、この文を書き直す`);
+  for (const w of ['作者の欄', '様式の Excel の注', 'Windows のパスの直し']) assert.ok(evalLine.includes(w) && row.includes(w), w);
 });
 
 test('F85m: 冒頭の版は評価を走らせた版より後(.git の無い写しでは見ない)', (t) => {

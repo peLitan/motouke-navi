@@ -21,6 +21,10 @@
 // - raw/ を探すのは作業フォルダから3階層まで。それより深い所の raw/ は、パスに raw の文字があるときだけ止める
 // - プラグインのフォルダ(CLAUDE_PLUGIN_ROOT)のスクリプトは中身を見ずに通す(点検の Skill のスクリプトを止めないため)
 // - フックは Claude Code の道具だけを見る。人が端末で開いたファイルや、別のプログラム、MCP の道具は止められない
+// 2026-11-08 に足したこと(Claude Security の指摘 F1・F2):
+// - Windows のパス(C:\ や C:/ で始まる、\\ で始まる、または win32 で動くとき)は path.win32 で解決する
+// - Windows のパスで、探しの起点も作業フォルダも調べられない(stat・readdir できない)ときは、raw/ が無いとせずに止める。WSL・Linux・macOS の動きは前と同じ
+// - パスの部分の末尾の点と空白を落として比べる(Windows は raw. や「raw 」を raw として開くため)
 
 import path from 'node:path';
 import fs from 'node:fs';
@@ -28,33 +32,46 @@ import { fileURLToPath } from 'node:url';
 
 export const RAW_DIR = 'raw';
 
-const isRawName = (s) => String(s).toLowerCase() === RAW_DIR;
+// 末尾の点と空白を落として比べる(Windows は raw. や「raw 」の部分を raw として開く)
+const isRawName = (s) => String(s).replace(/[. ]+$/, '').toLowerCase() === RAW_DIR;
 const slash = (s) => String(s ?? '').replace(/\\/g, '/');
 const unquote = (s) => slash(s).replace(/^["']|["']$/g, '');
 
+// Windows のパスか(C:\ C:/ \\ で始まる、または win32 で動いている)。試験のために動く OS を替えられる
+let platform = process.platform;
+export function setPlatformForTest(p) { platform = p || process.platform; }
+const WIN_PATH = /^(?:[A-Za-z]:(?:[\\/]|$)|\\\\)/;
+const winStyle = (...xs) => platform === 'win32' || xs.some((x) => WIN_PATH.test(String(x ?? '')));
+const pathOf = (...xs) => (winStyle(...xs) ? path.win32 : path.posix);
+
 // パスを、cwd からの部分(cwd の外なら絶対パス)に分ける
 function partsFrom(abs, base) {
-  const rel = path.posix.relative(base, abs);
-  const inside = rel === '' || (!rel.startsWith('..') && !path.posix.isAbsolute(rel));
+  const P = pathOf(abs, base);
+  const rel = slash(P.relative(base, abs));
+  const inside = rel === '' || (!rel.startsWith('..') && !P.isAbsolute(rel));
   return (inside ? rel : abs).split('/').filter(Boolean);
 }
 
-function resolveAbs(p, cwd) {
-  return path.posix.resolve(slash(cwd || '/'), unquote(p));
+export function resolveAbs(p, cwd) {
+  const c = slash(cwd || '/');
+  const q = unquote(p);
+  if (winStyle(c, q)) return slash(path.win32.resolve(c, q));
+  return path.posix.resolve(c, q);
 }
 
 // 一番長い、実在する先頭の部分を実体のパスにする(シンボリックリンクをたどる)。何も無ければ null
 function realOf(abs) {
+  const P = pathOf(abs);
   let cur = abs;
   const rest = [];
   for (let i = 0; i < 64; i++) {
     try {
       const real = slash(fs.realpathSync(cur));
-      return rest.length ? path.posix.join(real, ...rest.reverse()) : real;
+      return rest.length ? slash(P.join(real, ...rest.reverse())) : real;
     } catch {
-      const parent = path.posix.dirname(cur);
+      const parent = slash(P.dirname(cur));
       if (parent === cur) return null;
-      rest.push(path.posix.basename(cur));
+      rest.push(P.basename(cur));
       cur = parent;
     }
   }
@@ -105,11 +122,11 @@ function segRegex(seg) {
 
 export const hasGlobChars = (s) => /[*?[{]/.test(String(s));
 
-// グロブの1つの部分が「raw」という名前に当たるか
+// グロブの1つの部分が「raw」という名前に当たるか(末尾の点と空白は落として見る)
 export function globSegMatchesRaw(seg) {
   if (!hasGlobChars(seg)) return isRawName(seg);
   try {
-    return new RegExp('^' + segRegex(seg) + '$', 'i').test(RAW_DIR);
+    return new RegExp('^' + segRegex(String(seg).replace(/[. ]+$/, '')) + '$', 'i').test(RAW_DIR);
   } catch {
     return true; // 読めない形は当たるものとして扱う
   }
@@ -145,27 +162,45 @@ export function findRawDirs(base, depth = 3) {
   return out;
 }
 
+// フォルダを調べられるか(stat でき、フォルダなら readdir もできるか)
+function canExamine(abs) {
+  try {
+    if (fs.statSync(abs).isDirectory()) fs.readdirSync(abs);
+    return true;
+  } catch { return false; }
+}
+
+// Windows のパスの作業フォルダを調べられない(raw/ の有無が分からない)。このときは止める側に倒す(F1)
+// WSL・Linux・macOS のパスでは前と同じく「raw/ は無い」として扱う
+const unknownWorkspace = (ws) => winStyle(ws) && !canExamine(resolveAbs('.', ws));
+
+// 探しの起点(abs)の下に raw/ があるか。起点が無いときは、作業フォルダ(ws)を調べられれば前と同じく無いとし、調べられなければ(Windows のパスで)止める側にする
+function rootHasRaw(abs, ws) {
+  let st;
+  try { st = fs.statSync(abs); } catch { return unknownWorkspace(ws); }
+  if (!st.isDirectory()) return false;
+  try { fs.readdirSync(abs); } catch { return winStyle(abs); }
+  return findRawDirs(abs).length > 0;
+}
+
 // 作業フォルダ(cwd)に raw/ があるか、cwd が raw/ の中か
 export function rawWorkspace(cwd) {
   const c = slash(cwd || '/');
   if (c.split('/').some(isRawName)) return true;
   const real = realOf(c);
   if (real && real.split('/').some(isRawName)) return true;
+  if (unknownWorkspace(c)) return true;
   return findRawDirs(c).length > 0;
 }
 
 // dir(パス)が raw/ そのもの、または raw/ を下に持つか(再帰の検索の起点として危ないか)
 function coversRaw(p, cwd) {
   if (isRawPath(p, cwd)) return true;
-  const abs = resolveAbs(p, cwd);
-  let st;
-  try { st = fs.statSync(abs); } catch { return false; }
-  if (!st.isDirectory()) return false;
-  return findRawDirs(abs).length > 0;
+  return rootHasRaw(resolveAbs(p, cwd), cwd);
 }
 
-// グロブの語が、展開すると raw/ に当たりうるか(r?w/a.txt・*/a.txt・**/*.txt など)
-function globHitsRaw(token, cwd) {
+// グロブの語が、展開すると raw/ に当たりうるか(r?w/a.txt・*/a.txt・**/*.txt など)。ws は作業フォルダ(起点が無いときの確かめに使う)
+function globHitsRaw(token, cwd, ws = cwd) {
   const t = unquote(token);
   if (!hasGlobChars(t)) return false;
   const segs = t.split('/');
@@ -177,8 +212,7 @@ function globHitsRaw(token, cwd) {
   if (!rest.some((s) => globSegMatchesRaw(s))) return false;
   const prefix = lit.length ? (lit.join('/') || '/') : '.';
   if (isRawPath(prefix, cwd)) return true;
-  const abs = resolveAbs(prefix, cwd);
-  return findRawDirs(abs).length > 0;
+  return rootHasRaw(resolveAbs(prefix, cwd), ws);
 }
 
 // ---- コマンドの読み方(簡単なもの) ----
@@ -266,7 +300,7 @@ function resolveJs(spec, fromFile) {
   const clean = spec.replace(/[?#].*$/, '');
   let base;
   try {
-    base = clean.startsWith('file:') ? slash(fileURLToPath(clean)) : path.posix.resolve(path.posix.dirname(fromFile), slash(clean));
+    base = clean.startsWith('file:') ? slash(fileURLToPath(clean)) : resolveAbs(clean, slash(pathOf(fromFile).dirname(fromFile)));
   } catch { return null; }
   for (const t of JS_TRY) if (isFile(base + t)) return base + t;
   return null;
@@ -371,7 +405,8 @@ const block = (reason) => ({ block: true, reason });
 const pass = () => ({ block: false });
 
 // Bash のコマンドの中の raw/ の指定(cat raw/a.txt、"./raw/a.txt"、C:\work\raw\a.txt など)。大文字・小文字は区別しない
-const RAW_IN_COMMAND = /(^|[\s'"=(:;|&<>/\\`])raw([/\\]|(?=[\s'";|&)<>`]|$))/i;
+// raw の後に点や空白が続く形(raw.\a.txt・raw. /a.txt・raw.)も当てる(Windows は末尾の点と空白を落として開く)
+const RAW_IN_COMMAND = /(^|[\s'"=(:;|&<>/\\`])raw(?:[. ]*[/\\]|\.*(?=[\s'";|&)<>`]|$))/i;
 
 // 変数・コマンドの置き換え・エスケープの形(どのファイルを読むか、文字からは分からない)。よく使う変数は除く
 const SAFE_VARS = new Set(['HOME', 'PWD', 'TMPDIR', 'CLAUDE_PLUGIN_ROOT', 'CLAUDE_PROJECT_DIR', 'CLAUDE_PLUGIN_DATA']);
@@ -459,7 +494,7 @@ function decideWords(commands, startCwd, env, depth) {
 
     // 語ごと: リンクの実体が raw/ を指す・グロブが raw/ に当たる
     for (const w of ws) {
-      if (w.glob && globHitsRaw(w.text, here)) return block(`グロブ(${w.text})が raw/ に当たるので止めました。読むファイルを masked/ など raw/ を含まないパスで指定してください。` + REASON_TOOL);
+      if (w.glob && globHitsRaw(w.text, here, startCwd)) return block(`グロブ(${w.text})が raw/ に当たるので止めました。読むファイルを masked/ など raw/ を含まないパスで指定してください。` + REASON_TOOL);
       if (!w.text.startsWith('-') && w.text.length < 4096 && isRawPath(w.text, here)) return block(`「${w.text}」の実体が raw/ を指すので止めました。` + REASON_TOOL);
     }
 
@@ -555,7 +590,7 @@ export function decideTool(input, env = process.env) {
     }
     case 'Grep': {
       if (isRawPath(ti.path, cwd) || isRawPattern(ti.glob)) return block(REASON_TOOL);
-      if (ti.glob && globHitsRaw(ti.glob, ti.path ? resolveAbs(ti.path, cwd) : cwd)) return block(REASON_TOOL);
+      if (ti.glob && globHitsRaw(ti.glob, ti.path ? resolveAbs(ti.path, cwd) : cwd, cwd)) return block(REASON_TOOL);
       if (coversRaw(ti.path || '.', cwd)) return block('探す場所の下に raw/ があるので止めました。path に masked/ など raw/ を含まない場所を指定してください。');
       return pass();
     }
@@ -563,7 +598,7 @@ export function decideTool(input, env = process.env) {
       if (isRawPath(ti.path, cwd) || isRawPattern(ti.pattern)) return block(REASON_TOOL);
       const base = ti.path ? resolveAbs(ti.path, cwd) : slash(cwd);
       const segs = slash(ti.pattern).split('/').filter((s) => s !== '**');
-      if (segs.some((s) => hasGlobChars(s) && globSegMatchesRaw(s)) && findRawDirs(base).length) return block('グロブが raw/ に当たるので止めました。' + REASON_TOOL);
+      if (segs.some((s) => hasGlobChars(s) && globSegMatchesRaw(s)) && rootHasRaw(base, cwd)) return block('グロブが raw/ に当たるので止めました。' + REASON_TOOL);
       return pass();
     }
     case 'Bash':
