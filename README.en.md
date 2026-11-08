@@ -140,7 +140,7 @@ claude --plugin-dir <this repository>/plugin
 The sample job, companies, people and numbers are all fictional.
 
 ## Demo video
-- Video: in preparation (the author will add the URL at submission). About 2 minutes 40 seconds, 11 scenes, showing in one take everything from having Claude Code read one real public notice with the Skill, through the results pages, the steps after award, checking fictional documents, and the hook blocking operations that read raw files, to keeping the results. Only features built during the hackathon are shown
+- Video: [https://youtu.be/ej6FIFSPNac](https://youtu.be/ej6FIFSPNac) — about 2 minutes 40 seconds, 11 scenes, showing in one take everything from having Claude Code read one real public notice with the Skill, through the results pages, the steps after award, checking fictional documents, and the hook blocking operations that read raw files, to keeping the results. Only features built during the hackathon are shown
 
 ## Limitations (summary)
 - The rule tables cover only the retrieved articles and the cited parts of MLIT materials. Contract terms and local government guidelines are not included. Laws are amended; amendments after the retrieval date are not included, so check the original text on e-Gov before use
@@ -183,5 +183,5 @@ Articles of laws were retrieved from the e-Gov Law API, and national materials f
 - The code and documents of this work are released under the Apache License 2.0. The full text is `LICENSE` at the repository root (the same text as https://www.apache.org/licenses/LICENSE-2.0.txt). The copyright notice is the following line
 - Copyright 2026 ぺりたん
 - No external components (libraries) are bundled. .docx, .xlsx and PDF are unpacked with `DecompressionStream`, which is built into browsers and Node.js
-- Many of the screen's color values are borrowed from the Digital Agency Design System npm package `@digital-go-jp/design-tokens` (MIT License). This screen was not made by the Digital Agency
+- Many of the screen's color values are borrowed from the Digital Agency Design System npm package `@digital-go-jp/design-tokens` (MIT License). The license text is `LICENSES/design-tokens-MIT.txt`. This screen was not made by the Digital Agency
 - The bundled MLIT materials follow the Public Data License (PDL1.0). The bundled original texts of laws are not subject to copyright. The Apache License 2.0 does not change how these are handled

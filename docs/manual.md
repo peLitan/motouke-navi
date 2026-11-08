@@ -803,9 +803,9 @@ Claude Code のプラグイン(上の「Claude Code のプラグイン」)を入
 - 「公園緑地工事共通仕様書 令和6年5月」(国土交通省都市局公園緑地・景観課) https://www.mlit.go.jp/toshi/park/content/001742862.pdf (取得日 2026-11-06)。`node scripts/fetch-tsushin-park-spec.mjs park` で表紙と目次の頁だけを取り出した(`data/sources/mlit-park-spec-r6-notes.txt`)。本文は入れていない
   - 加工: 注の文から造園の説明を書いた(`data/zoen-basis.json`)。加工したのはこの作品の作者(開発用のエージェントを含む)。このツールの出力は国土交通省が作成したものではありません
 
-- 「施工体制台帳(作成例)」(国土交通省。Excel の様式) https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx (掲載ページ「施工体制台帳、施工体系図等」 https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html 。取得日 2026-11-02)。台帳の Excel の読み込みの試験で本物の様式として読むために、取得したファイルを手を加えずに `data/sources/mlit-taicho-sakuseirei.xlsx` に置いた
+- 「施工体制台帳(作成例)」(国土交通省。Excel の様式) https://www.mlit.go.jp/totikensangyo/const/content/001389106.xlsx (掲載ページ「施工体制台帳、施工体系図等」 https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html 。取得日 2026-11-02)。台帳の Excel の読み込みの試験で本物の様式として読むために、取得したファイル(34,977 バイト)を `data/sources/mlit-taicho-sakuseirei.xlsx` に置いた。公開の版では、作成者などの欄(作成者・最終更新者・保存したフォルダの道筋・プリンタの名前)を空にした(27,759 バイト)。表の中身は取得した物と同じ。取得した物の sha256 は 1464309f397ab7657275dbb5b267362881599c2d3ac6b90f646dbe88e25b6009、公開の版の sha256 は 22dd38d5711e0153d78ebb7ae0f8a1df2a32630159b541d43c07a5238dd0eb82
   - 出典: 国土交通省「施工体制台帳(作成例)」。公共データ利用規約(第1.0版)(PDL1.0)に従って利用する(ページに権利表記が無いので、国土交通省ウェブサイト利用規約 https://www.mlit.go.jp/links/terms-of-use.html による)
-  - 加工: していない(様式のまま同梱)。読み込みの部品(`src/ledger-xlsx.mjs`)はこの作品の作者(開発用のエージェントを含む)が作ったもので、国土交通省が作成したものではありません
+  - 加工: 表の中身はしていない(様式のまま同梱)。公開の版では作成者などの欄(作成者・最終更新者・保存したフォルダの道筋・プリンタの名前)を空にした。読み込みの部品(`src/ledger-xlsx.mjs`)はこの作品の作者(開発用のエージェントを含む)が作ったもので、国土交通省が作成したものではありません
 
 - 「施工体制台帳等のチェックリスト」(国土交通省。Word のファイル) https://www.mlit.go.jp/totikensangyo/const/content/001389105.docx (掲載ページ「施工体制台帳、施工体系図等」 https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000191.html 。取得日 2026-11-03)。台帳の記載事項の表の上に、参考として題名・URL・取得日だけを出す。題名とリンク先は掲載ページの HTML のリンクの文のまま。チェックリストの文は写しておらず、ファイルも同梱していない(表の事項は施行規則 第14条の2 の原文から作った)
 
