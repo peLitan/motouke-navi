@@ -149,6 +149,10 @@ The sample job, companies, people and numbers are all fictional.
 - Sentences in a public notice that require past performance as a main contractor are found by searching for words, so some phrasings will be missed. The tool does not judge whether you are eligible to bid
 - Leaks in text replacement never reach zero. Personal names, site names, etc. that are not in the dictionary may remain. Even after replacement, the combination of remaining words (schedule, amount, place names, type of work, client, etc.) may reveal which job or whom it is about. Always check with your own eyes before sending anything outside
 - The Claude Code guard also cannot block every operation that reads `raw/`. Reads by commands (such as `cat`) are blocked on Linux and WSL when Claude Code's sandbox is enabled. On Windows (native), the sandbox is not available, so they are not blocked. Not checked on macOS
+- The handling of Windows paths in the plugin's hook (which guards `raw/`) has been fixed, but it has not been tested on native Windows. We recommend using it on WSL2, Linux or macOS together with the settings in `integration/` (sandbox and `permissions.deny`)
+- Keep the replacement map and dictionary files (`MASK_MAP`, `MASK_DICT`) under `raw/` or outside the working folder. The hook does not guard them
+- If the working folder holds a very large number of files (thousands), the guard may fail because the search for `raw/` has a count limit. Do not put large numbers of files in the working folder, and put `raw/` directly under it
+- Loading a maliciously crafted document may freeze the app screen or the replacement (masking) process
 - Only PDFs that contain text are read. Image-only (scanned) PDFs are reported as unreadable (no OCR)
 - Detailed limitations for each feature are in each section of [docs/manual.md](docs/manual.md) and in "限界" (Limitations) in [docs/details.md](docs/details.md#限界) (both in Japanese)
 
