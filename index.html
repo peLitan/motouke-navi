@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1yHFQkLQ2IAgrDIDb49KHV3ik9h9hnfNvo+Tkio8cQ8='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-K7yapOsaS9SJeB+vMa3KcZlkN8dPN/igKBKu1+cgaiU='; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motouke Navi(はじめての元請けの確認ツール)</title>
@@ -142,8 +142,9 @@
   /* 主のボタン(F38b): .sample-button は .entry-button より後に書く(同じ強さなので、先に書くと塗りが消える) */
   #bid-run, #ledger-run, #plan-run, #mask-run, #unmask-run, #next-step-3, #confirm-go, #pg-next, .sample-button { color: var(--paper); background: var(--primary); border-color: var(--primary); font-weight: bold; }
   #bid-run:hover, #ledger-run:hover, #plan-run:hover, #mask-run:hover, #unmask-run:hover, #next-step-3:hover, #confirm-go:hover, #pg-next:hover, .sample-button:hover, #bid-run:active, #ledger-run:active, #plan-run:active, #mask-run:active, #unmask-run:active, #next-step-3:active, #confirm-go:active, #pg-next:active, .sample-button:active { color: var(--paper); background: var(--primary-dark); border-color: var(--primary-dark); }
-  /* 進み具合(F86b): 今どこかを示すだけで押せない。番号の丸を線でつなぎ、全部の段の名前を出す。入口でも出す。行き来は下の帯の「戻る」と右の席で。
-     これからの段は丸を灰色にして押せる形に見せない(主の色の輪と字を使わない。F83a6)。今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色。線は枠線で描く(3:1 の検査に掛かる) */
+  /* 進み具合(F86b・F88b): 番号の丸を線でつなぎ、全部の段の名前を出す。入口でも出す。進むのは下の帯の右の席で。
+     今より前の段だけ押せて、その段の最初のページへ戻る(F88b)。今の段と先の段の button は disabled で、押せる形に見せない(button:disabled の灰色の地と cursor を打ち消す)。
+     これからの段は丸を灰色にする(主の色の輪と字を使わない。F83a6)。今の段は丸を塗り字を太くする。今より前の段の線と丸は主の色で、名前に下線を付ける。線は枠線で描く(3:1 の検査に掛かる) */
   .progress { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; }
   .steps { display: flex; align-items: center; list-style: none; padding: 0; margin: 0; }
   .steps li { display: flex; align-items: center; gap: 0.25rem; color: var(--ink-2); }
@@ -153,6 +154,11 @@
   .steps li:has(~ li[aria-current="step"]) .step-dot { color: var(--primary); border-color: var(--primary); }
   .steps li[aria-current="step"] { color: var(--ink); font-weight: bold; }
   .steps li[aria-current="step"] .step-dot { color: var(--paper); background: var(--primary); border-color: var(--primary); }
+  .step-back { display: flex; align-items: center; gap: 0.25rem; min-height: 2.75rem; padding: 0; margin: 0; color: inherit; background: none; border: 0; border-radius: 8px; font-weight: inherit; }
+  .step-back:disabled, .step-back:disabled:hover { color: inherit; background: none; border: 0; cursor: default; }
+  .step-back:enabled { color: var(--primary); cursor: pointer; }
+  .step-back:enabled .step-name { text-decoration: underline; }
+  .step-back:enabled:hover, .step-back:enabled:active { color: var(--primary-dark); background: var(--primary-bg); }
   #pg-count { color: var(--ink-2); }
   /* 入口に戻る(F38b): 4つ目の段に見えないよう、段の列の下の行に灰色の枠で置く。hidden で隠すので display は決めない */
   #entry-back { margin: 0.5rem 0 0; color: var(--ink); border-color: var(--line); }
@@ -602,10 +608,10 @@
 <div class="start no-print" id="start">
 <div class="progress no-print" id="progress">
 <ol class="steps" id="steps" aria-label="進み具合">
-<li id="step-0" aria-current="step"><span class="step-dot">1</span><span class="step-name">入口</span></li>
-<li id="step-1"><span class="step-dot">2</span><span class="step-name">条件</span></li>
-<li id="step-2"><span class="step-dot">3</span><span class="step-name">結果</span></li>
-<li id="step-3"><span class="step-dot">4</span><span class="step-name">書類</span></li>
+<li id="step-0" aria-current="step"><button type="button" class="step-back" id="step-back-0" disabled><span class="step-dot">1</span><span class="step-name">入口</span></button></li>
+<li id="step-1"><button type="button" class="step-back" id="step-back-1" disabled><span class="step-dot">2</span><span class="step-name">条件</span></button></li>
+<li id="step-2"><button type="button" class="step-back" id="step-back-2" disabled><span class="step-dot">3</span><span class="step-name">結果</span></button></li>
+<li id="step-3"><button type="button" class="step-back" id="step-back-3" disabled><span class="step-dot">4</span><span class="step-name">書類</span></button></li>
 </ol>
 <span id="pg-count"><span id="pg-num"></span> <span id="pg-name"></span></span>
 </div>
@@ -3109,13 +3115,18 @@ let jumpFrom = null; // リンクで飛んだ直後の「戻る」の行き先(F
 const flip = (doc, id, on) => { const e = doc.getElementById(id); if (e) e.hidden = !on; };
 const lastIndex = (group) => (listOf(group)?.length ?? 1) - 1;
 
+// 今の段より前の段のボタンだけ押せるようにする(F88b)。今の段・先の段・どの段にも印が無いページでは押せない
 function markStep(doc, n) {
   for (const i of STEPS) {
+    const back = doc.getElementById('step-back-' + i);
+    if (back) back.disabled = !(n > i);
     const step = doc.getElementById('step-' + i);
     if (!step) continue;
     if (i === n) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
   }
 }
+// 今いる段の番号。入口は 0、別の道具と使った資料は null
+const currentStep = () => (at.group === null ? 0 : STEP_OF[at.group] ?? null);
 // ページの数と名前は別の要素に分ける(幅 40rem 以下は名前を隠して数だけにする)
 function setCount(doc, num, name) {
   const numEl = doc.getElementById('pg-num');
@@ -3208,7 +3219,7 @@ function pageStep(doc, step, out) {
   showPage(doc, at.group, index);
 }
 
-return { PAGES, setScheduleOnly, currentPage, rememberCameFrom, rememberJump, pageOfLink, seatOf, backTarget, showPage, openScheduleTable, hidePages, pageStep };
+return { PAGES, setScheduleOnly, currentStep, currentPage, rememberCameFrom, rememberJump, pageOfLink, seatOf, backTarget, showPage, openScheduleTable, hidePages, pageStep };
 })();
 __m["src/mask/company-types.mjs"] = (function () {
 // 会社・団体の名前の語の一覧(F24a)。業界を問わない。規則は src/mask/rules-company.mjs にあり、この一覧を使う。
@@ -9895,7 +9906,7 @@ __m["src/ui/app.mjs"] = (function () {
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 const { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } = __m["src/ui/form.mjs"];
 const { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } = __m["src/ui/view.mjs"];
-const { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly, openScheduleTable } = __m["src/ui/pager.mjs"];
+const { showPage, hidePages, pageStep, backTarget, currentPage, currentStep, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly, openScheduleTable } = __m["src/ui/pager.mjs"];
 const { checkChecklistText } = __m["src/checklist.mjs"];
 const { DICT_FORMAT, MAP_FORMAT } = __m["src/mask/core.mjs"];
 const { parseLedgerText } = __m["src/ledger-text.mjs"];
@@ -10138,6 +10149,13 @@ function goBack(doc) {
   else if (group === 'tools') openTools(doc, index);
   else showPanel(doc, group, index);
   if (jump) rememberJump(jump);
+}
+// 上の進み具合(F88b): 今の段より前の段を押すと、その段の最初のページへ戻る。今の段と先の段は何もしない。入れた値と結果は消さない
+function backToStep(doc, n) {
+  const now = currentStep();
+  if (now === null || !(n < now)) return;
+  if (n === 0) showEntry(doc);
+  else showPanel(doc, n, 0);
 }
 // 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
 let fieldSources = {};
@@ -11377,6 +11395,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
     on('pg-back', () => pageStep(doc, -1, () => goBack(doc)));
     on('entry-tools', () => openTools(doc));
     on('ref-open', () => openRef(doc));
+    for (const n of [0, 1, 2, 3]) on('step-back-' + n, () => backToStep(doc, n));
     const main = doc.getElementById('main');
     if (main) main.addEventListener('click', (ev) => {
       const a = ev && ev.target && ev.target.closest ? ev.target.closest('a[href^="#"]') : null;
@@ -11507,7 +11526,7 @@ function startApp(doc, win = typeof window !== 'undefined' ? window : globalThis
   else start();
 }
 
-return { renderSafety, changeSafety, showPanel, showEntry, openTools, openConfirm, changeField, openPanelForLink, runBid, setScheduleNote, awardedNotice, enterAwarded, loadRulesFile, useWakayamaExample, clearRulesTable, exportScheduleCsv, openDetailsForPrint, openSummaryForPrint, restoreDetailsAfterPrint, stampPrintHead, endPrint, exportCsv, printResult, printAll, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, loadPlanFile, exportPlanCsv, loadSample, rememberIntakeText, saveIntakeTxt, loadIntakeFile, fileTypeMessage, readingNotice, dropPortName, findDropTarget, handleDragMove, handleFileDrop, startDrop, clearSample, startApp };
+return { renderSafety, changeSafety, showPanel, showEntry, openTools, backToStep, openConfirm, changeField, openPanelForLink, runBid, setScheduleNote, awardedNotice, enterAwarded, loadRulesFile, useWakayamaExample, clearRulesTable, exportScheduleCsv, openDetailsForPrint, openSummaryForPrint, restoreDetailsAfterPrint, stampPrintHead, endPrint, exportCsv, printResult, printAll, runLedgerCheck, checklistState, runChecklist, setChecklistChecked, exportChecklistCsv, exportCheckCsv, loadLedgerFile, runPlanCheck, loadPlanFile, exportPlanCsv, loadSample, rememberIntakeText, saveIntakeTxt, loadIntakeFile, fileTypeMessage, readingNotice, dropPortName, findDropTarget, handleDragMove, handleFileDrop, startDrop, clearSample, startApp };
 })();
 __m["src/ui/app.mjs"].startApp(document);
 })();

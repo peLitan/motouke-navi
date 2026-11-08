@@ -3,7 +3,7 @@
 // 入れた内容はどこにも保存しない(ページを閉じれば消える)。
 import { readBidForm, readDirect, readWorkKind, formErrors, amountValidity, amountFieldError, amountReadNote, BID_FORM_IDS, CHECKBOX_IDS } from './form.mjs';
 import { esc, renderBidResult, renderTaichoResult, renderErrors, renderEmptyInput, resultCountText, resultSnapshot, resultDiffText, checkCountText, planCountText, renderCheckResult, renderSchedule, renderPlanResult, renderXlsxResult, renderSummary, renderResultTop, renderOpenItems, renderChecklist } from './view.mjs';
-import { showPage, hidePages, pageStep, backTarget, currentPage, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly, openScheduleTable } from './pager.mjs';
+import { showPage, hidePages, pageStep, backTarget, currentPage, currentStep, rememberCameFrom, rememberJump, pageOfLink, setScheduleOnly, openScheduleTable } from './pager.mjs';
 import { checkChecklistText } from '../checklist.mjs';
 import { DICT_FORMAT, MAP_FORMAT } from '../mask/core.mjs';
 import { parseLedgerText } from '../ledger-text.mjs';
@@ -246,6 +246,13 @@ function goBack(doc) {
   else if (group === 'tools') openTools(doc, index);
   else showPanel(doc, group, index);
   if (jump) rememberJump(jump);
+}
+// 上の進み具合(F88b): 今の段より前の段を押すと、その段の最初のページへ戻る。今の段と先の段は何もしない。入れた値と結果は消さない
+export function backToStep(doc, n) {
+  const now = currentStep();
+  if (now === null || !(n < now)) return;
+  if (n === 0) showEntry(doc);
+  else showPanel(doc, n, 0);
 }
 // 入力の確かめ(F43d): 読み込んだ値の出どころ(行の鍵 → 出どころ)。メモリだけに持つ。値を変えた行は手入力に戻る
 let fieldSources = {};
@@ -1485,6 +1492,7 @@ export function startApp(doc, win = typeof window !== 'undefined' ? window : glo
     on('pg-back', () => pageStep(doc, -1, () => goBack(doc)));
     on('entry-tools', () => openTools(doc));
     on('ref-open', () => openRef(doc));
+    for (const n of [0, 1, 2, 3]) on('step-back-' + n, () => backToStep(doc, n));
     const main = doc.getElementById('main');
     if (main) main.addEventListener('click', (ev) => {
       const a = ev && ev.target && ev.target.closest ? ev.target.closest('a[href^="#"]') : null;

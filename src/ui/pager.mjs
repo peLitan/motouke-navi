@@ -90,13 +90,18 @@ let jumpFrom = null; // リンクで飛んだ直後の「戻る」の行き先(F
 const flip = (doc, id, on) => { const e = doc.getElementById(id); if (e) e.hidden = !on; };
 const lastIndex = (group) => (listOf(group)?.length ?? 1) - 1;
 
+// 今の段より前の段のボタンだけ押せるようにする(F88b)。今の段・先の段・どの段にも印が無いページでは押せない
 function markStep(doc, n) {
   for (const i of STEPS) {
+    const back = doc.getElementById('step-back-' + i);
+    if (back) back.disabled = !(n > i);
     const step = doc.getElementById('step-' + i);
     if (!step) continue;
     if (i === n) step.setAttribute('aria-current', 'step'); else step.removeAttribute('aria-current');
   }
 }
+// 今いる段の番号。入口は 0、別の道具と使った資料は null
+export const currentStep = () => (at.group === null ? 0 : STEP_OF[at.group] ?? null);
 // ページの数と名前は別の要素に分ける(幅 40rem 以下は名前を隠して数だけにする)
 function setCount(doc, num, name) {
   const numEl = doc.getElementById('pg-num');

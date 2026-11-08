@@ -178,9 +178,9 @@ test('断り書き: 帯のすぐ下の印つきの1行。文はそのままで�
   assert.ok(!hide[0].sel.split(',').some((x) => /\.disclaimer|#disclaimer/.test(x) && !x.includes('#notice-more:not([hidden]):not([open]) ~')));
 });
 
-test('進み具合: 番号の丸と線で、全部の段の名前を出す。押せない印で、今の段を塗る', () => {
+test('進み具合: 番号の丸と線で、全部の段の名前を出す。前の段だけ押せる button(F88b)で、今の段を塗る', () => {
   const ol = body.match(/<ol class="steps"[\s\S]*?<\/ol>/)[0];
-  const li = [...ol.matchAll(/<li id="step-(\d)"[^>]*><span class="step-dot">(\d)<\/span><span class="step-name">([^<]+)<\/span><\/li>/g)];
+  const li = [...ol.matchAll(/<li id="step-(\d)"[^>]*><button type="button" class="step-back" id="step-back-\1" disabled><span class="step-dot">(\d)<\/span><span class="step-name">([^<]+)<\/span><\/button><\/li>/g)];
   assert.equal(li.length, 4);
   for (const m of li) assert.equal(Number(m[1]) + 1, Number(m[2]));
   // 線は枠線で描くので、総なめの 3:1 と印刷の黒の検査に掛かる

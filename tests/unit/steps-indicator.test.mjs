@@ -1,4 +1,4 @@
-// F86b: 進み具合は「①入口 ─ ②条件 ─ ③結果 ─ ④書類」の押せない印。段の番号は画面の文から外す。
+// F86b: 進み具合は「①入口 ─ ②条件 ─ ③結果 ─ ④書類」の印。段の番号は画面の文から外す。F88b で、前の段だけ押して戻れるようにした(steps-back.test)
 // ブラウザが無いので、幅 320・390 で1行に入るかは字の幅の見積もりで見る(Edge の確かめは統括)
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,24 +32,27 @@ const SCREEN = {
   'src/ui/mask-app.mjs': mjsText(read('src/ui/mask-app.mjs')),
 };
 
-test('#steps: button もリンクも無く、入口・条件・結果・書類の4つの順で番号が1から付く', () => {
+test('#steps: リンクが無く、段ごとに1つの button(F88b)で、入口・条件・結果・書類の4つの順で番号が1から付く', () => {
   const list = ol();
   assert.ok(list, '#steps が無い');
-  assert.ok(!/<(button|a)\b/.test(list), '押せる物がある');
+  assert.ok(!/<a\b/.test(list), 'リンクがある');
+  assert.equal((list.match(/<button\b/g) ?? []).length, 4, '段のボタンのほかに押せる物がある'); // F88b: 前の段へ戻るボタン。今と先の段は disabled(steps-back.test)
   assert.ok(!/tabindex|onclick|\brole=/.test(list), '押せる物に見せる属性がある');
-  const li = [...list.matchAll(/<li id="(step-\d)"[^>]*><span class="step-dot">(\d)<\/span><span class="step-name">([^<]+)<\/span><\/li>/g)];
+  const li = [...list.matchAll(/<li id="(step-\d)"[^>]*><button type="button" class="step-back" id="step-back-\d" disabled><span class="step-dot">(\d)<\/span><span class="step-name">([^<]+)<\/span><\/button><\/li>/g)];
   assert.deepEqual(li.map((m) => [m[1], m[2], m[3]]), [['step-0', '1', '入口'], ['step-1', '2', '条件'], ['step-2', '3', '結果'], ['step-3', '4', '書類']]);
 });
 
-test('#steps: 押す仕掛けが残っていない', async () => {
-  assert.ok(!/step-'/.test(read('src/ui/app.mjs')), 'app.mjs が段の印を触っている');
-  assert.ok(!/\.steps button|\.steps [^{]*:hover|\.step-dot:hover/.test(css), '段の印に押す形の決まりがある');
+test('#steps: 今の段と先の段は押しても段が替わらない(F88b で前の段だけ押せるようにした。前の段は steps-back.test)', async () => {
+  assert.ok(!/step-'/.test(read('src/ui/app.mjs')), 'app.mjs が段の印(li)を触っている');
+  assert.ok(!/\.steps button|\.steps [^{]*:hover|\.step-dot:hover/.test(css), '段の印(li・丸)に押す形の決まりがある');
   const page = runPage(html);
   await page.click('sample-load');
   await page.click('confirm-go');
-  await page.click('step-1');
-  assert.equal(page.el('panel-2').hidden, false, '印を押すと段が替わった');
-  assert.deepEqual(current(page), ['step-2']);
+  for (const id of ['step-1', 'step-back-2', 'step-back-3']) {
+    await page.click(id);
+    assert.equal(page.el('panel-2').hidden, false, id + ' を押すと段が替わった');
+    assert.deepEqual(current(page), ['step-2']);
+  }
 });
 
 test('今の段だけ aria-current: 入口でも印が付き、確かめは条件の段に数える', async () => {
