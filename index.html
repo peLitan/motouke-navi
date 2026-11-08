@@ -231,7 +231,8 @@
   .topbar .wrap { display: flex; align-items: center; gap: 0.5rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
   .topbar svg { flex: none; width: 2rem; height: 2rem; }
   h1 { font-size: 1.1875rem; margin: 0; line-height: 1.4; }
-  .topbar-sub { display: block; font-size: 1rem; font-weight: normal; }
+  /* 帯の括弧書きは画面に出さない。title と見出しの読み上げの名前は今のままにするので、消さずに読み上げ用に画面の外へ置く(F88a) */
+  .topbar-sub { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .topbar-link { flex: none; margin: 0 0 0 auto; color: var(--bar-ink); background: var(--bar-bg); border: 1px solid var(--bar-ink); }
   .topbar-link:hover, .topbar-link:active { color: var(--bar-ink); background: var(--bar-bg); text-decoration: underline; }
   /* 法令の2つの一覧は閉じた折りたたみ(F14g)。「見ていない」があることの1行は入口の「くわしく」の中で、紙には常に出す(F86c) */

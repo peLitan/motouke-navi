@@ -138,11 +138,11 @@ test('開いたカードの見出しの「閉じる ▴」を紙に出さない�
   assert.ok(screen.includes(r.sel + ' { content: "閉じる ▴"'), '画面の規則とセレクタがずれている');
 });
 
-test('帯の副題は紙に出さず、画面には出す', () => {
+test('帯の副題は紙に出さず、画面では読み上げに残して見えない形にする(F88a)', () => {
   assert.ok(hiddenStrong.includes('.topbar-sub'), '副題が紙に出る');
   assert.ok(!briefHidden.some((s) => s.includes('topbar')), 'まとめの紙だけでなく全部の紙でも隠す');
-  assert.match(screen, /\.topbar-sub \{ display: block;/);
-  assert.ok(!/\.topbar-sub[^{}]*\{[^}]*display: none/.test(screen), '画面でも隠れている');
+  assert.match(screen, /\.topbar-sub \{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset\(50%\); white-space: nowrap; \}/);
+  assert.ok(!/\.topbar-sub[^{}]*\{[^}]*display: none/.test(screen), '画面で読み上げからも消えている');
   assert.ok(body.includes('<span class="topbar-name">Motouke Navi</span><span class="topbar-sub">(はじめての元請けの確認ツール)</span>'));
   assert.ok(!hiddenStrong.includes('.topbar-name'), '作品名まで紙から消える');
 });
