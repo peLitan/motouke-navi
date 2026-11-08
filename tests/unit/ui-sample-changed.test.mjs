@@ -182,6 +182,6 @@ test('README: 試し方の文と手順2 に、結果から条件へ戻る押し�
   const lines = fs.readFileSync(new URL('../../README.md', import.meta.url), 'utf8').split('\n');
   const line = lines.find((l) => l.includes('入力欄の値を変えて'));
   assert.ok(line.includes('要点のページの「戻る」で確かめのページへ戻り、「条件を直す」から'), line);
-  const step2 = lines.find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
+  const step2 = fs.readFileSync(new URL('../../docs/details.md', import.meta.url), 'utf8').split('\n').find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
   assert.ok(step2.includes('「戻る」で確かめのページへ戻り、「条件を直す」の「請負代金の見込みを変更」で請負代金を変え、「次へ」で公告のページまで進んで「確認する」'));
 });

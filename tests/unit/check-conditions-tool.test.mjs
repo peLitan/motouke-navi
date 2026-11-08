@@ -419,12 +419,12 @@ test('文書: plugin.json・overview の4列の行・README と評価.md の --a
   for (const r of rows) assert.equal(r.split(' | ').length, 4, r.slice(0, 40));
   assert.ok(rows[3].includes('tests/unit/check-conditions-tool.test.mjs'));
   const tools = ['read_masked', 'list_masked', 'check_articles', 'check_conditions'].map((n) => 'mcp__plugin_motouke-navi-guard_masked-files__' + n);
-  for (const f of ['README.md', 'docs/評価.md']) {
+  for (const f of ['docs/details.md', 'docs/評価.md']) {
     const line = read(f).split('\n').find((l) => l.includes('--allow-tools mcp__'));
     assert.ok(line, f);
     for (const t of tools) assert.ok(line.includes(t), f + ' ' + t);
   }
-  assert.ok(read('README.md').includes('`--allow-tools` の4つの道具'));
+  assert.ok(read('docs/details.md').includes('`--allow-tools` の4つの道具'));
   const manual = read('docs/manual.md').split('公告から条件を拾う(Skill `bid-intake`)')[1].split('\n## ')[0];
   assert.ok(manual.includes('`check_conditions`'));
   assert.ok(manual.includes('端末で使うとき'));

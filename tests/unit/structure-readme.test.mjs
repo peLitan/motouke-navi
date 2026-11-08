@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const readme = fs.readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
-const section = readme.split('## 業界の構造にどう効くか(効かないことも含めて)')[1]?.split('\n## ')[0] ?? '';
+// README.md から docs/details.md へ移した節を見る(2026-11-08 統括: README を整えた)
+const details = fs.readFileSync(new URL('../../docs/details.md', import.meta.url), 'utf8');
+const section = details.split('## 業界の構造にどう効くか(効かないことも含めて)')[1]?.split('\n## ')[0] ?? '';
 const overview = fs.readFileSync(new URL('../../docs/overview.md', import.meta.url), 'utf8');
 const paragraphs = section.trim().split('\n\n');
 
@@ -22,7 +24,7 @@ test('F50a の条と結果の節の名前が書いてある', () => {
 });
 
 test('節の国の資料が「データと出典」の表に取得日つきで載っている', () => {
-  const sources = readme.split('## データと出典')[1].split('\n## ')[0];
+  const sources = details.split('## データと出典')[1].split('\n## ')[0];
   for (const id of ['001971681', '001971712', '001760946', '001984988']) {
     assert.match(sources, new RegExp(`/${id}\\.pdf \\| \\d{4}-\\d{2}-\\d{2} \\|`), id);
   }
@@ -48,6 +50,7 @@ for (const [name, text] of [['README の節の先頭の段落', paragraphs[0]], 
 test('F71a: 受注の難しさ・意向の数字に読める語が README と概要に無い', () => {
   for (const s of ['受けたいが受けられない', '受注できる', '数を増やす', '数を減らす', '元請けの経験が無い']) {
     assert.ok(!readme.includes(s), `README: ${s}`);
+    assert.ok(!details.includes(s), `docs/details.md: ${s}`);
     assert.ok(!overview.includes(s), `overview: ${s}`);
   }
 });
@@ -65,7 +68,7 @@ test('F71a: 節の2つ目の段落に就業者・賃金・労働時間の数字�
 
 test('F71a: 受注の箇条は残り、「データと出典」のその資料の行に p.2 の数字がある', () => {
   assert.match(section, /^- 受注: 実績・等級・資金・人の体力は変えません。/m);
-  const sources = readme.split('## データと出典')[1].split('\n## ')[0];
+  const sources = details.split('## データと出典')[1].split('\n## ')[0];
   const row = sources.split('\n').find((l) => l.includes('中小建設業への普及促進方策について')) ?? '';
   assert.ok(row.includes('p.2 の 723社 / 9,734社 にも使う'), row);
 });

@@ -250,7 +250,7 @@ test('文書: 走らせ方の命令の写しは増えず、--case を付けな�
 });
 
 test('文書: README 手順4 に E4 の1行があり、claude plugin eval の命令の行は E4 の旗を含まない', () => {
-  const lines = read('README.md').split('\n');
+  const lines = read('docs/details.md').split('\n');
   const step4 = lines.slice(lines.findIndex((l) => l.startsWith('4. Claude Code があれば')), lines.indexOf('## できること'));
   const e4 = step4.filter((l) => l.includes('E4'));
   // F85m: 走らせたので値と版に替えた

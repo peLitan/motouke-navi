@@ -166,7 +166,7 @@ test('README: 試し方1 は数字のカードと「次にすること」から�
   const tryOut = lines[lines.indexOf('## 試し方') + 1];
   assert.ok(tryOut.includes('結果の一番上の数字のカードと「次にすること」から'));
   assert.ok(!tryOut.includes('「まとめ」の枠'));
-  const step2 = lines.find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
+  const step2 = read('docs/details.md').split('\n').find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
   assert.ok(step2.includes('確かめの画面で「この内容で結果を見る」'));
   assert.ok(step2.includes('「条件を直す」の「請負代金の見込みを変更」で請負代金を変え、「次へ」で公告のページまで進んで「確認する」'));
 });

@@ -222,7 +222,7 @@ test('文書: 評価.md の 7 に判定役の読み方があり、走らせ方�
   }
   const line = SECTION7.split('\n').find((l) => l.startsWith('claude plugin eval plugin'));
   assert.ok(line.includes('--judge-model <別の固定の値>'));
-  assert.ok(read('README.md').includes('判定役は作る側(`--model`)と別のモデルに固定'));
+  assert.ok(read('docs/details.md').includes('判定役は作る側(`--model`)と別のモデルに固定'));
 });
 
 test('arm は手順の印にだけ付け、read_masked の検査を点数から外さない(0回でも 1.00 になるため)', () => {
@@ -323,7 +323,7 @@ test('未測の枠の決まり: 値は版の印と日時つきの行にだけ入
 
 test('文書: 8/8・0/8 と判定の合格は、古い組(検査9つ)の値だと書く', () => {
   const OLD = /[78]\/8|0\/8|あり [78]・なし 0|判定は合格|判定は「合格」/;
-  for (const f of ['README.md', 'docs/overview.md', 'docs/demo-script.md', 'docs/評価.md']) {
+  for (const f of ['README.md', 'docs/details.md', 'docs/overview.md', 'docs/demo-script.md', 'docs/評価.md']) {
     for (const line of read(f).split('\n')) {
       if (OLD.test(line)) assert.ok(line.includes('古い組'), `${f}: ${line.slice(0, 60)}`);
     }
@@ -339,7 +339,7 @@ test('文書: 評価.md の 7 に合否の書き方・公式のページの出�
 });
 
 test('README: claude plugin eval の1行に旗と4つの道具があり、単体の試験の命令がある', () => {
-  const lines = read('README.md').split('\n');
+  const lines = read('docs/details.md').split('\n');
   const line = lines.find((l) => l.includes('claude plugin eval plugin'));
   assert.ok(line);
   for (const w of ['--scaffold', '--allow-real-servers', '--allow-tools', '--model', '--judge-model <別の固定の値>', '--no-publish', `${TOOL}read_masked`, `${TOOL}list_masked`, `${TOOL}check_articles`, `${TOOL}check_conditions`]) {
@@ -614,7 +614,7 @@ test('文書: 評価.md の 7 の表に E3 の行が版の印と値つきであ�
 });
 
 test('文書: README 手順4 に E3 が走ることと値と版があり、overview の評価の行と manual に E3 がある', () => {
-  const readme = read('README.md');
+  const readme = read('docs/details.md');
   const line = readme.split('\n').find((l) => l.includes('E3(公告の拾い)も走ります'));
   assert.ok(line);
   // F85m: 走らせたので値と版に替えた。差が 0 のまま「合格」とだけ書かないことも見る

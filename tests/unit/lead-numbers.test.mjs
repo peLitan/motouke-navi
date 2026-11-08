@@ -38,6 +38,7 @@ test('README.md の冒頭は作者の言葉と作者の立場の段落のあと�
   assert.deepEqual(lines.slice(5, 9).map((l) => l.slice(0, 5)), ['- 誰の:', '- どんな', '- 何を:', '- どう:']);
   assert.ok(lines[8].includes('使う前は') && lines[8].includes('使うと'));
   assert.ok(!/\d/.test(lines.slice(5, 9).join('')), '要約の箇条に数字を置かない');
-  const section = readme.slice(readme.indexOf('\n## 評価\n'), readme.indexOf('\n## データと出典\n'));
+  const details = read('docs/details.md'); // README から移した「## 評価」の節
+  const section = details.slice(details.indexOf('\n## 評価\n'), details.indexOf('\n## データと出典\n'));
   assertNumbers(section);
 });

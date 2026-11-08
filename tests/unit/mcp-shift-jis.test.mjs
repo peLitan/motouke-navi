@@ -149,7 +149,7 @@ test('plugin の写しは元と同じで、入れた後の場所でも Shift_JIS
 });
 
 test('README と manual に読める文字コードを書き、測っていない言い切りを書かない', () => {
-  for (const f of ['README.md', 'docs/manual.md']) {
+  for (const f of ['docs/details.md', 'docs/manual.md']) {
     const body = read(f);
     assert.ok(body.includes('Excel の既定で保存した CSV・TXT は Shift_JIS になることがあります'), f);
     assert.ok(!/Shift_JIS.{0,6}多い/.test(body), f);

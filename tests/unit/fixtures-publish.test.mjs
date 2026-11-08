@@ -70,7 +70,7 @@ test('git の対象と履歴に正解の表・仕込み表が無い(git を呼�
 });
 
 test('README: 仕込み表の文のすぐ後に、正解と初めて見る書類の置き場と、入れていない物の名前がある(F72a)', () => {
-  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const readme = fs.readFileSync(path.join(root, 'docs', 'details.md'), 'utf8');
   const keep = '仕込み表と置き換えの正解の表はリポジトリに入れていません';
   assert.equal(readme.split(keep).length - 1, 1, '元の文が1件残っている');
   const line = readme.slice(readme.indexOf(keep) + keep.length).split('\n')[0];

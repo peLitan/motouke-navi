@@ -63,7 +63,7 @@ test('運用マニュアルの抜き書き: 原文にあり、元請の限定と
   const q = quotesData.quotes.find((x) => x.id === 'q-mlit-manual-koyo');
   assert.deepEqual(checkQuote(q, { [source.id]: text }), { ok: true });
   for (const w of ['元請の専任の主任技術者', '入札の申込のあった日', '指名競争', '見積書の提出のあった日', '三ヶ月以上の雇用関係', '合併、営業譲渡又は会社分割等', 'この限りではない']) assert.ok(q.text.includes(w), w);
-  assert.ok(read('README.md').includes(source.url), 'README の「データと出典」に無い');
+  assert.ok(read('docs/details.md').includes(source.url), 'docs/details.md の「データと出典」に無い');
 });
 
 test('専任の行は、専任が要ると出たときだけ', () => {

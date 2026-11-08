@@ -406,7 +406,7 @@ test('F80c 文書: コメント・manual の走らせた記録の見出しと参
   const rows = section.split('\n');
   assert.equal(rows.filter((l) => l.includes('CLAUDE_CODE_FORWARD_SUBAGENT_TEXT') && l.includes('Follow subagent messages')).length, 1);
   assert.equal(rows.filter((l) => l.includes("Fail CI when a plugin or MCP server doesn't load") && l.includes('plugin_errors') && l.includes('mcp_servers') && l.includes('ok: false')).length, 1);
-  const readme = fs.readFileSync(path.resolve('README.md'), 'utf8');
+  const readme = fs.readFileSync(path.resolve('docs/details.md'), 'utf8');
   for (const u of ['https://code.claude.com/docs/en/headless', 'https://code.claude.com/docs/en/agent-sdk/typescript']) assert.ok(readme.includes(u), u);
   assert.match(fs.readFileSync(path.resolve('CHANGELOG.md'), 'utf8'), /^- F80c: /m);
 });

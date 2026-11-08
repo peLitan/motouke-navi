@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-const readme = read('README.md');
+// README.md から docs/details.md へ移した節を見る(2026-11-08 統括: README を整えた)
+const readme = read('docs/details.md');
 const HEAD = '## 審査で確かめる所(5分)';
 const section = readme.split(HEAD)[1]?.split('\n## ')[0] ?? '';
 const SUB = '### モデルを呼ぶ命令';
@@ -22,7 +23,8 @@ const tableLines = above.split('\n').filter((l) => l.startsWith('|'));
 const rows = tableLines.slice(2).map(cells);
 const row = (name) => rows.find((r) => r[0].includes(name)) ?? assert.fail(`行が無い: ${name}`);
 const codeSpans = (s) => [...s.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
-const linkTargets = (s) => [...s.matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)].map((m) => m[1]).filter((t) => t);
+// docs/details.md の中のリンクは docs/ から見た道筋なので、リポジトリの直下からの道筋に直して比べる
+const linkTargets = (s) => [...s.matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)].map((m) => m[1]).filter((t) => t).map((t) => path.posix.normalize('docs/' + t));
 
 test('節は1つで、デモの後・業界の構造の前にあり、5分で試せる手順の切り出しの中に無い', () => {
   assert.equal(readme.split(HEAD).length - 1, 1);

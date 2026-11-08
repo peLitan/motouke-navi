@@ -7,7 +7,7 @@ import { checkKindSchedule } from '../../src/kind-schedule-check.mjs';
 
 const read = (p) => fs.readFileSync(new URL('../../' + p, import.meta.url), 'utf8');
 const json = (p) => JSON.parse(read(p));
-const DOCS = ['README.md', 'docs/overview.md', 'docs/manual.md', 'plugin/skills/bid-intake/SKILL.md'];
+const DOCS = ['docs/details.md', 'docs/overview.md', 'docs/manual.md', 'plugin/skills/bid-intake/SKILL.md'];
 
 // 工種ごとの段取りの表。原文のファイルは土木だけ別の点検(check-quotes の条ごとの照合)なので null
 const TABLES = {
@@ -54,5 +54,5 @@ test('見ていない範囲を4つの文書に書き、言い過ぎの語を書�
 });
 
 test('公開の説明の抜き書きの件数が同じ日の数にそろっている', () => {
-  for (const file of ['README.md', 'docs/overview.md']) assert.match(read(file), /規則表の抜き書き 345 件が原文にある/, file);
+  for (const file of ['docs/details.md', 'docs/overview.md']) assert.match(read(file), /規則表の抜き書き 345 件が原文にある/, file);
 });

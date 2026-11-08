@@ -138,6 +138,6 @@ test('語の一覧は src/mask/ の別のファイルで、出典の URL があ�
   const rules = fs.readFileSync(new URL('../../src/mask/rules-company.mjs', import.meta.url), 'utf8');
   assert.ok(!rules.includes("'特定非営利活動法人'") && !rules.includes("'工務店'"));
   assert.deepEqual(COMPANY_RULES.map((r) => r.id), ['company-before', 'company-after', 'org-suffix']);
-  const readme = fs.readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
+  const readme = fs.readFileSync(new URL('../../docs/details.md', import.meta.url), 'utf8');
   assert.ok(readme.includes('src/mask/company-types.mjs'), 'README から語の一覧のファイルが見られる');
 });

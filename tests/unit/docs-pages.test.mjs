@@ -9,10 +9,12 @@ const read = (p) => fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf
 const html = read('index.html');
 const screen = html.slice(html.indexOf('<body>')).replace(/<script\b[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, '');
 const readme = read('README.md');
+// README.md から docs/details.md へ移した節を見る(2026-11-08 統括: README を整えた)
+const details = read('docs/details.md');
 const manual = read('docs/manual.md');
 const design = read('docs/design.md');
 const script = read('docs/demo-script.md');
-const DOCS = { 'README.md': readme, 'docs/manual.md': manual, 'docs/design.md': design, 'docs/demo-script.md': script, 'docs/overview.md': read('docs/overview.md'), 'docs/development.md': read('docs/development.md') };
+const DOCS = { 'README.md': readme, 'docs/details.md': details, 'docs/manual.md': manual, 'docs/design.md': design, 'docs/demo-script.md': script, 'docs/overview.md': read('docs/overview.md'), 'docs/development.md': read('docs/development.md') };
 
 // 今は無い操作の語。段の番号は画面の文から外した(F86b)。段の間はボタンで動かず、別の道具は入口から開く(F86c)
 const GONE = [
@@ -38,7 +40,8 @@ test('この試験が除いた頭の番号の例は manual の1か所だけで�
 
 test('文書の手順が名を挙げるボタン・折りたたみ・ページは今の画面にあり、文書にも書いてある', () => {
   const words = {
-    'README.md': ['確かめのページ', '条件を直す', '請負代金の見込みを変更', '文の置き換え(別の道具)', '辞書・ファイル・金額の扱い', '入口に戻る', 'ほかの残し方'],
+    'README.md': ['ほかの残し方'],
+    'docs/details.md': ['確かめのページ', '条件を直す', '請負代金の見込みを変更', '文の置き換え(別の道具)', '辞書・ファイル・金額の扱い', '入口に戻る'],
     'docs/manual.md': ['条件を直す', '例を切り替える・自分の表を読み込む', '文の置き換え(別の道具)', '辞書・ファイル・金額の扱い', '対応表の書き出しと読み込み', '公告から拾った条件を読み込む'],
     'docs/demo-script.md': ['条件を直す', '工種を変更', 'くわしく', '公告を読み込む'],
   };
@@ -60,7 +63,7 @@ test('design: 下の帯・進み具合・ページの決まりの節があり、
 });
 
 test('README の手順2 の語のとおりに、確かめのページの「条件を直す」から金額を変えて結果を出し直せる', async () => {
-  const step2 = readme.split('\n').find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
+  const step2 = details.split('\n').find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
   assert.ok(step2.includes('「戻る」で確かめのページへ戻り、「条件を直す」の「請負代金の見込みを変更」'));
   const page = runPage(html);
   await page.click('sample-load');
@@ -80,7 +83,7 @@ test('README の手順2 の語のとおりに、確かめのページの「条�
 });
 
 test('README の手順2 の語のとおりに、見本の候補が書類の2つの候補のページに出る', async () => {
-  const step2 = readme.split('\n').find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
+  const step2 = details.split('\n').find((l) => l.startsWith('2. 入口の「まず見本で試す」を押す。'));
   for (const w of ['「次へ: 書類を確かめる」', '「台帳の候補」', '「目次の候補」']) assert.ok(step2.includes(w), w);
   const page = runPage(html);
   await page.click('sample-load');
@@ -100,7 +103,7 @@ test('README の手順2 の語のとおりに、見本の候補が書類の2つ�
 });
 
 test('README の手順3 の語のとおりに、入口から置き換えて元に戻せる', async () => {
-  const step3 = readme.split('\n').find((l) => /^3\. 入口の/.test(l)) ?? assert.fail('手順3 が入口から始まらない');
+  const step3 = details.split('\n').find((l) => /^3\. 入口の/.test(l)) ?? assert.fail('手順3 が入口から始まらない');
   for (const w of ['「文の置き換え(別の道具)」', '「辞書・ファイル・金額の扱い」', '「置き換える」', '置き換えた結果のページ', '「元に戻す」']) assert.ok(step3.includes(w), w);
   const page = runPage(html);
   await page.click('entry-tools');
@@ -136,7 +139,9 @@ test('台本: 場面の番号・時間・動画の URL の文を変えていな�
   assert.ok(readme.includes('- 動画: (提出のときに作者が URL を書きます。台本は `docs/demo-script.md`。12場面・2:58 で'));
 });
 
-test('README の画像の説明の文は今の画像のまま(撮り直すまで変えない)', () => {
-  assert.ok(readme.includes('![Motouke Navi の最初の画面。候補であり保証や合否ではないという注意、見ていない法令・資料があるという表示、'));
-  assert.ok(readme.includes('![架空の見本の結果の先頭。「結果を見る」の段、見本を読み込んだという表示、数字のカード 要るものの候補 6・確認が要る点 2・安全の法令の候補 7、'));
+test('README の画像の説明の文は今の画像のまま(撮り直すまで変えない。2026-11-08 に撮り直して絵に合わせた)', () => {
+  for (const text of [readme, details]) {
+    assert.ok(text.includes('![Motouke Navi の最初の画面。上の帯に作品名と「使った資料」のボタン、候補であり保証や合否ではないという注意、入口・条件・結果・書類の4つの段の進み具合、'));
+    assert.ok(text.includes('![架空の見本の結果の要点のページ(結果の段の 1/7)。工事の名前と「見本の結果です」の表示、数字のカード 要るものの候補 6・確認が要る点 2・安全の法令の候補 7、'));
+  }
 });

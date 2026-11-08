@@ -22,7 +22,7 @@ test('条の数: 説明の 29 と 8 が data/sources の法令の行の数と Sk
   const skill = fs.readdirSync(new URL('../../plugin/skills/construction-check/reference/sources/', import.meta.url)).filter((f) => /^law-.*\.txt$/.test(f)).length;
   assert.equal(all, 29);
   assert.equal(skill, 8);
-  const readme = read('README.md');
+  const readme = read('docs/details.md');
   assert.ok(readme.includes(`Skill に入れた${skill}つの条だけ`));
   assert.ok(readme.includes(`取得した法令の条は${all}です`));
   assert.ok(readme.includes(`残る${all - skill}の条`));
@@ -40,7 +40,7 @@ test('第37条: 技術検定の7種目の抜き書きが第1項の中にあり�
   for (const q of quotes) assert.ok(verifyQuote(q.text, para), q.id);
   const kinds = quotes.filter((q) => q.id !== 'q-rei-37-1').map((q) => q.text.split('　')[0]);
   assert.deepEqual(kinds, ['建設機械施工管理', '土木施工管理', '建築施工管理', '電気工事施工管理', '管工事施工管理', '電気通信工事施工管理', '造園施工管理']);
-  assert.match(read('README.md'), /建設業法施行令\(第37条。工種の欄の7種目の根拠\) \| https:\/\/laws\.e-gov\.go\.jp\/law\/331CO0000000273 \| 2026-11-06/);
+  assert.match(read('docs/details.md'), /建設業法施行令\(第37条。工種の欄の7種目の根拠\) \| https:\/\/laws\.e-gov\.go\.jp\/law\/331CO0000000273 \| 2026-11-06/);
 });
 
 test('原文の保存: 表は1行を1つの行にし、欄を全角の空白で区切る(架空の条)', () => {
@@ -58,7 +58,7 @@ test('原文の保存: 表は1行を1つの行にし、欄を全角の空白で�
 });
 
 test('5分で試せる手順: 公告から拾った条件の見本を挙げ、そのファイルを読み込むと確かめる画面まで進める', async () => {
-  const section = read('README.md').split('## 5分で試せる手順')[1].split('\n## ')[0];
+  const section = read('docs/details.md').split('## 5分で試せる手順')[1].split('\n## ')[0];
   const file = 'docs/samples/bid-intake/画面に入れる条件.json';
   assert.ok(section.includes(file));
   const text = read(file);
@@ -73,10 +73,11 @@ test('5分で試せる手順: 公告から拾った条件の見本を挙げ、�
 });
 
 // F70a: 費用と通信の1行、手順の数、困る場面の箇条
-const trySteps = () => read('README.md').split('## 5分で試せる手順')[1].split('\n## ')[0];
+const trySteps = () => read('docs/details.md').split('## 5分で試せる手順')[1].split('\n## ')[0];
 
 test('5分で試せる手順: 先頭の行に通信・費用・鍵の文があり、費用の文は1つだけ', () => {
-  const readme = read('README.md');
+  const readme = read('docs/details.md'); // README.md から移した節
+  assert.equal(/(^|[^A-Za-z0-9-])sk-[A-Za-z0-9_-]/.test(read('README.md')), false);
   const first = trySteps().trimStart().split('\n')[0];
   for (const w of ['開いたあとは通信しません', '使う人自身の API の鍵か Claude Code のログイン', '費用もその人の契約', '`claude plugin eval` の費用と時間の目安', 'docs/評価.md §7', '作者の鍵はこのリポジトリに入っていません']) {
     assert.ok(first.includes(w), w);

@@ -86,7 +86,7 @@ test('項目の札とカード「要るものの候補」は変えない', async
 });
 
 test('文書の節の名前も新しい呼び方で、前の呼び方が残らない', () => {
-  for (const f of ['README.md', 'docs/manual.md']) {
+  for (const f of ['docs/details.md', 'docs/manual.md']) {
     const s = fs.readFileSync(new URL('../../' + f, import.meta.url), 'utf8');
     assert.ok(s.includes('労務費と処遇の候補(確認が要る点の数に入れません)'), f);
     assert.ok(!s.includes('確認が要る候補'), f);

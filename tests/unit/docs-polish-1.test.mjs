@@ -5,6 +5,8 @@ import fs from 'node:fs';
 
 const read = (p) => fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
 const readme = read('README.md');
+// README.md から docs/details.md へ移した節を見る(2026-11-08 統括: README を整えた)
+const details = read('docs/details.md');
 const overview = read('docs/overview.md');
 const manual = read('docs/manual.md');
 const hyouka = read('docs/評価.md');
@@ -45,21 +47,22 @@ test('積算のずれ: overview が評価.md の 9 の数を書き、測って�
 test('見落としの差: どの文書もあり 5/30・なし 0/30 で、差が無いと丸めない', () => {
   assert.ok(/\| あり\(6回\) \| 5\/30 \|/.test(hyouka));
   assert.ok(/\| なし\(6回\) \| 0\/30 \|/.test(hyouka));
-  for (const text of [readme, overview, manual, hyouka]) {
+  for (const text of [details, overview, manual, hyouka]) {
     assert.ok(/あり 5\/30.*なし 0\/30/.test(text));
     assert.ok(!text.includes('ほぼ0'));
   }
   assert.ok(!readme.includes('見落としに差は出ませんでした'));
+  assert.ok(!details.includes('見落としに差は出ませんでした'));
 });
 
 test('抜き書きの数: README・overview・manual・評価.md が同じ', () => {
   const total = hyouka.match(/^\| 合計 \| (\d{3}) \| (\d{3}) \| 100\.0% \|$/m);
   assert.ok(total);
-  for (const text of [readme, overview, manual]) assert.ok(text.includes(`規則表の抜き書き ${total[1]} 件が原文にある`));
+  for (const text of [details, overview, manual]) assert.ok(text.includes(`規則表の抜き書き ${total[1]} 件が原文にある`));
 });
 
 test('仕込みの確かめ・モデルの選び方・期間の分け方の文がある', () => {
-  for (const text of [readme, hyouka]) assert.ok(/仕込みの出力の確かめ: 2026-11-06 に版 7ba4f4f と版 7055986/.test(text));
+  for (const text of [details, hyouka]) assert.ok(/仕込みの出力の確かめ: 2026-11-06 に版 7ba4f4f と版 7055986/.test(text));
   assert.ok(/^\| モデルの選び方 \|.*`model: inherit`/m.test(overview));
   assert.ok(read('plugin/agents/refuter.md').includes('model: inherit'));
   assert.ok(readme.includes('受け入れ条件の文書と自走の仕組みは開始前に用意し、受け入れテストのコードと作品は期間中に書きました'));

@@ -108,7 +108,7 @@ test('raw/ の中のシンボリックリンクで外へ出るものは挙げな
 test('SKILL.md に「書類の名前が分からないときは list_masked」、README に名前に個人情報が入りうること', () => {
   const skill = fs.readFileSync(path.join(ROOT, 'plugin', 'skills', 'construction-check', 'SKILL.md'), 'utf8');
   assert.match(skill, /名前が分からない[^\n]*list_masked/);
-  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+  const readme = fs.readFileSync(path.join(ROOT, 'docs', 'details.md'), 'utf8');
   assert.match(readme, /list_masked/);
   assert.match(readme, /list_masked[^\n]*(ファイルの名前|ファイル名)[^\n]*(人名|会社名|個人情報)/);
 });

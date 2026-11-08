@@ -137,7 +137,7 @@ test('index.html に業界の切り替えと「例」・率は測っていない
   assert.equal(labelFor(body, 'mask-industry'), '業界(語尾・役職の表)');
   assert.ok(body.includes('<option value="medical">医療(例)</option>'));
   assert.match(body, /医療の書類での漏れの率は測っていません/);
-  const readme = readText('README.md');
+  const readme = readText('docs/details.md');
   assert.match(readme, /src\/mask\/suffix-medical\.mjs/);
   assert.ok(readme.includes('医療(例)'));
   assert.match(readme, /医療の書類での漏れの率は測っていません/);

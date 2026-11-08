@@ -206,7 +206,7 @@ test('plugin の写しは元と同じで、入れた後の場所でも同じに�
 test('文書: コメントと README・manual が今の動きと合う', () => {
   const src = read('integration/claude-code/mcp/masked-files.mjs');
   assert.ok(!src.includes('どちらでも読めなければ断る(化けた文を Claude に渡さない)'), 'ISO-2022-JP は読めてしまい、化けた文を渡すので、この文のままにしない');
-  assert.match(read('README.md'), /`read_masked` は UTF-8[^\n]*ISO-2022-JP[^\n]*断/);
+  assert.match(read('docs/details.md'), /`read_masked` は UTF-8[^\n]*ISO-2022-JP[^\n]*断/);
   const manual = read('docs/manual.md');
   assert.match(manual, /ISO-2022-JP のファイルは読めません/);
   assert.match(manual, /ファイルが空です/);

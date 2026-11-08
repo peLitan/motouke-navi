@@ -201,8 +201,8 @@ test('数の命令が3つとも本文にあり、id の種類の数と overview 
 });
 
 test('README の作り方の段落の末尾に、記録と残っていることへのリンクがある', () => {
-  const lines = read('README.md').split('\n');
+  const lines = read('docs/details.md').split('\n');
   const para = lines[lines.indexOf('## Claude Code での作り方') + 1];
-  assert.ok(para.includes('[開発の記録](docs/development.md)'));
-  assert.ok(para.endsWith('[残っていること](docs/development.md#残っていること未測直していない) の一覧にあります。'));
+  assert.ok(para.includes('[開発の記録](development.md)'));
+  assert.ok(para.endsWith('[残っていること](development.md#残っていること未測直していない) の一覧にあります。'));
 });
