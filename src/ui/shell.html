@@ -496,6 +496,16 @@
     /* 折りたたみを開いたら中身は全幅にし、ボタンの行はその下へ回す(狭い左の列に中身を詰めない) */
     #pg-2-schedule:not([hidden]):has(> #schedule-more[open]) { grid-template-rows: auto auto auto auto auto 1fr; grid-template-areas: "head head" "notice notice" "file file" "more more" "bar bar" "frame frame"; }
     #pg-3-table:not([hidden]):has(> details.fold[open]) { grid-template-rows: auto auto auto auto 1fr; grid-template-areas: "head head" "more more" "bar bar" "status status" "frame frame"; }
+    /* 確かめの一覧の枠を高くする(F89b): 枠の上は短い1文と2つの閉じた折りたたみ(くわしく・条件を直す)の1行にし、枠が残りの行を取る。
+       HTML の順と見た目の順は同じ。押す所は枠の外のまま。折りたたみを開いたら、中身を全幅にするため1列に積む */
+    #pg-confirm:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto auto 1fr; grid-template-areas: "head head head" "lead more edit" "frame frame frame"; column-gap: 0.75rem; row-gap: 0.25rem; }
+    #confirm-title { grid-area: head; }
+    #confirm-lead { grid-area: lead; align-self: center; margin: 0; }
+    #confirm-more { grid-area: more; margin: 0; }
+    #confirm-edit { grid-area: edit; margin: 0; }
+    #pg-confirm > .ref-frame { grid-area: frame; }
+    #confirm-more > summary, #confirm-edit > summary { padding: 0.25rem 0; }
+    #pg-confirm:not([hidden]):has(> details[open]) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; grid-template-areas: "head" "lead" "more" "edit" "frame"; }
     /* 別の道具のページでは開いたままにするので、開く見出しは要らない */
     body.in-pages #other-tools > summary { display: none; }
     #pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; max-width: 60rem; margin: 0 auto; padding: 0.5rem 1rem; box-sizing: border-box; border-top: 1px solid var(--line); background: var(--paper); }
@@ -530,13 +540,15 @@
     #schedule-csv-btn, #checklist-csv-btn { white-space: nowrap; }
     .csv-what { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #schedule-more > summary, #pg-3-table > details.fold > summary { padding: 0.25rem 0; }
+    /* 確かめの一覧(F89b): 短い1文は1行を取り、2つの折りたたみをその下の1行に並べる */
+    #pg-confirm:not([hidden]) { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto 1fr; grid-template-areas: "head head" "lead lead" "more edit" "frame frame"; }
   }
   /* 背の低い画面(拡大 200%・横向きのスマホ): 下の帯が場所を取り切らないよう、高さの固定を外して全体が動く形に戻す(WCAG 1.4.10) */
   @media screen and (max-height: 30rem) {
     html, body { height: auto; overflow: visible; }
     body { display: block; }
     .wrap.page, body.in-pages .wrap.page { display: block; overflow: visible; }
-    body.in-pages #main, #bid:not([hidden]), #bid-form:not([hidden]), #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]), #pg-2-schedule:not([hidden]), #pg-3-table:not([hidden]) { display: block; overflow: visible; }
+    body.in-pages #main, #bid:not([hidden]), #bid-form:not([hidden]), #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]), #pg-2-schedule:not([hidden]), #pg-3-table:not([hidden]), #pg-confirm:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
     #panel-tools .pg { position: static; }
@@ -769,21 +781,10 @@
 </section>
 <section id="panel-confirm" class="no-print" hidden><div class="pg pg-framed" id="pg-confirm">
 <h2 id="confirm-title" tabindex="-1">入れた条件を確かめてください</h2>
-<p>発注者や金額の1つの違いで、要るものが変わります。違うときは「条件を直す」から直せます。「分からない」のままでも結果は出ます(その項目は「確認が要る」になります)。</p>
-<div class="ref-frame">
-<dl class="confirm" id="confirm-rows">
-<div class="confirm-row"><dt>発注者</dt><dd id="confirm-value-orderer"></dd></div>
-<div class="confirm-row"><dt>元請けか下請けか</dt><dd id="confirm-value-role"></dd></div>
-<div class="confirm-row"><dt>工事の種類</dt><dd id="confirm-value-work-type"></dd></div>
-<div class="confirm-row"><dt>工種</dt><dd id="confirm-value-work-kind"></dd></div>
-<div class="confirm-row"><dt>請負代金の見込み</dt><dd id="confirm-value-contract-amount"></dd></div>
-<div class="confirm-row"><dt>下請けの総額</dt><dd id="confirm-value-subcontract-total"></dd></div>
-<div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd></div>
-<div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd></div>
-<div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd></div>
-<div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd></div>
-</dl>
-</div>
+<p id="confirm-lead">違うときは「条件を直す」から直せます。</p>
+<details class="fold" id="confirm-more"><summary>くわしく</summary>
+<p>発注者や金額の1つの違いで、要るものが変わります。「分からない」のままでも結果は出ます(その項目は「確認が要る」になります)。</p>
+</details>
 <details class="fold" id="confirm-edit"><summary>条件を直す</summary>
 <div class="confirm-edit-list">
 <button type="button" id="confirm-change-orderer">発注者を変更</button>
@@ -798,6 +799,20 @@
 <button type="button" id="confirm-change-participation-conditions">公告の参加の条件を変更</button>
 </div>
 </details>
+<div class="ref-frame">
+<dl class="confirm" id="confirm-rows">
+<div class="confirm-row"><dt>発注者</dt><dd id="confirm-value-orderer"></dd></div>
+<div class="confirm-row"><dt>元請けか下請けか</dt><dd id="confirm-value-role"></dd></div>
+<div class="confirm-row"><dt>工事の種類</dt><dd id="confirm-value-work-type"></dd></div>
+<div class="confirm-row"><dt>工種</dt><dd id="confirm-value-work-kind"></dd></div>
+<div class="confirm-row"><dt>請負代金の見込み</dt><dd id="confirm-value-contract-amount"></dd></div>
+<div class="confirm-row"><dt>下請けの総額</dt><dd id="confirm-value-subcontract-total"></dd></div>
+<div class="confirm-row"><dt>元請けの許可の種類</dt><dd id="confirm-value-license"></dd></div>
+<div class="confirm-row"><dt>置ける技術者の資格</dt><dd id="confirm-value-engineer-qualification"></dd></div>
+<div class="confirm-row"><dt>発注者が台帳を閲覧できる措置</dt><dd id="confirm-value-ict-measure"></dd></div>
+<div class="confirm-row"><dt>公告の参加の条件</dt><dd id="confirm-value-participation-conditions"></dd></div>
+</dl>
+</div>
 </div></section>
 <section id="panel-2" hidden><div class="pg" id="pg-2-top">
 <h2 id="result-title" tabindex="-1">結果</h2>
