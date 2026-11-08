@@ -7,3 +7,4 @@ tmp/
 node_modules/
 .claude/settings.local.json
 answers.json
+!.env.example
