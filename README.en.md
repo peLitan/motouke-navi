@@ -15,7 +15,7 @@ The first three lines are the author's words. The author is in their first year 
 
 The rules for a main contractor are split between laws such as the Construction Business Act and each client's specifications. The only national model documents available as a guide are those for works ordered directly by the national government. (Theme #2: "Things that should reach everyone.")
 
-> **One measured example (1 case)**: On one real public notice from a national government agency, we measured the time to find the condition that requires past performance as a main contractor. It was measured on 2026-11-08 by pasting the text of the notice into the screen of version 4589fbe. The author (first year on a construction site) found it in about 5 minutes by hand and in about 3 seconds with this tool; the sentence found was the same. The author's words: "I'm a newcomer myself, so I think experienced people could find it faster." This is a single measurement, not a rate.
+> **One measured example (1 case)**: On one real public notice from a national government agency, we measured the time to find the condition that requires past performance as a main contractor. It was measured on 2026-11-08 by pasting the text of the notice into the screen of version 4589fbe. This is the time with the notice text pasted into the screen; it does not include the time for having Claude Code read the notice with the Skill. The author (first year on a construction site) found it in about 5 minutes by hand and in about 3 seconds with this tool; the sentence found was the same. The author's words: "I'm a newcomer myself, so I think experienced people could find it faster." This is a single measurement, not a rate.
 
 > The output is a set of candidate findings. It is not proof that nothing is missing, and it is not a pass/fail judgment. Final checks should be made by the person in charge, in consultation with the client.
 
@@ -36,7 +36,7 @@ The rules for a main contractor are split between laws such as the Construction 
 ## Try it in 1 minute
 No installation is needed; a browser is enough. The screen is in Japanese; button names are given in Japanese with a translation.
 
-1. Open `index.html` in a browser (checked on Edge on Windows). The public URL is `[Pages URL]` (the author will fill it in before submission)
+1. Open `index.html` in a browser (checked on Edge on Windows). The public URL is https://pelitan.github.io/motouke-navi/ (it will open once GitHub Pages has been set up)
 2. On the entry page, press 「まず見本で試す」 ("Try the sample first"; it loads a fictional sample job)
 3. On the confirmation page, press 「この内容で結果を見る」 ("See results with these conditions"). The summary page of the results opens
 4. Press 「次へ」 ("Next") on the bar at the bottom to go one page at a time. What you will need, points to check, and the steps after award appear with the relevant articles and excerpts of the original text
@@ -140,11 +140,12 @@ claude --plugin-dir <this repository>/plugin
 The sample job, companies, people and numbers are all fictional.
 
 ## Demo video
-- Video: in preparation (the author will add the URL at submission). The script is `docs/demo-script.md` (Japanese): 12 scenes, 2:58, showing in one take everything from reading one real public notice to the results, checking fictional documents, and the measured numbers. Only features built during the hackathon are shown
+- Video: in preparation (the author will add the URL at submission). About 2 minutes 40 seconds, 11 scenes, showing in one take everything from having Claude Code read one real public notice with the Skill, through the results pages, the steps after award, checking fictional documents, and the hook blocking operations that read raw files, to keeping the results. Only features built during the hackathon are shown
 
 ## Limitations (summary)
 - The rule tables cover only the retrieved articles and the cited parts of MLIT materials. Contract terms and local government guidelines are not included. Laws are amended; amendments after the retrieval date are not included, so check the original text on e-Gov before use
 - The default steps and required items for a construction plan are examples from works ordered directly by the national government. For local government or private works, replace them with the client's specifications and contract. The range of specifications read differs by type of work
+- The "handover" (引き渡し) row in the steps after award is the handover of items such as materials generated on site (現場発生品). The handover of the work itself (under the contract) is not included
 - Sentences in a public notice that require past performance as a main contractor are found by searching for words, so some phrasings will be missed. The tool does not judge whether you are eligible to bid
 - Leaks in text replacement never reach zero. Personal names, site names, etc. that are not in the dictionary may remain. Even after replacement, the combination of remaining words (schedule, amount, place names, type of work, client, etc.) may reveal which job or whom it is about. Always check with your own eyes before sending anything outside
 - The Claude Code guard also cannot block every operation that reads `raw/`. Reads by commands (such as `cat`) are blocked on Linux and WSL when Claude Code's sandbox is enabled. On Windows (native), the sandbox is not available, so they are not blocked. Not checked on macOS
@@ -167,10 +168,11 @@ All documents below are in Japanese.
 | Full limitations | [docs/details.md "限界"](docs/details.md#限界) |
 | Title, URL and retrieval date of each source, with attribution and processing notes | [docs/details.md "データと出典"](docs/details.md#データと出典) |
 | Development record (found → fixed → re-measured, what remains) | [docs/development.md](docs/development.md) |
-| Video script | [docs/demo-script.md](docs/demo-script.md) |
 
 ## About development
-> Built during Built with Claude: Japan 2026 (from 2026-11-02). Following the organizer's guidance, the development system (a self-driving kit) and the design and acceptance-criteria documents, all prepared before the start, are kept outside this repository. This repository contains only what was written during the hackathon, including the acceptance test code (kickoff: 2026-11-02 12:00–12:30; the first commit of the work: 20:48 the same day; the acceptance test code: a commit at 21:18 the same day. Commit times can be seen with `git log`). The project overview is in [docs/overview.md](docs/overview.md), the 3-minute video script in [docs/demo-script.md](docs/demo-script.md), and detailed descriptions and limitations of each feature in [docs/manual.md](docs/manual.md) (all in Japanese).
+> Built during Built with Claude: Japan 2026 (from 2026-11-02). Following the organizer's guidance, the development system (a self-driving kit) and the design and acceptance-criteria documents, all prepared before the start, are kept outside this repository. This repository contains only what was written during the hackathon, including the acceptance test code (kickoff: 2026-11-02 12:00–12:30; the first commit of the work: 20:48 the same day; the acceptance test code: a commit at 21:18 the same day. Commit times can be seen with `git log`). The project overview is in [docs/overview.md](docs/overview.md), and detailed descriptions and limitations of each feature in [docs/manual.md](docs/manual.md) (all in Japanese).
+
+The code was written by Claude Code (a self-driving loop); the author made requests in Japanese and checked the results. How hooks, MCP, Skills and the refuter agent are used is in [docs/overview.md "Claude の使い方"](docs/overview.md#claude-の使い方) (Japanese).
 
 ## Data and sources
 Articles of laws were retrieved from the e-Gov Law API, and national materials from public pages of MLIT and other agencies. The title, URL and retrieval date of each source, and the attribution and processing notes required under the Public Data License (PDL1.0) and other terms, are in [docs/details.md "データと出典"](docs/details.md#データと出典) (Japanese). How they were retrieved, the range of excerpts and the processing are described in [docs/manual.md "データと出典の細部"](docs/manual.md#データと出典の細部) (Japanese).
@@ -181,4 +183,5 @@ Articles of laws were retrieved from the e-Gov Law API, and national materials f
 - The code and documents of this work are released under the Apache License 2.0. The full text is `LICENSE` at the repository root (the same text as https://www.apache.org/licenses/LICENSE-2.0.txt). The copyright notice is the following line
 - Copyright 2026 ぺりたん
 - No external components (libraries) are bundled. .docx, .xlsx and PDF are unpacked with `DecompressionStream`, which is built into browsers and Node.js
+- Many of the screen's color values are borrowed from the Digital Agency Design System npm package `@digital-go-jp/design-tokens` (MIT License). This screen was not made by the Digital Agency
 - The bundled MLIT materials follow the Public Data License (PDL1.0). The bundled original texts of laws are not subject to copyright. The Apache License 2.0 does not change how these are handled

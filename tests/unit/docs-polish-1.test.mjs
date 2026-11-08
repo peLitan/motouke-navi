@@ -12,10 +12,12 @@ const manual = read('docs/manual.md');
 const hyouka = read('docs/評価.md');
 const script = read('docs/demo-script.md');
 
-test('場面の数: README と台本の見出しの数が、台本の表の行の数と同じ', () => {
+// 2026-11-08 統括: README の動画の行は出す動画 v9(約2分40秒・11場面)に合わせた。台本 docs/demo-script.md は前の版のままで、
+// README からの案内を一度外した(統括が v9 の台本と入れ替える)。台本の見出しと表の行の数の照らしは残す
+test('場面の数: 台本の見出しの数が台本の表の行の数と同じで、README は出す動画の場面の数を書く', () => {
   const rows = script.split('\n').filter((l) => /^\| \d+ \| \d:\d\d〜/.test(l)).length;
   assert.ok(script.includes(`長さ: ${rows}場面で`));
-  assert.ok(readme.includes(`${rows}場面・`));
+  assert.ok(readme.includes('約2分40秒・11場面'));
 });
 
 test('台本の札1: 公告2件・1人・各1回の形で、測れなかったときの外し方が2通りある(F72a)', () => {
