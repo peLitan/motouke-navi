@@ -476,8 +476,26 @@
     #schedule-frame { min-height: 12rem; }
     #schedule-result details.schedule-table { --shadow: none; margin: 0; border: none; padding: 0; }
     #schedule-result details.schedule-table > summary { display: none; }
-    #pg-2-schedule > .export { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.75rem; margin: 0.25rem 0 0; }
+    #pg-2-schedule > .export { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.75rem; margin: 0; }
     #pg-2-schedule > .export p { margin: 0; }
+    /* 表の枠を高くする(F89a): 折りたたみの見出しと CSV のボタンを枠の上の1行に並べる。押す所は枠の外のまま。
+       HTML の順(紙の順・焦点の順)は変えず、grid で置き場だけを変える。記載事項の表の説明の文は紙だけに出し、画面では「この表の見方」の中で読む */
+    #pg-2-schedule:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto auto 1fr; grid-template-areas: "head head" "notice notice" "file file" "more bar" "frame frame"; column-gap: 0.75rem; }
+    #schedule-heading { grid-area: head; }
+    #pg-2-schedule > .schedule-notice { grid-area: notice; }
+    #rules-file-on { grid-area: file; }
+    #schedule-more { grid-area: more; }
+    #schedule-frame { grid-area: frame; }
+    #pg-2-schedule > .export { grid-area: bar; align-self: start; }
+    #pg-3-table:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto 1fr; grid-template-areas: "head head" "more bar" "status status" "frame frame"; column-gap: 0.75rem; }
+    #checklist-title { grid-area: head; }
+    #pg-3-table > details.fold { grid-area: more; margin: 0; }
+    #pg-3-table > .row { grid-area: bar; align-self: start; margin: 0; }
+    #checklist-status { grid-area: status; margin: 0; }
+    #pg-3-table > .ref-frame { grid-area: frame; }
+    /* 折りたたみを開いたら中身は全幅にし、ボタンの行はその下へ回す(狭い左の列に中身を詰めない) */
+    #pg-2-schedule:not([hidden]):has(> #schedule-more[open]) { grid-template-rows: auto auto auto auto auto 1fr; grid-template-areas: "head head" "notice notice" "file file" "more more" "bar bar" "frame frame"; }
+    #pg-3-table:not([hidden]):has(> details.fold[open]) { grid-template-rows: auto auto auto auto 1fr; grid-template-areas: "head head" "more more" "bar bar" "status status" "frame frame"; }
     /* 別の道具のページでは開いたままにするので、開く見出しは要らない */
     body.in-pages #other-tools > summary { display: none; }
     #pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; max-width: 60rem; margin: 0 auto; padding: 0.5rem 1rem; box-sizing: border-box; border-top: 1px solid var(--line); background: var(--paper); }
@@ -507,13 +525,18 @@
     #bid-result .item > details.basis:not([open]) .basis-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #bid-result .item { gap: 0 0.25rem; }
     #schedule-heading .heading-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    /* 表の枠を高くする(F89a): ボタンの列はボタンの幅だけにし、ボタンの名前の前置き(何の CSV か)は読み上げに残して画面の外へ置く。折りたたみの見出しは折り返して左の列に入れる */
+    #pg-2-schedule:not([hidden]), #pg-3-table:not([hidden]) { grid-template-columns: minmax(0, 1fr) min-content; }
+    #schedule-csv-btn, #checklist-csv-btn { white-space: nowrap; }
+    .csv-what { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    #schedule-more > summary, #pg-3-table > details.fold > summary { padding: 0.25rem 0; }
   }
   /* 背の低い画面(拡大 200%・横向きのスマホ): 下の帯が場所を取り切らないよう、高さの固定を外して全体が動く形に戻す(WCAG 1.4.10) */
   @media screen and (max-height: 30rem) {
     html, body { height: auto; overflow: visible; }
     body { display: block; }
     .wrap.page, body.in-pages .wrap.page { display: block; overflow: visible; }
-    body.in-pages #main, #bid:not([hidden]), #bid-form:not([hidden]), #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]) { display: block; overflow: visible; }
+    body.in-pages #main, #bid:not([hidden]), #bid-form:not([hidden]), #panel-1:not([hidden]), #panel-confirm:not([hidden]), #panel-2:not([hidden]), #panel-3:not([hidden]), #panel-tools:not([hidden]), #panel-ref:not([hidden]), #pg-ref:not([hidden]), .pg-framed:not([hidden]), #pg-2-schedule:not([hidden]), #pg-3-table:not([hidden]) { display: block; overflow: visible; }
     .pg:not([hidden]) { overflow-y: visible; }
     .ref-frame { flex: none; overflow-y: visible; }
     #panel-tools .pg { position: static; }
@@ -824,7 +847,7 @@
 <div id="schedule-result" class="result-plain"><p>条件を入れて「確認する」を押してください。</p></div>
 </div>
 <div class="export no-print">
-<button type="button" id="schedule-csv-btn">段取りを CSV に書き出す</button>
+<button type="button" id="schedule-csv-btn"><span class="csv-what">段取りを </span>CSV に書き出す</button>
 <p id="schedule-status" aria-live="polite"></p>
 </div>
 </div><div class="pg pg-framed" id="pg-2-safety" hidden>
@@ -942,12 +965,12 @@
 <div id="checklist-section">
 <div class="pg pg-framed" id="pg-3-table" hidden>
 <h3 id="checklist-title" tabindex="-1">台帳の記載事項の表(建設業法施行規則 第14条の2 第1項)</h3>
-<p>「台帳を点検する」を押すと、記載事項ごとに、台帳の値か「空」か「判断できない」かを表で出します。</p>
+<p class="print-only">「台帳を点検する」を押すと、記載事項ごとに、台帳の値か「空」か「判断できない」かを表で出します。</p>
 <details class="fold"><summary>この表の見方と「確認した」の印</summary>
 <p>「台帳を点検する」を押すと、台帳の候補とは別に、第14条の2 第1項の記載事項ごとに、台帳に見つかった値か「空」か「判断できない」かを表で出します。台帳の値は書いてあるまま出し、推測で埋めません。各行の「確認した」は、台帳や別紙を見て人が確かめた印です。チェックはこの画面の中だけに持ち、ブラウザに保存しません(ページを閉じると消えます)。印刷と CSV にはチェックの有無が出ます。</p>
 <p class="note" id="checklist-reference">{{CHECKLIST_REFERENCE}}</p>
 </details>
-<div class="row"><button type="button" id="checklist-csv-btn">記載事項の表を CSV に書き出す</button></div>
+<div class="row"><button type="button" id="checklist-csv-btn"><span class="csv-what">記載事項の表を </span>CSV に書き出す</button></div>
 <p id="checklist-status" aria-live="polite"></p>
 <div class="ref-frame"><div id="checklist-result" class="result"><p>台帳を貼って「台帳を点検する」を押すと、記載事項の表が出ます。</p></div></div>
 </div>
